@@ -1,0 +1,28 @@
+{
+    "config": {
+        "optimize-autoloader": true,
+        "preferred-install": "dist",
+        "sort-packages": true,
+        "allow-plugins": {},
+        "platform": {
+            "php": "8.3.19"
+        }
+    },
+    "require": {
+        "slim/slim": "*",
+        "slim/psr7": "*",
+        "slim/http": "*",
+        "php-di/slim-bridge": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tarot\\": ["includes/", "includes/Tarot"],
+            "Routes\\": ["api/", "api/Routes"]
+        }
+    },
+    "require-dev": {
+        "roave/security-advisories": "dev-latest",
+        "squizlabs/php_codesniffer": "*",
+        "friendsofphp/php-cs-fixer": "*"
+    }
+}

@@ -1,0 +1,13 @@
+.reversed {
+    transform: scale(-1, -1);
+}
+
+.card-image {
+    max-width:300px;
+}
+
+.sticky-footer {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: column;
+}
