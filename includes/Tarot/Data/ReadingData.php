@@ -4,6 +4,7 @@ namespace Tarot\Data;
 
 use Exception;
 use PDO;
+use RuntimeException;
 use Tarot\Database\Connection;
 use Tarot\Structure\Reading;
 
@@ -60,20 +61,24 @@ class ReadingData
         // Prepare statement
         $stmt = $this->db->prepare($query);
 
+        // Get the data
+        $readingId = $reading->getReadingId();
+        $readingInfo = $reading->getReadingInfo();
+
         // If prepared statement is successful
         if ($stmt) {
             // Bind reading_id
-            $stmt->bindParam(':reading_id', $reading->getReadingId(), PDO::PARAM_STR);
-            $stmt->bindParam(':reading_info', $reading->getReadingInfo(), PDO::PARAM_STR);
+            $stmt->bindParam(':reading_id', $readingId, PDO::PARAM_STR);
+            $stmt->bindParam(':reading_info', $readingInfo, PDO::PARAM_STR);
 
             // Try executing
             if (!$stmt->execute()) {
-                throw new Exception('Failed to store reading: ' . $this->db->errorInfo());
+                throw new RuntimeException('Failed to store reading: ' . $this->db->errorInfo()[2]);
             }
 
             $stmt->closeCursor();
         }
 
-        return $this->retrieve($reading->getReadingId());
+        return $this->retrieve($readingId);
     }
 }

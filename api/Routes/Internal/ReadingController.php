@@ -2,6 +2,9 @@
 
 namespace Routes\Internal;
 
+use JsonException;
+use Psr\Http\Message\ResponseInterface;
+use Random\RandomException;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardRepository;
@@ -12,7 +15,7 @@ use Tarot\Structure\Reading;
 
 class ReadingController extends AbstractController
 {
-    public function getReading(Request $request, Response $response, array $args)
+    public function getReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         // Initialize Reading ID if provided
         $reading_id = $this->parseParameters($args, 'reading_id', null);
@@ -40,7 +43,11 @@ class ReadingController extends AbstractController
         return $response->withJson($data, $status);
     }
 
-    public function newReading(Request $request, Response $response, array $args)
+    /**
+     * @throws RandomException
+     * @throws JsonException
+     */
+    public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         // Initialize Required Variables
         $params = $request->getParsedBody();
@@ -85,13 +92,16 @@ class ReadingController extends AbstractController
         // Get the draw
         $draw = array_slice($deck_of_cards, 0, $number_of_cards);
 
+        // Initialize Reversal Values
+        $reversal_values = [];
+
         // If no reversals, all false
         if ($reversal_chance === 0) {
             $reversal_values = array_fill(0, $number_of_cards, false);
         // Generate array of reversal values for each card.
         } else {
             for ($i = 0; $i < $number_of_cards; $i++) {
-                $reversal_values[] = (bool)(mt_rand(1, 100) <= $reversal_chance); 
+                $reversal_values[] = (bool)(random_int(1, 100) <= $reversal_chance);
             }
         }
 
@@ -102,30 +112,33 @@ class ReadingController extends AbstractController
         $reading_id = bin2hex(random_bytes(5));
         $reading->setReadingId($reading_id);
 
-        // Setup the Reading Data
+        // Set up the Reading Data
         $reading_data = [];
         $reading_data['deck_id'] = $deck_id;
         $reading_data['draw'] = [];
 
+        // Loop through the draw and set the card data for each card
         foreach ($draw as $key => $card_id) {
             // Set normal properties
             $reading_data['draw'][$key]['card_id'] = $card_id;
             $reading_data['draw'][$key]['reversed'] = $reversal_values[$key];
 
             // Get Card from Base of Special/Nonstandard
-            if ($deck->isNonStandard() || $card_id > 78) {
+            if ($card_id > 78 || $deck->isNonStandard()) {
                 $card = $special_card_repo->get($deck_id, $card_id);
             } else {
                 $card = $card_repo->get($card_id);
             }
 
             // Set Card Name and unset card just in case
-            $reading_data['draw'][$key]['card_name'] = $card->getName();
-            unset($card);
+            if ($card) {
+                $reading_data['draw'][$key]['card_name'] = (!$deck->isThoth()) ? $card->getName() : $card->getNameThoth();
+                unset($card);
+            }
         }
 
         // Set Reading Info
-        $reading->setReadingInfo(json_encode($reading_data, true));
+        $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR | true));
 
         // Save the Reading
         $reading = $reading_repo->save($reading);
