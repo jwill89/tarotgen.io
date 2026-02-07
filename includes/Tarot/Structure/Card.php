@@ -8,8 +8,13 @@ class Card extends AbstractStructure
     protected string $name = '';
     protected ?string $meaning = '';
     protected ?string $advice = '';
-    protected ?string $reversed_meaning = '';
-    protected ?string $reversed_advice = '';
+    protected ?string $meaning_reversed = '';
+    protected ?string $advice_reversed = '';
+    protected string $name_thoth = '';
+    protected ?string $meaning_thoth = '';
+    protected ?string $advice_thoth = '';
+    protected ?string $meaning_thoth_reversed = '';
+    protected ?string $advice_thoth_reversed = '';
 
     public function getCardId(): int
     {
@@ -31,13 +36,38 @@ class Card extends AbstractStructure
         return $this->advice;
     }
 
-    public function getReversedMeaning(): ?string
+    public function getMeaningReversed(): ?string
     {
-        return $this->reversed_meaning;
+        return $this->meaning_reversed;
     }
 
-    public function getReversedAdvice(): ?string
+    public function getAdviceReversed(): ?string
     {
-        return $this->reversed_advice;
+        return $this->advice_reversed;
+    }
+
+    public function getNameThoth(): string
+    {
+        return $this->name_thoth;
+    }
+
+    public function getMeaningThoth(): ?string
+    {
+        return $this->meaning_thoth;
+    }
+
+    public function getAdviceThoth(): ?string
+    {
+        return $this->advice_thoth;
+    }
+
+    public function getMeaningThothReversed(): ?string
+    {
+        return $this->meaning_thoth_reversed;
+    }
+
+    public function getAdviceThothReversed(): ?string
+    {
+        return $this->advice_thoth_reversed;
     }
 }

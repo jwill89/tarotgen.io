@@ -8,6 +8,7 @@ class Deck extends AbstractStructure
     protected string $name = '';
     protected string $artist = '';
     protected string $purchase_url = '';
+    protected bool $is_thoth = false;
     protected bool $has_extras = false;
     protected bool $non_standard = false;
     protected int $total_cards = 78;
@@ -31,6 +32,11 @@ class Deck extends AbstractStructure
     public function getPurchaseUrl(): string
     {
         return $this->purchase_url;
+    }
+
+    public function isThoth(): bool
+    {
+        return $this->is_thoth;
     }
     public function hasExtras(): bool
     {

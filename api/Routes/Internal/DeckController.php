@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\DeckRepository;
@@ -9,7 +10,7 @@ use Tarot\Structure\Deck;
 
 class DeckController extends AbstractController
 {
-    public function getDeck(Request $request, Response $response, array $args)
+    public function getDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         // Initialize Deck ID if provided
         $deck_id = $this->parseParameters($args, 'deck_id', null);

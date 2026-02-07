@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <meta charset="utf-8" />
@@ -23,21 +23,21 @@
     <meta property="twitter:description" content="Generate your own tarot readings! Select one of various decks, the number of cards you want to draw, how to handle reversals, then shuffle and draw! Bringing the magic of tarot to your browser!" />
     <meta property="twitter:image" content="https://tarot.mathdad.me/assets/share_banner.png" />
 
-    <!-- Stylesheets and Javascript -->
+    <!-- Stylesheets and JavaScript -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css" />
     <link rel="stylesheet" href="css/lightbox.css" />
     <link rel="stylesheet" href="css/style.css?v=<?=time();?>" />
     <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
     <script src="https://kit.fontawesome.com/f4ac720004.js" crossorigin="anonymous"></script>
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"
-        integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-4.0.0.min.js"
+            integrity="sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao=" crossorigin="anonymous"></script>
     <script type="text/javascript" src="js/lightbox.min.js"></script>
     <script type="text/javascript" src="js/main.js?v=<?=time();?>"></script>
 </head>
 
 <body class="sticky-footer has-navbar-fixed-top">
     <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
-        <div iv="navbar-brand" class="navbar-brand">
+        <div id="navbar-brand" class="navbar-brand">
             <a class="navbar-burger" id="nav_burger" role="button" aria-label="menu" aria-expanded="false">
                 <span aria-hidden="true"></span>
                 <span aria-hidden="true"></span>
@@ -75,7 +75,16 @@
                 the code you were provided. News and updates about the generator below!
             </p>
             <div class=content>
-                <h5>Non-Standard & Special Cards - First Pass</h5>
+                <h5>2026-02-07 - New Decks and Updates</h5>
+                <p>
+                    My previous two news entries, which were just new deck additions, were erased as I was updating the
+                    the code and adding some stuff, so here is a combinaed update. New decks have been added, and the
+                    alerts for different deck types (including Thoth decks) have been added and made bolder so you know
+                    when you are using a deck that deviates from Rider-Waite or has extra cards. Hopefully I will
+                    motivate myself to start adding basic info for meanings and advice on these cards to help people who
+                    are new to tarot get some readings. Anyhow, enjoy the update.
+                </p>
+                <h5>2025-04-08 - Non-Standard & Special Cards - First Pass</h5>
                 <p>
                     I've added the data for non-standard decks and the special extra cards in some decks so they
                     will display in the LightBox popups now! Hopefully this will allow these to be used better,
@@ -110,6 +119,7 @@
                 <label class="label">Deck</label>
                 <div class="control has-icons-left">
                     <div class="select">
+                        <label for="deck_id"></label>
                         <select name="deck_id" id="deck_id" autocomplete="off">
                         </select>
                     </div>
@@ -118,18 +128,27 @@
                     </span>
                 </div>
             </div>
-            <div class="field is-hidden" id="form_use_additional_cards">
+            <div class="field notification is-warning is-hidden" id="form_use_additional_cards">
                 <div class="control">
                     <label class="checkbox">
                     <input type="checkbox" name="use_additional_cards" id="use_additional_cards" value="true">
-                    This deck has extra non-standard cards. Check this box to allow them to be drawn in your reading.
+                        <strong>This deck has extra non-standard cards.</strong>
+                        Check this box to allow them to be drawn in your reading.
                     </label>
                 </div>
+            </div>
+            <div class="field notification is-info is-hidden" id="form_non_standard_deck">
+                This deck is a unique <strong>non-standard</strong> deck, meaning it does not follow the traditional
+                Rider-Waite 78-card tarot deck structure. All cards in this deck will be available for drawing.
+            </div>
+            <div class="field notification is-info is-hidden" id="form_thoth_deck">
+                This deck is a <strong>Thoth</strong> deck. Please note that the card names and structure will 
+                differ from traditional Rider-Waite decks.
             </div>
             <div class="field">
                 <label class="label">Number of Cards</label>
                 <div class="control has-icons-left">
-                    <input class="input" type="number" name="number_of_cards" id="number_of_cards" min="1" max="78" value="1" autocomplete="off" />
+                    <label for="number_of_cards"></label><input class="input" type="number" name="number_of_cards" id="number_of_cards" min="1" max="78" value="1" autocomplete="off" />
                     <span class="icon is-small is-left">
                         <i class="fa-solid fa-diamond"></i>
                     </span>
@@ -138,7 +157,7 @@
             <div class="field">
                 <label class="label">Percent Chance of Reversals</label>
                 <div class="control has-icons-left">
-                    <input class="input" type="number" name="reversal_chance" id="reversal_chance" min="0" max="50" value="0" autocomplete="off" />
+                    <label for="reversal_chance"></label><input class="input" type="number" name="reversal_chance" id="reversal_chance" min="0" max="50" value="0" autocomplete="off" />
                     <span class="icon is-small is-left">
                         <i class="fa-solid fa-percent"></i>
                     </span>
@@ -167,12 +186,19 @@
     </section>
     <section class="section is-hidden" id="reading">
         <div class="container">
-            <div class="content">
-                <h1 class="title">Your Reading</h1>
-                <p>
+            <div class="content columns">
+                <div class="column is-narrow">
+                    <figure class='image card-back'>
+                        <a id="card_back_url" href="" data-lightbox="Card Back" title="Card Back">
+                            <img id="card_back" alt="Card Back" title="Card Back" src="" />
+                        </a>
+                    </figure>
+                </div>
+                <div class="column">
+                    <h1 class="title">Your Reading</h1>
                     <ul id="reading_data">
                     </ul>
-                </p>
+                </div>
             </div>
             <div class="grid" id="reading_cards">
             </div>
@@ -181,7 +207,7 @@
     <footer class="footer is-flex-align-items-flex-end mt-auto">
         <div class="content has-text-centered">
             <p>
-                Coded by <a href="https://www.mathdad.me"><strong>MathDad</strong></a>. Copyright &copy; <script>document.write(new Date().getFullYear())</script>. Please Use Responsibly!<br/>
+                Coded by <a href="https://www.mathdad.me"><strong>MathDad</strong></a>. Copyright &copy; <span id="copyright_year"></span>. Please Use Responsibly!<br/>
                 Want to support the project? Donate on <a href="https://ko-fi.com/mathdad" target="_blank">Ko-Fi</a> for server costs! Want to see a deck added to the list? Gift it on <a href="https://throne.com/mathdad" target="_blank">Throne</a>!
             </p>
         </div>
