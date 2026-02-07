@@ -128,8 +128,8 @@ $(document).ready(function() {
             dataType: 'json',
             success: function(data) {
                 $.each(data, function(index, deck) {
-                    $('#deck_id').append('<option value="' + deck.deck_id + '">' + deck.name + ', Art by ' + deck.artist + (deck.non_standard ? ' (Non-Standard Deck)' : '') + '</option>');
-                    deckData[deck.deck_id] = {name: deck.name, artist: deck.artist, purchase_url: deck.purchase_url, non_standard: deck.non_standard, has_extras: deck.has_extras, total_cards: deck.total_cards, additional_cards: deck.additional_cards};
+                    $('#deck_id').append('<option value="' + deck.deck_id + '">' + deck.name + ', Art by ' + deck.artist + (deck.non_standard ? ' (Non-Standard Deck)' : '') + (deck.is_thoth ? ' (Thoth Deck)' : '') + '</option>');
+                    deckData[deck.deck_id] = {name: deck.name, artist: deck.artist, purchase_url: deck.purchase_url, is_thoth: deck.is_thoth, non_standard: deck.non_standard, has_extras: deck.has_extras, total_cards: deck.total_cards, additional_cards: deck.additional_cards};
                 });
             },
             complete: function() {
