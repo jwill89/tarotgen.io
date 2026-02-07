@@ -186,12 +186,19 @@
     </section>
     <section class="section is-hidden" id="reading">
         <div class="container">
-            <div class="content">
-                <h1 class="title">Your Reading</h1>
-                <p>
+            <div class="content columns">
+                <div class="column is-narrow">
+                    <figure class='image card-back'>
+                        <a id="card_back_url" href="" data-lightbox="Card Back" title="Card Back">
+                            <img id="card_back" alt="Card Back" title="Card Back" src="" />
+                        </a>
+                    </figure>
+                </div>
+                <div class="column">
+                    <h1 class="title">Your Reading</h1>
                     <ul id="reading_data">
                     </ul>
-                </p>
+                </div>
             </div>
             <div class="grid" id="reading_cards">
             </div>
