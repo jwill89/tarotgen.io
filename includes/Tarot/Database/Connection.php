@@ -7,8 +7,8 @@ use Exception, PDO;
 class Connection
 {
     // Path to DB
-    private const PATH_TO_SQLITE_DB = "../db/tarotdb.db";
-    private const CRON_PATH_TO_SQLITE_DB = "db/tarotdb.db";
+    private const string PATH_TO_SQLITE_DB = "../db/tarotdb.db";
+    private const string CRON_PATH_TO_SQLITE_DB = "db/tarotdb.db";
 
     // Access Through Connection
     private static PDO $conn;
