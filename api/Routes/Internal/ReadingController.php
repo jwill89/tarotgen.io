@@ -53,7 +53,7 @@ class ReadingController extends AbstractController
         $params = $request->getParsedBody();
         $number_of_cards = (int)$this->parseParameters($params, 'number_of_cards', 1);
         $deck_id = (int)$this->parseParameters($params, 'deck_id', 1);
-        $reversal_chance = (int)$this->parseParameters($params, 'reversal_chance', 0);
+        $reversal_chance = min(50, max(0, (int)$this->parseParameters($params, 'reversal_chance', 0)));
         $number_of_shuffles = (int)$this->parseParameters($params, 'number_of_shuffles', 1);
         $use_additional_cards = (bool)$this->parseParameters($params, 'use_additional_cards', false);
 
