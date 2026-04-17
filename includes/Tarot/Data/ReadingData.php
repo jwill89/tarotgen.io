@@ -14,9 +14,7 @@ class ReadingData
 
     public function __construct()
     {
-        if (!isset($this->db)) {
-            $this->db = Connection::getInstance();
-        }
+        $this->db = Connection::getInstance();
     }
 
     public function retrieve(string $reading_id): ?Reading

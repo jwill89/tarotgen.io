@@ -26,13 +26,13 @@
     <!-- Stylesheets and JavaScript -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css" />
     <link rel="stylesheet" href="css/lightbox.css" />
-    <link rel="stylesheet" href="css/style.css?v=<?=time();?>" />
+    <link rel="stylesheet" href="css/style.css?v=<?=filemtime('css/style.css');?>" />
     <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
-    <script src="https://kit.fontawesome.com/f4ac720004.js" crossorigin="anonymous"></script>
+    <script src="https://kit.fontawesome.com/f4ac720004.js" crossorigin="anonymous" defer></script>
     <script src="https://code.jquery.com/jquery-4.0.0.min.js"
-            integrity="sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao=" crossorigin="anonymous"></script>
-    <script type="text/javascript" src="js/lightbox.min.js"></script>
-    <script type="text/javascript" src="js/main.js?v=<?=time();?>"></script>
+            integrity="sha256-OaVG6prZf4v69dPg6PhVattBXkcOWQB62pdZ3ORyrao=" crossorigin="anonymous" defer></script>
+    <script type="text/javascript" src="js/lightbox.min.js" defer></script>
+    <script type="text/javascript" src="js/main.js?v=<?=filemtime('js/main.js');?>" defer></script>
 </head>
 
 <body class="sticky-footer has-navbar-fixed-top">

@@ -105,6 +105,33 @@ class ReadingController extends AbstractController
             }
         }
 
+        // Batch fetch all cards to avoid N+1 queries
+        $standard_card_ids = [];
+        $special_card_ids = [];
+
+        foreach ($draw as $card_id) {
+            if ($card_id > 78 || $deck->isNonStandard()) {
+                $special_card_ids[] = $card_id;
+            } else {
+                $standard_card_ids[] = $card_id;
+            }
+        }
+
+        // Fetch all needed cards in two queries max
+        $standard_cards = [];
+        if (!empty($standard_card_ids)) {
+            foreach ($card_repo->getMultiple($standard_card_ids) as $card) {
+                $standard_cards[$card->getCardId()] = $card;
+            }
+        }
+
+        $special_cards = [];
+        if (!empty($special_card_ids)) {
+            foreach ($special_card_repo->getMultiple($deck_id, $special_card_ids) as $card) {
+                $special_cards[$card->getCardId()] = $card;
+            }
+        }
+
         // Build the Reading
         $reading = new Reading();
 
@@ -123,22 +150,21 @@ class ReadingController extends AbstractController
             $reading_data['draw'][$key]['card_id'] = $card_id;
             $reading_data['draw'][$key]['reversed'] = $reversal_values[$key];
 
-            // Get Card from Base of Special/Nonstandard
+            // Look up card from pre-fetched data
             if ($card_id > 78 || $deck->isNonStandard()) {
-                $card = $special_card_repo->get($deck_id, $card_id);
+                $card = $special_cards[$card_id] ?? null;
             } else {
-                $card = $card_repo->get($card_id);
+                $card = $standard_cards[$card_id] ?? null;
             }
 
-            // Set Card Name and unset card just in case
+            // Set Card Name
             if ($card) {
                 $reading_data['draw'][$key]['card_name'] = (!$deck->isThoth()) ? $card->getName() : $card->getNameThoth();
-                unset($card);
             }
         }
 
         // Set Reading Info
-        $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR | true));
+        $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR));
 
         // Save the Reading
         $reading = $reading_repo->save($reading);

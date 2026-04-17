@@ -11,9 +11,7 @@ class ReadingRepository
 
     public function __construct()
     {
-        if (!isset($this->data)) {
-            $this->data = new ReadingData();
-        }
+        $this->data = new ReadingData();
     }
 
     public function get(string $reading_id): ?Reading

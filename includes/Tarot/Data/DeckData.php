@@ -12,9 +12,7 @@ class DeckData
 
     public function __construct()
     {
-        if (!isset($this->db)) {
-            $this->db = Connection::getInstance();
-        }
+        $this->db = Connection::getInstance();
     }
 
     public function retrieve(?int $deck_id = null): ?array
