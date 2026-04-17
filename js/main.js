@@ -3,7 +3,7 @@
  * @description Main JS file for Tarot Reading Application (Vue 3)
  * @author MathDad <https://www.mathdad.me>
  * @license MIT
- * @version 2.0.0
+ * @version 2.1.0
  */
 
 document.addEventListener('DOMContentLoaded', function () {
@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const burgerOpen = ref(false);
             const searchReadingId = ref('');
             const alertModalActive = ref(false);
+            const isLoading = ref(false);
             const decks = ref([]);
             const deckLookup = ref({});
             const reading = ref(null);
@@ -31,8 +32,12 @@ document.addEventListener('DOMContentLoaded', function () {
 
             const lightbox = reactive({
                 active: false,
-                index: -1   // -1 = card back
+                index: -1,  // -1 = card back
+                flipped: false  // true = user toggled to view upright
             });
+
+            // Touch swipe tracking
+            let touchStartX = 0;
 
             // ── Computed Properties ─────────────────────────────────
             const currentYear = computed(() => new Date().getFullYear());
@@ -76,9 +81,25 @@ document.addEventListener('DOMContentLoaded', function () {
                 return card ? card.card_name : '';
             });
 
+            const lightboxIsReversed = computed(() => {
+                if (lightbox.index === -1) return false;
+                const card = readingCards.value[lightbox.index];
+                return card ? card.reversed : false;
+            });
+
+            const lightboxShowReversed = computed(() => {
+                return lightboxIsReversed.value && !lightbox.flipped;
+            });
+
             // ── Watch: reset additional cards checkbox when deck changes ─
             watch(() => form.deckId, () => {
                 form.useAdditionalCards = false;
+            });
+
+            // ── Watch: clamp reversal chance to 0–50 ─
+            watch(() => form.reversalChance, (val) => {
+                if (val > 50) form.reversalChance = 50;
+                else if (val < 0) form.reversalChance = 0;
             });
 
             // ── Methods ─────────────────────────────────────────────
@@ -94,6 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     clearReading();
                     fetchReading(rid);
                     searchReadingId.value = '';
+                    burgerOpen.value = false;
                 } else {
                     navigateTo('new_reading');
                 }
@@ -143,6 +165,7 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             async function fetchReading(readingId) {
+                isLoading.value = true;
                 try {
                     let res;
                     if (readingId !== null && readingId !== '') {
@@ -172,8 +195,13 @@ document.addEventListener('DOMContentLoaded', function () {
                     readingInfo.value = JSON.parse(data.reading_info);
                     currentPage.value = 'reading';
                     burgerOpen.value = false;
+
+                    // Scroll to top when reading loads
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                 } catch {
                     alertModalActive.value = true;
+                } finally {
+                    isLoading.value = false;
                 }
             }
 
@@ -191,25 +219,33 @@ document.addEventListener('DOMContentLoaded', function () {
             // ── Lightbox Methods ────────────────────────────────────
             function openLightbox(index) {
                 lightbox.index = index;
+                lightbox.flipped = false;
                 lightbox.active = true;
                 document.body.style.overflow = 'hidden';
             }
 
             function closeLightbox() {
                 lightbox.active = false;
+                lightbox.flipped = false;
                 document.body.style.overflow = '';
             }
 
             function lightboxPrev() {
                 if (lightbox.index > -1) {
                     lightbox.index--;
+                    lightbox.flipped = false;
                 }
             }
 
             function lightboxNext() {
                 if (lightbox.index < readingCards.value.length - 1) {
                     lightbox.index++;
+                    lightbox.flipped = false;
                 }
+            }
+
+            function toggleLightboxFlip() {
+                lightbox.flipped = !lightbox.flipped;
             }
 
             function handleLightboxKeyboard(e) {
@@ -217,6 +253,24 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (e.key === 'Escape') closeLightbox();
                 else if (e.key === 'ArrowLeft') lightboxPrev();
                 else if (e.key === 'ArrowRight') lightboxNext();
+            }
+
+            // Touch swipe support for lightbox
+            function onTouchStart(e) {
+                touchStartX = e.changedTouches[0].screenX;
+            }
+
+            function onTouchEnd(e) {
+                const touchEndX = e.changedTouches[0].screenX;
+                const diff = touchStartX - touchEndX;
+
+                if (Math.abs(diff) > 50) {
+                    if (diff > 0) {
+                        lightboxNext();
+                    } else {
+                        lightboxPrev();
+                    }
+                }
             }
 
             // ── Lifecycle ───────────────────────────────────────────
@@ -232,6 +286,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 burgerOpen,
                 searchReadingId,
                 alertModalActive,
+                isLoading,
                 decks,
                 reading,
                 readingInfo,
@@ -245,6 +300,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 readingCards,
                 lightboxImageSrc,
                 lightboxImageTitle,
+                lightboxIsReversed,
+                lightboxShowReversed,
                 navigateTo,
                 viewReading,
                 submitNewReading,
@@ -253,8 +310,12 @@ document.addEventListener('DOMContentLoaded', function () {
                 openLightbox,
                 closeLightbox,
                 lightboxPrev,
-                lightboxNext
+                lightboxNext,
+                toggleLightboxFlip,
+                onTouchStart,
+                onTouchEnd
             };
         }
     }).mount('#app');
 });
+
