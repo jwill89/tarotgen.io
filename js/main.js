@@ -1,243 +1,260 @@
 /**
  * @file main.js
- * @description Main JS file for Tarot Reading Application
+ * @description Main JS file for Tarot Reading Application (Vue 3)
  * @author MathDad <https://www.mathdad.me>
  * @license MIT
- * @version 1.0.1
+ * @version 2.0.0
  */
-let deckData = [];
 
-$(document).ready(function() {
-    // Set the current year in the footer
-    $('#copyright_year').text(new Date().getFullYear());
+document.addEventListener('DOMContentLoaded', function () {
+    const { createApp, ref, reactive, computed, onMounted, watch } = Vue;
 
-    // Get Deck Data
-    getDeckData();
+    createApp({
+        setup() {
+            // ── Reactive State ──────────────────────────────────────
+            const currentPage = ref('home');
+            const burgerOpen = ref(false);
+            const searchReadingId = ref('');
+            const alertModalActive = ref(false);
+            const decks = ref([]);
+            const deckLookup = ref({});
+            const reading = ref(null);
+            const readingInfo = ref(null);
 
-    // Navbar Mobile Burger Menu Toggle
-    $('#nav_burger').on('click', function() {
-        $('#nav_burger').toggleClass('is-active');
-        $(".navbar-menu").toggleClass("is-active");
-    });
+            const form = reactive({
+                deckId: null,
+                numberOfCards: 1,
+                reversalChance: 0,
+                numberOfShuffles: 1,
+                useAdditionalCards: false
+            });
 
-    // Navbar - Home
-    $('#nav_home').on('click', function() {
-        // Set Home Active
-        $('#nav_home').addClass('is-active');
-        $('#home').removeClass('is-hidden');
+            const lightbox = reactive({
+                active: false,
+                index: -1   // -1 = card back
+            });
 
-        // Set New Reading Inactive
-        $('#nav_new_reading').removeClass('is-active');
-        $('#new_reading').addClass('is-hidden');
+            // ── Computed Properties ─────────────────────────────────
+            const currentYear = computed(() => new Date().getFullYear());
 
-        // Clear Existing Reading
-        clearReadingPage();
-    });
+            const selectedDeck = computed(() => {
+                return deckLookup.value[form.deckId] || null;
+            });
 
-    // Navbar - New Reading
-    $('#nav_new_reading').on('click', function() {
-        // Set Home Inactive
-        $('#nav_home').removeClass('is-active');
-        $('#home').addClass('is-hidden');
+            const readingDeck = computed(() => {
+                if (!readingInfo.value) return {};
+                return deckLookup.value[readingInfo.value.deck_id] || {};
+            });
 
-        // Set New Reading Active
-        $('#nav_new_reading').addClass('is-active');
-        $('#new_reading').removeClass('is-hidden');
+            const cardBackUrl = computed(() => {
+                if (!readingInfo.value) return '';
+                return 'assets/decks/' + readingInfo.value.deck_id + '/Card_Back.png';
+            });
 
-        // Clear Existing Reading
-        clearReadingPage();
-    });
+            const readingUrl = computed(() => {
+                if (!reading.value) return '';
+                return 'https://tarot.mathdad.me/?rid=' + reading.value.reading_id;
+            });
 
-    // Navbar - View Reading (Search)
-    $('#nav_view_reading').on('click', function() {
-        // Get Reading Code
-        let readingId = $('#nav_search_reading_id_input').val();
+            const readingCards = computed(() => {
+                if (!readingInfo.value || !readingInfo.value.draw) return [];
+                return readingInfo.value.draw.map(card => ({
+                    ...card,
+                    imgUrl: 'assets/decks/' + readingInfo.value.deck_id + '/Card_' + String(card.card_id).padStart(4, '0') + '.png'
+                }));
+            });
 
-        // Check for Blank Reading ID
-        if (readingId !== '') {
-            // Clear Existing Reading
-            clearReadingPage();
+            const lightboxImageSrc = computed(() => {
+                if (lightbox.index === -1) return cardBackUrl.value;
+                const card = readingCards.value[lightbox.index];
+                return card ? card.imgUrl : '';
+            });
 
-            // Get Reading Data
-            getReadingData(readingId);
+            const lightboxImageTitle = computed(() => {
+                if (lightbox.index === -1) return 'Card Back';
+                const card = readingCards.value[lightbox.index];
+                return card ? card.card_name : '';
+            });
 
-            // Clear Reading Value
-            $('#nav_search_reading_id_input').val('')
-        } else {
-            // New Reading
-            $('#nav_new_reading').trigger('click');
-        }
-    });
+            // ── Watch: reset additional cards checkbox when deck changes ─
+            watch(() => form.deckId, () => {
+                form.useAdditionalCards = false;
+            });
 
-    // Form - Get New Reading
-    $('#submit_new_reading').on('click', function() {
-        // Clear Existing Reading
-        clearReadingPage();
-        
-        // Get New Reading
-        getReadingData();
-    });
+            // ── Methods ─────────────────────────────────────────────
+            function navigateTo(page) {
+                clearReading();
+                currentPage.value = page;
+                burgerOpen.value = false;
+            }
 
-    // Form - Show Additional Card Checkbox
-    $('#deck_id').on('change', function() {
-        // Clear existing checked status
-        $('#use_additional_cards').prop('checked', false);
+            function viewReading() {
+                const rid = searchReadingId.value.trim();
+                if (rid !== '') {
+                    clearReading();
+                    fetchReading(rid);
+                    searchReadingId.value = '';
+                } else {
+                    navigateTo('new_reading');
+                }
+            }
 
-        // If deck has extras, show the option to use them.
-        if (deckData[this.value].has_extras) {
-            $('#form_use_additional_cards').removeClass('is-hidden');
-        } else {
-            $('#form_use_additional_cards').addClass('is-hidden');
-        }
+            function submitNewReading() {
+                clearReading();
+                fetchReading(null);
+            }
 
-        // If the deck is non-standard, show the notification
-        if (deckData[this.value].non_standard) {
-            $('#form_non_standard_deck').removeClass('is-hidden');
-        } else {
-            $('#form_non_standard_deck').addClass('is-hidden');
-        }
+            function resetForm() {
+                form.deckId = decks.value.length > 0 ? decks.value[0].deck_id : null;
+                form.useAdditionalCards = false;
+                form.numberOfCards = 1;
+                form.reversalChance = 0;
+                form.numberOfShuffles = 1;
+            }
 
-        // If the deck is a Thoth deck, show the notification
-        if (deckData[this.value].is_thoth) {
-            $('#form_thoth_deck').removeClass('is-hidden');
-        } else {
-            $('#form_thoth_deck').addClass('is-hidden');
-        }
-    });
+            function clearReading() {
+                reading.value = null;
+                readingInfo.value = null;
 
-    // Form - Reset New Reading
-    $('#reset_new_reading').on('click', function() {
-        $('#deck_id').val(1);
-        $('#use_additional_cards').prop('checked', false);
-        $('#form_use_additional_cards').addClass('is-hidden');
-        $('#number_of_cards').val(1);
-        $('#reversal_chance').val(0);
-        $('#number_of_shuffles').val(1);
-    });
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('rid')) {
+                    window.history.replaceState(null, '', window.location.pathname);
+                }
+            }
 
-    // Modal - Close When Clicked Places
-    $('.modal-background, .modal-close, .message-header .delete, .modal-card-foot .button').on('click', function() {
-        $('#alert_modal').removeClass('is-active');
-    });
+            async function fetchDecks() {
+                try {
+                    const res = await fetch('/api/deck/');
+                    const data = await res.json();
+                    decks.value = data;
 
-    // Get Deck Data
-    function getDeckData() {
-        $.ajax({
-            url: '/api/deck/',
-            type: 'GET',
-            dataType: 'json',
-            success: function(data) {
-                let options = '';
-                $.each(data, function(index, deck) {
-                    options += '<option value="' + deck.deck_id + '">' + deck.name + ', Art by ' + deck.artist + (deck.non_standard ? ' (Non-Standard Deck)' : '') + (deck.is_thoth ? ' (Thoth Deck)' : '') + '</option>';
-                    deckData[deck.deck_id] = {name: deck.name, artist: deck.artist, purchase_url: deck.purchase_url, is_thoth: deck.is_thoth, non_standard: deck.non_standard, has_extras: deck.has_extras, total_cards: deck.total_cards, additional_cards: deck.additional_cards};
-                });
-                $('#deck_id').append(options);
-            },
-            complete: function() {
-                // Check URL for Reading ID after deck data loaded
+                    const lookup = {};
+                    data.forEach(deck => {
+                        lookup[deck.deck_id] = deck;
+                    });
+                    deckLookup.value = lookup;
+
+                    if (data.length > 0 && form.deckId === null) {
+                        form.deckId = data[0].deck_id;
+                    }
+                } catch {
+                    // Silently fail on deck load
+                }
+            }
+
+            async function fetchReading(readingId) {
+                try {
+                    let res;
+                    if (readingId !== null && readingId !== '') {
+                        res = await fetch('/api/reading/' + encodeURIComponent(readingId));
+                    } else {
+                        const body = new URLSearchParams({
+                            deck_id: form.deckId,
+                            number_of_cards: form.numberOfCards,
+                            reversal_chance: form.reversalChance,
+                            number_of_shuffles: form.numberOfShuffles,
+                            use_additional_cards: form.useAdditionalCards
+                        });
+                        res = await fetch('/api/reading/new/', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: body.toString()
+                        });
+                    }
+
+                    if (!res.ok) {
+                        alertModalActive.value = true;
+                        return;
+                    }
+
+                    const data = await res.json();
+                    reading.value = data;
+                    readingInfo.value = JSON.parse(data.reading_info);
+                    currentPage.value = 'reading';
+                    burgerOpen.value = false;
+                } catch {
+                    alertModalActive.value = true;
+                }
+            }
+
+            function checkURLForReading() {
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.has('rid')) {
+                    fetchReading(urlParams.get('rid'));
+                }
+            }
+
+            function copyReadingUrl() {
+                navigator.clipboard.writeText(readingUrl.value);
+            }
+
+            // ── Lightbox Methods ────────────────────────────────────
+            function openLightbox(index) {
+                lightbox.index = index;
+                lightbox.active = true;
+                document.body.style.overflow = 'hidden';
+            }
+
+            function closeLightbox() {
+                lightbox.active = false;
+                document.body.style.overflow = '';
+            }
+
+            function lightboxPrev() {
+                if (lightbox.index > -1) {
+                    lightbox.index--;
+                }
+            }
+
+            function lightboxNext() {
+                if (lightbox.index < readingCards.value.length - 1) {
+                    lightbox.index++;
+                }
+            }
+
+            function handleLightboxKeyboard(e) {
+                if (!lightbox.active) return;
+                if (e.key === 'Escape') closeLightbox();
+                else if (e.key === 'ArrowLeft') lightboxPrev();
+                else if (e.key === 'ArrowRight') lightboxNext();
+            }
+
+            // ── Lifecycle ───────────────────────────────────────────
+            onMounted(async () => {
+                await fetchDecks();
                 checkURLForReading();
-            }
-        });
-    }
+                document.addEventListener('keydown', handleLightboxKeyboard);
+            });
 
-    // Check URL Data
-    function checkURLForReading() {
-        // Get Search Parameters
-        let urlParams = new URLSearchParams(window.location.search);
-
-        // Check for Reading
-        if(urlParams.has('rid')) {
-            let readingID = urlParams.get('rid');
-
-            // Get the Reading Data
-            getReadingData(readingID);
+            // ── Expose to Template ──────────────────────────────────
+            return {
+                currentPage,
+                burgerOpen,
+                searchReadingId,
+                alertModalActive,
+                decks,
+                reading,
+                readingInfo,
+                form,
+                lightbox,
+                currentYear,
+                selectedDeck,
+                readingDeck,
+                cardBackUrl,
+                readingUrl,
+                readingCards,
+                lightboxImageSrc,
+                lightboxImageTitle,
+                navigateTo,
+                viewReading,
+                submitNewReading,
+                resetForm,
+                copyReadingUrl,
+                openLightbox,
+                closeLightbox,
+                lightboxPrev,
+                lightboxNext
+            };
         }
-    }
-
-    // Get Reading Data
-    function getReadingData(readingId = null) {
-        // Default is for New Reading
-        let callType = 'POST';
-        let callURL = '/api/reading/new/';
-        let callData = {
-            deck_id: $('#deck_id').val(),
-            number_of_cards: $('#number_of_cards').val(),
-            reversal_chance: $('#reversal_chance').val(),
-            number_of_shuffles: $('#number_of_shuffles').val(),
-            use_additional_cards: $('#use_additional_cards').is(':checked')
-        };
-
-        // Set Data Based On Reading ID
-        if (readingId !== '' && readingId !== null) {
-            callType = 'GET';
-            callURL = '/api/reading/' + readingId;
-            callData = {};
-        }
-        $.ajax({
-            url: callURL,
-            type: callType,
-            data: callData,
-            dataType: 'json',
-            success: function(data) {
-                // Set Home Inactive
-                $('#nav_home').removeClass('is-active');
-                $('#home').addClass('is-hidden');
-
-                // Set New Reading Active
-                $('#nav_new_reading').removeClass('is-active');
-                $('#new_reading').addClass('is-hidden');
-
-                // Set Reading Active
-                $('#reading').removeClass('is-hidden');
-
-                // Add Reading & Deck Info
-                let readingInfo = JSON.parse(data.reading_info);
-                let readingHtml = '';
-                readingHtml += '<li><strong>Reading ID</strong>: ' + data.reading_id + '</li>';
-                readingHtml += '<li><strong>Reading URL</strong>: <span class="is-family-code" id="reading_url">https://tarot.mathdad.me/?rid=' + data.reading_id + '</span> <button class="button is-small is-responsive is-info is-rounded" id="copy_reading_url" title="Copy Reading URL"><span class="icon is-small"><i class="fa-solid fa-copy"></i></span></button></li>';
-                readingHtml += '<li><strong>Reading Date</strong>: ' + data.reading_time + '</li>';
-                readingHtml += '<li><strong>Deck</strong>: ' + deckData[readingInfo.deck_id].name + '</li>';
-                readingHtml += '<li><strong>Artist</strong>: ' + deckData[readingInfo.deck_id].artist + '</li>';
-                readingHtml += '<li><strong>Purchase URL</strong>: <a href="' + deckData[readingInfo.deck_id].purchase_url + '" target="_blank">Purchase Deck</a></li>';
-                $('#reading_data').append(readingHtml);
-
-                // Add Card Back
-                let imgURLCardBack = "assets/decks/" + readingInfo.deck_id + "/Card_Back.png";
-                $('#card_back').attr("src", imgURLCardBack)
-                $('#card_back_url').attr("href", imgURLCardBack);
-
-                // Build all card HTML at once
-                let cardsHtml = '';
-                $.each(readingInfo.draw, function(index, card) {
-                    let imgURLCard = "assets/decks/" + readingInfo.deck_id + "/Card_" + ((card.card_id + '').padStart(4, '0')) + ".png"
-                    cardsHtml += "<div class='cell'><figure class='image card-image'><a href='" + imgURLCard + "' data-lightbox='Reading' title='" + card.card_name + "'><img src='" + imgURLCard + "'" + (card.reversed ? " class='reversed'" : "") + " loading='lazy' /></a></figure></div>";
-                });
-                $('#reading_cards').append(cardsHtml);
-
-                // Copy Reading URL Listener
-                $('#copy_reading_url').on('click', function() {
-                    navigator.clipboard.writeText($('#reading_url').text());
-                });
-            },
-            error: function() {
-                $('#alert_modal').addClass('is-active');
-            }
-        });
-    }
-
-    // Clear Reading Page
-    function clearReadingPage() {
-        $('#reading').addClass('is-hidden');
-        $('#reading_data').empty();
-        $('#reading_cards').empty();
-
-        // If we have a reading ID, clear it.
-        let urlParams = new URLSearchParams(window.location.search);
-
-        // Check for Reading
-        if(urlParams.has('rid')) {
-            window.history.replaceState(null, '', window.location.pathname);
-        }
-    }
+    }).mount('#app');
 });
