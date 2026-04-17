@@ -23,18 +23,13 @@ class Connection
     {
         // If the connection isn't set, set it.
         if (!isset(self::$conn)) {
+            // Determine the correct path
+            $path = file_exists(self::PATH_TO_SQLITE_DB)
+                ? self::PATH_TO_SQLITE_DB
+                : self::CRON_PATH_TO_SQLITE_DB;
 
-            try {
-
-                // This is generally the correct path
-                self::$conn = new PDO("sqlite:" . self::PATH_TO_SQLITE_DB);
-
-            } catch (Exception $e) {
-
-                // We're probably in the cron, use the other path
-                self::$conn = new PDO("sqlite:" . self::CRON_PATH_TO_SQLITE_DB);
-
-            }
+            self::$conn = new PDO("sqlite:" . $path);
+            self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         }
 
         return self::$conn;

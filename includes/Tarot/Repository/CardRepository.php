@@ -11,9 +11,7 @@ class CardRepository
 
     public function __construct()
     {
-        if (!isset($this->data)) {
-            $this->data = new CardData();
-        }
+        $this->data = new CardData();
     }
 
     public function get(int $card_id): ?Card

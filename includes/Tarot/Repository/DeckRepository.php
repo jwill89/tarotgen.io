@@ -11,9 +11,7 @@ class DeckRepository
 
     public function __construct()
     {
-        if (!isset($this->data)) {
-            $this->data = new DeckData();
-        }
+        $this->data = new DeckData();
     }
 
     public function get(int $deck_id = null): array|Deck

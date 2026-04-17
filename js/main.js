@@ -127,10 +127,12 @@ $(document).ready(function() {
             type: 'GET',
             dataType: 'json',
             success: function(data) {
+                let options = '';
                 $.each(data, function(index, deck) {
-                    $('#deck_id').append('<option value="' + deck.deck_id + '">' + deck.name + ', Art by ' + deck.artist + (deck.non_standard ? ' (Non-Standard Deck)' : '') + (deck.is_thoth ? ' (Thoth Deck)' : '') + '</option>');
+                    options += '<option value="' + deck.deck_id + '">' + deck.name + ', Art by ' + deck.artist + (deck.non_standard ? ' (Non-Standard Deck)' : '') + (deck.is_thoth ? ' (Thoth Deck)' : '') + '</option>';
                     deckData[deck.deck_id] = {name: deck.name, artist: deck.artist, purchase_url: deck.purchase_url, is_thoth: deck.is_thoth, non_standard: deck.non_standard, has_extras: deck.has_extras, total_cards: deck.total_cards, additional_cards: deck.additional_cards};
                 });
+                $('#deck_id').append(options);
             },
             complete: function() {
                 // Check URL for Reading ID after deck data loaded
@@ -191,23 +193,27 @@ $(document).ready(function() {
 
                 // Add Reading & Deck Info
                 let readingInfo = JSON.parse(data.reading_info);
-                let readingDataDiv = $('#reading_data');
-                readingDataDiv.append('<li><strong>Reading ID</strong>: ' + data.reading_id + '</li>');
-                readingDataDiv.append('<li><strong>Reading URL</strong>: <span class="is-family-code" id="reading_url">https://tarot.mathdad.me/?rid=' + data.reading_id + '</span> <button class="button is-small is-responsive is-info is-rounded" id="copy_reading_url" title="Copy Reading URL"><span class="icon is-small"><i class="fa-solid fa-copy"></i></span></button></li>');
-                readingDataDiv.append('<li><strong>Reading Date</strong>: ' + data.reading_time + '</li>');
-                readingDataDiv.append('<li><strong>Deck</strong>: ' + deckData[readingInfo.deck_id].name + '</li>');
-                readingDataDiv.append('<li><strong>Artist</strong>: ' + deckData[readingInfo.deck_id].artist + '</li>');
-                readingDataDiv.append('<li><strong>Purchase URL</strong>: <a href="' + deckData[readingInfo.deck_id].purchase_url + '" target="_blank">Purchase Deck</a></li>');
+                let readingHtml = '';
+                readingHtml += '<li><strong>Reading ID</strong>: ' + data.reading_id + '</li>';
+                readingHtml += '<li><strong>Reading URL</strong>: <span class="is-family-code" id="reading_url">https://tarot.mathdad.me/?rid=' + data.reading_id + '</span> <button class="button is-small is-responsive is-info is-rounded" id="copy_reading_url" title="Copy Reading URL"><span class="icon is-small"><i class="fa-solid fa-copy"></i></span></button></li>';
+                readingHtml += '<li><strong>Reading Date</strong>: ' + data.reading_time + '</li>';
+                readingHtml += '<li><strong>Deck</strong>: ' + deckData[readingInfo.deck_id].name + '</li>';
+                readingHtml += '<li><strong>Artist</strong>: ' + deckData[readingInfo.deck_id].artist + '</li>';
+                readingHtml += '<li><strong>Purchase URL</strong>: <a href="' + deckData[readingInfo.deck_id].purchase_url + '" target="_blank">Purchase Deck</a></li>';
+                $('#reading_data').append(readingHtml);
 
                 // Add Card Back
                 let imgURLCardBack = "assets/decks/" + readingInfo.deck_id + "/Card_Back.png";
                 $('#card_back').attr("src", imgURLCardBack)
                 $('#card_back_url').attr("href", imgURLCardBack);
 
+                // Build all card HTML at once
+                let cardsHtml = '';
                 $.each(readingInfo.draw, function(index, card) {
                     let imgURLCard = "assets/decks/" + readingInfo.deck_id + "/Card_" + ((card.card_id + '').padStart(4, '0')) + ".png"
-                    $('#reading_cards').append("<div class='cell'><figure class='image card-image'><a href='" + imgURLCard + "' data-lightbox='Reading' title='" + card.card_name + "'><img src='" + imgURLCard + "'" + (card.reversed ? " class='reversed'" : "") + " /></a></figure></div>");
+                    cardsHtml += "<div class='cell'><figure class='image card-image'><a href='" + imgURLCard + "' data-lightbox='Reading' title='" + card.card_name + "'><img src='" + imgURLCard + "'" + (card.reversed ? " class='reversed'" : "") + " loading='lazy' /></a></figure></div>";
                 });
+                $('#reading_cards').append(cardsHtml);
 
                 // Copy Reading URL Listener
                 $('#copy_reading_url').on('click', function() {

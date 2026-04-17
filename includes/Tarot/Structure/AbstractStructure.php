@@ -15,6 +15,11 @@ use ReflectionClass;
 abstract class AbstractStructure implements JsonSerializable
 {
     /**
+     * Cache of property names per class to avoid repeated reflection.
+     */
+    private static array $propertyCache = [];
+
+    /**
      * Constructor method
      * 
      * @param array $params An associative array of properties to set on the object.
@@ -44,19 +49,26 @@ abstract class AbstractStructure implements JsonSerializable
     /**
      * JSON serialize method
      * 
-     * This method uses ReflectionClass to get the properties of the object and 
-     * adds them to an associative array which is returned.
-     * 
+     * This method caches ReflectionClass property names per class and
+     * returns an associative array of the object's properties.
+     *
      * @return array An associative array of the object's properties.
      */
     public function jsonSerialize(): array
     {
-        $reflection_class = new ReflectionClass($this);
-        $properties = $reflection_class->getProperties();
-        $data = [];
+        $class = static::class;
 
-        foreach ($properties as $property) {
-            $data[$property->getName()] = $property->getValue($this);
+        if (!isset(self::$propertyCache[$class])) {
+            $reflection_class = new ReflectionClass($this);
+            self::$propertyCache[$class] = array_map(
+                fn($prop) => $prop->getName(),
+                $reflection_class->getProperties()
+            );
+        }
+
+        $data = [];
+        foreach (self::$propertyCache[$class] as $name) {
+            $data[$name] = $this->$name;
         }
 
         return $data;

@@ -12,9 +12,7 @@ class CardData
 
     public function __construct()
     {
-        if (!isset($this->db)) {
-            $this->db = Connection::getInstance();
-        }
+        $this->db = Connection::getInstance();
     }
 
     public function retrieve(int $card_id): ?Card
@@ -51,16 +49,21 @@ class CardData
         // Initialize card data
         $card_data = [];
 
-        // Setup Query
-        $query = "SELECT * FROM cards WHERE card_id = IN (" . implode(', ', $card_ids) . ")";
+        if (empty($card_ids)) {
+            return $card_data;
+        }
+
+        // Setup Query with parameterized placeholders
+        $placeholders = implode(', ', array_fill(0, count($card_ids), '?'));
+        $query = "SELECT * FROM cards WHERE card_id IN ($placeholders)";
 
         // Prepare statement
         $stmt = $this->db->prepare($query);
 
         // If prepared statement is successful
         if ($stmt) {
-            // Try executing
-            if ($stmt->execute()) {
+            // Try executing with card_ids as bound values
+            if ($stmt->execute(array_values($card_ids))) {
                 // Fetch results
                 $card_data = $stmt->fetchAll(PDO::FETCH_CLASS, Card::class);
             }
