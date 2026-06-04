@@ -2,26 +2,38 @@
 
 namespace Routes\Internal;
 
-use PDO;
-use Tarot\Database\Connection;
-use Psr\Container\ContainerInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Tarot\Utility\Session;
 
+/**
+ * Base for HTTP controllers. Dependencies are now injected directly into each
+ * concrete controller's constructor (see the container definitions), so this
+ * base only carries shared request/session helpers.
+ */
 abstract class AbstractController
 {
-    protected ContainerInterface $container;
-
-    public function __construct(ContainerInterface $container)
+    /**
+     * Extract the client IP address from the request.
+     */
+    protected function clientIp(ServerRequestInterface $request): string
     {
-        $this->container = $container;
+        $server = $request->getServerParams();
+        return (string)($server['REMOTE_ADDR'] ?? 'unknown');
     }
 
-    protected function getConnection(): PDO
+    /**
+     * Start a session with "remember me" persistence support.
+     */
+    protected function startSessionWithPersistence(): void
     {
-        return Connection::getInstance();
+        Session::start();
     }
 
-    protected function parseParameters(array $parameters, $parameter_name, $default_value)
+    /**
+     * Mark the current session for 30-day persistence ("remember me").
+     */
+    protected function persistSession(): void
     {
-        return array_key_exists($parameter_name, $parameters) ? $parameters[$parameter_name] : $default_value;
+        Session::persist();
     }
 }
