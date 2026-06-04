@@ -1,0 +1,20 @@
+RewriteEngine On
+
+# API requests — handled by api/.htaccess
+RewriteCond %{REQUEST_URI} ^/api/
+RewriteRule ^ - [L]
+
+# Existing files served directly (card images, etc.)
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^ - [L]
+
+# Built assets in dist/ (Vite JS/CSS bundles)
+RewriteCond %{DOCUMENT_ROOT}/dist%{REQUEST_URI} -f
+RewriteRule ^(.*)$ dist/$1 [L]
+
+# Shared reading links: serve the built app shell with per-reading social meta
+# injected server-side (the SPA still hydrates as normal for visitors).
+RewriteRule ^reading/[A-Za-z0-9]+/?$ og.php [L]
+
+# SPA fallback — serve the built app
+RewriteRule ^ dist/index.html [L]

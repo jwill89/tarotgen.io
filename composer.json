@@ -9,21 +9,32 @@
         }
     },
     "require": {
-        "slim/slim": "*",
-        "slim/psr7": "*",
-        "slim/http": "*",
+        "ext-pdo": "*",
+        "lbuchs/webauthn": "^2.2",
         "php-di/slim-bridge": "*",
-        "ext-pdo": "*"
+        "phpmailer/phpmailer": "^6.9",
+        "slim/http": "*",
+        "slim/psr7": "*",
+        "slim/slim": "*"
     },
     "autoload": {
         "psr-4": {
-            "Tarot\\": ["includes/", "includes/Tarot"],
-            "Routes\\": ["api/", "api/Routes"]
+            "Tarot\\": "includes/Tarot",
+            "Routes\\": "api/Routes"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tarot\\Tests\\": "tests"
         }
     },
     "require-dev": {
         "roave/security-advisories": "dev-latest",
         "squizlabs/php_codesniffer": "*",
-        "friendsofphp/php-cs-fixer": "*"
+        "friendsofphp/php-cs-fixer": "*",
+        "phpunit/phpunit": "^12.0"
+    },
+    "scripts": {
+        "test": "phpunit"
     }
 }
