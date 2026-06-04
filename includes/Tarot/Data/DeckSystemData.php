@@ -1,0 +1,151 @@
+<?php
+
+namespace Tarot\Data;
+
+use Tarot\Structure\DeckSystem;
+use Tarot\Structure\DeckSystemCard;
+
+class DeckSystemData extends AbstractData
+{
+    public function retrieve(?int $id = null): array
+    {
+        if ($id !== null) {
+            return $this->fetchAllAs(
+                "SELECT * FROM deck_systems WHERE deck_system_id = :id",
+                [':id' => $id],
+                DeckSystem::class
+            );
+        }
+
+        return $this->fetchAllAs("SELECT * FROM deck_systems ORDER BY name", [], DeckSystem::class);
+    }
+
+    public function retrieveApproved(): array
+    {
+        return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 1 ORDER BY name", [], DeckSystem::class);
+    }
+
+    public function retrievePending(): array
+    {
+        return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 0 ORDER BY name", [], DeckSystem::class);
+    }
+
+    public function store(array $data): ?DeckSystem
+    {
+        $sql = "INSERT INTO deck_systems (name, short_name, total_cards, approved, submitted_by)
+                VALUES (:name, :short_name, :total_cards, :approved, :submitted_by)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':name'         => $data['name'] ?? '',
+            ':short_name'   => $data['short_name'] ?? '',
+            ':total_cards'  => (int)($data['total_cards'] ?? 78),
+            ':approved'     => (int)($data['approved'] ?? false),
+            ':submitted_by' => $data['submitted_by'] ?? null,
+        ]);
+
+        $id = (int)$this->db->lastInsertId();
+        $result = $this->retrieve($id);
+
+        return $result[0] ?? null;
+    }
+
+    public function update(int $id, array $data): ?DeckSystem
+    {
+        $allowed  = ['name', 'short_name', 'total_cards', 'approved'];
+        $boolCols = ['approved'];
+        $intCols  = ['total_cards'];
+
+        if (!$this->applyUpdate('deck_systems', $data, $allowed, ['deck_system_id' => $id], $intCols, $boolCols)) {
+            return null;
+        }
+
+        $result = $this->retrieve($id);
+        return $result[0] ?? null;
+    }
+
+    public function delete(int $id): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM deck_systems WHERE deck_system_id = :id");
+        $stmt->execute([':id' => $id]);
+        return $stmt->rowCount() > 0;
+    }
+
+    // ── Deck System Cards ────────────────────────────────────────
+
+    public function retrieveCards(int $systemId): array
+    {
+        return $this->fetchAllAs(
+            "SELECT * FROM deck_system_cards WHERE deck_system_id = :id ORDER BY card_id",
+            [':id' => $systemId],
+            DeckSystemCard::class
+        );
+    }
+
+    public function retrieveCardsByIds(int $systemId, array $cardIds): array
+    {
+        if (empty($cardIds)) {
+            return [];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($cardIds), '?'));
+        $params = array_merge([$systemId], array_values($cardIds));
+
+        return $this->fetchAllAs(
+            "SELECT * FROM deck_system_cards WHERE deck_system_id = ? AND card_id IN ($placeholders)",
+            $params,
+            DeckSystemCard::class
+        );
+    }
+
+    public function storeCard(array $data): bool
+    {
+        $sql = "INSERT OR REPLACE INTO deck_system_cards (deck_system_id, card_id, name, keywords, meaning, advice, reversed_keywords, reversed_meaning, reversed_advice)
+                VALUES (:sys, :cid, :name, :kw, :meaning, :advice, :rkw, :rm, :ra)";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            ':sys'     => (int)($data['deck_system_id'] ?? 0),
+            ':cid'     => (int)($data['card_id'] ?? 0),
+            ':name'    => $data['name'] ?? '',
+            ':kw'      => $data['keywords'] ?? null,
+            ':meaning' => $data['meaning'] ?? null,
+            ':advice'  => $data['advice'] ?? null,
+            ':rkw'     => $data['reversed_keywords'] ?? null,
+            ':rm'      => $data['reversed_meaning'] ?? null,
+            ':ra'      => $data['reversed_advice'] ?? null,
+        ]);
+
+        return true;
+    }
+
+    public function storeCards(int $systemId, array $cards): void
+    {
+        $sql = "INSERT OR REPLACE INTO deck_system_cards (deck_system_id, card_id, name, keywords, meaning, advice, reversed_keywords, reversed_meaning, reversed_advice)
+                VALUES (:sys, :cid, :name, :kw, :meaning, :advice, :rkw, :rm, :ra)";
+
+        $stmt = $this->db->prepare($sql);
+
+        foreach ($cards as $card) {
+            $stmt->execute([
+                ':sys'     => $systemId,
+                ':cid'     => (int)($card['card_id'] ?? 0),
+                ':name'    => $card['name'] ?? '',
+                ':kw'      => $card['keywords'] ?? null,
+                ':meaning' => $card['meaning'] ?? null,
+                ':advice'  => $card['advice'] ?? null,
+                ':rkw'     => $card['reversed_keywords'] ?? null,
+                ':rm'      => $card['reversed_meaning'] ?? null,
+                ':ra'      => $card['reversed_advice'] ?? null,
+            ]);
+        }
+    }
+
+    public function deleteCards(int $systemId): bool
+    {
+        $stmt = $this->db->prepare("DELETE FROM deck_system_cards WHERE deck_system_id = :id");
+        $stmt->execute([':id' => $systemId]);
+        return true;
+    }
+}
+
