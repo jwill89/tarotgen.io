@@ -1,0 +1,75 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Tarot\Tests\Unit\Data;
+
+use PDO;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\TestCase;
+use Tarot\Data\NormalizesPositions;
+use Tarot\Data\PendingSpreadData;
+
+#[CoversClass(PendingSpreadData::class)]
+#[CoversClass(NormalizesPositions::class)]
+final class PendingSpreadDataTest extends TestCase
+{
+    private PDO $pdo;
+    private PendingSpreadData $data;
+
+    protected function setUp(): void
+    {
+        $this->pdo = new PDO('sqlite::memory:');
+        $this->pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $this->pdo->exec(
+            "CREATE TABLE pending_spreads (
+                pending_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL DEFAULT '',
+                description TEXT NOT NULL DEFAULT '',
+                card_count INTEGER NOT NULL DEFAULT 1,
+                positions TEXT NOT NULL DEFAULT '[]',
+                submitter TEXT NOT NULL DEFAULT '',
+                submitted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                user_id INTEGER DEFAULT NULL
+            )"
+        );
+        $this->pdo->exec('CREATE TABLE users (user_id INTEGER PRIMARY KEY, display_name TEXT)');
+        $this->pdo->exec("INSERT INTO users (user_id, display_name) VALUES (1, 'Stargazer')");
+        $this->data = new PendingSpreadData($this->pdo);
+    }
+
+    private function payload(): array
+    {
+        return ['name' => 'My Spread', 'description' => '', 'card_count' => 1, 'positions' => [
+            ['order' => 1, 'title' => '', 'x' => 50, 'y' => 50, 'rotation' => 0],
+        ]];
+    }
+
+    public function testGuestSubmissionResolvesToGuest(): void
+    {
+        $created = $this->data->store($this->payload(), null);
+        $this->assertNotNull($created);
+        $this->assertSame('Guest', $created->getSubmitter());
+        $this->assertNull($created->getUserId());
+    }
+
+    public function testLoggedInSubmissionResolvesToDisplayName(): void
+    {
+        $created = $this->data->store($this->payload(), 1);
+        $this->assertSame('Stargazer', $created->getSubmitter());
+        $this->assertSame(1, $created->getUserId());
+
+        // Renaming the account is reflected (resolved live, not snapshotted).
+        $this->pdo->exec("UPDATE users SET display_name = 'New Name' WHERE user_id = 1");
+        $reloaded = $this->data->retrieve($created->getPendingId());
+        $this->assertSame('New Name', $reloaded[0]->getSubmitter());
+    }
+
+    public function testLegacyFreeTextSubmitterIsUsedWhenNoAccount(): void
+    {
+        // Simulate a pre-migration row that stored a free-text name.
+        $this->pdo->exec("INSERT INTO pending_spreads (name, positions, submitter) VALUES ('Old', '[]', 'Old Timer')");
+        $rows = $this->data->retrieve();
+        $this->assertSame('Old Timer', $rows[0]->getSubmitter());
+    }
+}
