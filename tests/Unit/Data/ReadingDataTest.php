@@ -29,6 +29,7 @@ final class ReadingDataTest extends TestCase
                 hide_user INTEGER NOT NULL DEFAULT 0,
                 reading_name TEXT DEFAULT NULL,
                 reading_notes TEXT DEFAULT NULL,
+                is_final INTEGER NOT NULL DEFAULT 0,
                 password_hash TEXT DEFAULT NULL
             )'
         );
@@ -113,6 +114,44 @@ final class ReadingDataTest extends TestCase
         // The owner can.
         $this->assertTrue($this->data->deleteForOwner('mine', 1));
         $this->assertNull($this->data->retrieve('mine'));
+    }
+
+    public function testMarkFinalIsScopedToTheOwnerAndIsIdempotent(): void
+    {
+        $this->data->store($this->make('lockme', 5), null);
+        $this->assertFalseOrNullFinal('lockme');
+
+        // Wrong owner can't lock it.
+        $this->assertNull($this->data->markFinal('lockme', 99));
+        $this->assertFalse($this->data->retrieve('lockme')->isFinal());
+
+        // The owner can, and a repeat call still reports the (final) state.
+        $this->assertTrue($this->data->markFinal('lockme', 5)->isFinal());
+        $this->assertTrue($this->data->markFinal('lockme', 5)->isFinal());
+    }
+
+    private function assertFalseOrNullFinal(string $id): void
+    {
+        $this->assertFalse($this->data->retrieve($id)->isFinal());
+    }
+
+    public function testUpdateReadingInfoAppendsDraw(): void
+    {
+        $this->data->store($this->make('grow', 8), null);
+
+        $updated = $this->data->updateReadingInfo(
+            'grow',
+            '{"deck_id":1,"origin":"generated","draw":[{"card_id":4}]}',
+            8
+        );
+        $this->assertNotNull($updated);
+
+        $info = json_decode($updated->getReadingInfo(), true);
+        $this->assertCount(1, $info['draw']);
+        $this->assertSame(4, $info['draw'][0]['card_id']);
+
+        // Wrong owner can't rewrite it.
+        $this->assertNull($this->data->updateReadingInfo('grow', '{"deck_id":1,"draw":[]}', 99));
     }
 
     public function testUpdateMetaIsScopedToTheOwner(): void

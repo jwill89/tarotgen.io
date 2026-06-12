@@ -27,12 +27,57 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet" />
-    <script src="https://kit.fontawesome.com/f4ac720004.js" crossorigin="anonymous" defer></script>
-    <style>[v-cloak] { display: none !important; }</style>
+    <style>
+        [v-cloak] { display: none !important; }
+
+        /* Boot loader: painted on the very first frame (inline CSS, no JS/chunk
+           needed) and removed by main.ts once the app is mounted AND the initial
+           route's lazy chunk has resolved — so the shell and view appear together
+           instead of the background/menu flashing in ahead of the content. */
+        #app-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0e0b1c;
+            transition: opacity 0.35s ease;
+        }
+        #app-loading.is-hiding { opacity: 0; }
+        #app-loading .app-loading__orb {
+            width: 2.75rem;
+            height: 2.75rem;
+            object-fit: contain;
+            animation: app-loading-pulse 1.6s ease-in-out infinite;
+        }
+        #app-loading .app-loading__ring {
+            position: absolute;
+            width: 4.75rem;
+            height: 4.75rem;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.12);
+            border-top-color: #e9c46a;
+            animation: app-loading-spin 0.9s linear infinite;
+        }
+        @keyframes app-loading-spin { to { transform: rotate(360deg); } }
+        @keyframes app-loading-pulse {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #app-loading .app-loading__ring,
+            #app-loading .app-loading__orb { animation: none; }
+        }
+    </style>
 </head>
 
 <body class="has-navbar-fixed-top">
     <div id="app" v-cloak></div>
+    <div id="app-loading" role="status" aria-label="Loading">
+        <span class="app-loading__ring" aria-hidden="true"></span>
+        <img class="app-loading__orb" src="/assets/favicon.png" alt="" aria-hidden="true" />
+    </div>
     <script type="module" src="/src/main.ts"></script>
 </body>
 

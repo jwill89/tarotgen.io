@@ -11,4 +11,6 @@ export const STORAGE_KEYS = {
     recentReadings: 'tarot.recentReadings',
     /** Cached current user (display name, is_admin, etc.) for instant nav/guards on reload. */
     currentUser: 'tarot.user.current',
+    /** Chosen heading/display font (id from HEADING_FONTS). */
+    headingFont: 'tarot.ui.headingFont',
 } as const

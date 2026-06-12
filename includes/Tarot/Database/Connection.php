@@ -6,10 +6,6 @@ use PDO;
 
 final class Connection
 {
-    // Path to DB
-    private const string PATH_TO_SQLITE_DB = "../db/tarotdb.db";
-    private const string CRON_PATH_TO_SQLITE_DB = "db/tarotdb.db";
-
     // Access Through Connection
     private static PDO $conn;
 
@@ -23,10 +19,10 @@ final class Connection
     {
         // If the connection isn't set, set it.
         if (!isset(self::$conn)) {
-            // Determine the correct path
-            $path = file_exists(self::PATH_TO_SQLITE_DB)
-                ? self::PATH_TO_SQLITE_DB
-                : self::CRON_PATH_TO_SQLITE_DB;
+            // Anchor the DB path to this file's location (project_root/db) so it
+            // resolves identically regardless of the caller's working directory
+            // (web request from /, /api, the og.php shim, or a CLI/cron script).
+            $path = dirname(__DIR__, 3) . '/db/tarotdb.db';
 
             self::$conn = new PDO("sqlite:" . $path);
             self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);

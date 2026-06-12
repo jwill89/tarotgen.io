@@ -125,6 +125,10 @@ class ReadingController extends AbstractController
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
+        if ($reading->isFinal()) {
+            return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
+        }
+
         $params = $request->getParsedBody() ?? [];
         $positions = $params['positions'] ?? [];
 
@@ -143,8 +147,14 @@ class ReadingController extends AbstractController
             return $response->withJson(['error' => 'Position count must match the number of drawn cards.'], 400);
         }
 
-        // Build spread snapshot from the placement data.
-        $spreadName = mb_substr(trim((string)($params['spread_name'] ?? '')), 0, 100) ?: 'Free Draw Placement';
+        // Build spread snapshot from the placement data. When the reading
+        // already had a spread (e.g. drawing more cards into an existing spread),
+        // preserve its identity — only the positions are being rewritten.
+        $existingSpread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
+        $spreadName = mb_substr(trim((string)($params['spread_name'] ?? '')), 0, 100);
+        if ($spreadName === '') {
+            $spreadName = (string)($existingSpread['name'] ?? '') ?: 'Free Draw Placement';
+        }
         $snappedPositions = [];
 
         foreach ($positions as $idx => $pos) {
@@ -165,9 +175,9 @@ class ReadingController extends AbstractController
         }
 
         $info['spread'] = [
-            'spread_id'   => 0,
+            'spread_id'   => (int)($existingSpread['spread_id'] ?? 0),
             'name'        => $spreadName,
-            'description' => '',
+            'description' => (string)($existingSpread['description'] ?? ''),
             'positions'   => $snappedPositions,
         ];
 
@@ -180,6 +190,87 @@ class ReadingController extends AbstractController
         }
 
         return $response->withJson(['success' => true, 'reading_id' => $reading_id]);
+    }
+
+    /**
+     * Draw additional cards into an existing generated reading owned by the
+     * caller. The new cards are appended to the draw; for a spread reading the
+     * client then opens the placement editor to position them.
+     * @throws JsonException
+     */
+    public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
+    {
+        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
+
+        if (!($reading instanceof Reading)) {
+            return $response->withJson(['error' => 'Reading not found.'], 404);
+        }
+
+        $userId = $this->currentUserId();
+        if ($userId === null || $reading->getUserId() !== $userId) {
+            return $response->withJson(['error' => 'You do not own this reading.'], 403);
+        }
+
+        if ($reading->isFinal()) {
+            return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
+        }
+
+        $info = json_decode($reading->getReadingInfo(), true, 512, JSON_THROW_ON_ERROR);
+        if (!is_array($info)) {
+            return $response->withJson(['error' => 'Invalid reading data.'], 500);
+        }
+
+        if (($info['origin'] ?? null) === 'custom') {
+            return $response->withJson(['error' => 'Custom readings cannot draw additional cards.'], 400);
+        }
+
+        try {
+            $updated = $this->readingService->drawAdditional($info, $request->getParsedBody() ?? []);
+        } catch (ApiException $e) {
+            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
+        $saved = $this->readings->updateReadingInfo(
+            $reading_id,
+            json_encode($updated, JSON_THROW_ON_ERROR),
+            $userId
+        );
+
+        if (!($saved instanceof Reading)) {
+            return $response->withJson(['error' => 'Failed to save the new cards.'], 500);
+        }
+
+        return $response->withJson($this->accessiblePayload($saved, true))
+            ->withHeader('Cache-Control', 'private, no-store');
+    }
+
+    /**
+     * Mark a reading as final, permanently locking it against further draws.
+     * One-way: there is no endpoint to undo it. Owner-only.
+     * @throws JsonException
+     */
+    public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface
+    {
+        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
+
+        if (!($reading instanceof Reading)) {
+            return $response->withJson(['error' => 'Reading not found.'], 404);
+        }
+
+        $userId = $this->currentUserId();
+        if ($userId === null || $reading->getUserId() !== $userId) {
+            return $response->withJson(['error' => 'You do not own this reading.'], 403);
+        }
+
+        $updated = $this->readings->markFinal($reading_id, $userId);
+        if (!($updated instanceof Reading)) {
+            return $response->withJson(['error' => 'Failed to finalize the reading.'], 500);
+        }
+
+        return $response->withJson($this->accessiblePayload($updated, true))
+            ->withHeader('Cache-Control', 'private, no-store');
     }
 
     /**
@@ -198,6 +289,11 @@ class ReadingController extends AbstractController
             $info = [];
         }
 
+        // Only the owner of a randomly-generated (non-custom) reading that hasn't
+        // been finalized may draw additional cards into it.
+        $origin      = $info['origin'] ?? null;
+        $canDrawMore = $isOwner && !$reading->isFinal() && $origin !== 'custom';
+
         return [
             'reading_id'    => $reading->getReadingId(),
             'reading_info'  => $info,
@@ -206,6 +302,8 @@ class ReadingController extends AbstractController
             'reading_notes' => $reading->getReadingNotes(),
             'reader'        => $this->resolveReader($reading),
             'is_owner'      => $isOwner,
+            'is_final'      => $reading->isFinal(),
+            'can_draw_more' => $canDrawMore,
             'locked'        => false,
         ];
     }

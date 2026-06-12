@@ -22,18 +22,18 @@ final class StructureTest extends TestCase
     public function testConstructorPopulatesKnownProperties(): void
     {
         $deck = new Deck([
-            'deck_id'      => 7,
-            'name'         => 'Thoth',
-            'is_thoth'     => true,
-            'non_standard' => false,
-            'total_cards'  => 78,
+            'deck_id'            => 7,
+            'name'               => 'Thoth',
+            'deck_system_id'     => 2,
+            'system_total_cards' => 78,
+            'additional_cards'   => 3,
         ]);
 
         $this->assertSame(7, $deck->getDeckId());
         $this->assertSame('Thoth', $deck->getName());
-        $this->assertTrue($deck->isThoth());
-        $this->assertFalse($deck->isNonStandard());
-        $this->assertSame(78, $deck->getTotalCards());
+        $this->assertSame(2, $deck->getDeckSystemId());
+        $this->assertSame(78, $deck->getEffectiveTotalCards());
+        $this->assertSame(3, $deck->getAdditionalCards());
     }
 
     public function testUnknownPropertiesAreIgnored(): void
@@ -52,11 +52,9 @@ final class StructureTest extends TestCase
         $deck = new Deck();
 
         $this->assertSame(0, $deck->getDeckId());
-        $this->assertSame(78, $deck->getTotalCards());
         $this->assertSame(0, $deck->getAdditionalCards());
-        $this->assertFalse($deck->isThoth());
-        $this->assertFalse($deck->hasExtras());
-        $this->assertFalse($deck->isNonStandard());
+        // No system on a bare deck → effective total falls back to a standard 78.
+        $this->assertSame(78, $deck->getEffectiveTotalCards());
     }
 
     public function testJsonSerializeReturnsEveryDeclaredProperty(): void

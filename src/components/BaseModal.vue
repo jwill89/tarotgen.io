@@ -103,7 +103,8 @@ onBeforeUnmount(() => {
 }
 
 .modal-panel-title {
-    font-family: "Cinzel", Georgia, serif;
+    font-family: var(--myst-heading-font);
+    font-variant-caps: small-caps;
     font-size: 1.2rem;
     font-weight: 700;
     color: var(--myst-gold, #e9c46a);

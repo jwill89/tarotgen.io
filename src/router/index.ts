@@ -1,36 +1,10 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 
-import HomeView from '@/views/HomeView.vue'
-import NewReadingView from '@/views/NewReadingView.vue'
-import ReadingView from '@/views/ReadingView.vue'
-import CustomReadingView from '@/views/CustomReadingView.vue'
-import FreeDrawPlacementView from '@/views/FreeDrawPlacementView.vue'
-import SubmitSpreadView from '@/views/SubmitSpreadView.vue'
-import SubmitDeckView from '@/views/SubmitDeckView.vue'
-import SubmitDeckSystemView from '@/views/SubmitDeckSystemView.vue'
-import ChangelogView from '@/views/ChangelogView.vue'
-import RegisterView from '@/views/RegisterView.vue'
-import LoginView from '@/views/LoginView.vue'
-import ActivateView from '@/views/ActivateView.vue'
-import ForgotPasswordView from '@/views/ForgotPasswordView.vue'
-import ResetPasswordView from '@/views/ResetPasswordView.vue'
-import DashboardView from '@/views/DashboardView.vue'
-import AccountReadingsView from '@/views/AccountReadingsView.vue'
-import AccountSettingsView from '@/views/AccountSettingsView.vue'
-import AccountSpreadsView from '@/views/AccountSpreadsView.vue'
-import AdminDashboardView from '@/views/admin/DashboardView.vue'
-import AdminDecksView from '@/views/admin/DecksView.vue'
-import AdminDeckSystemsView from '@/views/admin/DeckSystemsView.vue'
-import AdminSpecialCardsView from '@/views/admin/SpecialCardsView.vue'
-import AdminSpreadsView from '@/views/admin/SpreadsView.vue'
-import AdminReadingsView from '@/views/admin/ReadingsView.vue'
-import AdminChangelogView from '@/views/admin/ChangelogView.vue'
-import AdminUsersView from '@/views/admin/UsersView.vue'
-import AdminContactsView from '@/views/admin/ContactsView.vue'
-import ContactView from '@/views/ContactView.vue'
-import PrivacyPolicyView from '@/views/PrivacyPolicyView.vue'
-import TermsOfServiceView from '@/views/TermsOfServiceView.vue'
+// Route components are loaded lazily (() => import(...)) so each view — and its
+// heavier dependencies (e.g. the TipTap markdown editor, admin tables) — is
+// split into its own chunk and only fetched when that route is visited. This
+// keeps the initial bundle to the app shell + shared vendor code.
 
 const BASE_TITLE = 'TarotGen.io Tarot Generator'
 
@@ -55,44 +29,44 @@ const router = createRouter({
         {
             path: '/',
             name: 'home',
-            component: HomeView,
+            component: () => import('@/views/HomeView.vue'),
             beforeEnter: (to) => {
                 const rid = to.query.rid as string | undefined
                 if (rid) return { name: 'reading', params: { id: rid } }
             },
         },
-        { path: '/new', name: 'new-reading', component: NewReadingView, meta: { title: 'New Reading' } },
-        { path: '/custom', name: 'custom-reading', component: CustomReadingView, meta: { title: 'Custom Reading' } },
-        { path: '/reading/:id/placement', name: 'free-draw-placement', component: FreeDrawPlacementView, meta: { title: 'Arrange Draw' } },
-        { path: '/reading/:id', name: 'reading', component: ReadingView, meta: { title: 'Reading' } },
-        { path: '/create-spread', name: 'submit-spread', component: SubmitSpreadView, meta: { title: 'Create Spread' } },
+        { path: '/new', name: 'new-reading', component: () => import('@/views/NewReadingView.vue'), meta: { title: 'New Reading' } },
+        { path: '/custom', name: 'custom-reading', component: () => import('@/views/CustomReadingView.vue'), meta: { title: 'Custom Reading' } },
+        { path: '/reading/:id/placement', name: 'free-draw-placement', component: () => import('@/views/FreeDrawPlacementView.vue'), meta: { title: 'Arrange Draw' } },
+        { path: '/reading/:id', name: 'reading', component: () => import('@/views/ReadingView.vue'), meta: { title: 'Reading' } },
+        { path: '/create-spread', name: 'submit-spread', component: () => import('@/views/SubmitSpreadView.vue'), meta: { title: 'Create Spread' } },
         { path: '/submit-spread', redirect: { name: 'submit-spread' } },
-        { path: '/submit-deck', name: 'submit-deck', component: SubmitDeckView, meta: { title: 'Submit a Deck' } },
-        { path: '/submit-deck-system', name: 'submit-deck-system', component: SubmitDeckSystemView, meta: { title: 'Submit a Deck System' } },
-        { path: '/contact', name: 'contact', component: ContactView, meta: { title: 'Contact' } },
-        { path: '/changelog', name: 'changelog', component: ChangelogView, meta: { title: 'Changelog' } },
-        { path: '/privacy', name: 'privacy-policy', component: PrivacyPolicyView, meta: { title: 'Privacy Policy' } },
-        { path: '/terms', name: 'terms-of-service', component: TermsOfServiceView, meta: { title: 'Terms of Service' } },
-        { path: '/register', name: 'register', component: RegisterView, meta: { title: 'Register', userGuest: true } },
-        { path: '/login', name: 'login', component: LoginView, meta: { title: 'Login', userGuest: true } },
-        { path: '/activate', name: 'activate', component: ActivateView, meta: { title: 'Activate Account' } },
-        { path: '/forgot-password', name: 'forgot-password', component: ForgotPasswordView, meta: { title: 'Forgot Password' } },
-        { path: '/reset-password', name: 'reset-password', component: ResetPasswordView, meta: { title: 'Reset Password' } },
-        { path: '/account', name: 'dashboard', component: DashboardView, meta: { title: 'Dashboard', userOnly: true } },
-        { path: '/account/readings', name: 'account-readings', component: AccountReadingsView, meta: { title: 'My Readings', userOnly: true } },
-        { path: '/account/settings', name: 'account-settings', component: AccountSettingsView, meta: { title: 'Account Settings', userOnly: true } },
-        { path: '/account/spreads', name: 'account-spreads', component: AccountSpreadsView, meta: { title: 'My Spreads', userOnly: true } },
+        { path: '/submit-deck', name: 'submit-deck', component: () => import('@/views/SubmitDeckView.vue'), meta: { title: 'Submit a Deck' } },
+        { path: '/submit-deck-system', name: 'submit-deck-system', component: () => import('@/views/SubmitDeckSystemView.vue'), meta: { title: 'Submit a Deck System' } },
+        { path: '/contact', name: 'contact', component: () => import('@/views/ContactView.vue'), meta: { title: 'Contact' } },
+        { path: '/changelog', name: 'changelog', component: () => import('@/views/ChangelogView.vue'), meta: { title: 'Changelog' } },
+        { path: '/privacy', name: 'privacy-policy', component: () => import('@/views/PrivacyPolicyView.vue'), meta: { title: 'Privacy Policy' } },
+        { path: '/terms', name: 'terms-of-service', component: () => import('@/views/TermsOfServiceView.vue'), meta: { title: 'Terms of Service' } },
+        { path: '/register', name: 'register', component: () => import('@/views/RegisterView.vue'), meta: { title: 'Register', userGuest: true } },
+        { path: '/login', name: 'login', component: () => import('@/views/LoginView.vue'), meta: { title: 'Login', userGuest: true } },
+        { path: '/activate', name: 'activate', component: () => import('@/views/ActivateView.vue'), meta: { title: 'Activate Account' } },
+        { path: '/forgot-password', name: 'forgot-password', component: () => import('@/views/ForgotPasswordView.vue'), meta: { title: 'Forgot Password' } },
+        { path: '/reset-password', name: 'reset-password', component: () => import('@/views/ResetPasswordView.vue'), meta: { title: 'Reset Password' } },
+        { path: '/account', name: 'dashboard', component: () => import('@/views/DashboardView.vue'), meta: { title: 'Dashboard', userOnly: true } },
+        { path: '/account/readings', name: 'account-readings', component: () => import('@/views/AccountReadingsView.vue'), meta: { title: 'My Readings', userOnly: true } },
+        { path: '/account/settings', name: 'account-settings', component: () => import('@/views/AccountSettingsView.vue'), meta: { title: 'Account Settings', userOnly: true } },
+        { path: '/account/spreads', name: 'account-spreads', component: () => import('@/views/AccountSpreadsView.vue'), meta: { title: 'My Spreads', userOnly: true } },
         // Legacy admin-login URL now points at the unified account login.
         { path: '/admin/login', redirect: { name: 'login' } },
-        { path: '/admin', name: 'admin-dashboard', component: AdminDashboardView, meta: { title: 'Admin Dashboard', admin: true } },
-        { path: '/admin/decks', name: 'admin-decks', component: AdminDecksView, meta: { title: 'Admin Decks', admin: true } },
-        { path: '/admin/deck-systems', name: 'admin-deck-systems', component: AdminDeckSystemsView, meta: { title: 'Admin Deck Systems', admin: true } },
-        { path: '/admin/special-cards', name: 'admin-special-cards', component: AdminSpecialCardsView, meta: { title: 'Admin Special Cards', admin: true } },
-        { path: '/admin/spreads', name: 'admin-spreads', component: AdminSpreadsView, meta: { title: 'Admin Spreads', admin: true } },
-        { path: '/admin/readings', name: 'admin-readings', component: AdminReadingsView, meta: { title: 'Admin Readings', admin: true } },
-        { path: '/admin/changelog', name: 'admin-changelog', component: AdminChangelogView, meta: { title: 'Admin Changelog', admin: true } },
-        { path: '/admin/users', name: 'admin-users', component: AdminUsersView, meta: { title: 'Admin Users', admin: true } },
-        { path: '/admin/contacts', name: 'admin-contacts', component: AdminContactsView, meta: { title: 'Admin Contacts', admin: true } },
+        { path: '/admin', name: 'admin-dashboard', component: () => import('@/views/admin/DashboardView.vue'), meta: { title: 'Admin Dashboard', admin: true } },
+        { path: '/admin/decks', name: 'admin-decks', component: () => import('@/views/admin/DecksView.vue'), meta: { title: 'Admin Decks', admin: true } },
+        { path: '/admin/deck-systems', name: 'admin-deck-systems', component: () => import('@/views/admin/DeckSystemsView.vue'), meta: { title: 'Admin Deck Systems', admin: true } },
+        { path: '/admin/special-cards', name: 'admin-special-cards', component: () => import('@/views/admin/SpecialCardsView.vue'), meta: { title: 'Admin Special Cards', admin: true } },
+        { path: '/admin/spreads', name: 'admin-spreads', component: () => import('@/views/admin/SpreadsView.vue'), meta: { title: 'Admin Spreads', admin: true } },
+        { path: '/admin/readings', name: 'admin-readings', component: () => import('@/views/admin/ReadingsView.vue'), meta: { title: 'Admin Readings', admin: true } },
+        { path: '/admin/changelog', name: 'admin-changelog', component: () => import('@/views/admin/ChangelogView.vue'), meta: { title: 'Admin Changelog', admin: true } },
+        { path: '/admin/users', name: 'admin-users', component: () => import('@/views/admin/UsersView.vue'), meta: { title: 'Admin Users', admin: true } },
+        { path: '/admin/contacts', name: 'admin-contacts', component: () => import('@/views/admin/ContactsView.vue'), meta: { title: 'Admin Contacts', admin: true } },
         { path: '/:pathMatch(.*)*', redirect: '/' },
     ],
 })

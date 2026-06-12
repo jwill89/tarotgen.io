@@ -92,7 +92,10 @@ class GoogleOAuthService
     /**
      * Fetch the authenticated user's profile from Google.
      *
-     * @return array{sub:string,email:string,name:string,picture:string}|null
+     * The `email_verified` claim is included so callers can refuse to bind an
+     * account to an unverified email (see GoogleAuthController::callback).
+     *
+     * @return array{sub:string,email:string,email_verified?:bool,name:string,picture:string}|null
      */
     public function fetchUserInfo(string $accessToken): ?array
     {

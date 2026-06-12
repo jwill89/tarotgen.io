@@ -13,7 +13,7 @@ class ReadingData extends AbstractData
      * hydrated onto the Reading (so it can't leak through serialization).
      */
     private const string SELECT_COLS =
-        'reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes,
+        'reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes, is_final,
          CASE WHEN password_hash IS NOT NULL AND password_hash <> \'\' THEN 1 ELSE 0 END AS password_protected';
 
     public function retrieve(string $reading_id): ?Reading
@@ -147,6 +147,29 @@ class ReadingData extends AbstractData
         return $this->retrieve($reading_id);
     }
 
+    /**
+     * Mark a reading as final (locked against further draws), scoped to its
+     * owner. One-way: the flag is never cleared. Returns the updated reading, or
+     * null when nothing matched (wrong owner / unknown id).
+     */
+    public function markFinal(string $reading_id, int $userId): ?Reading
+    {
+        $stmt = $this->db->prepare(
+            'UPDATE readings SET is_final = 1 WHERE reading_id = :id AND user_id = :uid'
+        );
+        $stmt->execute([':id' => $reading_id, ':uid' => $userId]);
+
+        // rowCount() is 0 when the value was already 1, so re-read rather than
+        // relying on it. Report success only when the row belongs to this owner
+        // (guards against an unknown id or a non-owner caller).
+        $reading = $this->retrieve($reading_id);
+        if ($reading === null || $reading->getUserId() !== $userId) {
+            return null;
+        }
+
+        return $reading;
+    }
+
     /** Delete a reading, scoped to its owner. Returns true when a row was removed. */
     public function deleteForOwner(string $reading_id, int $userId): bool
     {
@@ -229,6 +252,7 @@ class ReadingData extends AbstractData
         $reading->setHideUser((bool)(int)$row['hide_user']);
         $reading->setReadingName($row['reading_name'] !== null ? (string)$row['reading_name'] : null);
         $reading->setReadingNotes($row['reading_notes'] !== null ? (string)$row['reading_notes'] : null);
+        $reading->setIsFinal((bool)(int)($row['is_final'] ?? 0));
         $reading->setPasswordProtected((bool)(int)$row['password_protected']);
 
         return $reading;

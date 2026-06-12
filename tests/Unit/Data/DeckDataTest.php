@@ -46,10 +46,6 @@ final class DeckDataTest extends TestCase
                 name TEXT NOT NULL DEFAULT \'\',
                 artist TEXT NOT NULL DEFAULT \'\',
                 purchase_url TEXT NOT NULL DEFAULT \'\',
-                is_thoth INTEGER NOT NULL DEFAULT 0,
-                has_extras INTEGER NOT NULL DEFAULT 0,
-                non_standard INTEGER NOT NULL DEFAULT 0,
-                total_cards INTEGER NOT NULL DEFAULT 78,
                 additional_cards INTEGER NOT NULL DEFAULT 0,
                 card_aspect_w REAL NOT NULL DEFAULT 5,
                 card_aspect_h REAL NOT NULL DEFAULT 8.6,
@@ -105,21 +101,21 @@ final class DeckDataTest extends TestCase
 
     public function testUpdateOnlyWritesAllowListedColumns(): void
     {
-        $deck = $this->data->store(['name' => 'Original', 'total_cards' => 78]);
+        $deck = $this->data->store(['name' => 'Original', 'additional_cards' => 0]);
         $id = $deck->getDeckId();
 
-        // 'name' and 'total_cards' are allowed; 'submitted_by' and an unknown
+        // 'name' and 'additional_cards' are allowed; 'submitted_by' and an unknown
         // column are not and must be silently ignored (not error).
         $updated = $this->data->update($id, [
-            'name'         => 'Renamed',
-            'total_cards'  => 40,
-            'submitted_by' => 999,     // not in the allow-list
-            'evil_column'  => 'DROP',  // unknown
+            'name'             => 'Renamed',
+            'additional_cards' => 5,
+            'submitted_by'     => 999,     // not in the allow-list
+            'evil_column'      => 'DROP',  // unknown
         ]);
 
         $this->assertInstanceOf(Deck::class, $updated);
         $this->assertSame('Renamed', $updated->getName());
-        $this->assertSame(40, $updated->getTotalCards());
+        $this->assertSame(5, $updated->getAdditionalCards());
         // submitted_by stays NULL (was never set, and update can't touch it).
         $row = $this->pdo->query('SELECT submitted_by FROM decks WHERE deck_id = ' . $id)->fetch(PDO::FETCH_ASSOC);
         $this->assertNull($row['submitted_by']);

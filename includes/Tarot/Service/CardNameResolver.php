@@ -31,7 +31,7 @@ readonly class CardNameResolver
     {
         $deck_id   = $deck->getDeckId();
         $systemId  = $deck->getDeckSystemId();
-        $systemTotal = $deck->getSystemTotalCards() ?: $deck->getTotalCards();
+        $systemTotal = $deck->getEffectiveTotalCards();
 
         $standard_ids = [];
         $special_ids  = [];

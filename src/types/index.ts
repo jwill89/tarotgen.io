@@ -19,10 +19,6 @@ export interface Deck {
     name: string
     artist: string
     purchase_url: string
-    is_thoth: boolean
-    has_extras: boolean
-    non_standard: boolean
-    total_cards: number
     additional_cards: number
     /** Card slot aspect ratio (width / height components); defaults 5 × 8.6. */
     card_aspect_w: number
@@ -155,6 +151,10 @@ export interface Reading {
     reader?: string
     /** Whether the current viewer owns this reading. */
     is_owner?: boolean
+    /** True once the owner has locked the reading against further draws. */
+    is_final?: boolean
+    /** True when the viewer (owner) may draw additional cards into this reading. */
+    can_draw_more?: boolean
     /** True (with no reading_info) when the reading is password-locked for this viewer. */
     locked?: boolean
 }
@@ -174,6 +174,8 @@ export interface ReadingInfo {
     deck_id: number
     draw: DrawCard[]
     spread?: SpreadSnapshot | null
+    /** How the reading was created. Custom readings can't draw additional cards. */
+    origin?: 'generated' | 'custom'
 }
 
 export interface DrawCard {

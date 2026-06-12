@@ -4,15 +4,14 @@ namespace Tarot\Structure;
 
 class Deck extends AbstractStructure
 {
+    /** Fallback standard card count when a deck's system is missing/orphaned. */
+    public const int DEFAULT_TOTAL_CARDS = 78;
+
     protected int $deck_id = 0;
     protected int $deck_system_id = 1;
     protected string $name = '';
     protected string $artist = '';
     protected string $purchase_url = '';
-    protected bool $is_thoth = false;
-    protected bool $has_extras = false;
-    protected bool $non_standard = false;
-    protected int $total_cards = 78;
     protected int $additional_cards = 0;
     protected float $card_aspect_w = 5.0;
     protected float $card_aspect_h = 8.6;
@@ -49,25 +48,6 @@ class Deck extends AbstractStructure
     public function getPurchaseUrl(): string
     {
         return $this->purchase_url;
-    }
-
-    public function isThoth(): bool
-    {
-        return $this->is_thoth;
-    }
-    public function hasExtras(): bool
-    {
-        return $this->has_extras;
-    }
-
-    public function isNonStandard(): bool
-    {
-        return $this->non_standard;
-    }
-
-    public function getTotalCards(): int
-    {
-        return $this->total_cards;
     }
 
     public function getAdditionalCards(): int
@@ -108,5 +88,15 @@ class Deck extends AbstractStructure
     public function getSystemTotalCards(): int
     {
         return $this->system_total_cards;
+    }
+
+    /**
+     * The authoritative standard card count for this deck: its deck system's
+     * total, falling back to a standard 78-card tarot deck when the system is
+     * missing (e.g. an orphaned deck whose system was deleted).
+     */
+    public function getEffectiveTotalCards(): int
+    {
+        return $this->system_total_cards > 0 ? $this->system_total_cards : self::DEFAULT_TOTAL_CARDS;
     }
 }

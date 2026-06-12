@@ -39,7 +39,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-decks' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-info">
-                            <i class="fa-solid fa-book fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-cards-blank fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Decks</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.decks + ' records' }}</p>
@@ -48,7 +48,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-deck-systems' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-link">
-                            <i class="fa-solid fa-layer-group fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-layer-group fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Deck Systems</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.deckSystems + ' systems' }}</p>
@@ -57,7 +57,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-special-cards' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-warning">
-                            <i class="fa-solid fa-star fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-sparkles fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Special Cards</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.specialCards + ' records' }}</p>
@@ -66,7 +66,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-spreads' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-link">
-                            <i class="fa-solid fa-table-cells fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-table-cells fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Spreads</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.spreads + ' records' }}</p>
@@ -75,7 +75,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-readings' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-grey-light">
-                            <i class="fa-solid fa-scroll fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-scroll fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Readings</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.readings + ' records' }}</p>
@@ -84,7 +84,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-users' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-primary">
-                            <i class="fa-solid fa-users fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-users fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Users</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.users + ' accounts' }}</p>
@@ -93,7 +93,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-contacts' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-success">
-                            <i class="fa-solid fa-envelope fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-envelope fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Contacts</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.unreadContacts + ' unread' }}</p>
@@ -102,7 +102,7 @@ onMounted(async () => {
                 <div class="column is-3">
                     <router-link :to="{ name: 'admin-changelog' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-danger">
-                            <i class="fa-solid fa-newspaper fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-newspaper fa-2x"></i>
                         </span>
                         <p class="title is-4 mt-3">Changelog</p>
                         <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.changelog + ' records' }}</p>

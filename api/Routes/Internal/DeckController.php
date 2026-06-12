@@ -63,7 +63,7 @@ class DeckController extends AbstractController
         }
 
         // Include extras so the user can place anything physically in the deck.
-        $systemTotal = $deck->getSystemTotalCards() ?: $deck->getTotalCards();
+        $systemTotal = $deck->getEffectiveTotalCards();
         $available = max(1, $systemTotal + $deck->getAdditionalCards());
 
         $names = $this->cardNames->resolve($deck, range(1, $available)); // card_id => name

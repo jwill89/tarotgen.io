@@ -45,6 +45,12 @@ class ReadingRepository
         return $this->data->updateReadingInfo($reading_id, $readingInfo, $userId);
     }
 
+    /** Mark a reading as final (one-way lock), scoped to its owner. */
+    public function markFinal(string $reading_id, int $userId): ?Reading
+    {
+        return $this->data->markFinal($reading_id, $userId);
+    }
+
     public function deleteOwned(string $reading_id, int $userId): bool
     {
         return $this->data->deleteForOwner($reading_id, $userId);

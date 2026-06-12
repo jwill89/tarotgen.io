@@ -81,7 +81,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateDrawsRequestedNumberOfCards(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 3]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
         $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
         $this->persistSucceeds();
 
@@ -99,7 +99,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateNeverDrawsMoreThanTheDeckHolds(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 2]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 2]));
         $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B']);
         $this->persistSucceeds();
 
@@ -110,7 +110,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateWithoutReversalsKeepsEveryCardUpright(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 3]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
         $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
         $this->persistSucceeds();
 
@@ -127,7 +127,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateUsesSpreadCardCountAndSnapshotsLayout(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 10]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 10]));
         $this->spreads->method('get')->willReturn(new Spread([
             'spread_id'  => 4,
             'name'       => 'Two Card',
@@ -152,7 +152,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateUsesUserSpreadCardCountAndSnapshotsLayout(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 10]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 10]));
         $this->userSpreads->method('findById')->willReturn(new UserSpread([
             'user_spread_id' => 7,
             'name'           => 'My Personal Spread',
@@ -183,7 +183,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testGenerateThrowsWithStatus404WhenSaveFails(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 3]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
         $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
         $this->readings->method('save')->willReturn(null);
 
@@ -194,6 +194,82 @@ final class ReadingServiceTest extends TestCase
             $this->assertSame(404, $e->getStatusCode());
             $this->assertSame('ErrorGeneratingReading', $e->getMessage());
         }
+    }
+
+    public function testGenerateMarksOriginAsGenerated(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
+        $this->persistSucceeds();
+
+        $reading = $this->service()->generate(['deck_id' => 1, 'number_of_cards' => 1]);
+
+        $this->assertSame('generated', $this->decodeInfo($reading)['origin']);
+    }
+
+    // ── drawAdditional() ────────────────────────────────────────
+
+    public function testDrawAdditionalAppendsUniqueCards(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
+        $this->cardNames->method('resolve')->willReturn(array_combine(range(1, 5), array_fill(0, 5, 'X')));
+
+        $info = [
+            'deck_id' => 1,
+            'origin'  => 'generated',
+            'draw'    => [
+                ['card_id' => 1, 'reversed' => false, 'card_name' => 'A'],
+                ['card_id' => 2, 'reversed' => false, 'card_name' => 'B'],
+            ],
+        ];
+
+        $updated = $this->service()->drawAdditional($info, ['count' => 2]);
+
+        // Two new entries appended, none colliding with the existing cards.
+        $this->assertCount(4, $updated['draw']);
+        $ids = array_column($updated['draw'], 'card_id');
+        $this->assertSame($ids, array_unique($ids));
+        $this->assertContains(1, $ids);
+        $this->assertContains(2, $ids);
+        foreach ($updated['draw'] as $entry) {
+            $this->assertArrayHasKey('card_name', $entry);
+        }
+    }
+
+    public function testDrawAdditionalNeverExceedsTheDeck(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
+        $this->cardNames->method('resolve')->willReturn(array_combine(range(1, 3), array_fill(0, 3, 'X')));
+
+        $info = ['deck_id' => 1, 'origin' => 'generated', 'draw' => [['card_id' => 1]]];
+
+        // Only cards 2 and 3 remain even though 10 were requested.
+        $updated = $this->service()->drawAdditional($info, ['count' => 10]);
+        $this->assertCount(3, $updated['draw']);
+    }
+
+    public function testDrawAdditionalThrowsWhenDeckExhausted(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 2]));
+
+        $info = [
+            'deck_id' => 1,
+            'origin'  => 'generated',
+            'draw'    => [['card_id' => 1], ['card_id' => 2]],
+        ];
+
+        $this->expectException(ApiException::class);
+        $this->service()->drawAdditional($info, ['count' => 1]);
+    }
+
+    public function testDrawAdditionalThrowsOnInvalidDeck(): void
+    {
+        $this->decks->method('get')->willReturn([]); // not a Deck
+
+        $this->expectException(ApiException::class);
+        $this->expectExceptionMessage('InvalidDeckID');
+
+        $this->service()->drawAdditional(['deck_id' => 999, 'draw' => []], ['count' => 1]);
     }
 
     // ── createCustom() ──────────────────────────────────────────
@@ -221,7 +297,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomRejectsCardOutsideDeckRange(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('A selected card is not part of this deck.');
@@ -234,7 +310,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomRejectsDuplicateCards(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
 
         $this->expectException(ApiException::class);
         $this->expectExceptionMessage('Each card can only be used once in a reading.');
@@ -247,7 +323,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomThrowsWhenNameCannotBeResolved(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
         $this->cardNames->method('resolve')->willReturn([]); // nothing resolves
 
         $this->expectException(ApiException::class);
@@ -261,7 +337,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomBuildsOrderedDrawAndSpreadSnapshot(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
         $this->cardNames->method('resolve')->willReturn([1 => 'The Fool', 3 => 'The Empress']);
         $this->persistSucceeds();
 
@@ -296,7 +372,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomAcceptsCardsAsJsonString(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
         $this->cardNames->method('resolve')->willReturn([2 => 'The High Priestess']);
         $this->persistSucceeds();
 
@@ -312,7 +388,7 @@ final class ReadingServiceTest extends TestCase
 
     public function testCreateCustomDefaultsBlankNameToCustomReading(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
         $this->cardNames->method('resolve')->willReturn([1 => 'The Fool']);
         $this->persistSucceeds();
 
@@ -325,9 +401,20 @@ final class ReadingServiceTest extends TestCase
         $this->assertSame('Custom Reading', $this->decodeInfo($reading)['spread']['name']);
     }
 
+    public function testCreateCustomMarksOriginAsCustom(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'The Fool']);
+        $this->persistSucceeds();
+
+        $reading = $this->service()->createCustom(['deck_id' => 1, 'cards' => [['card_id' => 1]]]);
+
+        $this->assertSame('custom', $this->decodeInfo($reading)['origin']);
+    }
+
     public function testCreateCustomThrowsWithStatus500WhenSaveFails(): void
     {
-        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'total_cards' => 5]));
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
         $this->cardNames->method('resolve')->willReturn([1 => 'The Fool']);
         $this->readings->method('save')->willReturn(null);
 
