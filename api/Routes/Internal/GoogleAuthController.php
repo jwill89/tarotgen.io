@@ -103,6 +103,20 @@ class GoogleAuthController extends AbstractController
         $intent = $_SESSION['google_oauth_intent'] ?? 'login';
         unset($_SESSION['google_oauth_intent']);
 
+        // The link flow binds by Google `sub` to the already-authenticated
+        // session user and never trusts the email. Login/register, however, match
+        // or create an account *by email* — so we must reject an unverified
+        // Google email, which would otherwise allow account takeover/squatting.
+        $emailVerified = filter_var($info['email_verified'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        if ($intent !== 'link' && !$emailVerified) {
+            $dest = $intent === 'register' ? '/register' : '/login';
+            return $this->redirectToFrontend(
+                $response,
+                $dest,
+                'Your Google email address is not verified. Please verify it with Google and try again.'
+            );
+        }
+
         return match ($intent) {
             'link'     => $this->handleLink($response, $googleId),
             'register' => $this->handleRegister($response, $googleId, $email, $name),

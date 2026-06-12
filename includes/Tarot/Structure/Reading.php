@@ -11,6 +11,8 @@ class Reading extends AbstractStructure
     protected bool $hide_user = false;
     protected ?string $reading_name = null;
     protected ?string $reading_notes = null;
+    /** One-way lock: when true the owner can no longer draw additional cards. */
+    protected bool $is_final = false;
     /** Derived flag — true when a view password is set. The hash itself is never exposed. */
     protected bool $password_protected = false;
 
@@ -82,6 +84,16 @@ class Reading extends AbstractStructure
     public function setReadingNotes(?string $reading_notes): void
     {
         $this->reading_notes = $reading_notes;
+    }
+
+    public function isFinal(): bool
+    {
+        return $this->is_final;
+    }
+
+    public function setIsFinal(bool $is_final): void
+    {
+        $this->is_final = $is_final;
     }
 
     public function isPasswordProtected(): bool

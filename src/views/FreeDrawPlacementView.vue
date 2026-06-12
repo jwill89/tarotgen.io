@@ -55,6 +55,12 @@ const snapToGrid = ref(true)
 const canvasRef = ref<HTMLElement | null>(null)
 let draggingIndex = -1
 
+// True when the reading already had a placed spread (e.g. the owner drew more
+// cards into it) — we then pre-place the existing cards, preserve the spread's
+// name, and skip the "save as spread" prompt that the fresh free-draw flow shows.
+const isExistingSpread = ref(false)
+const existingSpreadName = ref('')
+
 // Save-spread modal
 const showSaveSpreadModal = ref(false)
 const spreadName = ref('')
@@ -72,25 +78,42 @@ onMounted(async () => {
             return
         }
         const data = await res.json()
+
+        // A finalized reading is locked — there is nothing to arrange.
+        if (data.is_final) {
+            toasts.warning('This reading is final and can no longer be edited.')
+            router.replace({ name: 'reading', params: { id: readingId.value } })
+            return
+        }
+
         const info = data.reading_info as ReadingInfo
         readingInfo.value = info
 
         // Find deck
         deck.value = decks.value.find(dk => dk.deck_id === info.deck_id) ?? null
 
+        // Existing placement (if any), keyed by position order, so cards already
+        // arranged into a spread come back pre-placed and only the new draws sit
+        // in the tray awaiting placement.
+        const positions = info.spread?.positions ?? []
+        isExistingSpread.value = positions.length > 0
+        existingSpreadName.value = info.spread?.name ?? ''
+        const byOrder = new Map(positions.map(p => [p.order, p]))
+
         // Populate slots from draw data
-        for (const card of info.draw) {
+        info.draw.forEach((card, i) => {
+            const pos = byOrder.get(i + 1)
             slots.push({
-                title: '',
-                x: 50,
-                y: 50,
-                rotation: 0,
-                placed: false,
+                title: pos?.title ?? '',
+                x: pos?.x ?? 50,
+                y: pos?.y ?? 50,
+                rotation: pos?.rotation ?? 0,
+                placed: pos !== undefined,
                 cardId: card.card_id,
                 reversed: card.reversed,
                 cardName: card.card_name,
             })
-        }
+        })
     } catch {
         toasts.error('Failed to load reading data.')
         router.replace({ name: 'home' })
@@ -217,7 +240,10 @@ async function finalizePlacement() {
         const res = await fetch(`/api/reading/${readingId.value}/placement`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ positions, spread_name: 'Free Draw Placement' }),
+            body: JSON.stringify({
+                positions,
+                spread_name: existingSpreadName.value || 'Free Draw Placement',
+            }),
         })
 
         if (!res.ok) {
@@ -226,7 +252,15 @@ async function finalizePlacement() {
         }
 
         toasts.success('Placement saved!')
-        // Offer to save the spread
+
+        // Editing an existing spread (drew more cards): no need to re-offer
+        // saving it as a reusable spread — go straight back to the reading.
+        if (isExistingSpread.value) {
+            router.push({ name: 'reading', params: { id: readingId.value } })
+            return
+        }
+
+        // Fresh free draw: offer to save the layout as a reusable spread.
         showSaveSpreadModal.value = true
     } catch (e) {
         toasts.error('Network error. Please try again.', { detail: e })

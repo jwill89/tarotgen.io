@@ -54,7 +54,10 @@ function viewReading() {
                 <div class="column is-3-desktop is-6-tablet is-12-mobile">
                     <router-link :to="{ name: 'new-reading' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-primary">
-                            <i class="fa-solid fa-wand-magic-sparkles fa-2x"></i>
+                            <span class="fa-layers fa-2x">
+                                <i class="fa-duotone fa-solid fa-cards-blank"></i>
+                                <i class="fa-solid fa-sword" data-fa-transform="shrink-9 rotate--63 left-2 up-1.1" style="color: #3b1363"></i>
+                            </span>
                         </span>
                         <p class="title is-5 mt-3">New Draw</p>
                         <p class="subtitle is-6">Draw a fresh spread of cards. Does not include detailed interpretation.</p>
@@ -64,7 +67,7 @@ function viewReading() {
                 <div class="column is-3-desktop is-6-tablet is-12-mobile">
                     <router-link :to="{ name: 'custom-reading' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-success">
-                            <i class="fa-solid fa-hand-sparkles fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-hand-holding-magic fa-2x"></i>
                         </span>
                         <p class="title is-5 mt-3">Recreate Draw</p>
                         <p class="subtitle is-6">Recreate a real spread by placing specific cards in the positions you want.</p>
@@ -74,7 +77,7 @@ function viewReading() {
                 <div class="column is-3-desktop is-6-tablet is-12-mobile">
                     <router-link :to="{ name: 'submit-spread' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-link">
-                            <i class="fa-solid fa-table-cells fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-grid-2-plus fa-2x"></i>
                         </span>
                         <p class="title is-5 mt-3">Create a Spread</p>
                         <p class="subtitle is-6">Design a custom spread to use or share with others.</p>
@@ -84,7 +87,7 @@ function viewReading() {
                 <div v-if="isLoggedIn" class="column is-3-desktop is-6-tablet is-12-mobile">
                     <router-link :to="{ name: 'submit-deck' }" class="box home-action has-text-centered">
                         <span class="icon is-large has-text-warning">
-                            <i class="fa-solid fa-layer-group fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-cards-blank fa-2x"></i>
                         </span>
                         <p class="title is-5 mt-3">Submit a Deck</p>
                         <p class="subtitle is-6">Suggest a tarot deck to be added to the site.</p>
@@ -94,7 +97,7 @@ function viewReading() {
                 <div class="column is-3-desktop is-6-tablet is-12-mobile">
                     <div class="box home-action home-action--static has-text-centered">
                         <span class="icon is-large has-text-info">
-                            <i class="fa-solid fa-magnifying-glass fa-2x"></i>
+                            <i class="fa-duotone fa-solid fa-crystal-ball fa-2x"></i>
                         </span>
                         <p class="title is-5 mt-3">View a Reading</p>
                         <div class="field has-addons mt-2">
@@ -123,7 +126,7 @@ function viewReading() {
                 <div class="is-flex is-align-items-center is-justify-content-space-between mb-1">
                     <h2 class="title is-5 mb-0">
                         <span class="icon-text">
-                            <span class="icon has-text-grey-light"><i class="fa-solid fa-clock-rotate-left"></i></span>
+                            <span class="icon has-text-grey-light"><i class="fa-duotone fa-solid fa-clock-rotate-left"></i></span>
                             <span>Your Recent Readings</span>
                         </span>
                     </h2>
@@ -135,7 +138,7 @@ function viewReading() {
                 <div class="recent-list">
                     <div v-for="r in recent" :key="r.id" class="recent-item">
                         <router-link class="recent-link" :to="{ name: 'reading', params: { id: r.id } }">
-                            <span class="icon has-text-primary"><i class="fa-solid fa-wand-sparkles"></i></span>
+                            <span class="icon has-text-primary"><i class="fa-duotone fa-solid fa-scroll-old"></i></span>
                             <span class="recent-text">
                                 <span class="recent-summary">{{ r.summary }}</span>
                                 <span class="recent-meta">{{ r.deckName }}</span>

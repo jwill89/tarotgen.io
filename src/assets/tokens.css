@@ -40,6 +40,11 @@
     /* Backwards-compatible aliases used by existing component styles. */
     --myst-panel: var(--myst-surface-2);
 
+    /* Heading/display font. Overridden at runtime by the font switcher
+       (useHeadingFont) which rewrites this variable on <html>. Every heading
+       style reads it so a single token drives them all. */
+    --myst-heading-font: "Cinzel", Georgia, "Times New Roman", serif;
+
     /* ── Bulma intent palette → mystical ───────────────────── */
     /* Action semantics (used consistently across the app):
        primary = create/generate, link = gold/utility, info = edit,
@@ -108,7 +113,10 @@
 /* Headings: mystical display serif + strong text. */
 .title {
     color: var(--myst-text-strong);
-    font-family: "Cinzel", Georgia, "Times New Roman", serif;
+    font-family: var(--myst-heading-font);
+    /* Small-caps so headings read as display caps even when the chosen font
+       isn't already all-caps. */
+    font-variant-caps: small-caps;
     letter-spacing: 0.01em;
 }
 

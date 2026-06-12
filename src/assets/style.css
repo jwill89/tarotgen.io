@@ -255,12 +255,33 @@
     padding: 4rem 0;
 }
 
-.lightbox-content img {
+.lightbox-viewport {
+    display: inline-block;
     max-width: 90vw;
     max-height: 80vh;
     border: 3px solid white;
     border-radius: 32px;
+    overflow: hidden;
+    line-height: 0;
+    touch-action: none;
+    cursor: zoom-in;
+}
+
+.lightbox-viewport.zoomed {
+    cursor: grab;
+}
+
+.lightbox-viewport.panning {
+    cursor: grabbing;
+}
+
+.lightbox-content img {
+    max-width: 90vw;
+    max-height: 80vh;
     object-fit: contain;
+    transform-origin: center center;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 .lightbox-caption {
@@ -285,7 +306,7 @@
 }
 
 .lightbox-flip-btn {
-    margin-top: 8px;
+    margin-top: 0;
     opacity: 0.85;
     transition: opacity 0.2s;
 }
@@ -294,8 +315,51 @@
     opacity: 1;
 }
 
-.lightbox-content img.reversed {
-    transform: scale(-1, -1);
+.lightbox-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.lightbox-zoom-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    border-radius: 999px;
+    color: white;
+    min-width: 38px;
+    height: 34px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.lightbox-zoom-btn:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox-zoom-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.lightbox-zoom-reset {
+    min-width: 56px;
+}
+
+.lightbox-hint {
+    color: #888;
+    font-size: 0.78rem;
+    margin-top: 8px;
 }
 
 .lightbox-close {
@@ -756,6 +820,7 @@
         right: 6px;
     }
 
+    .lightbox-viewport,
     .lightbox-content img {
         max-width: 95vw;
         max-height: 75vh;
@@ -954,7 +1019,8 @@ body {
 /* Display serif for the secondary headings (.title is themed in tokens.css). */
 .spread-detail-list-title,
 .changelog-title {
-    font-family: "Cinzel", Georgia, "Times New Roman", serif;
+    font-family: var(--myst-heading-font);
+    font-variant-caps: small-caps;
     letter-spacing: 0.01em;
 }
 

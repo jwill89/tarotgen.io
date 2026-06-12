@@ -7,6 +7,8 @@ import ToastContainer from '@/components/ToastContainer.vue'
 import StarField from '@/components/StarField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import CookieBanner from '@/components/CookieBanner.vue'
+// Font picker hidden for now; re-enable the import + tag below to audition fonts.
+// import FontSwitcher from '@/components/FontSwitcher.vue'
 
 const router = useRouter()
 const { currentUser, isLoggedIn, logout: userLogout } = useUser()
@@ -41,7 +43,10 @@ async function doUserLogout() {
         <StarField />
         <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
             <div class="navbar-brand">
-                <span class="navbar-item has-text-weight-bold is-size-5 is-hidden-touch">🔮 TarotGen.io</span>
+                <span class="navbar-item has-text-weight-bold is-size-5 is-hidden-touch">
+                    <img src="/assets/favicon.png" alt="" class="brand-logo" />
+                    TarotGen.io
+                </span>
                 <a
                     class="navbar-burger"
                     role="button"
@@ -71,7 +76,7 @@ async function doUserLogout() {
                         :to="{ name: 'new-reading' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                        <span class="icon"><i class="fa-solid fa-cards"></i></span>
                         <span>New Draw</span>
                     </router-link>
                     <router-link
@@ -79,7 +84,7 @@ async function doUserLogout() {
                         :to="{ name: 'custom-reading' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-hand-sparkles"></i></span>
+                        <span class="icon"><i class="fa-solid fa-hand-holding-magic"></i></span>
                         <span>Recreate Draw</span>
                     </router-link>
                     <router-link
@@ -87,7 +92,7 @@ async function doUserLogout() {
                         :to="{ name: 'submit-spread' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-table-cells"></i></span>
+                        <span class="icon"><i class="fa-solid fa-grid-2-plus"></i></span>
                         <span>Create a Spread</span>
                     </router-link>
                     <router-link
@@ -96,7 +101,7 @@ async function doUserLogout() {
                         :to="{ name: 'submit-deck' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-layer-group"></i></span>
+                        <span class="icon"><i class="fa-solid fa-cards-blank"></i></span>
                         <span>Submit a Deck</span>
                     </router-link>
                 </div>
@@ -158,7 +163,7 @@ async function doUserLogout() {
                             <template v-if="currentUser?.is_admin">
                                 <hr class="navbar-divider" />
                                 <div class="navbar-item admin-menu-label">
-                                    <span class="icon"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon"><i class="fa-solid fa-lock-keyhole"></i></span>
                                     <span>Admin</span>
                                 </div>
                                 <router-link class="navbar-item" :to="{ name: 'admin-dashboard' }" @click="burgerOpen = false">
@@ -166,15 +171,15 @@ async function doUserLogout() {
                                     <span>Dashboard</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-decks' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-book"></i></span>
+                                    <span class="icon"><i class="fa-solid fa-cards-blank"></i></span>
                                     <span>Decks</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-cards' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-diamond"></i></span>
+                                    <span class="icon"><i class="fa-solid fa-cards"></i></span>
                                     <span>Cards</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-special-cards' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-star"></i></span>
+                                    <span class="icon"><i class="fa-solid fa-sparkles"></i></span>
                                     <span>Special Cards</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-spreads' }" @click="burgerOpen = false">
@@ -215,6 +220,8 @@ async function doUserLogout() {
         <ConfirmDialog />
         <ToastContainer />
         <CookieBanner />
+        <!-- Font picker hidden for now; re-enable to audition heading fonts. -->
+        <!-- <FontSwitcher /> -->
 
         <footer class="footer mt-auto">
             <div class="content has-text-centered">
@@ -232,3 +239,13 @@ async function doUserLogout() {
         </footer>
     </div>
 </template>
+
+<style scoped>
+.brand-logo {
+    height: 1.6rem;
+    width: auto;
+    margin-right: 0.4rem;
+    vertical-align: middle;
+}
+</style>
+

@@ -77,7 +77,7 @@ const selectedDeck = computed(() => {
 const maxCards = computed(() => {
     const d = selectedDeck.value
     if (!d) return 78
-    const baseCards = d.system_total_cards || d.total_cards
+    const baseCards = d.system_total_cards || 78
     return baseCards + (form.useAdditionalCards ? d.additional_cards : 0)
 })
 

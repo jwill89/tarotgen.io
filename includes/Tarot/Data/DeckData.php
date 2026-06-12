@@ -52,8 +52,8 @@ class DeckData extends AbstractData
 
     public function store(array $data): ?Deck
     {
-        $sql = "INSERT INTO decks (name, artist, purchase_url, deck_system_id, is_thoth, has_extras, non_standard, total_cards, additional_cards, card_aspect_w, card_aspect_h, approved, usable, submitted_by)
-                VALUES (:name, :artist, :purchase_url, :deck_system_id, :is_thoth, :has_extras, :non_standard, :total_cards, :additional_cards, :card_aspect_w, :card_aspect_h, :approved, :usable, :submitted_by)";
+        $sql = "INSERT INTO decks (name, artist, purchase_url, deck_system_id, additional_cards, card_aspect_w, card_aspect_h, approved, usable, submitted_by)
+                VALUES (:name, :artist, :purchase_url, :deck_system_id, :additional_cards, :card_aspect_w, :card_aspect_h, :approved, :usable, :submitted_by)";
 
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
@@ -61,10 +61,6 @@ class DeckData extends AbstractData
             ':artist'           => $data['artist'] ?? '',
             ':purchase_url'     => $data['purchase_url'] ?? '',
             ':deck_system_id'   => (int)($data['deck_system_id'] ?? 1),
-            ':is_thoth'         => (int)($data['is_thoth'] ?? false),
-            ':has_extras'       => (int)($data['has_extras'] ?? false),
-            ':non_standard'     => (int)($data['non_standard'] ?? false),
-            ':total_cards'      => (int)($data['total_cards'] ?? 78),
             ':additional_cards' => (int)($data['additional_cards'] ?? 0),
             ':card_aspect_w'    => $this->clampAspect($data['card_aspect_w'] ?? 5),
             ':card_aspect_h'    => $this->clampAspect($data['card_aspect_h'] ?? 8.6),
@@ -88,9 +84,9 @@ class DeckData extends AbstractData
             }
         }
 
-        $allowed   = ['name', 'artist', 'purchase_url', 'deck_system_id', 'is_thoth', 'has_extras', 'non_standard', 'total_cards', 'additional_cards', 'card_aspect_w', 'card_aspect_h', 'approved', 'usable'];
-        $boolCols  = ['is_thoth', 'has_extras', 'non_standard', 'approved', 'usable'];
-        $intCols   = ['total_cards', 'additional_cards', 'deck_system_id'];
+        $allowed   = ['name', 'artist', 'purchase_url', 'deck_system_id', 'additional_cards', 'card_aspect_w', 'card_aspect_h', 'approved', 'usable'];
+        $boolCols  = ['approved', 'usable'];
+        $intCols   = ['additional_cards', 'deck_system_id'];
 
         if (!$this->applyUpdate('decks', $data, $allowed, ['deck_id' => $deck_id], $intCols, $boolCols)) {
             return null;

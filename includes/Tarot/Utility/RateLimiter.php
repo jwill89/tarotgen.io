@@ -43,24 +43,26 @@ readonly class RateLimiter
     /** Record one hit against $key, starting a fresh window if needed. */
     public function hit(string $key): void
     {
-        $all   = $this->read();
-        $now   = time();
-        $entry = $all[$key] ?? null;
+        $this->mutate(function (array $all) use ($key): array {
+            $now   = time();
+            $entry = $all[$key] ?? null;
 
-        if ($entry === null || $now - (int)$entry['first'] > $this->windowSeconds) {
-            $all[$key] = ['count' => 1, 'first' => $now];
-        } else {
-            $all[$key]['count']++;
-        }
+            if ($entry === null || $now - (int)$entry['first'] > $this->windowSeconds) {
+                $all[$key] = ['count' => 1, 'first' => $now];
+            } else {
+                $all[$key]['count']++;
+            }
 
-        $this->write($all);
+            return $all;
+        });
     }
 
     public function clear(string $key): void
     {
-        $all = $this->read();
-        unset($all[$key]);
-        $this->write($all);
+        $this->mutate(static function (array $all) use ($key): array {
+            unset($all[$key]);
+            return $all;
+        });
     }
 
     private function file(): string
@@ -80,8 +82,56 @@ readonly class RateLimiter
         return is_array($decoded) ? $decoded : [];
     }
 
-    private function write(array $data): void
+    /**
+     * Atomically read → prune expired entries → apply $change → write back,
+     * holding an exclusive lock for the whole read-modify-write so concurrent
+     * requests can't lose increments. Pruning on every mutation stops the file
+     * from growing without bound as new keys (IPs) accumulate over time.
+     *
+     * @param callable(array<string,array{count:int,first:int}>):array<string,array{count:int,first:int}> $change
+     */
+    private function mutate(callable $change): void
     {
-        file_put_contents($this->file(), json_encode($data), LOCK_EX);
+        $fp = @fopen($this->file(), 'c+');
+        if ($fp === false) {
+            return; // can't open temp storage — fail open rather than block users
+        }
+
+        try {
+            flock($fp, LOCK_EX);
+
+            $contents = stream_get_contents($fp);
+            $all      = json_decode((string)$contents, true);
+            $all      = is_array($all) ? $all : [];
+
+            $all = $change($this->prune($all));
+
+            $json = json_encode($all);
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, $json === false ? '{}' : $json);
+            fflush($fp);
+        } finally {
+            flock($fp, LOCK_UN);
+            fclose($fp);
+        }
+    }
+
+    /**
+     * Drop entries whose window has fully elapsed. A namespace file is only ever
+     * written by limiters sharing the same window, so this is safe.
+     *
+     * @param  array<string,array{count:int,first:int}> $all
+     * @return array<string,array{count:int,first:int}>
+     */
+    private function prune(array $all): array
+    {
+        $now = time();
+        foreach ($all as $key => $entry) {
+            if (!is_array($entry) || $now - (int)($entry['first'] ?? 0) > $this->windowSeconds) {
+                unset($all[$key]);
+            }
+        }
+        return $all;
     }
 }

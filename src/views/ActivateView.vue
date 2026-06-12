@@ -45,7 +45,7 @@ onMounted(async () => {
 
                         <template v-else-if="state === 'success'">
                             <span class="icon is-large has-text-success">
-                                <i class="fa-solid fa-circle-check fa-2x"></i>
+                                <i class="fa-duotone fa-solid fa-circle-check fa-2x"></i>
                             </span>
                             <p class="mt-3">{{ message }}</p>
                             <div class="buttons is-centered mt-4">
@@ -58,7 +58,7 @@ onMounted(async () => {
 
                         <template v-else>
                             <span class="icon is-large has-text-danger">
-                                <i class="fa-solid fa-circle-exclamation fa-2x"></i>
+                                <i class="fa-duotone fa-solid fa-circle-exclamation fa-2x"></i>
                             </span>
                             <p class="mt-3">{{ message }}</p>
                             <div class="buttons is-centered mt-4">

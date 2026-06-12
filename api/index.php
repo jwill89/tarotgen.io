@@ -18,6 +18,7 @@ use Routes\Internal\{AccountController,
     SpreadController,
     UserController};
 use Routes\Middleware\AdminAuth;
+use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
 use Tarot\Config\Env;
 
@@ -84,6 +85,11 @@ $app->add(function($request, $handler) use ($allowed_origin) {
         ->withHeader('X-Content-Type-Options', 'nosniff');
 });
 
+// CSRF defense-in-depth: reject state-changing requests from a foreign origin.
+// Added last so it runs first (outermost), short-circuiting before routing.
+// Safe methods (incl. the GET OAuth callback) and same-origin requests pass.
+$app->add(OriginGuard::class);
+
 // Deck Controllers
 $app->group('/deck', function (RouteCollectorProxy $group) {
     $group->post('/submit[/]', DeckController::class . ':submitDeck');
@@ -103,6 +109,8 @@ $app->group('/reading', function (RouteCollectorProxy $group) {
     $group->post('/new[/]', ReadingController::class . ':newReading');
     $group->post('/custom[/]', ReadingController::class . ':customReading');
     $group->put('/{reading_id}/placement[/]', ReadingController::class . ':updatePlacement');
+    $group->post('/{reading_id}/draw[/]', ReadingController::class . ':drawCards');
+    $group->put('/{reading_id}/finalize[/]', ReadingController::class . ':finalizeReading');
     $group->post('/{reading_id}/unlock[/]', ReadingController::class . ':unlockReading');
     $group->get('/{reading_id}[/]', ReadingController::class . ':getReading');
 });

@@ -151,7 +151,7 @@ onMounted(load)
                             <td>{{ formatDateTime(r.reading_time) }}</td>
                             <td>
                                 <span v-if="r.password_protected" class="tag is-warning is-light mr-1">
-                                    <span class="icon is-small"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small"><i class="fa-solid fa-lock-keyhole"></i></span>
                                     <span>Password</span>
                                 </span>
                                 <span v-if="r.hide_user" class="tag is-info is-light">Name hidden</span>

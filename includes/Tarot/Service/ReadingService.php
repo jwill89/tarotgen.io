@@ -83,7 +83,7 @@ class ReadingService
             throw new ApiException('InvalidDeckID', 400);
         }
 
-        $total_cards = $deck->getSystemTotalCards() ?: $deck->getTotalCards();
+        $total_cards = $deck->getEffectiveTotalCards();
 
         // If flag was sent, use additional cards. Default is 0 so mistakes won't affect outcome.
         if ($use_additional_cards) {
@@ -110,6 +110,10 @@ class ReadingService
 
         $reading_data            = [];
         $reading_data['deck_id'] = $deck_id;
+        // Marks this as a randomly-generated reading (free draw or spread), which
+        // — unlike a hand-authored custom reading — the owner may later draw
+        // additional cards into.
+        $reading_data['origin'] = 'generated';
 
         // Snapshot the spread layout so shared reading links render correctly
         // even if the spread is later edited or deleted.
@@ -128,6 +132,81 @@ class ReadingService
         }
 
         return $this->persist($reading_data, $this->buildOwnerOptions($userId, $params));
+    }
+
+    /**
+     * Draw additional cards into an existing generated reading and append them
+     * to its draw, never re-dealing a card already present. Returns the updated
+     * reading_info array for the caller to persist; it does not save anything
+     * itself (so the controller can scope the write to the owner).
+     *
+     * The new cards are appended to the end of the draw. For a spread reading
+     * they have no position yet — the client opens the placement editor to slot
+     * them in; for a free draw they simply extend the list.
+     *
+     * @param array<string,mixed> $info   The reading's decoded reading_info.
+     * @param array<string,mixed> $params Raw request fields (count + options).
+     * @return array<string,mixed> The updated reading_info.
+     * @throws ApiException When the deck is invalid or the deck is exhausted.
+     * @throws RandomException
+     */
+    public function drawAdditional(array $info, array $params): array
+    {
+        $count                = max(1, (int)($params['count'] ?? 1));
+        $use_reversals        = filter_var($params['use_reversals'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $use_additional_cards = filter_var($params['use_additional_cards'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+        $deck = $this->decks->get((int)($info['deck_id'] ?? 0));
+        if (!($deck instanceof Deck)) {
+            throw new ApiException('InvalidDeckID', 400);
+        }
+
+        $total_cards = $deck->getEffectiveTotalCards();
+        if ($use_additional_cards) {
+            $total_cards += $deck->getAdditionalCards();
+        }
+
+        $existing = is_array($info['draw'] ?? null) ? $info['draw'] : [];
+
+        // A physical deck holds each card once, so exclude cards already dealt.
+        $used = [];
+        foreach ($existing as $entry) {
+            if (isset($entry['card_id'])) {
+                $used[(int)$entry['card_id']] = true;
+            }
+        }
+
+        $pool = [];
+        for ($id = 1; $id <= $total_cards; $id++) {
+            if (!isset($used[$id])) {
+                $pool[] = $id;
+            }
+        }
+
+        if ($pool === []) {
+            throw new ApiException('No more cards are left to draw from this deck.', 409);
+        }
+
+        $draw = array_slice($this->secureShuffle($pool), 0, $count);
+        $n    = count($draw);
+
+        $reversal_values = $use_reversals ? $this->cutAndTurn($n) : array_fill(0, $n, false);
+        $card_names      = $this->cardNames->resolve($deck, $draw);
+
+        foreach ($draw as $key => $card_id) {
+            $entry = [
+                'card_id'  => $card_id,
+                'reversed' => $reversal_values[$key],
+            ];
+            if (isset($card_names[$card_id])) {
+                $entry['card_name'] = $card_names[$card_id];
+            }
+            $existing[] = $entry;
+        }
+
+        $info['draw'] = array_values($existing);
+
+        return $info;
     }
 
     /**
@@ -168,7 +247,7 @@ class ReadingService
             throw new ApiException('InvalidDeckID', 400);
         }
 
-        $available = max(1, ($deck->getSystemTotalCards() ?: $deck->getTotalCards()) + $deck->getAdditionalCards());
+        $available = max(1, $deck->getEffectiveTotalCards() + $deck->getAdditionalCards());
 
         // Never store more cards than the deck physically holds.
         $cards = array_slice(array_values($cards), 0, $available);
@@ -241,6 +320,8 @@ class ReadingService
 
         $reading_data = [
             'deck_id' => $deck_id,
+            // Hand-authored: excluded from the post-hoc "draw more cards" flow.
+            'origin'  => 'custom',
             'spread'  => [
                 'spread_id'   => 0,
                 'name'        => $name,
