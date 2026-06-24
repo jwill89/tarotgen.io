@@ -37,8 +37,9 @@
         "squizlabs/php_codesniffer": "*"
     },
     "scripts": {
-        "test": "phpunit -c config/phpunit.xml",
-        "stan": "phpstan analyse -c config/phpstan.neon --memory-limit=512M",
+        "dev": "php -S localhost:80 dev-router.php",
+        "test": "phpunit",
+        "stan": "phpstan analyse --memory-limit=512M",
         "lint": "phpcs",
         "lint:fix": "php-cs-fixer fix"
     }
