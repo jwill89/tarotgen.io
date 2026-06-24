@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -124,7 +125,7 @@ onMounted(() => {
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -139,7 +140,7 @@ onMounted(() => {
                     </div>
                     <div class="level-right">
                         <button class="button is-primary" @click="openAdd">
-                            <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                             <span>Add Spread</span>
                         </button>
                     </div>
@@ -148,7 +149,7 @@ onMounted(() => {
                 <div class="field">
                     <div class="control has-icons-left">
                         <input class="input" type="text" v-model="search" placeholder="Search spreads by name or ID..." />
-                        <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                        <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                     </div>
                 </div>
 
@@ -170,11 +171,11 @@ onMounted(() => {
                                 <td>
                                     <div class="buttons are-small">
                                         <button class="button is-info" @click="openEdit(spread)">
-                                            <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                             <span>Edit</span>
                                         </button>
                                         <button class="button is-danger" @click="deleteSpread(spread)">
-                                            <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                             <span>Delete</span>
                                         </button>
                                     </div>
@@ -215,7 +216,7 @@ onMounted(() => {
                                     <td>
                                         <div class="buttons are-small">
                                             <button class="button" @click="previewing = p">
-                                                <span class="icon"><i class="fa-solid fa-eye"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
                                                 <span>Preview</span>
                                             </button>
                                             <button
@@ -223,11 +224,11 @@ onMounted(() => {
                                                 :class="{ 'is-loading': busyPendingId === p.pending_id }"
                                                 @click="approvePending(p)"
                                             >
-                                                <span class="icon"><i class="fa-solid fa-check"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                                                 <span>Approve</span>
                                             </button>
                                             <button class="button is-danger" @click="rejectPending(p)">
-                                                <span class="icon"><i class="fa-solid fa-xmark"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
                                                 <span>Reject</span>
                                             </button>
                                         </div>
@@ -289,11 +290,11 @@ onMounted(() => {
                 :class="{ 'is-loading': busyPendingId === previewing.pending_id }"
                 @click="approvePending(previewing)"
             >
-                <span class="icon"><i class="fa-solid fa-check"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                 <span>Approve</span>
             </button>
             <button class="button is-danger" @click="rejectPending(previewing)">
-                <span class="icon"><i class="fa-solid fa-xmark"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
                 <span>Reject</span>
             </button>
             <button class="button" @click="previewing = null">Close</button>

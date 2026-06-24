@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref } from 'vue'
 import { useUser } from '@/composables/useUser'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
@@ -81,7 +82,7 @@ defineExpose({ collect, reset })
     </div>
 
     <p class="help mb-4" v-else>
-        <span class="icon"><i class="fa-solid fa-circle-info"></i></span>
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-info']" /></span>
         <router-link :to="{ name: 'login' }">Log in</router-link>
         to name your reading, hide your display name, or set a view password.
     </p>

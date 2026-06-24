@@ -16,6 +16,9 @@ readonly class PasskeyRepository
         return $this->data->getByUser($userId);
     }
 
+    /**
+     * @return array<string,mixed>|null
+     */
     public function findByCredentialId(string $credentialId): ?array
     {
         return $this->data->findByCredentialId($credentialId);

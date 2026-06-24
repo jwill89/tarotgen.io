@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -102,7 +103,7 @@ onMounted(fetchUsers)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -118,7 +119,7 @@ onMounted(fetchUsers)
             <div class="field">
                 <div class="control has-icons-left">
                     <input class="input" type="text" v-model="search" placeholder="Search by email, name, or ID..." />
-                    <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                 </div>
             </div>
 
@@ -141,9 +142,9 @@ onMounted(fetchUsers)
                             <td>{{ user.email }}</td>
                             <td>
                                 {{ user.display_name }}
-                                <span v-if="user.is_admin" class="icon has-text-link ml-1" title="Admin"><i class="fa-solid fa-user-shield"></i></span>
-                                <span v-if="user.google_linked" class="icon has-text-info ml-1" title="Google linked"><i class="fa-brands fa-google"></i></span>
-                                <span v-if="user.has_passkeys" class="icon has-text-success ml-1" title="Has passkey(s)"><i class="fa-solid fa-key"></i></span>
+                                <span v-if="user.is_admin" class="icon has-text-link ml-1" title="Admin"><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']" /></span>
+                                <span v-if="user.google_linked" class="icon has-text-info ml-1" title="Google linked"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
+                                <span v-if="user.has_passkeys" class="icon has-text-success ml-1" title="Has passkey(s)"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                             </td>
                             <td>
                                 <span v-if="user.is_active" class="tag is-success is-light">Active</span>
@@ -159,7 +160,7 @@ onMounted(fetchUsers)
                                         :class="{ 'is-loading': busyId === user.user_id }"
                                         @click="activate(user)"
                                     >
-                                        <span class="icon"><i class="fa-solid fa-circle-check"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-check']" /></span>
                                         <span>Activate</span>
                                     </button>
                                     <button
@@ -168,7 +169,7 @@ onMounted(fetchUsers)
                                         :class="{ 'is-loading': busyId === user.user_id }"
                                         @click="resend(user)"
                                     >
-                                        <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                                         <span>Resend Email</span>
                                     </button>
                                     <button
@@ -177,11 +178,11 @@ onMounted(fetchUsers)
                                         :disabled="busyId === user.user_id"
                                         @click="toggleAdmin(user)"
                                     >
-                                        <span class="icon"><i class="fa-solid fa-user-shield"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']" /></span>
                                         <span>{{ user.is_admin ? 'Revoke Admin' : 'Make Admin' }}</span>
                                     </button>
                                     <button class="button is-danger" @click="remove(user)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>

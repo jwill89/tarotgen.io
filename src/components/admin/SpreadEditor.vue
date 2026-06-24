@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, computed, watch } from 'vue'
 import type { Spread, SpreadPosition } from '@/types'
 import { renderMarkdown } from '@/utils/markdown'
@@ -284,59 +285,59 @@ defineExpose({
 
                 <div class="buttons has-addons are-small mb-0">
                     <button class="button is-small" tabindex="-1" :disabled="!canUndo" @click="undo" title="Undo">
-                        <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                     </button>
                     <button class="button is-small" tabindex="-1" :disabled="!canRedo" @click="redo" title="Redo">
-                        <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                     </button>
                 </div>
 
                 <button class="button is-small" :disabled="placedIndexes.length === 0" @click="centerAll" title="Center all cards in the panel (keeps spacing)">
-                    <span class="icon is-small"><i class="fa-solid fa-arrows-to-dot"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-to-dot']" /></span>
                     <span>Center</span>
                 </button>
 
                 <div class="buttons has-addons are-small mb-0">
                     <span class="button is-static is-small">Align</span>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('left')" title="Align left edges">
-                        <span class="icon is-small"><i class="fa-solid fa-align-left"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-left']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('hcenter')" title="Align horizontal centers">
-                        <span class="icon is-small"><i class="fa-solid fa-align-center"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-center']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('right')" title="Align right edges">
-                        <span class="icon is-small"><i class="fa-solid fa-align-right"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-right']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('top')" title="Align top edges">
-                        <span class="icon is-small"><i class="fa-solid fa-angles-up"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-up']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('vmiddle')" title="Align to same height (vertical centers)">
-                        <span class="icon is-small"><i class="fa-solid fa-bars"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['bars']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 2" @click="align('bottom')" title="Align bottom edges">
-                        <span class="icon is-small"><i class="fa-solid fa-angles-down"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-down']" /></span>
                     </button>
                 </div>
 
                 <div class="buttons has-addons are-small mb-0">
                     <span class="button is-static is-small">Distribute</span>
                     <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('h')" title="Equal horizontal spacing">
-                        <span class="icon is-small"><i class="fa-solid fa-arrows-left-right"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-left-right']" /></span>
                     </button>
                     <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('v')" title="Equal vertical spacing">
-                        <span class="icon is-small"><i class="fa-solid fa-arrows-up-down"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-up-down']" /></span>
                     </button>
                 </div>
 
                 <div class="buttons has-addons are-small mb-0 ml-auto">
                     <button class="button is-small" tabindex="-1" :disabled="zoom <= MIN_ZOOM" @click="zoomOut" title="Zoom out">
-                        <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-minus"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']" /></span>
                     </button>
                     <button class="button is-small" tabindex="-1" @click="resetZoom" title="Reset zoom" style="min-width: 3.5rem;">
                         {{ Math.round(zoom * 100) }}%
                     </button>
                     <button class="button is-small" tabindex="-1" :disabled="zoom >= MAX_ZOOM" @click="zoomIn" title="Zoom in">
-                        <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']" /></span>
                     </button>
                 </div>
             </div>
@@ -378,16 +379,16 @@ defineExpose({
                             @pointerup.stop
                         >
                             <button class="button is-small" tabindex="-1" @click.stop="rotate(i, -15)" title="Rotate left">
-                                <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                                <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                             </button>
                             <button class="button is-small" tabindex="-1" @click.stop="rotate(i, 15)" title="Rotate right">
-                                <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                                <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                             </button>
                             <button class="button is-small is-info" tabindex="-1" @click.stop="editIndex = i" title="Edit title">
-                                <span class="icon is-small"><i class="fa-solid fa-pen"></i></span>
+                                <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                             </button>
                             <button class="button is-small is-danger" tabindex="-1" @click.stop="unplace(i)" title="Remove from layout">
-                                <span class="icon is-small"><i class="fa-solid fa-xmark"></i></span>
+                                <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
                             </button>
                         </div>
                     </template>
@@ -400,7 +401,7 @@ defineExpose({
         <div class="field is-grouped mt-4">
             <div class="control">
                 <button class="button is-success" :class="{ 'is-loading': saving }" @click="onSave">
-                    <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                     <span>{{ props.saveLabel }}</span>
                 </button>
             </div>

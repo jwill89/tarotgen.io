@@ -9,6 +9,9 @@ namespace Tarot\Data;
  */
 trait NormalizesPositions
 {
+    /**
+     * @return list<array{order:int, title:string, x:float, y:float, rotation:int}>
+     */
     private function normalizePositions(mixed $positions): array
     {
         if (!is_array($positions)) {

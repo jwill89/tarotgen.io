@@ -35,6 +35,9 @@ class ReadingRepository
         return $this->data->verifyPassword($reading_id, $password);
     }
 
+    /**
+     * @param array<string,mixed> $fields
+     */
     public function updateMeta(string $reading_id, int $userId, array $fields): ?Reading
     {
         return $this->data->updateMeta($reading_id, $userId, $fields);
@@ -65,7 +68,7 @@ class ReadingRepository
     /**
      * Admin: paginated list of all readings.
      *
-     * @return array{rows: array, total: int}
+     * @return array{rows: list<array<string,mixed>>, total: int}
      */
     public function listAll(int $limit = 50, int $offset = 0): array
     {

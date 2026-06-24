@@ -13,6 +13,7 @@ use Tarot\Structure\Deck;
 use Tarot\Structure\Reading;
 use Tarot\Structure\Spread;
 use Tarot\Structure\UserSpread;
+use Tarot\Utility\Input;
 
 /**
  * The reading engine: turns a request (deck + options, or a hand-authored set
@@ -53,10 +54,8 @@ class ReadingService
     {
         $number_of_cards = max(1, (int)($params['number_of_cards'] ?? 1));
         $deck_id         = (int)($params['deck_id'] ?? 1);
-        // Parse with FILTER_VALIDATE_BOOLEAN so the string "false" (which a
-        // plain (bool) cast treats as true) is correctly read as false.
-        $use_reversals        = filter_var($params['use_reversals'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $use_additional_cards = filter_var($params['use_additional_cards'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $use_reversals        = Input::bool($params['use_reversals'] ?? null);
+        $use_additional_cards = Input::bool($params['use_additional_cards'] ?? null);
         $spread_id            = $params['spread_id'] ?? null;
         $user_spread_id       = $params['user_spread_id'] ?? null;
 
@@ -153,8 +152,8 @@ class ReadingService
     public function drawAdditional(array $info, array $params): array
     {
         $count                = max(1, (int)($params['count'] ?? 1));
-        $use_reversals        = filter_var($params['use_reversals'] ?? false, FILTER_VALIDATE_BOOLEAN);
-        $use_additional_cards = filter_var($params['use_additional_cards'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $use_reversals        = Input::bool($params['use_reversals'] ?? null);
+        $use_additional_cards = Input::bool($params['use_additional_cards'] ?? null);
 
         $deck = $this->decks->get((int)($info['deck_id'] ?? 0));
         if (!($deck instanceof Deck)) {
@@ -225,7 +224,7 @@ class ReadingService
     {
         $deck_id = (int)($params['deck_id'] ?? 0);
 
-        $name = mb_substr(trim((string)($params['name'] ?? '')), 0, 100);
+        $name = Input::string($params['name'] ?? null, 100);
         if ($name === '') {
             $name = 'Custom Reading';
         }
@@ -280,8 +279,8 @@ class ReadingService
             $entries[] = [
                 'order'    => $idx + 1,
                 'card_id'  => $card_id,
-                'reversed' => filter_var($card['reversed'] ?? false, FILTER_VALIDATE_BOOLEAN),
-                'title'    => mb_substr(trim((string)($card['title'] ?? '')), 0, 100),
+                'reversed' => Input::bool($card['reversed'] ?? null),
+                'title'    => Input::string($card['title'] ?? null, 100),
                 'x'        => max(0.0, min(100.0, round((float)($card['x'] ?? 50), 2))),
                 'y'        => max(0.0, min(100.0, round((float)($card['y'] ?? 50), 2))),
                 'rotation' => $rotation,
@@ -349,8 +348,6 @@ class ReadingService
             return [];
         }
 
-        $name = mb_substr(trim((string)($params['reading_name'] ?? '')), 0, 100);
-
         $passwordHash = null;
         $password = (string)($params['password'] ?? '');
         if ($password !== '') {
@@ -360,13 +357,12 @@ class ReadingService
             $passwordHash = password_hash($password, AuthService::passwordAlgo());
         }
 
-        $notes = mb_substr((string)($params['reading_notes'] ?? ''), 0, 20000);
-
         return [
             'user_id'       => $userId,
-            'hide_user'     => filter_var($params['hide_user'] ?? false, FILTER_VALIDATE_BOOLEAN),
-            'reading_name'  => $name !== '' ? $name : null,
-            'reading_notes' => trim($notes) !== '' ? $notes : null,
+            'hide_user'     => Input::bool($params['hide_user'] ?? null),
+            'reading_name'  => Input::nullableString($params['reading_name'] ?? null, 100),
+            // Notes keep internal whitespace (only the empty check is trimmed).
+            'reading_notes' => Input::nullableString($params['reading_notes'] ?? null, 20000, trim: false),
             'password_hash' => $passwordHash,
         ];
     }
@@ -394,7 +390,7 @@ class ReadingService
         foreach ($positions as $idx => $pos) {
             $custom = $custom_titles[$idx] ?? null;
             if (is_string($custom)) {
-                $custom = mb_substr(trim($custom), 0, 100);
+                $custom = Input::string($custom, 100);
                 if ($custom !== '') {
                     $positions[$idx]['title'] = $custom;
                 }
@@ -428,6 +424,7 @@ class ReadingService
      * Wrap reading data in a {@see Reading}, assign an id, and save it.
      *
      * @param array<string,mixed> $reading_data
+     * @param array<string,mixed> $owner
      * @throws ApiException When the save fails.
      * @throws JsonException
      * @throws RandomException

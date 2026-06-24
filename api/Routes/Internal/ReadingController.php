@@ -11,6 +11,7 @@ use Tarot\Repository\ReadingRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\ReadingService;
 use Tarot\Structure\Reading;
+use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 
 class ReadingController extends AbstractController
@@ -22,6 +23,9 @@ class ReadingController extends AbstractController
     ) {
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function getReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -49,6 +53,9 @@ class ReadingController extends AbstractController
             ->withHeader('Cache-Control', 'private, no-store');
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function unlockReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -80,6 +87,9 @@ class ReadingController extends AbstractController
             ->withHeader('Cache-Control', 'private, no-store');
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
@@ -90,6 +100,9 @@ class ReadingController extends AbstractController
         }
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
@@ -104,6 +117,8 @@ class ReadingController extends AbstractController
      * Update a reading's spread/placement information after a "Free Draw With Placement"
      * has been generated. The caller provides position data which is merged into the
      * existing reading_info JSON as a spread snapshot.
+     *
+     * @param array<string,string> $args
      * @throws JsonException
      */
     public function updatePlacement(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -151,7 +166,7 @@ class ReadingController extends AbstractController
         // already had a spread (e.g. drawing more cards into an existing spread),
         // preserve its identity — only the positions are being rewritten.
         $existingSpread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
-        $spreadName = mb_substr(trim((string)($params['spread_name'] ?? '')), 0, 100);
+        $spreadName = Input::string($params['spread_name'] ?? null, 100);
         if ($spreadName === '') {
             $spreadName = (string)($existingSpread['name'] ?? '') ?: 'Free Draw Placement';
         }
@@ -167,7 +182,7 @@ class ReadingController extends AbstractController
 
             $snappedPositions[] = [
                 'order'    => $idx + 1,
-                'title'    => mb_substr(trim((string)($pos['title'] ?? '')), 0, 100),
+                'title'    => Input::string($pos['title'] ?? null, 100),
                 'x'        => max(0.0, min(100.0, round((float)($pos['x'] ?? 50), 2))),
                 'y'        => max(0.0, min(100.0, round((float)($pos['y'] ?? 50), 2))),
                 'rotation' => $rotation,
@@ -196,6 +211,8 @@ class ReadingController extends AbstractController
      * Draw additional cards into an existing generated reading owned by the
      * caller. The new cards are appended to the draw; for a spread reading the
      * client then opens the placement editor to position them.
+     *
+     * @param array<string,string> $args
      * @throws JsonException
      */
     public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -248,6 +265,8 @@ class ReadingController extends AbstractController
     /**
      * Mark a reading as final, permanently locking it against further draws.
      * One-way: there is no endpoint to undo it. Owner-only.
+     *
+     * @param array<string,string> $args
      * @throws JsonException
      */
     public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface

@@ -33,6 +33,9 @@ class ChangelogData extends AbstractData
         return array_map([$this, 'hydrate'], $rows);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?ChangelogEntry
     {
         $sql = "INSERT INTO changelog (title, body, entry_date)
@@ -50,6 +53,9 @@ class ChangelogData extends AbstractData
         return $result[0] ?? null;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $entry_id, array $data): ?ChangelogEntry
     {
         $fields = [];
@@ -88,6 +94,9 @@ class ChangelogData extends AbstractData
         return $stmt->execute([':entry_id' => $entry_id]);
     }
 
+    /**
+     * @param array<string,mixed> $row
+     */
     private function hydrate(array $row): ChangelogEntry
     {
         return new ChangelogEntry([

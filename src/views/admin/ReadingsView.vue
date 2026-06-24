@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted, useTemplateRef, nextTick } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -134,7 +135,7 @@ onMounted(fetchReadings)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -147,7 +148,7 @@ onMounted(fetchReadings)
                 </div>
                 <div class="level-right">
                     <button class="button is-danger" @click="cleanModalActive = true">
-                        <span class="icon"><i class="fa-solid fa-broom"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
                         <span>Clean Readings</span>
                     </button>
                 </div>
@@ -156,12 +157,12 @@ onMounted(fetchReadings)
             <div class="field">
                 <div class="control has-icons-left">
                     <input class="input" type="text" v-model="search" placeholder="Search by reading ID, deck, spread, or user..." />
-                    <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                 </div>
             </div>
 
             <p v-if="loading" class="has-text-grey">
-                <span class="icon"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
                 <span>Loading readings…</span>
             </p>
 
@@ -227,11 +228,11 @@ onMounted(fetchReadings)
                                 <td>
                                     <div class="buttons are-small">
                                         <button class="button is-info is-small" @click="viewReading(reading)">
-                                            <span class="icon"><i class="fa-solid fa-eye"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
                                             <span>View</span>
                                         </button>
                                         <button class="button is-danger is-small" @click="deleteReading(reading)">
-                                            <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                             <span>Delete</span>
                                         </button>
                                     </div>
@@ -285,7 +286,7 @@ onMounted(fetchReadings)
         <template #footer>
             <button class="button" @click="cleanModalActive = false">Cancel</button>
             <button class="button is-danger" :class="{ 'is-loading': cleanBusy }" :disabled="cleanBusy" @click="cleanOldReadings">
-                <span class="icon"><i class="fa-solid fa-broom"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
                 <span>Clean</span>
             </button>
         </template>

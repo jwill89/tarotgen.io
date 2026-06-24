@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
@@ -152,7 +153,7 @@ async function submitSystem() {
                     <p><strong>Thank you!</strong> Your deck system submission has been received and will be reviewed by an admin.</p>
                 </div>
                 <router-link :to="{ name: 'home' }" class="button is-link">
-                    <span class="icon"><i class="fa-solid fa-house"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
                     <span>Back to Home</span>
                 </router-link>
             </template>
@@ -198,11 +199,11 @@ async function submitSystem() {
                     <h4 class="title is-5 mb-0">Card Definitions</h4>
                     <div class="buttons are-small mb-0">
                         <button type="button" class="button is-small is-ghost" @click="expandAll">
-                            <span class="icon"><i class="fa-solid fa-angles-down"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-down']" /></span>
                             <span>Expand All</span>
                         </button>
                         <button type="button" class="button is-small is-ghost" @click="collapseAll">
-                            <span class="icon"><i class="fa-solid fa-angles-up"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-up']" /></span>
                             <span>Collapse All</span>
                         </button>
                     </div>
@@ -221,7 +222,7 @@ async function submitSystem() {
                             <span class="deck-card-title">{{ card.name?.trim() || 'Untitled Card' }}</span>
                             <span v-if="!card.name?.trim()" class="tag is-danger is-light ml-2">Name required</span>
                             <span class="icon deck-card-chevron">
-                                <i class="fa-solid" :class="isExpanded(index) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                <FontAwesomeIcon :icon="isExpanded(index) ? byPrefixAndName.fas['chevron-up'] : byPrefixAndName.fas['chevron-down']" />
                             </span>
                         </div>
 
@@ -292,7 +293,7 @@ async function submitSystem() {
 
                             <div class="has-text-right">
                                 <button type="button" class="button is-small is-success" @click="markDone(index)">
-                                    <span class="icon"><i class="fa-solid fa-check"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                                     <span>Done</span>
                                 </button>
                             </div>
@@ -307,7 +308,7 @@ async function submitSystem() {
                         :disabled="submitting || !allCardTitlesValid"
                         @click="submitSystem"
                     >
-                        <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                         <span>Submit Deck System</span>
                     </button>
                     <p v-if="!allCardTitlesValid" class="help is-danger mt-2">

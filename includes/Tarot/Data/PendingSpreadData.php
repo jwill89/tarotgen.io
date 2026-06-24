@@ -10,6 +10,9 @@ class PendingSpreadData extends AbstractData
 {
     use NormalizesPositions;
 
+    /**
+     * @return list<PendingSpread>
+     */
     public function retrieve(?int $pending_id = null): array
     {
         // Resolve the submitter label from the linked account's current display
@@ -42,6 +45,9 @@ class PendingSpreadData extends AbstractData
     /**
      * @throws JsonException
      */
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data, ?int $userId = null): ?PendingSpread
     {
         $positions = $this->normalizePositions($data['positions'] ?? []);
@@ -73,6 +79,9 @@ class PendingSpreadData extends AbstractData
 
     /**
      * @throws JsonException
+     */
+    /**
+     * @param array<string,mixed> $row
      */
     private function hydrate(array $row): PendingSpread
     {

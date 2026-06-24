@@ -15,6 +15,10 @@ class SpecialCardData extends AbstractData
         );
     }
 
+    /**
+     * @param list<int> $card_ids
+     * @return list<SpecialCard>
+     */
     public function retrieveMultiple(int $deck_id, array $card_ids): array
     {
         if (empty($card_ids)) {
@@ -25,11 +29,14 @@ class SpecialCardData extends AbstractData
 
         return $this->fetchAllAs(
             "SELECT * FROM special_cards WHERE deck_id = ? AND card_id IN ($placeholders)",
-            array_merge([$deck_id], array_values($card_ids)),
+            array_merge([$deck_id], $card_ids),
             SpecialCard::class
         );
     }
 
+    /**
+     * @return list<SpecialCard>
+     */
     public function retrieveAll(?int $deck_id = null): array
     {
         if ($deck_id !== null) {
@@ -47,6 +54,9 @@ class SpecialCardData extends AbstractData
         );
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?SpecialCard
     {
         $deck_id = (int)($data['deck_id'] ?? 0);
@@ -73,6 +83,9 @@ class SpecialCardData extends AbstractData
         return $this->retrieve($deck_id, $card_id);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $deck_id, int $card_id, array $data): ?SpecialCard
     {
         $allowed = [

@@ -284,6 +284,8 @@ class PasskeyController extends AbstractController
 
     /**
      * Rename a passkey.
+     *
+     * @param array<string,string> $args
      */
     public function rename(Request $request, Response $response, array $args): Response|ResponseInterface
     {
@@ -310,6 +312,8 @@ class PasskeyController extends AbstractController
 
     /**
      * Delete a passkey.
+     *
+     * @param array<string,string> $args
      */
     public function delete(Request $request, Response $response, array $args): Response|ResponseInterface
     {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import type { ReadingCard } from '@/types'
 
@@ -252,7 +253,8 @@ function onTouchEnd(e: TouchEvent) {
 
     // Horizontal swipe navigates (only when not zoomed).
     if (!isZoomed.value && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-        dx > 0 ? next() : prev()
+        if (dx > 0) next()
+        else prev()
     }
 }
 
@@ -339,7 +341,7 @@ onUnmounted(() => {
                     :disabled="zoom <= MIN_ZOOM"
                     aria-label="Zoom out"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-minus"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']" /></span>
                 </button>
                 <button class="lightbox-zoom-btn lightbox-zoom-reset" @click="resetBtn" aria-label="Reset zoom">
                     {{ Math.round(zoom * 100) }}%
@@ -350,7 +352,7 @@ onUnmounted(() => {
                     :disabled="zoom >= MAX_ZOOM"
                     aria-label="Zoom in"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']" /></span>
                 </button>
 
                 <button
@@ -358,7 +360,7 @@ onUnmounted(() => {
                     v-if="isReversed"
                     @click="flipped = !flipped"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-rotate"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate']" /></span>
                     <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
                 </button>
             </div>

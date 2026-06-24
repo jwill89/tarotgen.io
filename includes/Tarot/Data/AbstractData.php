@@ -23,6 +23,11 @@ abstract class AbstractData
 
     /**
      * Fetch a single row hydrated into $class, or null when there is no match.
+     *
+     * @template T of object
+     * @param array<array-key,mixed> $params Bound statement params (named or positional).
+     * @param class-string<T> $class
+     * @return T|null
      */
     protected function fetchOne(string $sql, array $params, string $class): ?object
     {
@@ -38,7 +43,10 @@ abstract class AbstractData
     /**
      * Fetch every matching row hydrated into $class.
      *
-     * @return object[]
+     * @template T of object
+     * @param array<array-key,mixed> $params Bound statement params (named or positional).
+     * @param class-string<T> $class
+     * @return list<T>
      */
     protected function fetchAllAs(string $sql, array $params, string $class): array
     {

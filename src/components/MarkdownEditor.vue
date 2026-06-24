@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
@@ -86,56 +87,56 @@ function setLink() {
                     :class="{ 'is-active': editor.isActive('bold') }"
                     @click="editor.chain().focus().toggleBold().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-bold"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['bold']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Italic"
                     :class="{ 'is-active': editor.isActive('italic') }"
                     @click="editor.chain().focus().toggleItalic().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-italic"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['italic']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Heading"
                     :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
                     @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-heading"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['heading']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Quote"
                     :class="{ 'is-active': editor.isActive('blockquote') }"
                     @click="editor.chain().focus().toggleBlockquote().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-quote-left"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['quote-left']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Bulleted list"
                     :class="{ 'is-active': editor.isActive('bulletList') }"
                     @click="editor.chain().focus().toggleBulletList().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-list-ul"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ul']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Numbered list"
                     :class="{ 'is-active': editor.isActive('orderedList') }"
                     @click="editor.chain().focus().toggleOrderedList().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-list-ol"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ol']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Inline code"
                     :class="{ 'is-active': editor.isActive('code') }"
                     @click="editor.chain().focus().toggleCode().run()"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-code"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['code']" /></span>
                 </button>
                 <button
                     type="button" class="button is-small" tabindex="-1" title="Link"
                     :class="{ 'is-active': editor.isActive('link') }"
                     @click="setLink"
                 >
-                    <span class="icon is-small"><i class="fa-solid fa-link"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span>
                 </button>
             </div>
         </div>

@@ -54,7 +54,6 @@ final class ThumbnailServiceTest extends TestCase
         $im = imagecreatetruecolor(600, 1032);
         imagefill($im, 0, 0, imagecolorallocate($im, 80, 40, 160));
         imagepng($im, sprintf('%s/Card_%04d.png', $dir, $cardId));
-        imagedestroy($im);
     }
 
     public function testEnsureDeckFoldersCreatesDirectories(): void

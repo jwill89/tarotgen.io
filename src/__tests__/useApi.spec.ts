@@ -5,7 +5,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 const { pushMock } = vi.hoisted(() => ({ pushMock: vi.fn() }))
 vi.mock('vue-router', () => ({ useRouter: () => ({ push: pushMock }) }))
 
-import { apiFetch, useAdminApi, readApiError } from '@/composables/useApi'
+import { apiFetch, apiRequest, useAdminApi, readApiError } from '@/composables/useApi'
 import { useUser } from '@/composables/useUser'
 
 /** Build a minimal Response-like object for the fetch mock. */
@@ -36,6 +36,53 @@ describe('apiFetch', () => {
     it('returns null when fetch rejects (network error)', async () => {
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
         expect(await apiFetch('/deck/')).toBeNull()
+    })
+})
+
+describe('apiRequest', () => {
+    it('returns ok with parsed data and status on success', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({ id: 1 }, { status: 201 })))
+
+        const res = await apiRequest<{ id: number }>('/deck/')
+
+        expect(res).toEqual({ ok: true, status: 201, data: { id: 1 } })
+    })
+
+    it('on an error status returns the server message, status, body, and networkError=false', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+            fakeResponse({ error: 'Bad deck' }, { ok: false, status: 400 }),
+        ))
+
+        const res = await apiRequest('/deck/')
+
+        expect(res.ok).toBe(false)
+        if (!res.ok) {
+            expect(res.status).toBe(400)
+            expect(res.error).toBe('Bad deck')
+            expect(res.networkError).toBe(false)
+            expect(res.data).toEqual({ error: 'Bad deck' })
+        }
+    })
+
+    it('uses the supplied fallback when the error body has no message', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({}, { ok: false, status: 500 })))
+
+        const res = await apiRequest('/deck/', undefined, 'Custom fallback.')
+
+        expect(res.ok).toBe(false)
+        if (!res.ok) expect(res.error).toBe('Custom fallback.')
+    })
+
+    it('flags transport failures with networkError=true and status 0', async () => {
+        vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
+
+        const res = await apiRequest('/deck/')
+
+        expect(res.ok).toBe(false)
+        if (!res.ok) {
+            expect(res.networkError).toBe(true)
+            expect(res.status).toBe(0)
+        }
     })
 })
 

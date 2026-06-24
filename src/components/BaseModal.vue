@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { watch, onBeforeUnmount } from 'vue'
 
 const props = withDefaults(defineProps<{
@@ -49,7 +50,7 @@ onBeforeUnmount(() => {
                     <header class="modal-panel-head">
                         <h2 class="modal-panel-title">{{ title }}</h2>
                         <button class="modal-panel-close" type="button" aria-label="Close" @click="emit('close')">
-                            <i class="fa-solid fa-xmark"></i>
+                            <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
                         </button>
                     </header>
                     <div class="modal-panel-body">

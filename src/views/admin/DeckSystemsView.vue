@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -207,7 +208,7 @@ onMounted(() => {
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -220,7 +221,7 @@ onMounted(() => {
                 </div>
                 <div class="level-right">
                     <button class="button is-primary" @click="openAdd" :disabled="editingSystem !== null">
-                        <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                         <span>Add Deck System</span>
                     </button>
                 </div>
@@ -258,11 +259,11 @@ onMounted(() => {
                     <h5 class="title is-5 mb-0">Card Definitions</h5>
                     <div class="buttons are-small mb-0">
                         <button type="button" class="button is-small is-ghost" @click="expandAllCards">
-                            <span class="icon"><i class="fa-solid fa-angles-down"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-down']" /></span>
                             <span>Expand All</span>
                         </button>
                         <button type="button" class="button is-small is-ghost" @click="collapseAllCards">
-                            <span class="icon"><i class="fa-solid fa-angles-up"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-up']" /></span>
                             <span>Collapse All</span>
                         </button>
                     </div>
@@ -281,7 +282,7 @@ onMounted(() => {
                             <span class="deck-card-title">{{ card.name?.trim() || 'Untitled Card' }}</span>
                             <span v-if="!card.name?.trim()" class="tag is-danger is-light ml-2">Name required</span>
                             <span class="icon deck-card-chevron">
-                                <i class="fa-solid" :class="isCardExpanded(index) ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                <FontAwesomeIcon :icon="isCardExpanded(index) ? byPrefixAndName.fas['chevron-up'] : byPrefixAndName.fas['chevron-down']" />
                             </span>
                         </div>
 
@@ -352,7 +353,7 @@ onMounted(() => {
 
                             <div class="has-text-right">
                                 <button type="button" class="button is-small is-success" @click="markCardDone(index)">
-                                    <span class="icon"><i class="fa-solid fa-check"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                                     <span>Done</span>
                                 </button>
                             </div>
@@ -374,7 +375,7 @@ onMounted(() => {
                             :disabled="saving || !allCardTitlesValid"
                             @click="saveSystem"
                         >
-                            <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                             <span>{{ isNew ? 'Create' : 'Save' }}</span>
                         </button>
                     </div>
@@ -406,15 +407,15 @@ onMounted(() => {
                                 <td>
                                     <div class="buttons are-small">
                                         <button class="button is-success" @click="approveSystem(sys)">
-                                            <span class="icon"><i class="fa-solid fa-check"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                                             <span>Approve</span>
                                         </button>
                                         <button class="button is-info" @click="openEdit(sys)">
-                                            <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                             <span>Edit</span>
                                         </button>
                                         <button class="button is-danger" @click="deleteSystem(sys)">
-                                            <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                             <span>Delete</span>
                                         </button>
                                     </div>
@@ -431,7 +432,7 @@ onMounted(() => {
             <div class="field">
                 <div class="control has-icons-left">
                     <input class="input" type="text" v-model="search" placeholder="Search by name or short name..." />
-                    <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                 </div>
             </div>
 
@@ -455,11 +456,11 @@ onMounted(() => {
                             <td>
                                 <div class="buttons are-small">
                                     <button class="button is-info" @click="openEdit(sys)">
-                                        <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                         <span>Edit</span>
                                     </button>
                                     <button class="button is-danger" @click="deleteSystem(sys)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
@@ -78,7 +79,7 @@ function resetForm() {
                 </p>
                 <div class="buttons">
                     <button class="button is-link" @click="resetForm">
-                        <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                         <span>Send Another Message</span>
                     </button>
                     <router-link :to="{ name: 'home' }" class="button">Back to Home</router-link>
@@ -97,7 +98,7 @@ function resetForm() {
                             :disabled="isLoggedIn"
                             required
                         />
-                        <span class="icon is-small is-left"><i class="fa-solid fa-user"></i></span>
+                        <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>
                     </div>
                 </div>
 
@@ -112,7 +113,7 @@ function resetForm() {
                             :disabled="isLoggedIn"
                             required
                         />
-                        <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
+                        <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
                     </div>
                 </div>
 
@@ -133,7 +134,7 @@ function resetForm() {
                             :class="{ 'is-loading': submitting }"
                             :disabled="submitting"
                         >
-                            <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                             <span>Send Message</span>
                         </button>
                     </div>

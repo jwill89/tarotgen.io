@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, computed, watch, onMounted, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import ReadingOwnerOptions from '@/components/ReadingOwnerOptions.vue'
@@ -12,7 +13,7 @@ import { STORAGE_KEYS } from '@/constants'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { readApiError } from '@/composables/useApi'
-import { deckLabel, defaultDeckId } from '@/utils/deck'
+import { defaultDeckId } from '@/utils/deck'
 import { usePanZoom } from '@/composables/usePanZoom'
 import { useLayoutTools } from '@/composables/useLayoutTools'
 import { useUndoRedo } from '@/composables/useUndoRedo'
@@ -201,11 +202,6 @@ const usedCardIds = computed(
 // The slot currently open in the edit modal (null when closed).
 const editingSlot = computed(() => (editIndex.value === null ? null : slots[editIndex.value]))
 
-function cardName(cardId: number | null): string {
-    if (cardId === null) return ''
-    return deckCards.value.find(c => c.card_id === cardId)?.name ?? ''
-}
-
 function cardThumb(cardId: number | null): string {
     if (cardId === null || deckId.value === null) return ''
     const filename = 'Card_' + String(cardId).padStart(4, '0')
@@ -389,7 +385,7 @@ async function submit() {
                                     </option>
                                 </select>
                             </div>
-                            <span class="icon is-small is-left"><i class="fa-solid fa-table-cells"></i></span>
+                            <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span>
                         </div>
                         <p class="help">Pre-fills the card count and positions; you still choose which card goes in each spot.</p>
                     </div>
@@ -428,41 +424,41 @@ async function submit() {
 
                     <div class="buttons has-addons are-small mb-0">
                         <button class="button is-small" tabindex="-1" :disabled="!canUndo" @click="undo" title="Undo">
-                            <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                         </button>
                         <button class="button is-small" tabindex="-1" :disabled="!canRedo" @click="redo" title="Redo">
-                            <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                         </button>
                     </div>
 
                     <button class="button is-small" :disabled="placedIndexes.length === 0" @click="centerAll" title="Center all cards in the panel (keeps spacing)">
-                        <span class="icon is-small"><i class="fa-solid fa-arrows-to-dot"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-to-dot']" /></span>
                         <span>Center</span>
                     </button>
                     <div class="buttons has-addons are-small mb-0">
                         <span class="button is-static is-small">Align</span>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('left')" title="Align left edges"><span class="icon is-small"><i class="fa-solid fa-align-left"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('hcenter')" title="Align horizontal centers"><span class="icon is-small"><i class="fa-solid fa-align-center"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('right')" title="Align right edges"><span class="icon is-small"><i class="fa-solid fa-align-right"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('top')" title="Align top edges"><span class="icon is-small"><i class="fa-solid fa-angles-up"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('vmiddle')" title="Align to same height (vertical centers)"><span class="icon is-small"><i class="fa-solid fa-bars"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('bottom')" title="Align bottom edges"><span class="icon is-small"><i class="fa-solid fa-angles-down"></i></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('left')" title="Align left edges"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-left']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('hcenter')" title="Align horizontal centers"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-center']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('right')" title="Align right edges"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-right']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('top')" title="Align top edges"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-up']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('vmiddle')" title="Align to same height (vertical centers)"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['bars']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('bottom')" title="Align bottom edges"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-down']" /></span></button>
                     </div>
                     <div class="buttons has-addons are-small mb-0">
                         <span class="button is-static is-small">Distribute</span>
-                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('h')" title="Equal horizontal spacing"><span class="icon is-small"><i class="fa-solid fa-arrows-left-right"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('v')" title="Equal vertical spacing"><span class="icon is-small"><i class="fa-solid fa-arrows-up-down"></i></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('h')" title="Equal horizontal spacing"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-left-right']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('v')" title="Equal vertical spacing"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-up-down']" /></span></button>
                     </div>
 
                     <div class="buttons has-addons are-small mb-0 ml-auto">
                         <button class="button is-small" tabindex="-1" :disabled="zoom <= MIN_ZOOM" @click="zoomOut" title="Zoom out">
-                            <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-minus"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']" /></span>
                         </button>
                         <button class="button is-small" tabindex="-1" @click="resetZoom" title="Reset zoom" style="min-width: 3.5rem;">
                             {{ Math.round(zoom * 100) }}%
                         </button>
                         <button class="button is-small" tabindex="-1" :disabled="zoom >= MAX_ZOOM" @click="zoomIn" title="Zoom in">
-                            <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']" /></span>
                         </button>
                     </div>
                 </div>
@@ -512,19 +508,19 @@ async function submit() {
                                 @pointerup.stop
                             >
                                 <button class="button is-small" tabindex="-1" @click.stop="rotate(i, -15)" title="Rotate left">
-                                    <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                                 </button>
                                 <button class="button is-small" tabindex="-1" @click.stop="rotate(i, 15)" title="Rotate right">
-                                    <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                                 </button>
                                 <button class="button is-small" :class="{ 'is-warning': slots[i].reversed }" tabindex="-1" @click.stop="slots[i].reversed = !slots[i].reversed" title="Toggle reversed">
-                                    <span class="icon is-small"><i class="fa-solid fa-arrows-up-down"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-up-down']" /></span>
                                 </button>
                                 <button class="button is-small is-info" tabindex="-1" @click.stop="editIndex = i" title="Choose card / title">
-                                    <span class="icon is-small"><i class="fa-solid fa-pen"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                                 </button>
                                 <button class="button is-small is-danger" tabindex="-1" @click.stop="unplace(i)" title="Remove from layout">
-                                    <span class="icon is-small"><i class="fa-solid fa-xmark"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
                                 </button>
                             </div>
                         </template>
@@ -537,13 +533,13 @@ async function submit() {
             <div class="field is-grouped mt-4">
                 <div class="control">
                     <button class="button is-primary is-medium" @click="submit">
-                        <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']" /></span>
                         <span>Recreate Draw</span>
                     </button>
                 </div>
                 <div class="control">
                     <button class="button is-medium" @click="resetForm">
-                        <span class="icon"><i class="fa-solid fa-rotate-left"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                         <span>Reset</span>
                     </button>
                 </div>

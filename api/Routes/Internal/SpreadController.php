@@ -28,6 +28,9 @@ class SpreadController extends AbstractController
         $this->pending = $pending;
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function getSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spread_id = $args['spread_id'] ?? null;

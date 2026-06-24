@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -17,6 +18,13 @@ const { fetchDecks } = useDecks()
 const burgerOpen = ref(false)
 const searchReadingId = ref('')
 const currentYear = computed(() => new Date().getFullYear())
+
+// Reference the brand logo as a runtime URL rather than a static `src="..."`,
+// which @vitejs/plugin-vue would compile into an asset module import. Since
+// /assets is proxied to the PHP host (vite.config.ts) — same as deck images —
+// that import would return raw image bytes instead of a JS module and break the
+// app's module graph. A bound string is left as-is and fetched at runtime.
+const brandLogo = '/assets/favicon.png'
 
 fetchDecks()
 
@@ -44,7 +52,7 @@ async function doUserLogout() {
         <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
             <div class="navbar-brand">
                 <span class="navbar-item has-text-weight-bold is-size-5 is-hidden-touch">
-                    <img src="/assets/favicon.png" alt="" class="brand-logo" />
+                    <img :src="brandLogo" alt="" class="brand-logo" />
                     TarotGen.io
                 </span>
                 <a
@@ -68,7 +76,7 @@ async function doUserLogout() {
                         :to="{ name: 'home' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-house"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
                         <span>Home</span>
                     </router-link>
                     <router-link
@@ -76,7 +84,7 @@ async function doUserLogout() {
                         :to="{ name: 'new-reading' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-cards"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
                         <span>New Draw</span>
                     </router-link>
                     <router-link
@@ -84,7 +92,7 @@ async function doUserLogout() {
                         :to="{ name: 'custom-reading' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-hand-holding-magic"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['hand-holding-magic']" /></span>
                         <span>Recreate Draw</span>
                     </router-link>
                     <router-link
@@ -92,7 +100,7 @@ async function doUserLogout() {
                         :to="{ name: 'submit-spread' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-grid-2-plus"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['grid-2-plus']" /></span>
                         <span>Create a Spread</span>
                     </router-link>
                     <router-link
@@ -101,7 +109,7 @@ async function doUserLogout() {
                         :to="{ name: 'submit-deck' }"
                         @click="burgerOpen = false"
                     >
-                        <span class="icon"><i class="fa-solid fa-cards-blank"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>
                         <span>Submit a Deck</span>
                     </router-link>
                 </div>
@@ -120,7 +128,7 @@ async function doUserLogout() {
                             </p>
                             <p class="control">
                                 <button class="button is-link" @click="viewReading">
-                                    <span class="icon is-hidden-mobile"><i class="fa-solid fa-magnifying-glass"></i></span>
+                                    <span class="icon is-hidden-mobile"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                                     <span>View</span>
                                 </button>
                             </p>
@@ -131,31 +139,31 @@ async function doUserLogout() {
                     <div class="navbar-item" v-if="!isLoggedIn">
                         <div class="buttons">
                             <router-link class="button is-primary" :to="{ name: 'login' }" @click="burgerOpen = false">
-                                <span class="icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']" /></span>
                                 <span>Log In</span>
                             </router-link>
                         </div>
                     </div>
                     <div class="navbar-item has-dropdown is-hoverable" v-else>
                         <a class="navbar-link">
-                            <span class="icon"><i class="fa-solid fa-circle-user"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']" /></span>
                             <span>{{ currentUser?.display_name }}</span>
                         </a>
                         <div class="navbar-dropdown is-right">
                             <router-link class="navbar-item" :to="{ name: 'dashboard' }" @click="burgerOpen = false">
-                                <span class="icon"><i class="fa-solid fa-gauge-high"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gauge-high']" /></span>
                                 <span>Dashboard</span>
                             </router-link>
                             <router-link class="navbar-item" :to="{ name: 'account-readings' }" @click="burgerOpen = false">
-                                <span class="icon"><i class="fa-solid fa-scroll"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['scroll']" /></span>
                                 <span>My Readings</span>
                             </router-link>
                             <router-link class="navbar-item" :to="{ name: 'account-spreads' }" @click="burgerOpen = false">
-                                <span class="icon"><i class="fa-solid fa-table-cells"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span>
                                 <span>My Spreads</span>
                             </router-link>
                             <router-link class="navbar-item" :to="{ name: 'account-settings' }" @click="burgerOpen = false">
-                                <span class="icon"><i class="fa-solid fa-gear"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gear']" /></span>
                                 <span>Account Settings</span>
                             </router-link>
 
@@ -163,50 +171,50 @@ async function doUserLogout() {
                             <template v-if="currentUser?.is_admin">
                                 <hr class="navbar-divider" />
                                 <div class="navbar-item admin-menu-label">
-                                    <span class="icon"><i class="fa-solid fa-lock-keyhole"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']" /></span>
                                     <span>Admin</span>
                                 </div>
                                 <router-link class="navbar-item" :to="{ name: 'admin-dashboard' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-gauge-high"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gauge-high']" /></span>
                                     <span>Dashboard</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-decks' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-cards-blank"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>
                                     <span>Decks</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-cards' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-cards"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
                                     <span>Cards</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-special-cards' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-sparkles"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['sparkles']" /></span>
                                     <span>Special Cards</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-spreads' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-table-cells"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span>
                                     <span>Spreads</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-readings' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-scroll"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['scroll']" /></span>
                                     <span>Readings</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-users' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-users"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['users']" /></span>
                                     <span>Users</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-contacts' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-envelope"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
                                     <span>Contacts</span>
                                 </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-changelog' }" @click="burgerOpen = false">
-                                    <span class="icon"><i class="fa-solid fa-newspaper"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['newspaper']" /></span>
                                     <span>Changelog</span>
                                 </router-link>
                             </template>
 
                             <hr class="navbar-divider" />
                             <a class="navbar-item" @click="doUserLogout">
-                                <span class="icon"><i class="fa-solid fa-right-from-bracket"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']" /></span>
                                 <span>Log Out</span>
                             </a>
                         </div>

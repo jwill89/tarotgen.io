@@ -14,6 +14,9 @@ class SpreadRepository
         $this->data = $data;
     }
 
+    /**
+     * @return list<Spread>|Spread
+     */
     public function get(?int $spread_id = null): array|Spread
     {
         $results = $this->data->retrieve($spread_id);
@@ -25,11 +28,17 @@ class SpreadRepository
         return $results;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function create(array $data): ?Spread
     {
         return $this->data->store($data);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $spread_id, array $data): ?Spread
     {
         return $this->data->update($spread_id, $data);

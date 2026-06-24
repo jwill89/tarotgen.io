@@ -14,6 +14,9 @@ class DeckRepository
         $this->data = $data;
     }
 
+    /**
+     * @return list<Deck>|Deck
+     */
     public function get(?int $deck_id = null): array|Deck
     {
         $results = $this->data->retrieve($deck_id);
@@ -25,29 +28,47 @@ class DeckRepository
         return $results;
     }
 
-    /** Decks marked usable — shown in public deck selectors. */
+    /**
+     * Decks marked usable — shown in public deck selectors.
+     *
+     * @return list<Deck>
+     */
     public function getUsable(): array
     {
         return $this->data->retrieveUsable();
     }
 
-    /** Decks that are approved (admin-approved list). */
+    /**
+     * Decks that are approved (admin-approved list).
+     *
+     * @return list<Deck>
+     */
     public function getApproved(): array
     {
         return $this->data->retrieveApproved();
     }
 
-    /** Decks that are not yet approved (pending submissions). */
+    /**
+     * Decks that are not yet approved (pending submissions).
+     *
+     * @return list<Deck>
+     */
     public function getPending(): array
     {
         return $this->data->retrievePending();
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function create(array $data): ?Deck
     {
         return $this->data->store($data);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $deck_id, array $data): ?Deck
     {
         return $this->data->update($deck_id, $data);

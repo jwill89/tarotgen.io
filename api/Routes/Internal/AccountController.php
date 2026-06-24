@@ -12,6 +12,7 @@ use Tarot\Repository\ReadingRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserSpreadRepository;
 use Tarot\Service\AuthService;
+use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 
 /**
@@ -37,7 +38,11 @@ class AccountController extends AbstractController
         return $response->withJson($this->readings->listByUser($this->userId()));
     }
 
-    /** Update a reading the current user owns: name, hidden author, view password. */
+    /**
+     * Update a reading the current user owns: name, hidden author, view password.
+     *
+     * @param array<string,string> $args
+     */
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -45,17 +50,16 @@ class AccountController extends AbstractController
         $fields     = [];
 
         if (array_key_exists('reading_name', $body)) {
-            $name = mb_substr(trim((string)$body['reading_name']), 0, 100);
-            $fields['reading_name'] = $name !== '' ? $name : null;
+            $fields['reading_name'] = Input::nullableString($body['reading_name'], 100);
         }
 
         if (array_key_exists('reading_notes', $body)) {
-            $notes = mb_substr((string)$body['reading_notes'], 0, 20000);
-            $fields['reading_notes'] = trim($notes) !== '' ? $notes : null;
+            // Notes keep internal whitespace (only the empty check is trimmed).
+            $fields['reading_notes'] = Input::nullableString($body['reading_notes'], 20000, trim: false);
         }
 
         if (array_key_exists('hide_user', $body)) {
-            $fields['hide_user'] = filter_var($body['hide_user'], FILTER_VALIDATE_BOOLEAN);
+            $fields['hide_user'] = Input::bool($body['hide_user']);
         }
 
         // Password: explicit removal, or set a new one. Omit both to leave as-is.
@@ -81,7 +85,11 @@ class AccountController extends AbstractController
         return $response->withJson($updated);
     }
 
-    /** Delete one of the current user's readings. */
+    /**
+     * Delete one of the current user's readings.
+     *
+     * @param array<string,string> $args
+     */
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -166,7 +174,11 @@ class AccountController extends AbstractController
         return $response->withJson($created, 201);
     }
 
-    /** Update one of the current user's personal spreads. */
+    /**
+     * Update one of the current user's personal spreads.
+     *
+     * @param array<string,string> $args
+     */
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
@@ -180,7 +192,11 @@ class AccountController extends AbstractController
         return $response->withJson($updated);
     }
 
-    /** Delete one of the current user's personal spreads. */
+    /**
+     * Delete one of the current user's personal spreads.
+     *
+     * @param array<string,string> $args
+     */
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
@@ -198,6 +214,8 @@ class AccountController extends AbstractController
     /**
      * Submit one of the user's personal spreads as a public spread (copies into
      * pending queue; the personal copy remains untouched).
+     *
+     * @param array<string,string> $args
      */
     public function submitSpreadAsPublic(Request $request, Response $response, array $args): Response|ResponseInterface
     {

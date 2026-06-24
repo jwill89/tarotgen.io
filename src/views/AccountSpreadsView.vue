@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted, useTemplateRef } from 'vue'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
@@ -93,7 +94,7 @@ async function handleSubmitPublic(spread: UserSpread) {
             <div class="columns is-centered">
                 <div class="column is-10-desktop">
                     <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
-                        <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                         <span>Back to Dashboard</span>
                     </router-link>
 
@@ -106,14 +107,14 @@ async function handleSubmitPublic(spread: UserSpread) {
                         </div>
                         <div class="level-right">
                             <router-link :to="{ name: 'submit-spread' }" class="button is-primary">
-                                <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                                 <span>Create Spread</span>
                             </router-link>
                         </div>
                     </div>
 
                     <div v-if="loading" class="has-text-centered py-6">
-                        <span class="icon is-large"><i class="fa-solid fa-spinner fa-spin fa-2x"></i></span>
+                        <span class="icon is-large"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin size="2x" /></span>
                     </div>
 
                     <div v-else-if="userSpreads.length === 0" class="notification is-info is-light">
@@ -149,13 +150,13 @@ async function handleSubmitPublic(spread: UserSpread) {
                                     <td class="has-text-right">
                                         <div class="buttons are-small is-justify-content-flex-end">
                                             <button class="button is-info is-outlined" @click="openEdit(spread)" title="Edit">
-                                                <span class="icon"><i class="fa-solid fa-pen"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                                             </button>
                                             <button class="button is-link is-outlined" @click="handleSubmitPublic(spread)" title="Submit as public spread">
-                                                <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                                             </button>
                                             <button class="button is-danger is-outlined" @click="handleDelete(spread)" title="Delete">
-                                                <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                             </button>
                                         </div>
                                     </td>

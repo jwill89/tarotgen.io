@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 defineProps<{
     label: string
     sortKey: string
@@ -13,10 +14,7 @@ const emit = defineEmits<{ sort: [string] }>()
     <th class="sortable-th" @click="emit('sort', sortKey)">
         <span>{{ label }}</span>
         <span class="icon is-small sort-icon">
-            <i
-                class="fa-solid"
-                :class="activeKey === sortKey ? (dir === 'asc' ? 'fa-sort-up' : 'fa-sort-down') : 'fa-sort'"
-            ></i>
+            <FontAwesomeIcon :icon="activeKey === sortKey ? (dir === 'asc' ? byPrefixAndName.fas['sort-up'] : byPrefixAndName.fas['sort-down']) : byPrefixAndName.fas['sort']" />
         </span>
     </th>
 </template>

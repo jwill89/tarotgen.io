@@ -14,7 +14,11 @@ class UserSpreadRepository
         $this->data = $data;
     }
 
-    /** List all of a user's personal spreads. */
+    /**
+     * List all of a user's personal spreads.
+     *
+     * @return list<UserSpread>
+     */
     public function listByUser(int $userId): array
     {
         return $this->data->retrieve($userId);
@@ -33,11 +37,17 @@ class UserSpreadRepository
         return $this->data->findById($userSpreadId);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function create(int $userId, array $data): ?UserSpread
     {
         return $this->data->store($userId, $data);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $userId, int $userSpreadId, array $data): ?UserSpread
     {
         return $this->data->update($userId, $userSpreadId, $data);

@@ -13,6 +13,9 @@ class DeckData extends AbstractData
         LEFT JOIN deck_systems ds ON ds.deck_system_id = d.deck_system_id
     ";
 
+    /**
+     * @return list<Deck>
+     */
     public function retrieve(?int $deck_id = null): array
     {
         if ($deck_id !== null) {
@@ -28,6 +31,8 @@ class DeckData extends AbstractData
 
     /**
      * Retrieve only decks marked as usable (for public-facing selectors).
+     *
+     * @return list<Deck>
      */
     public function retrieveUsable(): array
     {
@@ -36,6 +41,8 @@ class DeckData extends AbstractData
 
     /**
      * Retrieve decks that are approved but not necessarily usable (for admin approved list).
+     *
+     * @return list<Deck>
      */
     public function retrieveApproved(): array
     {
@@ -44,12 +51,17 @@ class DeckData extends AbstractData
 
     /**
      * Retrieve decks that are NOT approved (submitted, pending review).
+     *
+     * @return list<Deck>
      */
     public function retrievePending(): array
     {
         return $this->fetchAllAs(self::SELECT_WITH_SYSTEM . " WHERE d.approved = 0", [], Deck::class);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?Deck
     {
         $sql = "INSERT INTO decks (name, artist, purchase_url, deck_system_id, additional_cards, card_aspect_w, card_aspect_h, approved, usable, submitted_by)
@@ -75,6 +87,9 @@ class DeckData extends AbstractData
         return $result[0] ?? null;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $deck_id, array $data): ?Deck
     {
         // Clamp aspect components to a sane positive range before persisting.

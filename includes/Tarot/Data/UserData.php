@@ -160,7 +160,12 @@ class UserData extends AbstractData
         return $this->findById((int)$this->db->lastInsertId());
     }
 
-    /** Fetch a single associative row, or null when there is no match. */
+    /**
+     * Fetch a single associative row, or null when there is no match.
+     *
+     * @param array<array-key,mixed> $params
+     * @return array<string,mixed>|null
+     */
     private function row(string $sql, array $params): ?array
     {
         $stmt = $this->db->prepare($sql);
@@ -170,6 +175,9 @@ class UserData extends AbstractData
         return $row ?: null;
     }
 
+    /**
+     * @param array<string,mixed> $row
+     */
     private function hydrate(array $row): User
     {
         return new User([

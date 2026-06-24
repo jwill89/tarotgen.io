@@ -110,7 +110,6 @@ class ThumbnailService
         $w = imagesx($src);
         $h = imagesy($src);
         if ($w <= 0 || $h <= 0) {
-            imagedestroy($src);
             return false;
         }
 
@@ -123,11 +122,8 @@ class ThumbnailService
         imagesavealpha($dst, true);
         imagecopyresampled($dst, $src, 0, 0, 0, 0, $tw, $th, $w, $h);
 
-        $ok = imagewebp($dst, $webp, self::WEBP_QUALITY);
-
-        imagedestroy($src);
-        imagedestroy($dst);
-
-        return $ok;
+        // GdImage instances are freed automatically by the garbage collector
+        // since PHP 8.0; imagedestroy() was deprecated in 8.5.
+        return imagewebp($dst, $webp, self::WEBP_QUALITY);
     }
 }

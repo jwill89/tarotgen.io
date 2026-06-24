@@ -1,13 +1,12 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
-import { useToasts } from '@/composables/useToasts'
 
 const route = useRoute()
 const router = useRouter()
 const { register } = useUser()
-const toasts = useToasts()
 
 const email = ref('')
 const displayName = ref('')
@@ -83,7 +82,7 @@ function registerWithGoogle() {
                                         placeholder="you@example.com"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
                                 </div>
                             </div>
 
@@ -100,7 +99,7 @@ function registerWithGoogle() {
                                         placeholder="How you'll appear on the site"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-user"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>
                                 </div>
                             </div>
 
@@ -116,7 +115,7 @@ function registerWithGoogle() {
                                         placeholder="At least 12 characters"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 </div>
                                 <p class="help">
                                     Use at least 12 characters. A memorable passphrase (a few random words) is both
@@ -136,7 +135,7 @@ function registerWithGoogle() {
                                         autocomplete="new-password"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 </div>
                                 <p class="help is-danger" v-if="!passwordsMatch">Passwords do not match.</p>
                             </div>
@@ -162,7 +161,7 @@ function registerWithGoogle() {
                                     :class="{ 'is-loading': loading }"
                                     :disabled="loading"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-user-plus"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user-plus']" /></span>
                                     <span>Create Account</span>
                                 </button>
                             </div>
@@ -177,7 +176,7 @@ function registerWithGoogle() {
                                     type="button"
                                     @click="registerWithGoogle"
                                 >
-                                    <span class="icon"><i class="fa-brands fa-google"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                                     <span>Sign up with Google</span>
                                 </button>
                             </div>
@@ -191,7 +190,7 @@ function registerWithGoogle() {
 
                     <div class="box" v-else>
                         <div class="notification is-success is-light">
-                            <span class="icon"><i class="fa-solid fa-envelope-circle-check"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope-circle-check']" /></span>
                             {{ successMessage }}
                         </div>
 
@@ -202,7 +201,7 @@ function registerWithGoogle() {
 
                         <div class="buttons is-centered mt-4">
                             <router-link class="button is-primary" :to="{ name: 'login' }">
-                                <span class="icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']" /></span>
                                 <span>Go to Login</span>
                             </router-link>
                         </div>

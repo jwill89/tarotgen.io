@@ -17,6 +17,9 @@ class ChangelogController extends AbstractController
         $this->changelog = $changelog;
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function getChangelog(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $entry_id = $args['entry_id'] ?? null;
