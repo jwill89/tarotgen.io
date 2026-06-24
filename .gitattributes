@@ -1,0 +1,19 @@
+# Normalize line endings. Text files are stored as LF in the repo AND checked
+# out as LF in the working tree (eol=lf overrides core.autocrlf). This repo
+# deploys to Linux (Apache/PHP), so LF is the correct on-disk form everywhere
+# and avoids CRLF churn under OneDrive/Windows.
+* text=auto eol=lf
+
+# Explicit binary types — never normalized or shown as text diffs.
+*.woff   binary
+*.woff2  binary
+*.ttf    binary
+*.otf    binary
+*.png    binary
+*.jpg    binary
+*.jpeg   binary
+*.gif    binary
+*.webp   binary
+*.ico    binary
+*.db     binary
+*.pyc    binary
