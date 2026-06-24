@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useDataTable } from '@/composables/useDataTable'
@@ -55,7 +56,7 @@ onMounted(fetchContacts)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -68,7 +69,7 @@ onMounted(fetchContacts)
                 </div>
                 <div class="level-right">
                     <button class="button" :class="showRead ? 'is-link' : ''" @click="toggleShowRead">
-                        <span class="icon"><i class="fa-solid" :class="showRead ? 'fa-eye' : 'fa-eye-slash'"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="showRead ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']" /></span>
                         <span>{{ showRead ? 'Showing Read' : 'Show Read' }}</span>
                     </button>
                 </div>
@@ -77,7 +78,7 @@ onMounted(fetchContacts)
             <div class="field">
                 <div class="control has-icons-left">
                     <input class="input" type="text" v-model="search" placeholder="Search by name, email, or message..." />
-                    <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                 </div>
             </div>
 
@@ -103,7 +104,7 @@ onMounted(fetchContacts)
                             <td>
                                 <div class="buttons are-small">
                                     <button class="button is-info is-small" @click="viewingContact = contact">
-                                        <span class="icon"><i class="fa-solid fa-eye"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
                                         <span>View</span>
                                     </button>
                                     <button
@@ -113,7 +114,7 @@ onMounted(fetchContacts)
                                         @click="toggleRead(contact)"
                                     >
                                         <span class="icon">
-                                            <i class="fa-solid" :class="contact.is_read ? 'fa-envelope' : 'fa-envelope-open'"></i>
+                                            <FontAwesomeIcon :icon="contact.is_read ? byPrefixAndName.fas['envelope'] : byPrefixAndName.fas['envelope-open']" />
                                         </span>
                                         <span>{{ contact.is_read ? 'Mark Unread' : 'Mark Read' }}</span>
                                     </button>

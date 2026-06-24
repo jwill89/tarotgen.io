@@ -22,6 +22,9 @@ class ContactRepository
         return $this->data->retrieve($unreadOnly);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function create(array $data): ?Contact
     {
         return $this->data->store($data);

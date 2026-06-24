@@ -30,12 +30,16 @@
         }
     },
     "require-dev": {
-        "roave/security-advisories": "dev-latest",
-        "squizlabs/php_codesniffer": "*",
         "friendsofphp/php-cs-fixer": "*",
-        "phpunit/phpunit": "^12.0"
+        "phpstan/phpstan": "^2.0",
+        "phpunit/phpunit": "^12.0",
+        "roave/security-advisories": "dev-latest",
+        "squizlabs/php_codesniffer": "*"
     },
     "scripts": {
-        "test": "phpunit"
+        "test": "phpunit -c config/phpunit.xml",
+        "stan": "phpstan analyse -c config/phpstan.neon --memory-limit=512M",
+        "lint": "phpcs",
+        "lint:fix": "php-cs-fixer fix"
     }
 }

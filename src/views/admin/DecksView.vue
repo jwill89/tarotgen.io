@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -157,7 +158,7 @@ onMounted(() => {
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -171,11 +172,11 @@ onMounted(() => {
                 <div class="level-right">
                     <div class="buttons">
                         <button class="button is-link" :class="{ 'is-loading': generatingAll }" @click="generateAllThumbnails">
-                            <span class="icon"><i class="fa-solid fa-images"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
                             <span>Generate All Thumbnails</span>
                         </button>
                         <button class="button is-primary" @click="openAdd">
-                            <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                             <span>Add Deck</span>
                         </button>
                     </div>
@@ -208,15 +209,15 @@ onMounted(() => {
                                 <td>
                                     <div class="buttons are-small">
                                         <button class="button is-success" @click="approveDeck(deck)">
-                                            <span class="icon"><i class="fa-solid fa-check"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                                             <span>Approve</span>
                                         </button>
                                         <button class="button is-info" @click="openEdit(deck)">
-                                            <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                             <span>Edit</span>
                                         </button>
                                         <button class="button is-danger" @click="deleteDeck(deck)">
-                                            <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                             <span>Delete</span>
                                         </button>
                                     </div>
@@ -233,7 +234,7 @@ onMounted(() => {
             <div class="field">
                 <div class="control has-icons-left">
                     <input class="input" type="text" v-model="search" placeholder="Search decks by name, artist, or ID..." />
-                    <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                 </div>
             </div>
 
@@ -269,11 +270,11 @@ onMounted(() => {
                                         @click="toggleUsable(deck)"
                                         :title="deck.usable ? 'Mark as not usable' : 'Mark as usable'"
                                     >
-                                        <span class="icon"><i :class="deck.usable ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye'"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="deck.usable ? byPrefixAndName.fas['eye-slash'] : byPrefixAndName.fas['eye']" /></span>
                                         <span>{{ deck.usable ? 'Unlist' : 'Make Usable' }}</span>
                                     </button>
                                     <button class="button is-info" @click="openEdit(deck)">
-                                        <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                         <span>Edit</span>
                                     </button>
                                     <button
@@ -282,11 +283,11 @@ onMounted(() => {
                                         @click="generateThumbnails(deck)"
                                         title="Generate thumbnails for this deck"
                                     >
-                                        <span class="icon"><i class="fa-solid fa-images"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
                                         <span>Thumbnails</span>
                                     </button>
                                     <button class="button is-danger" @click="deleteDeck(deck)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>
@@ -355,7 +356,7 @@ onMounted(() => {
         <template #footer>
             <button class="button" @click="closeEdit">Cancel</button>
             <button class="button is-success" :class="{ 'is-loading': saving }" @click="saveDeck">
-                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                 <span>{{ isNew ? 'Create' : 'Save' }}</span>
             </button>
         </template>

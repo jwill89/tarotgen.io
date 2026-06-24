@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDecks } from '@/composables/useDecks'
@@ -412,7 +413,7 @@ watch(() => route.params.id, (id) => {
             <h1 class="title is-3 is-size-4-mobile">
                 {{ displayTitle }}
                 <span v-if="isFinal" class="tag is-dark is-medium ml-2 reading-final-tag">
-                    <span class="icon is-small"><i class="fa-solid fa-lock-keyhole"></i></span>
+                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']" /></span>
                     <span>Final</span>
                 </span>
             </h1>
@@ -435,33 +436,33 @@ watch(() => route.params.id, (id) => {
                 <div class="column is-7">
                     <dl class="reading-meta box">
                         <div class="meta-row">
-                            <dt><span class="icon"><i class="fa-solid fa-hashtag"></i></span>Reading ID</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['hashtag']" /></span>Reading ID</dt>
                             <dd><code>{{ reading.reading_id }}</code></dd>
                         </div>
                         <div class="meta-row">
-                            <dt><span class="icon"><i class="fa-solid fa-link"></i></span>Reading URL</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span>Reading URL</dt>
                             <dd class="meta-url">
                                 <span class="reading-url-text">{{ readingUrl }}</span>
                                 <button class="button is-small is-link" @click="copyReadingUrl" title="Copy Reading URL">
-                                    <span class="icon is-small"><i class="fa-solid fa-copy"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']" /></span>
                                     <span>Copy</span>
                                 </button>
                             </dd>
                         </div>
                         <div class="meta-row">
-                            <dt><span class="icon"><i class="fa-solid fa-calendar-day"></i></span>Date</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['calendar-day']" /></span>Date</dt>
                             <dd>{{ formatDateTime(reading.reading_time) }}</dd>
                         </div>
                         <div class="meta-row">
-                            <dt><span class="icon"><i class="fa-solid fa-table-cells"></i></span>Spread</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span>Spread</dt>
                             <dd>{{ displaySpreadName }}</dd>
                         </div>
                         <div class="meta-row">
-                            <dt><span class="icon"><i class="fa-solid fa-user"></i></span>Reader</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>Reader</dt>
                             <dd>{{ readerName }}</dd>
                         </div>
                         <div class="meta-row" v-if="readingDeck">
-                            <dt><span class="icon"><i class="fa-solid fa-cards-blank"></i></span>Deck</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>Deck</dt>
                             <dd>
                                 {{ readingDeck.name }}
                                 <span v-if="readingDeck.artist" class="meta-sub">· art by {{ readingDeck.artist }}</span>
@@ -469,7 +470,7 @@ watch(() => route.params.id, (id) => {
                             </dd>
                         </div>
                         <div class="meta-row" v-if="readingDeck && readingDeck.purchase_url">
-                            <dt><span class="icon"><i class="fa-solid fa-cart-shopping"></i></span>Purchase</dt>
+                            <dt><span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cart-shopping']" /></span>Purchase</dt>
                             <dd><a :href="readingDeck.purchase_url" target="_blank" rel="noopener noreferrer">Buy this deck</a></dd>
                         </div>
                     </dl>
@@ -477,24 +478,24 @@ watch(() => route.params.id, (id) => {
                     <!-- Free draw: actions sit under the reading details. -->
                     <div v-if="!spread" class="buttons mt-3">
                         <button class="button is-primary" @click="flipAll" :disabled="flippingAll">
-                            <span class="icon"><i class="fa-solid fa-arrows-rotate"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']" /></span>
                             <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
                         </button>
                         <button class="button is-link" @click="showExportModal = true" :class="{ 'is-loading': exporting }">
-                            <span class="icon"><i class="fa-solid fa-image"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
                             <span>Save as Image</span>
                         </button>
                         <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
                             <span class="icon">
-                                <span class="fa-layers">
-                                    <i class="fa-solid fa-cards"></i>
-                                    <i class="fa-solid fa-circle-plus" data-fa-transform="shrink-6 down-6 right-7"></i>
-                                </span>
+                                <FontAwesomeLayers>
+                                    <FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" />
+                                    <FontAwesomeIcon :icon="byPrefixAndName.fas['circle-plus']" transform="shrink-6 down-6 right-7" />
+                                </FontAwesomeLayers>
                             </span>
                             <span>Draw More Cards</span>
                         </button>
                         <button v-if="isOwner && !isFinal" class="button is-light" @click="markFinal" title="Permanently lock this reading">
-                            <span class="icon"><i class="fa-solid fa-lock-keyhole"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']" /></span>
                             <span>Mark as Final</span>
                         </button>
                     </div>
@@ -509,7 +510,7 @@ watch(() => route.params.id, (id) => {
                             :aria-expanded="showSpreadDetails ? 'true' : 'false'"
                         >
                             <span class="icon">
-                                <i class="fa-solid" :class="showSpreadDetails ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                                <FontAwesomeIcon :icon="showSpreadDetails ? byPrefixAndName.fas['chevron-down'] : byPrefixAndName.fas['chevron-right']" />
                             </span>
                             <span>Spread Details: {{ spread.name }}</span>
                         </button>
@@ -621,19 +622,19 @@ watch(() => route.params.id, (id) => {
 
                         <div class="buttons mt-4">
                             <button class="button is-primary" @click="flipAll" :disabled="flippingAll">
-                                <span class="icon"><i class="fa-solid fa-arrows-rotate"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']" /></span>
                                 <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
                             </button>
                             <button class="button is-link" @click="showExportModal = true" :class="{ 'is-loading': exporting }">
-                                <span class="icon"><i class="fa-solid fa-image"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
                                 <span>Save as Image</span>
                             </button>
                             <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
-                                <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                                 <span>Draw More Cards</span>
                             </button>
                             <button v-if="isOwner && !isFinal" class="button is-light" @click="markFinal" title="Permanently lock this reading">
-                                <span class="icon"><i class="fa-solid fa-lock-keyhole"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']" /></span>
                                 <span>Mark as Final</span>
                             </button>
                         </div>
@@ -649,7 +650,7 @@ watch(() => route.params.id, (id) => {
                     :aria-expanded="showNotes ? 'true' : 'false'"
                 >
                     <span class="icon">
-                        <i class="fa-solid" :class="showNotes ? 'fa-chevron-down' : 'fa-chevron-right'"></i>
+                        <FontAwesomeIcon :icon="showNotes ? byPrefixAndName.fas['chevron-down'] : byPrefixAndName.fas['chevron-right']" />
                     </span>
                     <span>Reading Notes</span>
                 </button>
@@ -668,10 +669,10 @@ watch(() => route.params.id, (id) => {
                     </h1>
                     <div class="box has-text-centered">
                         <span class="icon is-large has-text-warning">
-                            <span class="fa-layers fa-2x">
-                                <i class="fa-duotone fa-solid fa-scroll"></i>
-                                <i class="fa-solid fa-lock" data-fa-transform="shrink-7 down-5 right-6"></i>
-                            </span>
+                            <FontAwesomeLayers class="fa-2x">
+                                <FontAwesomeIcon :icon="byPrefixAndName.fad['scroll']" />
+                                <FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" transform="shrink-7 down-5 right-6" />
+                            </FontAwesomeLayers>
                         </span>
                         <p class="mt-3 mb-4">This reading is password-protected. Enter the password to view it.</p>
                         <form @submit.prevent="unlock">
@@ -685,7 +686,7 @@ watch(() => route.params.id, (id) => {
                                         autocomplete="off"
                                         autofocus
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-key"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                                 </div>
                             </div>
                             <div class="notification is-danger is-light" v-if="unlockError">{{ unlockError }}</div>
@@ -695,7 +696,7 @@ watch(() => route.params.id, (id) => {
                                 :class="{ 'is-loading': unlocking }"
                                 :disabled="unlocking || !unlockPassword"
                             >
-                                <span class="icon"><i class="fa-solid fa-unlock"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['unlock']" /></span>
                                 <span>View Reading</span>
                             </button>
                         </form>
@@ -708,7 +709,7 @@ watch(() => route.params.id, (id) => {
     <section class="section" v-else-if="notFound && !isLoading">
         <div class="container has-text-centered">
             <span class="icon is-large has-text-grey-light">
-                <i class="fa-duotone fa-solid fa-circle-question fa-2x"></i>
+                <FontAwesomeIcon :icon="byPrefixAndName.fad['circle-question']" size="2x" />
             </span>
             <h1 class="title is-4 mt-3">Reading not found</h1>
             <p class="subtitle is-6">
@@ -716,7 +717,7 @@ watch(() => route.params.id, (id) => {
             </p>
             <div class="buttons is-centered mt-4">
                 <router-link class="button is-primary" :to="{ name: 'new-reading' }">
-                    <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']" /></span>
                     <span>Start a New Draw</span>
                 </router-link>
                 <router-link class="button" :to="{ name: 'home' }">Back to Home</router-link>
@@ -763,7 +764,7 @@ watch(() => route.params.id, (id) => {
             <label class="label">Number of Cards</label>
             <div class="control has-icons-left">
                 <input class="input" type="number" v-model.number="drawForm.count" min="1" :max="maxDrawMore" autocomplete="off" />
-                <span class="icon is-small is-left"><i class="fa-solid fa-diamond"></i></span>
+                <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['diamond']" /></span>
             </div>
             <p class="help">{{ maxDrawMore }} card{{ maxDrawMore === 1 ? '' : 's' }} left in this deck.</p>
         </div>
@@ -794,7 +795,7 @@ watch(() => route.params.id, (id) => {
                 :disabled="drawing || maxDrawMore < 1 || drawForm.count < 1"
                 @click="submitDrawMore"
             >
-                <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']" /></span>
                 <span>Draw</span>
             </button>
         </template>

@@ -21,6 +21,9 @@ class PendingSpreadRepository
         $this->db      = $db;
     }
 
+    /**
+     * @return list<PendingSpread>|PendingSpread
+     */
     public function get(?int $pending_id = null): array|PendingSpread
     {
         $results = $this->data->retrieve($pending_id);
@@ -32,6 +35,9 @@ class PendingSpreadRepository
         return $results;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function create(array $data, ?int $userId = null): ?PendingSpread
     {
         return $this->data->store($data, $userId);

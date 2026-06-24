@@ -10,6 +10,9 @@ class SpreadData extends AbstractData
 {
     use NormalizesPositions;
 
+    /**
+     * @return list<Spread>
+     */
     public function retrieve(?int $spread_id = null): array
     {
         $query = "SELECT * FROM spreads";
@@ -35,6 +38,9 @@ class SpreadData extends AbstractData
     /**
      * @throws JsonException
      */
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?Spread
     {
         $positions = $this->normalizePositions($data['positions'] ?? []);
@@ -57,6 +63,9 @@ class SpreadData extends AbstractData
 
     /**
      * @throws JsonException
+     */
+    /**
+     * @param array<string,mixed> $data
      */
     public function update(int $spread_id, array $data): ?Spread
     {
@@ -110,6 +119,9 @@ class SpreadData extends AbstractData
 
     /**
      * @throws JsonException
+     */
+    /**
+     * @param array<string,mixed> $row
      */
     private function hydrate(array $row): Spread
     {

@@ -7,6 +7,9 @@ use Tarot\Structure\DeckSystemCard;
 
 class DeckSystemData extends AbstractData
 {
+    /**
+     * @return list<DeckSystem>
+     */
     public function retrieve(?int $id = null): array
     {
         if ($id !== null) {
@@ -20,16 +23,25 @@ class DeckSystemData extends AbstractData
         return $this->fetchAllAs("SELECT * FROM deck_systems ORDER BY name", [], DeckSystem::class);
     }
 
+    /**
+     * @return list<DeckSystem>
+     */
     public function retrieveApproved(): array
     {
         return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 1 ORDER BY name", [], DeckSystem::class);
     }
 
+    /**
+     * @return list<DeckSystem>
+     */
     public function retrievePending(): array
     {
         return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 0 ORDER BY name", [], DeckSystem::class);
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?DeckSystem
     {
         $sql = "INSERT INTO deck_systems (name, short_name, total_cards, approved, submitted_by)
@@ -50,6 +62,9 @@ class DeckSystemData extends AbstractData
         return $result[0] ?? null;
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function update(int $id, array $data): ?DeckSystem
     {
         $allowed  = ['name', 'short_name', 'total_cards', 'approved'];
@@ -73,6 +88,9 @@ class DeckSystemData extends AbstractData
 
     // ── Deck System Cards ────────────────────────────────────────
 
+    /**
+     * @return list<DeckSystemCard>
+     */
     public function retrieveCards(int $systemId): array
     {
         return $this->fetchAllAs(
@@ -82,6 +100,10 @@ class DeckSystemData extends AbstractData
         );
     }
 
+    /**
+     * @param list<int> $cardIds
+     * @return list<DeckSystemCard>
+     */
     public function retrieveCardsByIds(int $systemId, array $cardIds): array
     {
         if (empty($cardIds)) {
@@ -89,7 +111,7 @@ class DeckSystemData extends AbstractData
         }
 
         $placeholders = implode(', ', array_fill(0, count($cardIds), '?'));
-        $params = array_merge([$systemId], array_values($cardIds));
+        $params = array_merge([$systemId], $cardIds);
 
         return $this->fetchAllAs(
             "SELECT * FROM deck_system_cards WHERE deck_system_id = ? AND card_id IN ($placeholders)",
@@ -98,6 +120,9 @@ class DeckSystemData extends AbstractData
         );
     }
 
+    /**
+     * @param array<string,mixed> $data
+     */
     public function storeCard(array $data): bool
     {
         $sql = "INSERT OR REPLACE INTO deck_system_cards (deck_system_id, card_id, name, keywords, meaning, advice, reversed_keywords, reversed_meaning, reversed_advice)
@@ -119,6 +144,9 @@ class DeckSystemData extends AbstractData
         return true;
     }
 
+    /**
+     * @param list<array<string,mixed>> $cards
+     */
     public function storeCards(int $systemId, array $cards): void
     {
         $sql = "INSERT OR REPLACE INTO deck_system_cards (deck_system_id, card_id, name, keywords, meaning, advice, reversed_keywords, reversed_meaning, reversed_advice)

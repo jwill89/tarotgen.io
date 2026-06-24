@@ -1,9 +1,9 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, nextTick } from 'vue'
 import type { Deck } from '@/types'
 import { useFavoriteDecks } from '@/composables/useFavoriteDecks'
 import { useUser } from '@/composables/useUser'
-import { deckLabel } from '@/utils/deck'
 
 const props = defineProps<{
     decks: Deck[]
@@ -145,7 +145,7 @@ function onToggleFavorite(deck: Deck, e: Event) {
                 @keydown="onKeydown"
             />
             <span class="icon is-small is-left">
-                <i class="fa-solid fa-book"></i>
+                <FontAwesomeIcon :icon="byPrefixAndName.fas['book']" />
             </span>
         </div>
 
@@ -170,7 +170,7 @@ function onToggleFavorite(deck: Deck, e: Event) {
                             :title="isFavorite(deck.deck_id) ? 'Remove from favorites' : 'Add to favorites'"
                             @mousedown.prevent.stop="onToggleFavorite(deck, $event)"
                         >
-                            <i :class="isFavorite(deck.deck_id) ? 'fa-solid fa-star' : 'fa-regular fa-star'"></i>
+                            <FontAwesomeIcon :icon="isFavorite(deck.deck_id) ? byPrefixAndName.fas['star'] : byPrefixAndName.far['star']" />
                         </span>
                     </div>
                 </template>

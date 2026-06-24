@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -81,7 +82,7 @@ function goHome() {
                 </p>
                 <div class="buttons">
                     <button class="button is-link" @click="submitAnother">
-                        <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                         <span>Create Another</span>
                     </button>
                     <button class="button" @click="goHome">Back to Home</button>
@@ -92,7 +93,7 @@ function goHome() {
             <template v-else>
                 <p class="mb-4">
                     <span class="icon-text">
-                        <span class="icon"><i class="fa-solid fa-user"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>
                         <span>
                             Submitting as <strong>{{ currentUser?.display_name ?? 'Guest' }}</strong>.
                             <template v-if="!currentUser">
@@ -106,7 +107,7 @@ function goHome() {
                     <div class="field mb-0">
                         <label class="label">
                             <span class="icon-text">
-                                <span class="icon"><i class="fa-solid fa-bookmark"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['bookmark']" /></span>
                                 <span>Save as</span>
                             </span>
                         </label>
@@ -117,7 +118,7 @@ function goHome() {
                                 :class="{ 'is-active': saveMode === 'public' }"
                                 @click="saveMode = 'public'"
                             >
-                                <span class="icon"><i class="fa-solid fa-globe"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['globe']" /></span>
                                 <span>Public Spread</span>
                             </button>
                             <button
@@ -126,7 +127,7 @@ function goHome() {
                                 :class="{ 'is-active': saveMode === 'personal' }"
                                 @click="saveMode = 'personal'"
                             >
-                                <span class="icon"><i class="fa-solid fa-lock"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 <span>Personal Spread</span>
                             </button>
                         </div>

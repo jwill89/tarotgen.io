@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -102,7 +103,7 @@ onMounted(fetchData)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -115,7 +116,7 @@ onMounted(fetchData)
                 </div>
                 <div class="level-right">
                     <button class="button is-primary" @click="openAdd">
-                        <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                         <span>Add Special Card</span>
                     </button>
                 </div>
@@ -142,7 +143,7 @@ onMounted(fetchData)
                         <label class="label">Search</label>
                         <div class="control has-icons-left">
                             <input class="input" type="text" v-model="search" placeholder="Search by name, card ID, or deck..." />
-                            <span class="icon is-small is-left"><i class="fa-solid fa-magnifying-glass"></i></span>
+                            <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']" /></span>
                         </div>
                     </div>
                 </div>
@@ -168,11 +169,11 @@ onMounted(fetchData)
                             <td>
                                 <div class="buttons are-small">
                                     <button class="button is-info" @click="openEdit(card)">
-                                        <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                         <span>Edit</span>
                                     </button>
                                     <button class="button is-danger" @click="deleteCard(card)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>
@@ -242,7 +243,7 @@ onMounted(fetchData)
         <template #footer>
             <button class="button" @click="closeEdit">Cancel</button>
             <button class="button is-success" :class="{ 'is-loading': saving }" @click="saveCard">
-                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                 <span>{{ isNew ? 'Create' : 'Save' }}</span>
             </button>
         </template>

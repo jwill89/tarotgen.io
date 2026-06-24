@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref } from 'vue'
 import { useUser } from '@/composables/useUser'
 
@@ -46,7 +47,7 @@ async function submit() {
                                         required
                                         autofocus
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
                                 </div>
                             </div>
 
@@ -57,7 +58,7 @@ async function submit() {
                                     :class="{ 'is-loading': loading }"
                                     :disabled="loading"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                                     <span>Send Reset Link</span>
                                 </button>
                             </div>
@@ -70,7 +71,7 @@ async function submit() {
 
                     <div class="box" v-else>
                         <div class="notification is-success is-light">
-                            <span class="icon"><i class="fa-solid fa-envelope-circle-check"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope-circle-check']" /></span>
                             {{ message }}
                         </div>
 

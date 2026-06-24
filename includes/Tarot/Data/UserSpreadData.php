@@ -12,6 +12,8 @@ class UserSpreadData extends AbstractData
 
     /**
      * Retrieve all spreads for a user, or a single one by ID (scoped to user).
+     *
+     * @return list<UserSpread>
      */
     public function retrieve(int $userId, ?int $userSpreadId = null): array
     {
@@ -51,6 +53,9 @@ class UserSpreadData extends AbstractData
     /**
      * @throws JsonException
      */
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(int $userId, array $data): ?UserSpread
     {
         $positions = $this->normalizePositions($data['positions'] ?? []);
@@ -74,6 +79,9 @@ class UserSpreadData extends AbstractData
 
     /**
      * @throws JsonException
+     */
+    /**
+     * @param array<string,mixed> $data
      */
     public function update(int $userId, int $userSpreadId, array $data): ?UserSpread
     {
@@ -131,6 +139,9 @@ class UserSpreadData extends AbstractData
 
     /**
      * @throws JsonException
+     */
+    /**
+     * @param array<string,mixed> $row
      */
     private function hydrate(array $row): UserSpread
     {

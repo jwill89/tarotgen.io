@@ -12,6 +12,8 @@ class PendingSpread extends AbstractStructure
     /**
      * Array of position objects, each shaped:
      * ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
+     *
+     * @var list<array<string,mixed>>
      */
     protected array $positions = [];
 
@@ -40,6 +42,9 @@ class PendingSpread extends AbstractStructure
         return $this->card_count;
     }
 
+    /**
+     * @return list<array<string,mixed>>
+     */
     public function getPositions(): array
     {
         return $this->positions;

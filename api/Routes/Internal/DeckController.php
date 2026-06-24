@@ -21,6 +21,9 @@ class DeckController extends AbstractController
         $this->cardNames = $cardNames;
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function getDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = $args['deck_id'] ?? null;
@@ -52,6 +55,8 @@ class DeckController extends AbstractController
      * List every card available in a deck as {card_id, name}, so the custom
      * reading screen can offer a picker. Mirrors the reading engine's card
      * resolution.
+     *
+     * @param array<string,string> $args
      */
     public function getDeckCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, nextTick } from 'vue'
 import type { SpreadOption } from '@/types'
 import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
@@ -148,10 +149,10 @@ function onToggleFavorite(option: SpreadOption, e: Event) {
                 @keydown="onKeydown"
             />
             <span class="icon is-small is-left">
-                <i class="fa-solid fa-table-cells"></i>
+                <FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" />
             </span>
             <span v-if="modelValue" class="icon is-small is-right is-clickable" @mousedown.prevent="clearSelection">
-                <i class="fa-solid fa-xmark"></i>
+                <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
             </span>
         </div>
 
@@ -181,7 +182,7 @@ function onToggleFavorite(option: SpreadOption, e: Event) {
                             :title="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
                             @mousedown.prevent.stop="onToggleFavorite(option, $event)"
                         >
-                            <i :class="option.isFavorite ? 'fa-solid fa-star' : 'fa-regular fa-star'"></i>
+                            <FontAwesomeIcon :icon="option.isFavorite ? byPrefixAndName.fas['star'] : byPrefixAndName.far['star']" />
                         </span>
                     </div>
                 </template>

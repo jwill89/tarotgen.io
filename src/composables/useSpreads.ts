@@ -9,7 +9,7 @@ const spreads: Ref<Spread[]> = ref([])
 
 export function useSpreads() {
     const { userSpreads, fetchUserSpreads } = useUserSpreads()
-    const { favorites, fetchFavorites, isFavorite } = useFavoriteSpreads()
+    const { fetchFavorites, isFavorite } = useFavoriteSpreads()
     const { isLoggedIn } = useUser()
 
     async function fetchSpreads(): Promise<void> {

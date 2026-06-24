@@ -40,6 +40,9 @@ class ContactData extends AbstractData
     /**
      * Store a new contact submission.
      */
+    /**
+     * @param array<string,mixed> $data
+     */
     public function store(array $data): ?Contact
     {
         $sql = "INSERT INTO contacts (user_id, name, email, message)
@@ -95,6 +98,9 @@ class ContactData extends AbstractData
         return $row ? $this->hydrate($row) : null;
     }
 
+    /**
+     * @param array<string,mixed> $row
+     */
     private function hydrate(array $row): Contact
     {
         return new Contact([

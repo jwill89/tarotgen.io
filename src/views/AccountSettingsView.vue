@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAccount } from '@/composables/useAccount'
@@ -236,7 +237,7 @@ async function handleTogglePasswordLogin() {
             <div class="columns is-centered">
                 <div class="column is-6-desktop is-8-tablet">
                     <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
-                        <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                         <span>Back to Dashboard</span>
                     </router-link>
 
@@ -249,12 +250,12 @@ async function handleTogglePasswordLogin() {
                             <div class="field">
                                 <div class="control has-icons-left">
                                     <input class="input" type="text" v-model="displayName" maxlength="30" autocomplete="nickname" />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-user"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span>
                                 </div>
                             </div>
                             <div class="notification is-danger is-light" v-if="nameError">{{ nameError }}</div>
                             <button class="button is-success" type="submit" :class="{ 'is-loading': nameSaving }">
-                                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                                 <span>Save Name</span>
                             </button>
                         </form>
@@ -279,7 +280,7 @@ async function handleTogglePasswordLogin() {
                             </div>
                             <div class="notification is-danger is-light" v-if="pwError">{{ pwError }}</div>
                             <button class="button is-success" type="submit" :class="{ 'is-loading': pwSaving }">
-                                <span class="icon"><i class="fa-solid fa-key"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                                 <span>Change Password</span>
                             </button>
                         </form>
@@ -291,18 +292,18 @@ async function handleTogglePasswordLogin() {
                         <div class="notification is-danger is-light" v-if="googleError">{{ googleError }}</div>
                         <template v-if="currentUser?.google_linked">
                             <p class="mb-3">
-                                <span class="icon has-text-success"><i class="fa-solid fa-circle-check"></i></span>
+                                <span class="icon has-text-success"><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-check']" /></span>
                                 Your Google account is linked. You can sign in with Google.
                             </p>
                             <button class="button is-warning" :class="{ 'is-loading': unlinking }" @click="unlinkGoogle">
-                                <span class="icon"><i class="fa-brands fa-google"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                                 <span>Unlink Google</span>
                             </button>
                         </template>
                         <template v-else>
                             <p class="mb-3">Link your Google account to enable one-click sign in.</p>
                             <button class="button is-info" @click="linkGoogle">
-                                <span class="icon"><i class="fa-brands fa-google"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                                 <span>Link Google Account</span>
                             </button>
                         </template>
@@ -321,7 +322,7 @@ async function handleTogglePasswordLogin() {
                         <div v-if="passkeys.length > 0" class="mb-4">
                             <div v-for="pk in passkeys" :key="pk.passkey_id" class="passkey-item">
                                 <div class="passkey-info">
-                                    <span class="icon has-text-info"><i class="fa-solid fa-key"></i></span>
+                                    <span class="icon has-text-info"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                                     <span class="passkey-name">{{ pk.name }}</span>
                                     <span class="is-size-7 has-text-grey ml-2">
                                         Added {{ new Date(pk.created_at).toLocaleDateString() }}
@@ -330,10 +331,10 @@ async function handleTogglePasswordLogin() {
                                 </div>
                                 <div class="passkey-actions">
                                     <button class="button is-small" title="Rename" @click="editPasskeyName(pk.passkey_id, pk.name)">
-                                        <span class="icon"><i class="fa-solid fa-pen"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                                     </button>
                                     <button class="button is-small is-danger is-light" title="Remove" @click="removePasskey(pk.passkey_id, pk.name)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                     </button>
                                 </div>
                             </div>
@@ -357,7 +358,7 @@ async function handleTogglePasswordLogin() {
                                     :class="{ 'is-loading': passkeyRegistering }"
                                     @click="addPasskey"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                                     <span>Add Passkey</span>
                                 </button>
                             </div>
@@ -381,7 +382,7 @@ async function handleTogglePasswordLogin() {
                                 @click="handleTogglePasswordLogin"
                             >
                                 <span class="icon">
-                                    <i :class="currentUser?.password_login_disabled ? 'fa-solid fa-lock-open' : 'fa-solid fa-lock'"></i>
+                                    <FontAwesomeIcon :icon="currentUser?.password_login_disabled ? byPrefixAndName.fas['lock-open'] : byPrefixAndName.fas['lock']" />
                                 </span>
                                 <span>{{ currentUser?.password_login_disabled ? 'Re-enable Password Login' : 'Disable Password Login' }}</span>
                             </button>
@@ -400,7 +401,7 @@ async function handleTogglePasswordLogin() {
                         </div>
                         <div class="notification is-danger is-light" v-if="deleteError">{{ deleteError }}</div>
                         <button class="button is-danger" :class="{ 'is-loading': deleting }" @click="removeAccount">
-                            <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                             <span>Delete My Account</span>
                         </button>
                     </div>

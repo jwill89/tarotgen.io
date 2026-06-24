@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { reactive, computed, watch, ref, onMounted, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import ReadingOwnerOptions from '@/components/ReadingOwnerOptions.vue'
@@ -12,7 +13,7 @@ import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { readApiError } from '@/composables/useApi'
 import { renderMarkdown } from '@/utils/markdown'
-import { deckLabel, defaultDeckId } from '@/utils/deck'
+import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { local } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
@@ -24,7 +25,7 @@ const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
 const router = useRouter()
 const { decks } = useDecks()
 const { fetchFavoriteDecks } = useFavoriteDecks()
-const { spreads, spreadOptions, fetchSpreads } = useSpreads()
+const { spreadOptions, fetchSpreads } = useSpreads()
 const toasts = useToasts()
 const { record: recordReading } = useRecentReadings()
 
@@ -374,7 +375,7 @@ async function submitNewReading() {
                                 :class="{ 'is-active': form.freeDrawMode === 'standard' }"
                                 @click="form.freeDrawMode = 'standard'"
                             >
-                                <span class="icon"><i class="fa-solid fa-shuffle"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['shuffle']" /></span>
                                 <span>Standard</span>
                             </button>
                             <button
@@ -383,7 +384,7 @@ async function submitNewReading() {
                                 :class="{ 'is-active': form.freeDrawMode === 'placement' }"
                                 @click="form.freeDrawMode = 'placement'"
                             >
-                                <span class="icon"><i class="fa-solid fa-hand-pointer"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['hand-pointer']" /></span>
                                 <span>With Placement</span>
                             </button>
                         </div>
@@ -398,7 +399,7 @@ async function submitNewReading() {
                                 <div class="control has-icons-left">
                                     <input class="input" type="number" id="number_of_cards" v-model.number="form.numberOfCards" min="1" :max="maxCards" autocomplete="off" :disabled="selectedSpread !== null" />
                                     <span class="icon is-small is-left">
-                                        <i class="fa-solid fa-diamond"></i>
+                                        <FontAwesomeIcon :icon="byPrefixAndName.fas['diamond']" />
                                     </span>
                                 </div>
                                 <p class="help" v-if="selectedSpread">Set by the selected spread.</p>
@@ -424,11 +425,11 @@ async function submitNewReading() {
                     <div class="field">
                         <div class="buttons">
                             <button class="button is-primary is-medium" @click="submitNewReading">
-                                <span class="icon"><i class="fa-solid fa-wand-magic-sparkles"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']" /></span>
                                 <span>Generate New Draw</span>
                             </button>
                             <button class="button is-medium" @click="resetForm">
-                                <span class="icon"><i class="fa-solid fa-rotate-left"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                                 <span>Reset</span>
                             </button>
                         </div>

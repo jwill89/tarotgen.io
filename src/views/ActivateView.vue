@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -38,19 +39,19 @@ onMounted(async () => {
                     <div class="box">
                         <template v-if="state === 'working'">
                             <span class="icon is-large has-text-grey-light">
-                                <i class="fa-solid fa-spinner fa-spin fa-2x"></i>
+                                <FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin size="2x" />
                             </span>
                             <p class="mt-3">Activating your account…</p>
                         </template>
 
                         <template v-else-if="state === 'success'">
                             <span class="icon is-large has-text-success">
-                                <i class="fa-duotone fa-solid fa-circle-check fa-2x"></i>
+                                <FontAwesomeIcon :icon="byPrefixAndName.fad['circle-check']" size="2x" />
                             </span>
                             <p class="mt-3">{{ message }}</p>
                             <div class="buttons is-centered mt-4">
                                 <router-link class="button is-primary" :to="{ name: 'login' }">
-                                    <span class="icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']" /></span>
                                     <span>Log In</span>
                                 </router-link>
                             </div>
@@ -58,7 +59,7 @@ onMounted(async () => {
 
                         <template v-else>
                             <span class="icon is-large has-text-danger">
-                                <i class="fa-duotone fa-solid fa-circle-exclamation fa-2x"></i>
+                                <FontAwesomeIcon :icon="byPrefixAndName.fad['circle-exclamation']" size="2x" />
                             </span>
                             <p class="mt-3">{{ message }}</p>
                             <div class="buttons is-centered mt-4">

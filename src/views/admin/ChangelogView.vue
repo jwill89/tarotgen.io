@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { useConfirm } from '@/composables/useConfirm'
@@ -96,7 +97,7 @@ onMounted(fetchChangelog)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -109,7 +110,7 @@ onMounted(fetchChangelog)
                 </div>
                 <div class="level-right">
                     <button class="button is-primary" @click="openAdd">
-                        <span class="icon"><i class="fa-solid fa-plus"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
                         <span>Add Entry</span>
                     </button>
                 </div>
@@ -131,11 +132,11 @@ onMounted(fetchChangelog)
                             <td>
                                 <div class="buttons are-small">
                                     <button class="button is-info" @click="openEdit(entry)">
-                                        <span class="icon"><i class="fa-solid fa-pen-to-square"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']" /></span>
                                         <span>Edit</span>
                                     </button>
                                     <button class="button is-danger" @click="deleteEntry(entry)">
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>
@@ -176,7 +177,7 @@ onMounted(fetchChangelog)
         <template #footer>
             <button class="button" @click="closeEdit">Cancel</button>
             <button class="button is-success" :class="{ 'is-loading': saving }" @click="saveEntry">
-                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                 <span>{{ editingId !== null ? 'Save' : 'Create' }}</span>
             </button>
         </template>

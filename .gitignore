@@ -1,0 +1,22 @@
+/vendor/
+/assets/
+/db/
+/dist/
+/.idea/
+/.vscode/
+/node_modules/
+.env
+# Holds the FontAwesome private-registry auth token — never commit.
+/.npmrc
+/.phpunit.cache/
+/.claude/
+/AGENTS.md
+
+# Python bytecode (scripts/*.py)
+__pycache__/
+*.pyc
+
+# OS / editor cruft (this tree lives under OneDrive on Windows)
+.DS_Store
+Thumbs.db
+Desktop.ini

@@ -109,6 +109,8 @@ class Reading extends AbstractStructure
     /**
      * Override serialization so reading_info is emitted as a decoded JSON object
      * rather than a double-encoded string.
+     *
+     * @return array<string,mixed>
      */
     public function jsonSerialize(): array
     {

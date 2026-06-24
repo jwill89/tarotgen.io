@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 /**
  * Floating heading-font switcher.
  *
@@ -24,7 +25,7 @@ const open = ref(false)
             title="Switch heading font"
             @click="open = !open"
         >
-            <i class="fa-solid fa-font" aria-hidden="true"></i>
+            <FontAwesomeIcon :icon="byPrefixAndName.fas['font']" aria-hidden="true" />
         </button>
 
         <div v-if="open" class="font-switcher-panel" role="group" aria-label="Heading font">
@@ -39,11 +40,7 @@ const open = ref(false)
                 @click="setHeadingFont(font.id)"
             >
                 {{ font.label }}
-                <i
-                    v-if="font.id === currentFontId"
-                    class="fa-solid fa-check font-switcher-check"
-                    aria-hidden="true"
-                ></i>
+                <FontAwesomeIcon :icon="byPrefixAndName.fas['check']" class="font-switcher-check" v-if="font.id === currentFontId" aria-hidden="true" />
             </button>
         </div>
     </div>

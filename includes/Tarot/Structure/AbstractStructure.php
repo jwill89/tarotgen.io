@@ -16,13 +16,15 @@ abstract class AbstractStructure implements JsonSerializable
 {
     /**
      * Cache of property names per class to avoid repeated reflection.
+     *
+     * @var array<class-string, list<string>>
      */
     private static array $propertyCache = [];
 
     /**
      * Constructor method
-     * 
-     * @param array $params An associative array of properties to set on the object.
+     *
+     * @param array<string,mixed> $params An associative array of properties to set on the object.
      */
     public function __construct(array $params = [])
     {
@@ -31,10 +33,10 @@ abstract class AbstractStructure implements JsonSerializable
 
     /**
      * Set properties method
-     * 
+     *
      * This method sets the properties of the object based on the provided associative array.
-     * 
-     * @param array $params An associative array of properties to set on the object.
+     *
+     * @param array<string,mixed> $params An associative array of properties to set on the object.
      * @return void
      */
     public function setProperties(array $params = []): void
@@ -52,7 +54,7 @@ abstract class AbstractStructure implements JsonSerializable
      * This method caches ReflectionClass property names per class and
      * returns an associative array of the object's properties.
      *
-     * @return array An associative array of the object's properties.
+     * @return array<string,mixed> An associative array of the object's properties.
      */
     public function jsonSerialize(): array
     {

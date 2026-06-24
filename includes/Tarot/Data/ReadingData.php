@@ -191,7 +191,7 @@ class ReadingData extends AbstractData
     /**
      * Admin: paginated list of all readings (lightweight — no reading_info body).
      *
-     * @return array{rows: array, total: int}
+     * @return array{rows: list<array<string,mixed>>, total: int}
      */
     public function listAll(int $limit, int $offset): array
     {
@@ -242,6 +242,9 @@ class ReadingData extends AbstractData
         return $stmt->rowCount();
     }
 
+    /**
+     * @param array<string,mixed> $row
+     */
     private function hydrate(array $row): Reading
     {
         $reading = new Reading();

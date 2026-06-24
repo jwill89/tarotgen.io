@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, onMounted } from 'vue'
 import { useAccount } from '@/composables/useAccount'
 import { useToasts } from '@/composables/useToasts'
@@ -119,7 +120,7 @@ onMounted(load)
     <section class="section">
         <div class="container">
             <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
-                <span class="icon"><i class="fa-solid fa-arrow-left"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
                 <span>Back to Dashboard</span>
             </router-link>
 
@@ -127,7 +128,7 @@ onMounted(load)
             <p class="subtitle is-5">View your readings and manage their title, visibility, and password.</p>
 
             <p v-if="loading" class="has-text-grey">
-                <span class="icon"><i class="fa-solid fa-spinner fa-spin"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
                 <span>Loading your readings…</span>
             </p>
 
@@ -151,7 +152,7 @@ onMounted(load)
                             <td>{{ formatDateTime(r.reading_time) }}</td>
                             <td>
                                 <span v-if="r.password_protected" class="tag is-warning is-light mr-1">
-                                    <span class="icon is-small"><i class="fa-solid fa-lock-keyhole"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']" /></span>
                                     <span>Password</span>
                                 </span>
                                 <span v-if="r.hide_user" class="tag is-info is-light">Name hidden</span>
@@ -160,11 +161,11 @@ onMounted(load)
                             <td>
                                 <div class="buttons are-small">
                                     <router-link class="button is-info" :to="{ name: 'reading', params: { id: r.reading_id } }">
-                                        <span class="icon"><i class="fa-solid fa-eye"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
                                         <span>View</span>
                                     </router-link>
                                     <button class="button" @click="openEdit(r)">
-                                        <span class="icon"><i class="fa-solid fa-pen"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                                         <span>Edit</span>
                                     </button>
                                     <button
@@ -172,7 +173,7 @@ onMounted(load)
                                         :class="{ 'is-loading': deletingId === r.reading_id }"
                                         @click="removeReading(r)"
                                     >
-                                        <span class="icon"><i class="fa-solid fa-trash"></i></span>
+                                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
                                         <span>Delete</span>
                                     </button>
                                 </div>
@@ -232,7 +233,7 @@ onMounted(load)
         <template #footer>
             <button class="button" @click="showEdit = false">Cancel</button>
             <button class="button is-success" :class="{ 'is-loading': saving }" @click="save">
-                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                 <span>Save</span>
             </button>
         </template>

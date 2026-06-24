@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDecks } from '@/composables/useDecks'
@@ -366,41 +367,41 @@ function skipSaveSpread() {
 
                     <div class="buttons has-addons are-small mb-0">
                         <button class="button is-small" tabindex="-1" :disabled="!canUndo" @click="undo" title="Undo">
-                            <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                         </button>
                         <button class="button is-small" tabindex="-1" :disabled="!canRedo" @click="redo" title="Redo">
-                            <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                         </button>
                     </div>
 
                     <button class="button is-small" :disabled="placedIndexes.length === 0" @click="centerAll" title="Center all cards">
-                        <span class="icon is-small"><i class="fa-solid fa-arrows-to-dot"></i></span>
+                        <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-to-dot']" /></span>
                         <span>Center</span>
                     </button>
                     <div class="buttons has-addons are-small mb-0">
                         <span class="button is-static is-small">Align</span>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('left')" title="Align left"><span class="icon is-small"><i class="fa-solid fa-align-left"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('hcenter')" title="Align center"><span class="icon is-small"><i class="fa-solid fa-align-center"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('right')" title="Align right"><span class="icon is-small"><i class="fa-solid fa-align-right"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('top')" title="Align top"><span class="icon is-small"><i class="fa-solid fa-angles-up"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('vmiddle')" title="Align middle"><span class="icon is-small"><i class="fa-solid fa-bars"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('bottom')" title="Align bottom"><span class="icon is-small"><i class="fa-solid fa-angles-down"></i></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('left')" title="Align left"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-left']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('hcenter')" title="Align center"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-center']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('right')" title="Align right"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['align-right']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('top')" title="Align top"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-up']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('vmiddle')" title="Align middle"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['bars']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 2" @click="align('bottom')" title="Align bottom"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['angles-down']" /></span></button>
                     </div>
                     <div class="buttons has-addons are-small mb-0">
                         <span class="button is-static is-small">Distribute</span>
-                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('h')" title="Distribute horizontal"><span class="icon is-small"><i class="fa-solid fa-arrows-left-right"></i></span></button>
-                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('v')" title="Distribute vertical"><span class="icon is-small"><i class="fa-solid fa-arrows-up-down"></i></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('h')" title="Distribute horizontal"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-left-right']" /></span></button>
+                        <button class="button is-small" :disabled="selectedCount < 3" @click="distribute('v')" title="Distribute vertical"><span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-up-down']" /></span></button>
                     </div>
 
                     <div class="buttons has-addons are-small mb-0 ml-auto">
                         <button class="button is-small" tabindex="-1" :disabled="zoom <= MIN_ZOOM" @click="zoomOut" title="Zoom out">
-                            <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-minus"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']" /></span>
                         </button>
                         <button class="button is-small" tabindex="-1" @click="resetZoom" title="Reset zoom" style="min-width: 3.5rem;">
                             {{ Math.round(zoom * 100) }}%
                         </button>
                         <button class="button is-small" tabindex="-1" :disabled="zoom >= MAX_ZOOM" @click="zoomIn" title="Zoom in">
-                            <span class="icon is-small"><i class="fa-solid fa-magnifying-glass-plus"></i></span>
+                            <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']" /></span>
                         </button>
                     </div>
                 </div>
@@ -450,16 +451,16 @@ function skipSaveSpread() {
                                 @pointerup.stop
                             >
                                 <button class="button is-small" tabindex="-1" @click.stop="rotate(i, -15)" title="Rotate left">
-                                    <span class="icon is-small"><i class="fa-solid fa-rotate-left"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']" /></span>
                                 </button>
                                 <button class="button is-small" tabindex="-1" @click.stop="rotate(i, 15)" title="Rotate right">
-                                    <span class="icon is-small"><i class="fa-solid fa-rotate-right"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-right']" /></span>
                                 </button>
                                 <button class="button is-small is-info" tabindex="-1" @click.stop="editIndex = i" title="Edit title">
-                                    <span class="icon is-small"><i class="fa-solid fa-pen"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
                                 </button>
                                 <button class="button is-small is-danger" tabindex="-1" @click.stop="unplace(i)" title="Remove from layout">
-                                    <span class="icon is-small"><i class="fa-solid fa-xmark"></i></span>
+                                    <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" /></span>
                                 </button>
                             </div>
                         </template>
@@ -476,11 +477,11 @@ function skipSaveSpread() {
                         :disabled="!allPlaced || saving"
                         @click="finalizePlacement"
                     >
-                        <span class="icon"><i class="fa-solid fa-check"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['check']" /></span>
                         <span>Finalize Placement</span>
                     </button>
                     <button class="button is-medium" @click="router.push({ name: 'reading', params: { id: readingId } })">
-                        <span class="icon"><i class="fa-solid fa-forward"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['forward']" /></span>
                         <span>Skip Placement</span>
                     </button>
                 </div>
@@ -537,7 +538,7 @@ function skipSaveSpread() {
                     :class="{ 'is-active': spreadSaveMode === 'personal' }"
                     @click="spreadSaveMode = 'personal'"
                 >
-                    <span class="icon"><i class="fa-solid fa-lock"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                     <span>Personal</span>
                 </button>
                 <button
@@ -546,7 +547,7 @@ function skipSaveSpread() {
                     :class="{ 'is-active': spreadSaveMode === 'public' }"
                     @click="spreadSaveMode = 'public'"
                 >
-                    <span class="icon"><i class="fa-solid fa-globe"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['globe']" /></span>
                     <span>Public</span>
                 </button>
             </div>
@@ -562,7 +563,7 @@ function skipSaveSpread() {
                 :disabled="spreadSaving || !spreadName.trim()"
                 @click="saveSpread"
             >
-                <span class="icon"><i class="fa-solid fa-floppy-disk"></i></span>
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
                 <span>Save Spread</span>
             </button>
         </template>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -92,7 +93,7 @@ async function handlePasskeyLogin() {
                                         required
                                         autofocus
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-envelope"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
                                 </div>
                             </div>
 
@@ -107,7 +108,7 @@ async function handlePasskeyLogin() {
                                         autocomplete="current-password"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 </div>
                             </div>
 
@@ -128,7 +129,7 @@ async function handlePasskeyLogin() {
                                     :class="{ 'is-loading': loading }"
                                     :disabled="loading"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']" /></span>
                                     <span>Log In</span>
                                 </button>
                             </div>
@@ -143,7 +144,7 @@ async function handlePasskeyLogin() {
                                     type="button"
                                     @click="loginWithGoogle"
                                 >
-                                    <span class="icon"><i class="fa-brands fa-google"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                                     <span>Sign in with Google</span>
                                 </button>
                             </div>
@@ -156,7 +157,7 @@ async function handlePasskeyLogin() {
                                     :disabled="passkeyLoading"
                                     @click="handlePasskeyLogin"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-key"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                                     <span>Sign in with Passkey</span>
                                 </button>
                             </div>
@@ -167,7 +168,7 @@ async function handlePasskeyLogin() {
                             <div class="has-text-centered mt-4">
                                 <p class="mb-2">Don't have an account?</p>
                                 <router-link class="button is-link is-outlined" :to="{ name: 'register' }">
-                                    <span class="icon"><i class="fa-solid fa-user-plus"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user-plus']" /></span>
                                     <span>Create an Account</span>
                                 </router-link>
                             </div>

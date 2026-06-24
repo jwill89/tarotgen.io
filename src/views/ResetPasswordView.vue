@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -71,7 +72,7 @@ async function submit() {
                                         required
                                         autofocus
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 </div>
                                 <p class="help">Use at least 12 characters. A memorable passphrase is strong and easy to recall.</p>
                             </div>
@@ -88,7 +89,7 @@ async function submit() {
                                         autocomplete="new-password"
                                         required
                                     />
-                                    <span class="icon is-small is-left"><i class="fa-solid fa-lock"></i></span>
+                                    <span class="icon is-small is-left"><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" /></span>
                                 </div>
                                 <p class="help is-danger" v-if="!passwordsMatch">Passwords do not match.</p>
                             </div>
@@ -110,7 +111,7 @@ async function submit() {
                                     :class="{ 'is-loading': loading }"
                                     :disabled="loading"
                                 >
-                                    <span class="icon"><i class="fa-solid fa-key"></i></span>
+                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['key']" /></span>
                                     <span>Update Password</span>
                                 </button>
                             </div>
@@ -119,12 +120,12 @@ async function submit() {
 
                     <div class="box" v-else>
                         <div class="notification is-success is-light">
-                            <span class="icon"><i class="fa-solid fa-circle-check"></i></span>
+                            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-check']" /></span>
                             Your password has been updated. You can now log in.
                         </div>
                         <div class="buttons is-centered mt-4">
                             <router-link class="button is-primary" :to="{ name: 'login' }">
-                                <span class="icon"><i class="fa-solid fa-right-to-bracket"></i></span>
+                                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']" /></span>
                                 <span>Log In</span>
                             </router-link>
                         </div>

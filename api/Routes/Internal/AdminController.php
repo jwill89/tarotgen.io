@@ -96,6 +96,9 @@ class AdminController extends AbstractController
         return $response->withJson($deck, 201);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function approveDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -109,6 +112,9 @@ class AdminController extends AbstractController
         return $response->withJson($deck);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function markDeckUsable(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -131,6 +137,9 @@ class AdminController extends AbstractController
 
     // ── Thumbnails ──────────────────────────────────────────────
 
+    /**
+     * @param array<string,string> $args
+     */
     public function generateDeckThumbnails(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         @set_time_limit(0);
@@ -155,6 +164,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->thumbnails->generateAll($ids));
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -169,6 +181,9 @@ class AdminController extends AbstractController
         return $response->withJson($deck);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -204,6 +219,9 @@ class AdminController extends AbstractController
         return $response->withJson($card, 201);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function updateSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -219,6 +237,9 @@ class AdminController extends AbstractController
         return $response->withJson($card);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -252,6 +273,9 @@ class AdminController extends AbstractController
         return $response->withJson($spread, 201);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spread_id = (int)($args['spread_id'] ?? 0);
@@ -266,6 +290,9 @@ class AdminController extends AbstractController
         return $response->withJson($spread);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spread_id = (int)($args['spread_id'] ?? 0);
@@ -289,6 +316,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->pendingSpreads->get());
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function approvePendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $pending_id = (int)($args['pending_id'] ?? 0);
@@ -302,6 +332,9 @@ class AdminController extends AbstractController
         return $response->withJson($spread, 201);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function rejectPendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $pending_id = (int)($args['pending_id'] ?? 0);
@@ -334,6 +367,9 @@ class AdminController extends AbstractController
         return $response->withJson($entry, 201);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function updateChangelogEntry(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $entry_id = (int)($args['entry_id'] ?? 0);
@@ -348,6 +384,9 @@ class AdminController extends AbstractController
         return $response->withJson($entry);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteChangelogEntry(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $entry_id = (int)($args['entry_id'] ?? 0);
@@ -368,6 +407,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->users->getAll());
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function activateUser(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $user_id = (int)($args['user_id'] ?? 0);
@@ -381,6 +423,9 @@ class AdminController extends AbstractController
         return $response->withJson(['success' => true]);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function setUserAdmin(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $user_id = (int)($args['user_id'] ?? 0);
@@ -398,6 +443,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->users->findById($user_id));
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function resendActivation(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $user_id = (int)($args['user_id'] ?? 0);
@@ -418,6 +466,9 @@ class AdminController extends AbstractController
         return $response->withJson($payload);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteUser(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $user_id = (int)($args['user_id'] ?? 0);
@@ -441,6 +492,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->contacts->get($unreadOnly));
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function markContactRead(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $contact_id = (int)($args['contact_id'] ?? 0);
@@ -480,6 +534,9 @@ class AdminController extends AbstractController
         return $response->withJson($result);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -524,6 +581,9 @@ class AdminController extends AbstractController
         return $response->withJson($this->deckSystems->getPending());
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function getDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id = (int)($args['id'] ?? 0);
@@ -541,6 +601,9 @@ class AdminController extends AbstractController
         return $response->withJson($data);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function approveDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id = (int)($args['id'] ?? 0);
@@ -554,6 +617,9 @@ class AdminController extends AbstractController
         return $response->withJson($system);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id     = (int)($args['id'] ?? 0);
@@ -595,6 +661,9 @@ class AdminController extends AbstractController
         return $response->withJson($system);
     }
 
+    /**
+     * @param array<string,string> $args
+     */
     public function deleteDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id = (int)($args['id'] ?? 0);

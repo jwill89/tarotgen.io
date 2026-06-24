@@ -4,17 +4,23 @@ import router from './router'
 import { markAuthChecked } from './router'
 import { useUser } from './composables/useUser'
 import { initHeadingFont } from './composables/useHeadingFont'
+import { FontAwesomeIcon, FontAwesomeLayers } from '@fortawesome/vue-fontawesome'
 
 import 'bulma/css/bulma.min.css'
 import './assets/tokens.css'
 import './assets/fonts.css'
 import './assets/style.css'
-// Self-hosted FontAwesome (registers icons + starts dom.watch()). Must run
-// before mount so the SVG conversion observer is active for the initial render.
+// Self-hosted FontAwesome: imports the icon set + core CSS and exposes the
+// byPrefixAndName lookup used by the <FontAwesomeIcon> components below.
 import './fontawesome'
 
 const app = createApp(App)
 app.use(router)
+
+// Register the FA Vue components globally so templates can use them without a
+// per-file import (icons are passed via :icon="byPrefixAndName.xxx['name']").
+app.component('FontAwesomeIcon', FontAwesomeIcon)
+app.component('FontAwesomeLayers', FontAwesomeLayers)
 
 // Apply the saved heading font before mount so the chosen display font paints
 // on the first frame instead of flashing the default and swapping.

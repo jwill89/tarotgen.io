@@ -31,6 +31,7 @@ $id = preg_match('#/reading/([A-Za-z0-9]+)#', $path, $m) ? $m[1] : '';
 $title       = "TarotGen.io Tarot Generator";
 $description = 'View this tarot reading on TarotGen.io.';
 $image       = $siteUrl . '/assets/share_banner.png';
+$imageFile   = __DIR__ . '/assets/share_banner.png';
 $url         = $siteUrl . ($id !== '' ? '/reading/' . $id : '/');
 
 if ($id !== '') {
@@ -71,12 +72,20 @@ if ($id !== '') {
             // Prefer the deck's card back as the share image, when it exists.
             $back = __DIR__ . '/assets/decks/' . $deckId . '/Card_Back.png';
             if ($deckId > 0 && is_file($back)) {
-                $image = $siteUrl . '/assets/decks/' . $deckId . '/Card_Back.png';
+                $image     = $siteUrl . '/assets/decks/' . $deckId . '/Card_Back.png';
+                $imageFile = $back;
             }
         }
     } catch (Throwable) {
         // Keep the defaults on any failure.
     }
+}
+
+// Cache-bust the share image with the file's mtime so social crawlers (which
+// cache OG images hard, keyed by URL) refetch whenever the image changes.
+$mtime = @filemtime($imageFile);
+if ($mtime !== false) {
+    $image .= '?v=' . $mtime;
 }
 
 $esc = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
@@ -88,8 +97,13 @@ $template = preg_replace(
     '',
     $template
 ) ?? $template;
+// Drop the static canonical so we can point it at the reading itself.
+$template = preg_replace('#[ \t]*<link[^>]*rel="canonical"[^>]*>\s*#i', '', $template) ?? $template;
 
 $meta = '<title>' . $esc($title) . '</title>' . "\n"
+    // Individual readings are shareable but shouldn't clutter search results.
+    . '    <meta name="robots" content="noindex, follow" />' . "\n"
+    . '    <link rel="canonical" href="' . $esc($url) . '" />' . "\n"
     . '    <meta name="title" content="' . $esc($title) . '" />' . "\n"
     . '    <meta name="description" content="' . $esc($description) . '" />' . "\n"
     . '    <meta property="og:type" content="article" />' . "\n"

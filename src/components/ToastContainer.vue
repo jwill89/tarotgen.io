@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { useToasts, type ToastType } from '@/composables/useToasts'
 
 const { toasts, dismiss } = useToasts()
@@ -22,11 +23,11 @@ const ICONS: Record<ToastType, string> = {
                 role="status"
             >
                 <span class="toast-icon icon">
-                    <i class="fa-solid" :class="ICONS[toast.type]"></i>
+                    <FontAwesomeIcon :icon="ICONS[toast.type]" />
                 </span>
                 <span class="toast-message">{{ toast.message }}</span>
                 <button class="toast-close" aria-label="Dismiss" @click="dismiss(toast.id)">
-                    <i class="fa-solid fa-xmark"></i>
+                    <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
                 </button>
             </div>
         </TransitionGroup>

@@ -29,6 +29,8 @@ class DeckSystemController extends AbstractController
 
     /**
      * Public: get a single deck system with its cards.
+     *
+     * @param array<string,string> $args
      */
     public function getSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {

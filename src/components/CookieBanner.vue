@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 
 const STORAGE_KEY = 'cookie_notice_dismissed'
@@ -21,7 +22,7 @@ function dismiss() {
         <div v-if="visible" class="cookie-banner">
             <div class="cookie-banner__content">
                 <span class="cookie-banner__text">
-                    <i class="fa-solid fa-cookie-bite"></i>
+                    <FontAwesomeIcon :icon="byPrefixAndName.fas['cookie-bite']" />
                     This site uses essential cookies to keep you logged in. No tracking or advertising cookies are used.
                 </span>
                 <button class="button is-small is-primary" @click="dismiss">Got it</button>

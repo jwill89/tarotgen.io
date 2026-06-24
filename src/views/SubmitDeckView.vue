@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
@@ -93,7 +94,7 @@ async function submitDeck() {
                     <p><strong>Thank you!</strong> Your deck submission has been received and will be reviewed by an admin.</p>
                 </div>
                 <router-link :to="{ name: 'home' }" class="button is-link">
-                    <span class="icon"><i class="fa-solid fa-house"></i></span>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
                     <span>Back to Home</span>
                 </router-link>
             </template>
@@ -159,7 +160,7 @@ async function submitDeck() {
                         :disabled="submitting"
                         @click="submitDeck"
                     >
-                        <span class="icon"><i class="fa-solid fa-paper-plane"></i></span>
+                        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
                         <span>Submit Deck</span>
                     </button>
                 </div>
