@@ -5,7 +5,6 @@
     "type": "module",
     "scripts": {
         "dev": "vite",
-        "dev:api": "php -S localhost:80 dev-router.php",
         "build": "vite build",
         "preview": "vite preview",
         "type-check": "vue-tsc --noEmit",

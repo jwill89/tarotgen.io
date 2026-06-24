@@ -7,8 +7,8 @@
  *
  * Requires INDEXNOW_KEY in .env and the matching key file at public/<key>.txt.
  *
- * Usage (from the project root):
- *   php scripts/indexnow.php                                   # submit every URL in public/sitemap.xml
+ * Usage (from the backend/ directory):
+ *   php scripts/indexnow.php                                   # submit every URL in the frontend sitemap
  *   php scripts/indexnow.php https://tarotgen.io/changelog ... # submit specific URLs
  */
 
@@ -28,7 +28,8 @@ if (!$indexNow->isConfigured()) {
 /** @var list<string> $urls */
 $urls = array_slice($argv, 1);
 if ($urls === []) {
-    $urls = sitemapUrls(__DIR__ . '/../public/sitemap.xml');
+    // The sitemap lives in the frontend's public dir (deployed to dist/, served at /sitemap.xml).
+    $urls = sitemapUrls(__DIR__ . '/../../frontend/public/sitemap.xml');
 }
 
 if ($urls === []) {

@@ -10,7 +10,6 @@ parameters:
     # all annotated, so this bar is enforced for new code too. Raise toward `max`
     # incrementally from here.
     level: 6
-    # Lives in config/; paths are relative to this file, hence the ../ prefixes.
     paths:
-        - ../includes/Tarot
-        - ../api/Routes
+        - includes/Tarot
+        - api/Routes

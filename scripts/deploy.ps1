@@ -141,7 +141,9 @@ function Invoke-Upload([string]$WorkingDir, [string]$LocalItem, [string]$RemoteD
 
 # ── Resolve paths & tools ─────────────────────────────────────────────────────
 $RepoRoot = Split-Path $PSScriptRoot -Parent
-$DistDir = Join-Path $RepoRoot "dist"
+$FrontendDir = Join-Path $RepoRoot "frontend"
+$BackendDir = Join-Path $RepoRoot "backend"
+$DistDir = Join-Path $FrontendDir "dist"
 
 if (-not (Test-Path $KeyPath)) { Fail "SSH key not found: $KeyPath" }
 
@@ -168,7 +170,7 @@ function Deploy-Frontend {
     }
     else {
         Write-Step "Building frontend (vite)..."
-        Push-Location $RepoRoot
+        Push-Location $FrontendDir
         try {
             npm run build
             if ($LASTEXITCODE -ne 0) { Fail "Frontend build failed (exit $LASTEXITCODE). Live site untouched." }
@@ -203,7 +205,7 @@ Could not connect, or $WebRoot does not exist / is not writable.
         Write-Host "    Upload failed - possibly the SSH rate limit (ufw limit ssh)." -ForegroundColor Yellow
         Write-Host "    Waiting 35s for the 30s window to clear, then retrying once..." -ForegroundColor Yellow
         Start-Sleep -Seconds 35
-        $r = Invoke-Upload -WorkingDir $RepoRoot -LocalItem 'dist' -RemoteDest $remoteNew -Label 'Uploading frontend' -FileCount $localFileCount
+        $r = Invoke-Upload -WorkingDir $FrontendDir -LocalItem 'dist' -RemoteDest $remoteNew -Label 'Uploading frontend' -FileCount $localFileCount
     }
     if (-not $r.Ok) { Fail "Upload failed. Live site untouched (still serving the previous build).`n$($r.Err)" }
     Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
@@ -247,7 +249,7 @@ function Deploy-Backend {
     Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $stage | Out-Null
     foreach ($item in $BackendPayload) {
-        $src = Join-Path $RepoRoot $item
+        $src = Join-Path $BackendDir $item
         if (-not (Test-Path $src)) { Fail "Backend payload item not found: $src" }
         Copy-Item $src -Destination $stage -Recurse -Force
     }
