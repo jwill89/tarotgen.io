@@ -1,0 +1,12 @@
+# Local deploy settings for scripts/deploy.ps1 — COPY this file to
+# scripts/deploy.local.ps1 (which is gitignored) and fill in your values.
+#
+# These are intentionally kept out of source control so no infrastructure
+# details (server IP, SSH key path, web root) end up in git history. The deploy
+# script dot-sources scripts/deploy.local.ps1 if it exists; values can also be
+# supplied via -VpsHost/-KeyPath/... params or TAROT_DEPLOY_* environment vars.
+
+$DeployVpsHost = '203.0.113.10'                       # droplet IP or hostname
+$DeployVpsUser = 'root'                                # SSH user
+$DeployKeyPath = 'C:\path\to\your-droplet-key.ppk'     # PuTTY .ppk private key
+$DeployWebRoot = '/var/www/your-site'                  # Apache DocumentRoot on the host

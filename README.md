@@ -40,9 +40,10 @@ scripts/    deploy.ps1 (repo-level orchestration)
 
 ## Quickstart (local dev)
 
-Requires Node, PHP 8.5+, Composer, and a gitignored `frontend/.npmrc` with the
-FontAwesome Pro kit token (see `AGENTS.md` §6). Copy `backend/.env.example` →
-`backend/.env`. Run the app as **two processes, one per folder**:
+Requires Node 20.19+ (or 22.12+, as Vite 8 needs), PHP 8.5+, Composer, and a
+gitignored `frontend/.npmrc` with the FontAwesome Pro kit token (see `AGENTS.md`
+§6). Copy `backend/.env.example` → `backend/.env`. Run the app as **two
+processes, one per folder**:
 
 ```powershell
 cd frontend ; npm install            # frontend deps

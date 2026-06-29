@@ -11,6 +11,10 @@
 # Holds the FontAwesome private-registry auth token — never commit.
 /frontend/.npmrc
 
+# Local deploy settings (server IP, SSH key path, web root) — never commit.
+# Copy scripts/deploy.local.ps1.example to create it.
+/scripts/deploy.local.ps1
+
 # Editor / agent — repo-level
 /.idea/
 /.vscode/

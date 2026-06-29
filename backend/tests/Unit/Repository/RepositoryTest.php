@@ -67,7 +67,7 @@ final class RepositoryTest extends TestCase
         $created = new Spread(['spread_id' => 42, 'name' => 'Submitted Spread']);
 
         $data = $this->createMock(PendingSpreadData::class);
-        $data->method('retrieve')->with(7)->willReturn([$pending]);
+        $data->expects($this->once())->method('retrieve')->with(7)->willReturn([$pending]);
         $data->expects($this->once())->method('delete')->with(7)->willReturn(true);
 
         $spreads = $this->createMock(SpreadRepository::class);
@@ -87,7 +87,7 @@ final class RepositoryTest extends TestCase
     public function testApproveReturnsNullWhenSubmissionMissing(): void
     {
         $data = $this->createMock(PendingSpreadData::class);
-        $data->method('retrieve')->with(99)->willReturn([]);
+        $data->expects($this->once())->method('retrieve')->with(99)->willReturn([]);
         $data->expects($this->never())->method('delete');
 
         $spreads = $this->createMock(SpreadRepository::class);
@@ -104,7 +104,7 @@ final class RepositoryTest extends TestCase
         $pending = new PendingSpread(['pending_id' => 7, 'name' => 'X']);
 
         $data = $this->createMock(PendingSpreadData::class);
-        $data->method('retrieve')->with(7)->willReturn([$pending]);
+        $data->expects($this->once())->method('retrieve')->with(7)->willReturn([$pending]);
         $data->expects($this->never())->method('delete');
 
         $spreads = $this->createStub(SpreadRepository::class);

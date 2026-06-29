@@ -18,7 +18,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 
 - **Frontend:** Vue 3 (`<script setup>` + TypeScript), Vue Router, Bulma CSS,
   TipTap (markdown editor), built with Vite.
-- **Backend:** PHP 8.3+ (targets 8.5; Composer platform pinned to `8.5.0`),
+- **Backend:** PHP 8.5+ (Composer platform pinned to `8.5.6`),
   Slim 4 framework with PHP-DI (autowiring) container, a layered architecture
   over a SQLite database.
 - **Database:** SQLite (`db/tarotdb.db`) accessed through PDO, WAL mode.
@@ -29,15 +29,15 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 
 | Area        | Tooling |
 |-------------|---------|
-| Frontend    | Vue `^3.5`, vue-router `^4.5`, TypeScript `~5.8`, Vite `^6`, Bulma `^1.0` |
+| Frontend    | Vue `^3.5`, vue-router `^4.5`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
 | Icons       | FontAwesome **Pro v7**, self-hosted via the private kit (`@awesome.me/kit-91d12dd2d3`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
 | FE testing  | Vitest `^4` with `happy-dom` |
 | FE linting  | ESLint `^10` (flat config) + `eslint-plugin-vue` + `@vue/eslint-config-typescript` |
-| Backend     | PHP `>=8.3` (target `8.5`), Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
+| Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^12` |
-| BE linting  | `squizlabs/php_codesniffer`, `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 6, baselined) |
+| BE linting  | `squizlabs/php_codesniffer` (PSR-12, `phpcs.xml`), `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 6, baselined) |
 | Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
 
 ---

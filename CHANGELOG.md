@@ -67,6 +67,17 @@ Bot/abuse protection for the sign-in flow.
 
 ### Developer experience
 
+- Upgraded the frontend toolchain to **TypeScript 6** (`~6.0`) with
+  **`vue-tsc 3`**, and refreshed the documented tech-stack versions in
+  `README.md` and `AGENTS.md` (also correcting stale Vite `^6` → `^8` and
+  PHP `>=8.3` → `>=8.5` entries).
+- Upgraded backend testing to **PHPUnit 13** (refreshed PHPStan and
+  php-cs-fixer too) and bumped the JS dev tools (ESLint, Vitest,
+  `@vitejs/plugin-vue`, happy-dom) to their latest releases.
+- Moved deploy connection settings (host, SSH key path, web root) out of
+  `scripts/deploy.ps1` into a gitignored `scripts/deploy.local.ps1` (template:
+  `deploy.local.ps1.example`) so no infrastructure details live in source
+  control.
 - Added project governance docs: this `CHANGELOG.md`, a `CONTRIBUTING.md`
   guide, and a proprietary `LICENSE`.
 - Added a **GitHub Actions CI** pipeline (`.github/workflows/ci.yml`) that runs
