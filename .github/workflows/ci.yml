@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [master, vue]
+    branches: [main]
   pull_request:
 
 # Cancel an in-progress run when newer commits are pushed to the same ref.
