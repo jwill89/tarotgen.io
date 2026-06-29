@@ -1,0 +1,228 @@
+/*
+ * Mystical design tokens.
+ *
+ * This is the single source of truth for the palette. It (1) defines our raw
+ * `--myst-*` tokens and (2) maps Bulma's own CSS variables onto them, so every
+ * Bulma component — buttons, inputs, selects, tables, tags, notifications,
+ * modals — renders in the mystical theme automatically instead of leaking
+ * Bulma's defaults. Imported after Bulma and before style.css.
+ */
+
+:root {
+    /* ── Raw palette ───────────────────────────────────────── */
+    /* Backgrounds → surfaces, deepest to most raised. */
+    --myst-bg: #0e0b1c;
+    --myst-bg-2: #14102a;
+    --myst-surface: #1c1636;      /* dropdowns, modals */
+    --myst-surface-2: #231c39;    /* boxes, panels, inputs, tables */
+    --myst-surface-3: #2e2547;    /* raised / hover */
+    --myst-border: rgba(255, 255, 255, 0.10);
+    --myst-border-strong: rgba(255, 255, 255, 0.16);
+
+    /* Text tiers. */
+    --myst-text: #e7e2f5;
+    --myst-text-strong: #f5f1ff;
+    --myst-text-muted: rgba(231, 226, 245, 0.66);
+    --myst-text-dim: rgba(231, 226, 245, 0.45);
+
+    /* Accents. */
+    --myst-gold: #e9c46a;
+    --myst-gold-bright: #f4d58d;
+    --myst-violet: #8b5cf6;
+    --myst-violet-deep: #6d4ed6;
+
+    /* Semantic accent colours (for non-button UI: tags, dots, borders). */
+    --myst-success: #34d399;
+    --myst-danger: #f15f7d;
+    --myst-info: #4cb9e0;
+    --myst-warning: #f0b94a;
+
+    /* Backwards-compatible aliases used by existing component styles. */
+    --myst-panel: var(--myst-surface-2);
+
+    /* Heading/display font. Overridden at runtime by the font switcher
+       (useHeadingFont) which rewrites this variable on <html>. Every heading
+       style reads it so a single token drives them all. */
+    --myst-heading-font: "Cinzel", Georgia, "Times New Roman", serif;
+
+    /* ── Bulma intent palette → mystical ───────────────────── */
+    /* Action semantics (used consistently across the app):
+       primary = create/generate, link = gold/utility, info = edit,
+       success = save/submit/approve, danger = delete/reject, warning = caution. */
+    --bulma-primary-h: 265deg;  --bulma-primary-s: 58%;  --bulma-primary-l: 62%;
+    --bulma-link-h: 43deg;      --bulma-link-s: 74%;     --bulma-link-l: 62%;
+    --bulma-info-h: 196deg;     --bulma-info-s: 64%;     --bulma-info-l: 56%;
+    --bulma-success-h: 158deg;  --bulma-success-s: 56%;  --bulma-success-l: 46%;
+    --bulma-warning-h: 40deg;   --bulma-warning-s: 85%;  --bulma-warning-l: 58%;
+    --bulma-danger-h: 345deg;   --bulma-danger-s: 72%;   --bulma-danger-l: 60%;
+
+    /* ── Bulma neutral scheme → our surfaces/text/border ───── */
+    --bulma-scheme-h: 265deg;
+    --bulma-scheme-s: 18%;
+    --bulma-scheme-main: var(--myst-surface-2);
+    --bulma-scheme-main-bis: var(--myst-surface);
+    --bulma-scheme-main-ter: var(--myst-surface-3);
+    --bulma-background: var(--myst-bg-2);
+    --bulma-border: var(--myst-border);
+    --bulma-border-weak: var(--myst-border);
+    --bulma-text: var(--myst-text);
+    --bulma-text-strong: var(--myst-text-strong);
+    --bulma-text-weak: var(--myst-text-muted);
+
+    /* ── Shape + focus ─────────────────────────────────────── */
+    --bulma-radius-small: 0.4rem;
+    --bulma-radius: 0.55rem;
+    --bulma-radius-medium: 0.7rem;
+    --bulma-radius-large: 0.9rem;
+    /* Gold focus ring everywhere. */
+    --bulma-focus-h: 43deg;
+    --bulma-focus-s: 74%;
+    --bulma-focus-l: 62%;
+}
+
+/* ── Global element polish ─────────────────────────────────── */
+
+/* Buttons: one consistent treatment for every intent (no per-intent specials),
+   semibold label, subtle lift + shadow on hover, gold focus ring. */
+.button {
+    font-weight: 600;
+    transition: transform 0.12s ease, box-shadow 0.15s ease,
+        background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.button.is-primary:hover,
+.button.is-success:hover,
+.button.is-info:hover,
+.button.is-danger:hover,
+.button.is-warning:hover,
+.button.is-link:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.32);
+}
+
+/* Outlined buttons get a subtler hover — no lift, just a gentle glow. */
+.button.is-outlined:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.button:focus-visible {
+    box-shadow: 0 0 0 0.18rem hsla(43, 74%, 62%, 0.45);
+}
+
+/* Headings: mystical display serif + strong text. */
+.title {
+    color: var(--myst-text-strong);
+    font-family: var(--myst-heading-font);
+    /* Small-caps so headings read as display caps even when the chosen font
+       isn't already all-caps. */
+    font-variant-caps: small-caps;
+    letter-spacing: 0.01em;
+}
+
+.subtitle {
+    color: var(--myst-text-muted);
+}
+
+/* Help / hint text: Bulma's default (0.75rem, low-contrast grey) is hard to
+   read against the dark mystical scheme. Bump the size and lift the contrast. */
+.help {
+    font-size: 0.875rem;
+    color: var(--myst-text-muted);
+}
+
+/* Small grey inline hints (e.g. "tap to place", instructions) use is-size-7
+   + has-text-grey across the app — give them the same readable treatment. */
+.is-size-7.has-text-grey,
+.has-text-grey.is-size-7 {
+    font-size: 0.85rem !important;
+    color: var(--myst-text-muted) !important;
+}
+
+/* Links default to gold. */
+a {
+    color: var(--myst-gold);
+}
+
+a:hover {
+    color: var(--myst-gold-bright);
+}
+
+/* Inputs/selects/textareas: subtle, consistent, gold focus glow. */
+.input,
+.textarea,
+.select select {
+    border-color: var(--myst-border-strong);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+    color: var(--myst-text-dim);
+}
+
+/* Tags inherit the themed intents automatically; just round them a touch. */
+.tag:not(body) {
+    font-weight: 600;
+}
+
+/* Tags: Bulma's "is-light" variants produce pale pastel backgrounds that clash
+   with the dark theme. Override to use translucent tinted backgrounds with matching
+   text colours for a cohesive mystical look. */
+.tag.is-info.is-light {
+    background-color: rgba(76, 185, 224, 0.12);
+    color: var(--myst-info);
+}
+
+.tag.is-success.is-light {
+    background-color: rgba(52, 211, 153, 0.12);
+    color: var(--myst-success);
+}
+
+.tag.is-warning.is-light {
+    background-color: rgba(240, 185, 74, 0.12);
+    color: var(--myst-warning);
+}
+
+.tag.is-danger.is-light {
+    background-color: rgba(241, 95, 125, 0.12);
+    color: var(--myst-danger);
+}
+
+.tag.is-primary.is-light {
+    background-color: rgba(139, 92, 246, 0.12);
+    color: var(--myst-violet);
+}
+
+.tag.is-link.is-light {
+    background-color: rgba(233, 196, 106, 0.12);
+    color: var(--myst-gold);
+}
+
+/* Notifications: Bulma's "is-light" variants produce pale pastel backgrounds
+   that clash with the dark theme. Override them to use our surface palette with
+   a tinted left accent border matching each intent colour. */
+.notification.is-info.is-light,
+.notification.is-success.is-light,
+.notification.is-warning.is-light,
+.notification.is-danger.is-light {
+    background-color: var(--myst-surface-2);
+    color: var(--myst-text);
+    border: 1px solid var(--myst-border-strong);
+    border-left: 4px solid;
+}
+
+.notification.is-info.is-light {
+    border-left-color: var(--myst-info);
+}
+
+.notification.is-success.is-light {
+    border-left-color: var(--myst-success);
+}
+
+.notification.is-warning.is-light {
+    border-left-color: var(--myst-warning);
+}
+
+.notification.is-danger.is-light {
+    border-left-color: var(--myst-danger);
+}

@@ -1,0 +1,30 @@
+# Backend (PHP) — generated deps, server-side data, local config
+/backend/vendor/
+/backend/assets/
+/backend/db/
+/backend/.phpunit.cache/
+/backend/.env
+
+# Frontend (Vue) — generated deps + build output, private registry token
+/frontend/node_modules/
+/frontend/dist/
+# Holds the FontAwesome private-registry auth token — never commit.
+/frontend/.npmrc
+
+# Editor / agent — repo-level
+/.idea/
+/.vscode/
+/.claude/
+/AGENTS.md
+
+# Catch any stray .env anywhere
+.env
+
+# Python bytecode (scripts/*.py)
+__pycache__/
+*.pyc
+
+# OS / editor cruft (this tree lives under OneDrive on Windows)
+.DS_Store
+Thumbs.db
+Desktop.ini

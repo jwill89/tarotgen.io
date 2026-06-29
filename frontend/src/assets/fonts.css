@@ -1,0 +1,32 @@
+/*
+ * Heading font faces.
+ *
+ * "Cinzel" is loaded from Google Fonts in index.html (kept as the default).
+ * The faces below are self-hosted candidates living in `public/fonts/` so we
+ * can audition different display fonts for the headings. Which one is actually
+ * used is controlled by the `--myst-heading-font` token (see useHeadingFont).
+ */
+
+@font-face {
+    font-family: "Against";
+    src: url("/fonts/against-regular.woff") format("woff");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Belgiano Serif";
+    src: url("/fonts/Belgiano-Serif-2.woff") format("woff");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "Tarotheque";
+    src: url("/fonts/tarotheque-v1.woff") format("woff");
+    font-weight: 400 700;
+    font-style: normal;
+    font-display: swap;
+}

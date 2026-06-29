@@ -1,0 +1,19 @@
+# https://tarotgen.io/robots.txt
+User-agent: *
+Allow: /
+
+# Private / non-content areas — keep out of search indexes.
+Disallow: /account
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+Disallow: /activate
+Disallow: /forgot-password
+Disallow: /reset-password
+Disallow: /api/
+
+# Individual readings are shareable (so social crawlers can still fetch them
+# for link previews via og.php), but are kept out of search results with a
+# per-page noindex tag rather than a blanket Disallow here.
+
+Sitemap: https://tarotgen.io/sitemap.xml

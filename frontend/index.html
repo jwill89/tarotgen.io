@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TarotGen.io Tarot Generator</title>
+    <meta name="title" content="TarotGen.io Tarot Generator" />
+    <meta name="description" content="Draw your own tarot spreads! Select one of various decks, draw a specific spread or freely choose a number of cards, then draw! Tools for tarot readers to share their craft online!" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://tarotgen.io/" />
+    <meta property="og:title" content="TarotGen.io Tarot Generator" />
+    <meta property="og:description" content="Draw your own tarot spreads! Select one of various decks, draw a specific spread or freely choose a number of cards, then draw! Tools for tarot readers to share their craft online!" />
+    <meta property="og:image" content="https://tarotgen.io/assets/share_banner.png" />
+
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content="https://tarotgen.io/" />
+    <meta property="twitter:title" content="TarotGen.io Tarot Generator" />
+    <meta property="twitter:description" content="Draw your own tarot spreads! Select one of various decks, draw a specific spread or freely choose a number of cards, then draw! Tools for tarot readers to share their craft online!" />
+    <meta property="twitter:image" content="https://tarotgen.io/assets/share_banner.png" />
+
+    <!-- Default canonical. The SPA rewrites this per route at runtime (see
+         src/utils/seo.ts); og.php swaps it for the reading's URL for crawlers. -->
+    <link rel="canonical" href="https://tarotgen.io/" />
+
+    <link rel="icon" type="image/x-icon" href="/assets/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#1a1330" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap" rel="stylesheet" />
+    <style>
+        [v-cloak] { display: none !important; }
+
+        /* Boot loader: painted on the very first frame (inline CSS, no JS/chunk
+           needed) and removed by main.ts once the app is mounted AND the initial
+           route's lazy chunk has resolved — so the shell and view appear together
+           instead of the background/menu flashing in ahead of the content. */
+        #app-loading {
+            position: fixed;
+            inset: 0;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0e0b1c;
+            transition: opacity 0.35s ease;
+        }
+        #app-loading.is-hiding { opacity: 0; }
+        #app-loading .app-loading__orb {
+            width: 2.75rem;
+            height: 2.75rem;
+            object-fit: contain;
+            animation: app-loading-pulse 1.6s ease-in-out infinite;
+        }
+        #app-loading .app-loading__ring {
+            position: absolute;
+            width: 4.75rem;
+            height: 4.75rem;
+            border-radius: 50%;
+            border: 3px solid rgba(255, 255, 255, 0.12);
+            border-top-color: #e9c46a;
+            animation: app-loading-spin 0.9s linear infinite;
+        }
+        @keyframes app-loading-spin { to { transform: rotate(360deg); } }
+        @keyframes app-loading-pulse {
+            0%, 100% { opacity: 0.85; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.08); }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #app-loading .app-loading__ring,
+            #app-loading .app-loading__orb { animation: none; }
+        }
+    </style>
+
+    <!-- Structured data: helps search engines understand the site as a web app
+         and may surface a richer result / sitelinks search box. -->
+    <script type="application/ld+json">
+    {
+        "@context": "https://schema.org",
+        "@graph": [
+            {
+                "@type": "WebApplication",
+                "@id": "https://tarotgen.io/#webapp",
+                "name": "TarotGen.io Tarot Generator",
+                "url": "https://tarotgen.io/",
+                "description": "Draw your own tarot spreads! Select one of various decks, draw a specific spread or freely choose a number of cards, then draw! Tools for tarot readers to share their craft online!",
+                "applicationCategory": "LifestyleApplication",
+                "operatingSystem": "Any",
+                "browserRequirements": "Requires JavaScript.",
+                "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD"
+                }
+            },
+            {
+                "@type": "WebSite",
+                "@id": "https://tarotgen.io/#website",
+                "name": "TarotGen.io",
+                "url": "https://tarotgen.io/",
+                "publisher": { "@id": "https://tarotgen.io/#org" }
+            },
+            {
+                "@type": "Organization",
+                "@id": "https://tarotgen.io/#org",
+                "name": "TarotGen.io",
+                "url": "https://tarotgen.io/",
+                "logo": "https://tarotgen.io/icon-512.png"
+            }
+        ]
+    }
+    </script>
+</head>
+
+<body class="has-navbar-fixed-top">
+    <div id="app" v-cloak></div>
+    <div id="app-loading" role="status" aria-label="Loading">
+        <span class="app-loading__ring" aria-hidden="true"></span>
+        <img class="app-loading__orb" src="/assets/favicon.png" alt="" aria-hidden="true" />
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>

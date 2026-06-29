@@ -1,0 +1,15 @@
+includes:
+    # Pre-existing findings are baselined so `composer stan` stays green and only
+    # *new* issues fail. Burn the baseline down over time; regenerate with:
+    #   composer stan -- --generate-baseline
+    - phpstan-baseline.neon
+
+parameters:
+    # Level 6 additionally requires every array/iterable to declare its value
+    # type — the Data/Repository/Structure layers and controller route args are
+    # all annotated, so this bar is enforced for new code too. Raise toward `max`
+    # incrementally from here.
+    level: 6
+    paths:
+        - includes/Tarot
+        - api/Routes

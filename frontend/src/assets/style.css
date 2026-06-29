@@ -1,0 +1,1204 @@
+/* ── Base Layout ──────────────────────────────────────────── */
+
+.app-wrapper {
+    display: flex;
+    flex-direction: column;
+    /* Bulma adds `has-navbar-fixed-top` to <body>, which pads the body by the
+       navbar height (3.25rem) to clear the fixed navbar. Subtract that here so
+       wrapper + body-padding == one viewport, instead of overflowing by the
+       navbar height and forcing a needless scroll. */
+    min-height: calc(100vh - 3.25rem);
+}
+
+.app-wrapper > section {
+    flex: 1;
+}
+
+/* Bulma's default box shadow reads as a white glow on this dark theme and
+   gets clipped wherever a parent hides overflow. Drop it for a clean edge. */
+.box {
+    box-shadow: none;
+}
+
+/* ── Navbar ───────────────────────────────────────────────── */
+/* Non-interactive "Admin" section heading inside the user dropdown. */
+.navbar-item.admin-menu-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--myst-text-muted);
+    pointer-events: none;
+    padding-bottom: 0.25rem;
+}
+
+.navbar-item.admin-menu-label .icon {
+    color: var(--myst-gold);
+}
+
+.navbar-item.is-active {
+    background-color: rgba(255, 255, 255, 0.1);
+    font-weight: 600;
+}
+
+/* ── Card Images ─────────────────────────────────────────── */
+.reversed {
+    transform: scale(-1, -1);
+}
+
+.card-image {
+    max-width: 300px;
+}
+
+.card-image a {
+    display: block;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.card-image img {
+    border-radius: 16px;
+    object-fit: cover;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-image a:hover img {
+    transform: scale(1.03);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.card-image .reversed:hover {
+    transform: scale(-1.03, -1.03);
+}
+
+.card-back {
+    max-width: 200px;
+    max-height: 300px;
+}
+
+.card-back a {
+    display: block;
+    overflow: hidden;
+    border-radius: 16px;
+}
+
+.card-back img {
+    border-radius: 16px;
+    max-height: 300px;
+    width: auto;
+}
+
+/* ── Reading Info ────────────────────────────────────────── */
+.reading-meta {
+    padding: 0.5rem 1.25rem;
+    /* Wide enough that rows (e.g. the Reading URL) don't wrap; fills its is-7
+       column on desktop and caps sensibly when shown alone. */
+    max-width: 44rem;
+}
+
+/* Reading layout: the spread canvas fills its column (which sits beside the
+   Card Details), rather than a fixed centered box. */
+.reading-main {
+    align-items: flex-start;
+}
+
+.reading-canvas {
+    max-width: 100%;
+    margin: 0;
+}
+
+/* Card Details sits in a narrower side column, so the list stacks vertically. */
+.reading-detail-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.reading-detail-grid .spread-detail-row {
+    margin-bottom: 0;
+}
+
+/* Free-draw grid uses the same flip mechanic as spreads. */
+.reading-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 1.25rem;
+}
+
+.reading-grid-card {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.reading-grid-card .spread-flip {
+    width: 100%;
+    height: auto;
+    aspect-ratio: var(--card-aspect, 5 / 8.6);
+    cursor: pointer;
+}
+
+.reading-grid-card.is-flipped .spread-flip {
+    transform: rotateY(180deg);
+}
+
+.reading-grid-card.is-active .spread-flip {
+    outline: 3px solid var(--myst-gold);
+    outline-offset: 2px;
+    border-radius: 10px;
+}
+
+.reading-grid-caption {
+    text-align: center;
+    font-size: 0.85rem;
+    line-height: 1.3;
+    color: var(--myst-text);
+}
+
+.reading-meta .meta-row {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+    padding: 0.7rem 0;
+    border-bottom: 1px solid var(--myst-border);
+}
+
+.reading-meta .meta-row:last-child {
+    border-bottom: none;
+}
+
+.reading-meta dt {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--myst-text-muted);
+    font-size: 0.82rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.reading-meta dt .icon {
+    color: var(--myst-gold);
+}
+
+.reading-meta dd {
+    margin: 0;
+    color: var(--myst-text-strong);
+    word-break: break-word;
+}
+
+.reading-meta .meta-sub {
+    color: var(--myst-text-muted);
+    font-weight: 400;
+}
+
+.reading-meta .meta-url {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reading-url-text {
+    font-family: var(--bulma-family-code, monospace);
+    word-break: break-all;
+    font-size: 0.85rem;
+    color: var(--myst-text);
+}
+
+/* Stack label above value on narrow screens. */
+@media screen and (max-width: 600px) {
+    .reading-meta .meta-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+}
+
+/* ── Loading Overlay ─────────────────────────────────────── */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── Lightbox Overlay ────────────────────────────────────── */
+.lightbox-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 10000;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    /* Scrollable container: when the image (plus caption/controls) is taller
+       than the viewport it can be scrolled. Using margin:auto on the child to
+       center — rather than align-items:center — keeps tall content fully
+       reachable (flexbox centering would clip the top and block scrolling). */
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.lightbox-content {
+    margin: auto;
+    max-width: 90vw;
+    text-align: center;
+    padding: 4rem 0;
+}
+
+.lightbox-viewport {
+    display: inline-block;
+    max-width: 90vw;
+    max-height: 80vh;
+    border: 3px solid white;
+    border-radius: 32px;
+    overflow: hidden;
+    line-height: 0;
+    touch-action: none;
+    cursor: zoom-in;
+}
+
+.lightbox-viewport.zoomed {
+    cursor: grab;
+}
+
+.lightbox-viewport.panning {
+    cursor: grabbing;
+}
+
+.lightbox-content img {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    transform-origin: center center;
+    user-select: none;
+    -webkit-user-drag: none;
+}
+
+.lightbox-caption {
+    color: #ddd;
+    font-size: 1rem;
+    font-weight: bold;
+    margin-top: 10px;
+    line-height: 1.3;
+}
+
+.lightbox-counter {
+    color: #999;
+    font-size: 0.85rem;
+    margin-top: 4px;
+}
+
+.lightbox-reversed-tag {
+    color: #f4a261;
+    font-style: italic;
+    font-weight: normal;
+    font-size: 0.85rem;
+}
+
+.lightbox-flip-btn {
+    margin-top: 0;
+    opacity: 0.85;
+    transition: opacity 0.2s;
+}
+
+.lightbox-flip-btn:hover {
+    opacity: 1;
+}
+
+.lightbox-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+}
+
+.lightbox-zoom-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: none;
+    border-radius: 999px;
+    color: white;
+    min-width: 38px;
+    height: 34px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.85;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.lightbox-zoom-btn:hover:not(:disabled) {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox-zoom-btn:disabled {
+    opacity: 0.35;
+    cursor: default;
+}
+
+.lightbox-zoom-reset {
+    min-width: 56px;
+}
+
+.lightbox-hint {
+    color: #888;
+    font-size: 0.78rem;
+    margin-top: 8px;
+}
+
+.lightbox-close {
+    position: fixed;
+    top: 12px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 36px;
+    cursor: pointer;
+    z-index: 10001;
+    line-height: 1;
+    opacity: 0.7;
+    transition: opacity 0.2s;
+    padding: 8px 12px;
+}
+
+.lightbox-close:hover {
+    opacity: 1;
+}
+
+.lightbox-nav {
+    position: fixed;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(255, 255, 255, 0.1);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    z-index: 10001;
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.7;
+    transition: opacity 0.2s, background 0.2s;
+    user-select: none;
+}
+
+.lightbox-nav:hover {
+    opacity: 1;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.lightbox-prev {
+    left: 12px;
+}
+
+.lightbox-next {
+    right: 12px;
+}
+
+/* ── Spread Description Box ──────────────────────────────── */
+.spread-description {
+    background-color: var(--myst-surface-2);
+    color: var(--myst-text);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.spread-description .content,
+.spread-description .content p,
+.spread-description .content li,
+.spread-description .content td,
+.spread-details-body,
+.spread-details-body p,
+.spread-details-body li,
+.spread-details-body td {
+    color: var(--myst-text);
+}
+
+.spread-description .content strong,
+.spread-details-body strong {
+    color: #ffffff;
+}
+
+.spread-description .content a,
+.spread-details-body a {
+    color: var(--myst-gold);
+}
+
+.spread-description .content table,
+.spread-details-body table {
+    background-color: transparent;
+    color: var(--myst-text);
+}
+
+.spread-description .content table th,
+.spread-details-body table th {
+    background-color: var(--myst-violet);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.spread-description .content table td,
+.spread-details-body table td {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.spread-description .content table tbody tr:nth-child(even) td,
+.spread-details-body table tbody tr:nth-child(even) td {
+    background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Reading notes: same collapsible styling as spread details, but full width
+   and sitting below the cards/details. */
+.reading-notes {
+    background-color: var(--myst-surface-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* ── Spread Details (collapsible, reading page) ──────────── */
+.spread-details {
+    background-color: var(--myst-surface-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    overflow: hidden;
+    /* Fills its narrower is-5 column, leaving the wider share for the
+       reading-details box so its rows don't wrap. */
+}
+
+.spread-details-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background-color: var(--myst-surface-3);
+    color: #ffffff;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    text-align: left;
+}
+
+.spread-details-header:hover {
+    background-color: var(--myst-surface-3);
+}
+
+.spread-details-body {
+    padding: 1rem;
+}
+
+.spread-details-body :last-child {
+    margin-bottom: 0;
+}
+
+/* ── Spread Layout Canvas ────────────────────────────────── */
+.spread-canvas {
+    position: relative;
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    aspect-ratio: 1 / 1;
+    background-color: #1f2330;
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+/* Pan/zoom window for the editor canvas: fills the full content width, clips
+   its contents (no scrollbars), and lets the canvas be dragged around inside
+   (Google-Maps style). Panning/zooming is driven by usePanZoom via a transform
+   on the inner canvas. */
+.spread-canvas-viewport {
+    position: relative;
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    border-radius: 16px;
+    background-color: #1f2330;
+    touch-action: none;
+}
+
+/* Only show the grab cursor when there's somewhere to pan (zoomed in). */
+.spread-canvas-viewport.is-zoomed {
+    cursor: grab;
+}
+
+.spread-canvas-viewport.is-zoomed:active {
+    cursor: grabbing;
+}
+
+/* The zoomable canvas fills the viewport at 100%; the inline transform from
+   usePanZoom handles scale + pan, so no scrollbars are ever needed. */
+.spread-canvas--zoomable {
+    max-width: none;
+    width: 100%;
+    margin: 0;
+    will-change: transform;
+}
+
+.spread-canvas.has-grid {
+    background-image:
+        linear-gradient(to right, rgba(255, 255, 255, 0.06) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+    background-size: 2.5% 2.5%;
+}
+
+.spread-card {
+    position: absolute;
+    width: 11%;
+    aspect-ratio: var(--card-aspect, 5 / 8.6);
+    transform: translate(-50%, -50%) rotate(var(--rotation, 0deg));
+    transform-origin: center center;
+    cursor: pointer;
+    user-select: none;
+}
+
+.spread-card img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 10px;
+    display: block;
+}
+
+/* Flip mechanics (reading display) */
+.spread-flip {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transition: transform 0.5s;
+}
+
+.spread-card.is-flipped .spread-flip {
+    transform: rotateY(180deg);
+}
+
+.spread-face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.spread-face--reveal {
+    transform: rotateY(180deg);
+}
+
+.spread-face--reveal img.reversed {
+    transform: scale(-1, -1);
+}
+
+/* Order number on a revealed card — shown on hover/focus only */
+.spread-order-badge--reveal {
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.spread-card.is-flipped:hover .spread-order-badge--reveal,
+.spread-card.is-flipped:focus-within .spread-order-badge--reveal {
+    opacity: 1;
+}
+
+/* Order badge — inset so the card's rounded corner doesn't clip it */
+.spread-order-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 3;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 11px;
+    background-color: var(--myst-violet);
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+
+/* Highlight the card whose details are currently shown */
+.spread-card.is-active .spread-flip {
+    outline: 3px solid var(--myst-gold);
+    outline-offset: 2px;
+    border-radius: 10px;
+}
+
+/* Always-visible details list beside the spread canvas */
+.spread-detail-list-title {
+    color: #ffffff;
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.6rem;
+}
+
+.spread-detail-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.5rem 0.6rem;
+    margin-bottom: 0.4rem;
+    background-color: var(--myst-surface-2);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: var(--myst-text);
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.spread-detail-row:hover {
+    background-color: var(--myst-surface-3);
+}
+
+.spread-detail-row.is-active {
+    border-color: var(--myst-gold);
+    background-color: var(--myst-surface-3);
+}
+
+.spread-detail-order {
+    flex: none;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 13px;
+    background-color: var(--myst-violet);
+    color: #ffffff;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spread-detail-text {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.4rem 0.5rem;
+}
+
+.spread-detail-text strong {
+    color: var(--myst-gold);
+}
+
+/* ── Spread Editor (admin) ───────────────────────────────── */
+.spread-token-tray {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    min-height: 60px;
+    padding: 0.5rem;
+    border: 1px dashed rgba(255, 255, 255, 0.25);
+    border-radius: 8px;
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.spread-token {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 72px;
+    border-radius: 8px;
+    border: 2px solid var(--myst-violet);
+    background-color: var(--myst-surface-3);
+    color: var(--myst-gold);
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.spread-token:hover {
+    background-color: var(--myst-surface-2);
+    border-color: var(--myst-gold);
+}
+
+.spread-card--editor {
+    background-color: var(--myst-violet);
+    border: 2px solid #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 700;
+    font-size: 1.1rem;
+}
+
+/* Draggable cards in the spread editor must claim touch gestures so a drag
+   isn't read as a page scroll. Scoped to the editor canvas only (not the
+   read-only preview) so the reading-view and preview panels let the page
+   scroll/zoom normally on mobile. */
+.spread-canvas:not(.spread-canvas--preview) .spread-card--editor {
+    touch-action: none;
+}
+
+.spread-card--editor.is-selected {
+    outline: 3px solid var(--myst-gold);
+    outline-offset: 2px;
+    z-index: 5;
+}
+
+/* Read-only layout preview (new reading page) */
+.spread-canvas--preview {
+    max-width: 100%;
+}
+
+.spread-canvas--preview .spread-card {
+    cursor: default;
+    font-size: 1rem;
+}
+
+.spread-canvas--preview .preview-number {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    line-height: 1;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+
+/* ── Mobile Responsive Adjustments ───────────────────────── */
+@media screen and (max-width: 768px) {
+    .section {
+        padding: 1.5rem 1rem;
+    }
+
+    .card-image {
+        max-width: 260px;
+    }
+
+    .card-back {
+        max-width: 160px;
+        max-height: 240px;
+    }
+
+    .card-back img {
+        max-height: 240px;
+    }
+
+    .lightbox-nav {
+        width: 40px;
+        height: 40px;
+        font-size: 22px;
+    }
+
+    .lightbox-prev {
+        left: 6px;
+    }
+
+    .lightbox-next {
+        right: 6px;
+    }
+
+    .lightbox-viewport,
+    .lightbox-content img {
+        max-width: 95vw;
+        max-height: 75vh;
+    }
+
+    .lightbox-close {
+        top: 8px;
+        right: 12px;
+        font-size: 30px;
+    }
+}
+
+/* ── Toggle Switch ───────────────────────────────────────── */
+.toggle-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+/* Hide the native checkbox but keep it accessible/focusable. */
+.toggle-switch input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-track {
+    position: relative;
+    display: inline-block;
+    width: 3.25rem;
+    height: 1.75rem;
+    background-color: var(--myst-surface-3);
+    border: 1px solid #4a4f63;
+    border-radius: 999px;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 50%;
+    left: 0.1875rem;
+    width: 1.3rem;
+    height: 1.3rem;
+    background-color: #c7ccda;
+    border-radius: 50%;
+    transform: translateY(-50%);
+    transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.toggle-switch input:checked + .toggle-track {
+    background-color: var(--myst-gold);
+    border-color: var(--myst-gold);
+}
+
+.toggle-switch input:checked + .toggle-track .toggle-thumb {
+    transform: translate(1.5rem, -50%);
+    background-color: var(--myst-surface-2);
+}
+
+.toggle-switch input:focus-visible + .toggle-track {
+    outline: 3px solid var(--myst-gold);
+    outline-offset: 2px;
+}
+
+.toggle-state {
+    min-width: 1.6rem;
+    font-weight: 600;
+    color: #c7ccda;
+}
+
+.toggle-switch input:checked ~ .toggle-state {
+    color: var(--myst-gold);
+}
+
+/* Variant for the bright-yellow warning notification (non-light): the default
+   gold "on" state blends into the background, so use high-contrast dark tones
+   instead. The is-light variant uses a dark surface, so the default toggle
+   styles work fine there. */
+.notification.is-warning:not(.is-light) .toggle-track {
+    background-color: #3a3f52;
+    border-color: #23262f;
+}
+
+.notification.is-warning:not(.is-light) .toggle-thumb {
+    background-color: #f5f5f5;
+}
+
+.notification.is-warning:not(.is-light) .toggle-switch input:checked + .toggle-track {
+    background-color: #23262f;
+    border-color: #23262f;
+}
+
+.notification.is-warning:not(.is-light) .toggle-switch input:checked + .toggle-track .toggle-thumb {
+    background-color: var(--myst-gold);
+}
+
+.notification.is-warning:not(.is-light) .toggle-state,
+.notification.is-warning:not(.is-light) .toggle-switch input:checked ~ .toggle-state {
+    color: #23262f;
+}
+
+.notification.is-warning:not(.is-light) .toggle-switch input:focus-visible + .toggle-track {
+    outline-color: #23262f;
+}
+
+/* ── Home Action Cards ───────────────────────────────────── */
+.home-actions {
+    margin-top: 1.5rem;
+}
+
+.home-action {
+    height: 100%;
+    display: block;
+    /* Give the cards a visible edge now that the box shadow is gone. */
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.home-action:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+/* ── Changelog ───────────────────────────────────────────── */
+.changelog-timeline {
+    margin-top: 1.5rem;
+}
+
+.changelog-entry {
+    background-color: var(--myst-surface-2);
+    border-left: 4px solid var(--myst-violet);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1.25rem;
+}
+
+.changelog-entry-head {
+    margin-bottom: 0.6rem;
+}
+
+.changelog-date {
+    display: block;
+    color: var(--myst-text-muted);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.changelog-title {
+    color: #fff;
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0.1rem 0 0;
+}
+
+.changelog-body,
+.changelog-body p {
+    color: var(--myst-text);
+}
+
+.changelog-body a {
+    color: var(--myst-gold);
+}
+
+/* ── Mystical Theme (palette + Bulma variable mapping live in tokens.css) ── */
+
+html,
+body {
+    min-height: 100%;
+}
+
+/* Deep, layered nebula backdrop. Painted on <html> so it acts as the page
+   canvas (the very back layer). The <body> is left transparent on purpose: an
+   opaque body background is a block-level box that paints AFTER negative
+   z-index elements, which would hide the z-index:-1 starfield below. */
+html {
+    background-color: #0e0b1c;
+    background-image:
+        radial-gradient(1200px 600px at 12% -10%, rgba(123, 79, 214, 0.28), transparent 60%),
+        radial-gradient(1000px 700px at 112% 8%, rgba(79, 70, 229, 0.20), transparent 55%),
+        radial-gradient(900px 800px at 50% 120%, rgba(233, 196, 106, 0.07), transparent 60%);
+    background-attachment: fixed;
+}
+
+/* Transparent so the StarField (z-index: -1) shows through. The twinkling
+   starfield itself lives in src/components/StarField.vue. */
+body {
+    background: transparent;
+}
+
+/* Display serif for the secondary headings (.title is themed in tokens.css). */
+.spread-detail-list-title,
+.changelog-title {
+    font-family: var(--myst-heading-font);
+    font-variant-caps: small-caps;
+    letter-spacing: 0.01em;
+}
+
+/* Navbar: translucent, blurred, with a gold hairline and gold brand. */
+.navbar.is-fixed-top {
+    background-color: rgba(14, 11, 28, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(233, 196, 106, 0.18);
+}
+
+.navbar-brand .navbar-item.has-text-weight-bold {
+    color: var(--myst-gold);
+}
+
+/* Group each navbar option as a tight icon+label unit, with breathing room
+   between options so they read as distinct. */
+.navbar-menu .navbar-start .navbar-item {
+    padding-left: 1.4rem;
+    padding-right: 1.4rem;
+    /* The flex gap (inherited as 0.75rem) is what actually separates the icon
+       from its label — shrink it so each icon hugs its word. */
+    gap: 0.35rem;
+}
+
+.navbar-menu .navbar-item .icon:first-child:not(:last-child) {
+    width: auto;
+    min-width: 0;
+    margin-right: 0;
+    margin-left: 0;
+}
+
+/* Admin dropdown: render it as a seamless extension of the navbar — same dark
+   translucent backdrop + blur — and force the items/hover/divider into the same
+   family. (Bulma's default item-hover fill is scheme-derived and, with our
+   low-saturation violet scheme, renders as a clashing grey.) */
+.navbar-dropdown {
+    background-color: rgba(14, 11, 28, 0.92);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-color: rgba(233, 196, 106, 0.18);
+}
+
+/* Bulma styles dropdown items with `.navbar-dropdown .navbar-item:not(.is-active,
+   .is-selected)` — the :not() gives it (0,3,0) specificity, so our overrides must
+   match it (a plain `.navbar-dropdown .navbar-item` at (0,2,0) loses, which is why
+   the items kept Bulma's opaque grey). Items are transparent so the dropdown's own
+   dark backdrop shows through uniformly. */
+.navbar .navbar-dropdown .navbar-item:not(.is-active, .is-selected) {
+    background-color: transparent;
+    color: #e7e2f5;
+}
+
+.navbar .navbar-dropdown .navbar-item:hover:not(.is-active, .is-selected),
+.navbar .navbar-dropdown .navbar-item:focus:not(.is-active, .is-selected),
+.navbar .navbar-dropdown .navbar-item:focus-within:not(.is-active, .is-selected) {
+    background-color: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.navbar-divider {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Solid panels (kept opaque so text never sits over the starfield). */
+.box {
+    background-color: var(--myst-panel);
+    border: 1px solid var(--myst-border);
+}
+
+/* Footer: same solid backdrop as the navbar, with a gold hairline. Compact
+   padding (Bulma's default is very tall) so it isn't chunky. */
+.footer {
+    background-color: rgba(14, 11, 28, 0.82);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border-top: 1px solid rgba(233, 196, 106, 0.18);
+    padding: 1.25rem 1.5rem;
+}
+
+.footer .content p:not(:last-child) {
+    margin-bottom: 0.5rem;
+}
+
+.footer-admin {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+/* Warm gold glow when hovering reading-grid card art. */
+.card-image a:hover img {
+    box-shadow: 0 6px 24px rgba(233, 196, 106, 0.25);
+}
+
+/* Deepen the spread canvas to match the violet backdrop. */
+.spread-canvas {
+    background-color: #160f2b;
+}
+
+/* ── Admin Tables ────────────────────────────────────────── */
+/* The actions column is always last; pin it to the right edge. */
+.table th:last-child,
+.table td:last-child {
+    text-align: right;
+}
+
+.table td:last-child .buttons {
+    justify-content: flex-end;
+}
+
+/* ── OR Divider ──────────────────────────────────────────── */
+
+.is-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 1rem 0;
+    color: var(--myst-text-muted, #999);
+    font-size: 0.85rem;
+    gap: 0.75rem;
+}
+
+.is-divider::before,
+.is-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid var(--myst-border, #444);
+}
+
+/* ── Callout Box ─────────────────────────────────────────── */
+/* A reusable highlighted panel for drawing attention to grouped
+   options or informational asides, styled within the dark theme. */
+.myst-callout {
+    background: var(--myst-surface-2);
+    border: 1px solid var(--myst-border-strong);
+    border-left: 4px solid var(--myst-violet);
+    border-radius: var(--bulma-radius);
+    padding: 1.25rem 1.5rem;
+}
+
+/* ── Segmented Control ───────────────────────────────────── */
+/* A pill-shaped two-or-more-option toggle (replaces radio buttons
+   for binary/ternary choices). */
+.myst-segmented {
+    display: inline-flex;
+    border-radius: var(--bulma-radius);
+    border: 1px solid var(--myst-border-strong);
+    overflow: hidden;
+}
+
+.myst-segmented__btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.6rem 1.2rem;
+    border: none;
+    background: var(--myst-surface-3);
+    color: var(--myst-text-muted);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.myst-segmented__btn:not(:last-child) {
+    border-right: 1px solid var(--myst-border-strong);
+}
+
+.myst-segmented__btn:hover:not(.is-active) {
+    background: var(--myst-surface);
+    color: var(--myst-text);
+}
+
+.myst-segmented__btn.is-active {
+    background: var(--myst-violet);
+    color: #fff;
+}
+
+.myst-segmented__btn.is-active .icon {
+    color: var(--myst-gold-bright);
+}

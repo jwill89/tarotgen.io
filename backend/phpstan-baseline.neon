@@ -1,0 +1,43 @@
+parameters:
+	ignoreErrors:
+		-
+			message: '#^Offset ''name'' on array\{sub\: string, email\: string, email_verified\?\: bool, name\: string, picture\: string\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: api/Routes/Internal/GoogleAuthController.php
+
+		-
+			message: '#^Strict comparison using \!\=\= between mixed and null will always evaluate to true\.$#'
+			identifier: notIdentical.alwaysTrue
+			count: 1
+			path: includes/Tarot/Data/UserData.php
+
+		-
+			message: '#^Comparison operation "\<\=" between int\<1, max\> and 0 is always false\.$#'
+			identifier: smallerOrEqual.alwaysFalse
+			count: 2
+			path: includes/Tarot/Service/ThumbnailService.php
+
+		-
+			message: '#^Result of \|\| is always false\.$#'
+			identifier: booleanOr.alwaysFalse
+			count: 1
+			path: includes/Tarot/Service/ThumbnailService.php
+
+		-
+			message: '#^Method Tarot\\Utility\\DbSessionHandler\:\:read\(\) never returns false so it can be removed from the return type\.$#'
+			identifier: return.unusedType
+			count: 1
+			path: includes/Tarot/Utility/DbSessionHandler.php
+
+		-
+			message: '#^Call to function is_array\(\) with array\{count\: int, first\: int\} will always evaluate to true\.$#'
+			identifier: function.alreadyNarrowedType
+			count: 1
+			path: includes/Tarot/Utility/RateLimiter.php
+
+		-
+			message: '#^Offset ''first'' on array\{count\: int, first\: int\} on left side of \?\? always exists and is not nullable\.$#'
+			identifier: nullCoalesce.offset
+			count: 1
+			path: includes/Tarot/Utility/RateLimiter.php

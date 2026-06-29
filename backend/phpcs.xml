@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<ruleset name="TarotGen">
+    <description>PSR-12 coding standard for the TarotGen.io backend.</description>
+
+    <!-- Files/dirs scanned when no path is given on the CLI (i.e. `composer lint`). -->
+    <file>includes/Tarot</file>
+    <file>api</file>
+    <file>tests</file>
+
+    <!-- Never lint generated or third-party code. -->
+    <exclude-pattern>*/vendor/*</exclude-pattern>
+    <exclude-pattern>*/.phpunit.cache/*</exclude-pattern>
+
+    <!-- Show sniff codes (s) and progress (p); colourise output. -->
+    <arg name="colors"/>
+    <arg value="sp"/>
+    <arg name="parallel" value="8"/>
+
+    <!-- PSR-12's 120-char line length is a SHOULD, not a MUST: keep it as a
+         (visible) warning, but don't fail the build/CI on warnings alone. Errors
+         still fail. -->
+    <config name="ignore_warnings_on_exit" value="1"/>
+
+    <!-- The standard. -->
+    <rule ref="PSR12"/>
+</ruleset>
