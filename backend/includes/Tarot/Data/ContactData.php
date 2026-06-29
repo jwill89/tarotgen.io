@@ -114,4 +114,3 @@ class ContactData extends AbstractData
         ]);
     }
 }
-

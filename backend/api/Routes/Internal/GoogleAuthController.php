@@ -312,4 +312,3 @@ class GoogleAuthController extends AbstractController
         return $base . bin2hex(random_bytes(3));
     }
 }
-

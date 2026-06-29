@@ -16,7 +16,7 @@ use Tarot\Structure\Deck;
 readonly class CardNameResolver
 {
     public function __construct(
-        private DeckSystemRepository  $deckSystems,
+        private DeckSystemRepository $deckSystems,
         private SpecialCardRepository $specialCards,
     ) {
     }

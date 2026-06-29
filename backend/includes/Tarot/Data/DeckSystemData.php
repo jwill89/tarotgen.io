@@ -176,4 +176,3 @@ class DeckSystemData extends AbstractData
         return true;
     }
 }
-

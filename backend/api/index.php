@@ -9,6 +9,7 @@ use DI\ContainerBuilder;
 use Routes\Internal\{AccountController,
     AdminController,
     ChangelogController,
+    ConfigController,
     ContactController,
     DeckController,
     DeckSystemController,
@@ -69,7 +70,7 @@ $error_middleware = $app->addErrorMiddleware($is_production === false, true, tru
 // access is only enabled when APP_ORIGIN is explicitly configured (never '*'
 // alongside credentialed session cookies).
 $allowed_origin = Env::get('APP_ORIGIN');
-$app->add(function($request, $handler) use ($allowed_origin) {
+$app->add(function ($request, $handler) use ($allowed_origin) {
     $response = $handler->handle($request);
 
     if ($allowed_origin) {
@@ -151,6 +152,9 @@ $app->group('/contact', function (RouteCollectorProxy $group) {
 $app->group('/changelog', function (RouteCollectorProxy $group) {
     $group->get('/[{entry_id}[/]]', ChangelogController::class . ':getChangelog');
 });
+
+// Public runtime config (non-secret values the SPA needs, e.g. Turnstile site key)
+$app->get('/config[/]', ConfigController::class . ':get');
 
 // User Accounts (public: register, activate, login, logout, session check)
 $app->group('/user', function (RouteCollectorProxy $group) {

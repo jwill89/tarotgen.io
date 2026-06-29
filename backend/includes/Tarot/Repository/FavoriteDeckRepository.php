@@ -26,4 +26,3 @@ readonly class FavoriteDeckRepository
         return $this->data->remove($userId, $deckId);
     }
 }
-

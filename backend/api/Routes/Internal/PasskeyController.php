@@ -409,4 +409,3 @@ class PasskeyController extends AbstractController
         return base64_decode(strtr($data, '-_', '+/') . str_repeat('=', (4 - strlen($data) % 4) % 4));
     }
 }
-

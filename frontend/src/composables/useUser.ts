@@ -94,10 +94,15 @@ export function useUser() {
             : { ok: false, error: res.error }
     }
 
-    async function login(email: string, password: string, rememberMe = false): Promise<{ ok: boolean; error?: string }> {
+    async function login(
+        email: string,
+        password: string,
+        rememberMe = false,
+        turnstileToken = '',
+    ): Promise<{ ok: boolean; error?: string }> {
         const res = await apiRequest<LoginResponse>(
             '/user/login',
-            jsonPost({ email, password, remember_me: rememberMe }),
+            jsonPost({ email, password, remember_me: rememberMe, turnstile_token: turnstileToken }),
             'Login failed.',
         )
 

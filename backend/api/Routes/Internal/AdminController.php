@@ -640,7 +640,9 @@ class AdminController extends AbstractController
         if (is_array($cards)) {
             $cardData = [];
             foreach ($cards as $i => $card) {
-                if (!is_array($card)) continue;
+                if (!is_array($card)) {
+                    continue;
+                }
                 $cardData[] = [
                     'card_id'           => (int)($card['card_id'] ?? ($i + 1)),
                     'name'              => trim((string)($card['name'] ?? '')),

@@ -8,6 +8,7 @@ use Slim\Http\Response;
 use Tarot\Config\Env;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\AuthService;
+use Tarot\Service\TurnstileService;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 
@@ -35,6 +36,7 @@ class UserController extends AbstractController
     public function __construct(
         private readonly AuthService $auth,
         private readonly UserRepository $users,
+        private readonly TurnstileService $turnstile,
     ) {
     }
 
@@ -163,6 +165,16 @@ class UserController extends AbstractController
         $email      = (string)($params['email'] ?? '');
         $password   = (string)($params['password'] ?? '');
         $rememberMe = !empty($params['remember_me']);
+
+        // Bot/abuse guard: when Turnstile is configured, a valid challenge token
+        // is required before we even check credentials.
+        if ($this->turnstile->isConfigured()) {
+            $token = (string)($params['turnstile_token'] ?? '');
+            if (!$this->turnstile->verify($token, $ip)) {
+                $limiter->hit($ip);
+                return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
+            }
+        }
 
         $result = $this->auth->authenticate($email, $password);
 

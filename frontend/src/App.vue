@@ -182,10 +182,6 @@ async function doUserLogout() {
                                     <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>
                                     <span>Decks</span>
                                 </router-link>
-                                <router-link class="navbar-item" :to="{ name: 'admin-cards' }" @click="burgerOpen = false">
-                                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
-                                    <span>Cards</span>
-                                </router-link>
                                 <router-link class="navbar-item" :to="{ name: 'admin-special-cards' }" @click="burgerOpen = false">
                                     <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['sparkles']" /></span>
                                     <span>Special Cards</span>

@@ -41,4 +41,3 @@ readonly class FavoriteSpreadRepository
         return $this->data->removeBySpread($spreadType, $spreadId);
     }
 }
-

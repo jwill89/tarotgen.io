@@ -109,4 +109,3 @@ class PasskeyData extends AbstractData
         return (int)$stmt->fetchColumn();
     }
 }
-

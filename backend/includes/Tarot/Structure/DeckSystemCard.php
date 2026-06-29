@@ -59,4 +59,3 @@ class DeckSystemCard extends AbstractStructure
         return $this->reversed_advice;
     }
 }
-

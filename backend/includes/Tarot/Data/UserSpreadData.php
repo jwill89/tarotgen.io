@@ -159,4 +159,3 @@ class UserSpreadData extends AbstractData
         ]);
     }
 }
-
