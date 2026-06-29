@@ -78,6 +78,12 @@ Bot/abuse protection for the sign-in flow.
 - Upgraded backend testing to **PHPUnit 13** (refreshed PHPStan and
   php-cs-fixer too) and bumped the JS dev tools (ESLint, Vitest,
   `@vitejs/plugin-vue`, happy-dom) to their latest releases.
+- Upgraded the runtime frontend libraries to their latest releases:
+  **vue-router 4 → 5** (major), plus Vue, Vite, `marked`, `dompurify`, TipTap,
+  and the FontAwesome packages (`@fortawesome/*`). The DOMPurify
+  XSS-sanitisation test now runs under `jsdom` (added dev-only), because
+  DOMPurify ≥ 3.4.8 mishandles the happy-dom test DOM — sanitisation was
+  verified correct in real browsers.
 - Upgraded **PHPMailer to 7** (no code changes required).
 - Added a committed `db/schema.sql` and `scripts/dump_schema.php` so the
   database structure can be rebuilt from scratch, and retired the AGENTS.md
