@@ -40,4 +40,3 @@ class ContactRepository
         return $this->data->countUnread();
     }
 }
-

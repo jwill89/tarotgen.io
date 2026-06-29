@@ -57,4 +57,3 @@ class UserSpread extends AbstractStructure
         return $this->updated_at;
     }
 }
-

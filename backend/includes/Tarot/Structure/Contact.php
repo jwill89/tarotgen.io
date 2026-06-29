@@ -47,4 +47,3 @@ class Contact extends AbstractStructure
         return $this->submitted_at;
     }
 }
-

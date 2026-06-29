@@ -17,6 +17,13 @@ import './fontawesome'
 const app = createApp(App)
 app.use(router)
 
+// Last line of defense: log unhandled render/setup errors instead of letting a
+// single failing component (e.g. a <RouterLink> to an unregistered route) throw
+// out of mount and blank the entire app.
+app.config.errorHandler = (err, _instance, info) => {
+    console.error(`[app] Unhandled error during ${info}:`, err)
+}
+
 // Register the FA Vue components globally so templates can use them without a
 // per-file import (icons are passed via :icon="byPrefixAndName.xxx['name']").
 app.component('FontAwesomeIcon', FontAwesomeIcon)

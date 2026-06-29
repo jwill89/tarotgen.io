@@ -79,4 +79,3 @@ class ContactController extends AbstractController
         return Session::userId();
     }
 }
-

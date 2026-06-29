@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { APP_VERSION } from '@/constants'
 import type { UsageStats } from '@/types'
 
 const api = useAdminApi()
@@ -33,7 +34,10 @@ onMounted(async () => {
 <template>
     <section class="section">
         <div class="container">
-            <h1 class="title is-3">Admin Dashboard</h1>
+            <h1 class="title is-3">
+                Admin Dashboard
+                <span class="tag is-primary is-light ml-2 app-version" title="Application version">v{{ APP_VERSION }}</span>
+            </h1>
             <p class="subtitle is-5">Manage your tarot data.</p>
 
             <div class="columns is-multiline">
@@ -200,6 +204,12 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.app-version {
+    vertical-align: middle;
+    font-size: 0.6em;
+    font-weight: 600;
+}
+
 .stat-box {
     text-align: center;
     border: 1px solid rgba(255, 255, 255, 0.12);

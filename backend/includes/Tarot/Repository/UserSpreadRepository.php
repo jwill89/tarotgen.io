@@ -58,4 +58,3 @@ class UserSpreadRepository
         return $this->data->delete($userId, $userSpreadId);
     }
 }
-

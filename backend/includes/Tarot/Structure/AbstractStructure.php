@@ -7,9 +7,9 @@ use ReflectionClass;
 
 /**
  * Abstract class AbstractStructure
- * 
+ *
  * This abstract class implements the JsonSerializable interface and provides
- * a generic constructor and methods for setting properties and serializing 
+ * a generic constructor and methods for setting properties and serializing
  * the object to JSON.
  */
 abstract class AbstractStructure implements JsonSerializable
@@ -50,7 +50,7 @@ abstract class AbstractStructure implements JsonSerializable
 
     /**
      * JSON serialize method
-     * 
+     *
      * This method caches ReflectionClass property names per class and
      * returns an associative array of the object's properties.
      *

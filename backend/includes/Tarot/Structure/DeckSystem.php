@@ -41,4 +41,3 @@ class DeckSystem extends AbstractStructure
         return $this->submitted_by;
     }
 }
-

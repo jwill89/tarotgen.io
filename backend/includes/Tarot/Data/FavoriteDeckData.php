@@ -40,4 +40,3 @@ class FavoriteDeckData extends AbstractData
         return $stmt->execute([':user_id' => $userId, ':deck_id' => $deckId]);
     }
 }
-

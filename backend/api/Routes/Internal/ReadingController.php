@@ -178,7 +178,9 @@ class ReadingController extends AbstractController
             }
 
             $rotation = (int)($pos['rotation'] ?? 0) % 360;
-            if ($rotation < 0) $rotation += 360;
+            if ($rotation < 0) {
+                $rotation += 360;
+            }
 
             $snappedPositions[] = [
                 'order'    => $idx + 1,

@@ -55,4 +55,3 @@ readonly class PasskeyRepository
         return $this->data->countByUser($userId);
     }
 }
-

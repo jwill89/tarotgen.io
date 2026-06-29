@@ -153,5 +153,3 @@ final class ContactDataTest extends TestCase
         $this->assertSame('Hello', $contact->getMessage());
     }
 }
-
-
