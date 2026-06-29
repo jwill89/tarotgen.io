@@ -11,6 +11,7 @@ use Slim\Http\Response;
 use Tarot\Config\Env;
 use Tarot\Repository\PasskeyRepository;
 use Tarot\Repository\UserRepository;
+use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 
 /**
@@ -98,7 +99,7 @@ class PasskeyController extends AbstractController
         $body = $request->getParsedBody() ?? [];
         $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
         $attestationObject = self::base64UrlDecode((string)($body['attestationObject'] ?? ''));
-        $name = mb_substr(trim((string)($body['name'] ?? 'My Passkey')), 0, 50) ?: 'My Passkey';
+        $name = Input::string($body['name'] ?? 'My Passkey', 50) ?: 'My Passkey';
 
         if ($clientDataJSON === '' || $attestationObject === '') {
             return $response->withJson(['error' => 'Missing attestation data.'], 400);
@@ -297,7 +298,7 @@ class PasskeyController extends AbstractController
 
         $passkeyId = (int)($args['id'] ?? 0);
         $body = $request->getParsedBody() ?? [];
-        $name = mb_substr(trim((string)($body['name'] ?? '')), 0, 50);
+        $name = Input::string($body['name'] ?? '', 50);
 
         if ($name === '') {
             return $response->withJson(['error' => 'Name is required.'], 422);
@@ -355,7 +356,7 @@ class PasskeyController extends AbstractController
         }
 
         $body = $request->getParsedBody() ?? [];
-        $disable = filter_var($body['disable'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $disable = Input::bool($body['disable'] ?? null);
 
         if ($disable) {
             // Must have at least one passkey (or Google linked) to disable password.

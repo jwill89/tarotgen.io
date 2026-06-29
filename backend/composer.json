@@ -14,7 +14,7 @@
         "ext-pdo": "*",
         "lbuchs/webauthn": "^2.2",
         "php-di/slim-bridge": "*",
-        "phpmailer/phpmailer": "^6.9",
+        "phpmailer/phpmailer": "^7.0",
         "slim/http": "*",
         "slim/psr7": "*",
         "slim/slim": "*"

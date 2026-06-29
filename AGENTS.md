@@ -36,7 +36,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 | FE linting  | ESLint `^10` (flat config) + `eslint-plugin-vue` + `@vue/eslint-config-typescript` |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
-| BE testing  | PHPUnit `^12` |
+| BE testing  | PHPUnit `^13` |
 | BE linting  | `squizlabs/php_codesniffer` (PSR-12, `phpcs.xml`), `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 6, baselined) |
 | Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
 
@@ -294,11 +294,12 @@ target to ≤3 SSH connections (the droplet runs `ufw limit ssh`).
 - `php db/check_state.php` prints current tables/schema for inspection.
 - The DB path resolves relative to `Connection.php` (`<root>/db/tarotdb.db`), so
   scripts work regardless of the working directory.
-- **No `schema.sql` / seed exists, and `db/` is gitignored.** There is currently
-  no clean way to rebuild the database from scratch — the live `tarotdb.db` is the
-  source of truth, and the `migrate_*.php` scripts assume earlier state. Treat the
-  DB file as precious; back it up before running migrations. (See §12 for the
-  suggestion to add a consolidated schema/migration runner.)
+- **Rebuilding the schema:** the committed `db/schema.sql` recreates the full
+  structure — `sqlite3 db/tarotdb.db < db/schema.sql`. Regenerate it after a
+  migration with `php scripts/dump_schema.php` so the committed schema stays in
+  sync. The live `tarotdb.db` is gitignored and remains the source of truth for
+  *data*; the `migrate_*.php` scripts are unordered one-offs that assume earlier
+  state, so still treat the DB file as precious and back it up before migrating.
 
 ---
 
@@ -368,44 +369,4 @@ target to ≤3 SSH connections (the droplet runs `ufw limit ssh`).
 | Change a DB schema                  | new `db/migrate_*.php` script |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
 | Adjust auth/session/CSRF            | `api/index.php` + `api/Routes/Middleware/*` |
-
----
-
-## 12. Known gaps & improvement backlog
-
-Non-blocking observations from a codebase review — fix opportunistically, not all
-at once. Roughly ordered by value.
-
-- **No way to rebuild the DB from scratch (highest priority).** There's no
-  `schema.sql` or seed, the migrations are unordered one-offs, and `db/` is
-  gitignored (§7). Add either a committed `db/schema.sql` (regenerable via
-  `.schema`) or a tiny migration runner (a `schema_migrations` table + numbered
-  files, or a tool like `robmorgan/phinx`) so a fresh environment is reproducible.
-- **`FontSwitcher` is dead-but-shipped scaffolding.** The component is commented
-  out of `App.vue`, yet the composable, `fonts.css`, and three `.woff` files in
-  `public/fonts/` still deploy. Decide on the heading font, then either re-enable
-  the switcher or delete the audition scaffolding (and unused fonts) to trim the
-  build. (`useHeadingFont` has no test, unlike its sibling composables.)
-- ~~**`useUser.ts` hand-rolls fetch/JSON/error handling.**~~ *Done* — rebuilt on
-  `apiRequest`; the `parseJson` boilerplate is gone.
-- ~~**`apiFetch<T>()` collapses every failure to `null`.**~~ *Done* — added
-  `apiRequest<T>()` returning a discriminated `ApiResult<T>` (status + error +
-  body + `networkError`); `apiFetch` is now a thin wrapper over it.
-- ~~**No backend static analysis or frontend linter.**~~ *Done* — added PHPStan
-  (`composer stan`, now **level 6**, baselined) and ESLint (`npm run lint`, flat
-  config). The Data/Repository/Structure/controller layers are fully array-type
-  annotated. Burn down the 8-entry baseline and raise toward `max` over time.
-- **Input-sanitization idioms** are now centralised in `Tarot\Utility\Input`
-  (`bool`/`string`/`nullableString`) and applied in `ReadingService` +
-  reading/account controllers. A few other controllers (Passkey, GoogleAuth) still
-  inline the old pattern — migrate them when next touched.
-- **Security is solid but could add a Content-Security-Policy.** The CORS/headers
-  middleware sets `X-Frame-Options` + `nosniff` only; markdown is DOMPurify-
-  sanitized. A CSP header is the obvious next hardening step.
-- **Stale code comment:** `api/index.php` describes the container as "PDO +
-  repository interface bindings", but `api/dependencies.php` defines only `PDO`
-  (everything else is autowired). Trim the comment.
-- **`renderMarkdown` is documented as "admin-authored"** but is also used for
-  user-authored content (reading notes); the DOMPurify pass keeps it safe, but the
-  doc comment is misleading.
 

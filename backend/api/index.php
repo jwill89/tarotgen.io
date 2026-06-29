@@ -37,8 +37,8 @@ session_set_cookie_params([
     'secure'   => $is_production,
 ]);
 
-// Build the PHP-DI container with autowiring plus our explicit definitions
-// (PDO + repository interface bindings). In production, compile the container
+// Build the PHP-DI container with autowiring plus our one explicit definition
+// (just PDO; everything else is autowired). In production, compile the container
 // to disk so definition resolution isn't recomputed on every request.
 $builder = new ContainerBuilder();
 $builder->useAutowiring(true);

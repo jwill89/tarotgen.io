@@ -8,8 +8,6 @@ import ToastContainer from '@/components/ToastContainer.vue'
 import StarField from '@/components/StarField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
 import CookieBanner from '@/components/CookieBanner.vue'
-// Font picker hidden for now; re-enable the import + tag below to audition fonts.
-// import FontSwitcher from '@/components/FontSwitcher.vue'
 
 const router = useRouter()
 const { currentUser, isLoggedIn, logout: userLogout } = useUser()
@@ -224,8 +222,6 @@ async function doUserLogout() {
         <ConfirmDialog />
         <ToastContainer />
         <CookieBanner />
-        <!-- Font picker hidden for now; re-enable to audition heading fonts. -->
-        <!-- <FontSwitcher /> -->
 
         <footer class="footer mt-auto">
             <div class="content has-text-centered">

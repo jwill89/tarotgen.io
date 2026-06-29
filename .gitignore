@@ -1,7 +1,9 @@
 # Backend (PHP) — generated deps, server-side data, local config
 /backend/vendor/
 /backend/assets/
-/backend/db/
+# Ignore the live DB + one-off migration scripts, but keep the committed schema.
+/backend/db/*
+!/backend/db/schema.sql
 /backend/.phpunit.cache/
 /backend/.env
 

@@ -64,6 +64,10 @@ Bot/abuse protection for the sign-in flow.
 - Adds a human-verification layer in front of credential stuffing and automated
   login attempts, complementing the existing IP rate limiting and
   `OriginGuard` CSRF defenses.
+- Added a **report-only Content-Security-Policy** plus `X-Frame-Options`,
+  `X-Content-Type-Options`, and `Referrer-Policy` headers on the app shell
+  (`backend/.htaccess`). Report-only is the safe first rollout — it reports
+  violations without blocking, ready to promote to enforcing after monitoring.
 
 ### Developer experience
 
@@ -74,6 +78,10 @@ Bot/abuse protection for the sign-in flow.
 - Upgraded backend testing to **PHPUnit 13** (refreshed PHPStan and
   php-cs-fixer too) and bumped the JS dev tools (ESLint, Vitest,
   `@vitejs/plugin-vue`, happy-dom) to their latest releases.
+- Upgraded **PHPMailer to 7** (no code changes required).
+- Added a committed `db/schema.sql` and `scripts/dump_schema.php` so the
+  database structure can be rebuilt from scratch, and retired the AGENTS.md
+  "known gaps" backlog by resolving its remaining items.
 - Moved deploy connection settings (host, SSH key path, web root) out of
   `scripts/deploy.ps1` into a gitignored `scripts/deploy.local.ps1` (template:
   `deploy.local.ps1.example`) so no infrastructure details live in source
