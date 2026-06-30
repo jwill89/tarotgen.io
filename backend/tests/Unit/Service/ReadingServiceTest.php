@@ -59,7 +59,7 @@ final class ReadingServiceTest extends TestCase
     /** Decode the reading_info JSON of a saved reading. */
     private function decodeInfo(Reading $reading): array
     {
-        return json_decode($reading->getReadingInfo(), true, 512, JSON_THROW_ON_ERROR);
+        return json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
     }
 
     // ── generate() ──────────────────────────────────────────────

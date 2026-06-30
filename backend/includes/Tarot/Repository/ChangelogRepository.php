@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\ChangelogData;
 use Tarot\Structure\ChangelogEntry;
 
-class ChangelogRepository
+readonly class ChangelogRepository
 {
-    private ChangelogData $data;
-
-    public function __construct(ChangelogData $data)
+    public function __construct(private ChangelogData $data)
     {
-        $this->data = $data;
     }
 
     /**

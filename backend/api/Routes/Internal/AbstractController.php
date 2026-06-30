@@ -13,6 +13,24 @@ use Tarot\Utility\Session;
 abstract class AbstractController
 {
     /**
+     * The request body as a normalized associative array.
+     *
+     * Slim's `getParsedBody()` is typed `array|object|null` (it can yield a
+     * decoded JSON object or `null` for an empty/unparseable body). Controllers
+     * only ever read JSON request bodies as `field => value` maps, so this funnels
+     * every body through one place that guarantees an `array<string,mixed>` —
+     * removing the repeated `?? []` dance and giving the static analyzer a real
+     * offset-accessible type at every call site.
+     *
+     * @return array<string,mixed>
+     */
+    protected function parsedBody(ServerRequestInterface $request): array
+    {
+        $body = $request->getParsedBody();
+        return is_array($body) ? $body : [];
+    }
+
+    /**
      * Extract the client IP address from the request.
      */
     protected function clientIp(ServerRequestInterface $request): string

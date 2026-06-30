@@ -60,11 +60,11 @@ final class UserSpreadDataTest extends TestCase
         ]);
 
         $this->assertInstanceOf(UserSpread::class, $created);
-        $this->assertSame('Three Card', $created->getName());
-        $this->assertSame(1, $created->getUserId());
+        $this->assertSame('Three Card', $created->name);
+        $this->assertSame(1, $created->user_id);
         // card_count defaults to the position count when not supplied.
-        $this->assertSame(3, $created->getCardCount());
-        $this->assertCount(3, $created->getPositions());
+        $this->assertSame(3, $created->card_count);
+        $this->assertCount(3, $created->positions);
     }
 
     public function testRetrieveIsScopedToTheOwningUser(): void
@@ -74,20 +74,20 @@ final class UserSpreadDataTest extends TestCase
 
         $listForUser1 = $this->data->retrieve(1);
         $this->assertCount(1, $listForUser1);
-        $this->assertSame('Mine', $listForUser1[0]->getName());
+        $this->assertSame('Mine', $listForUser1[0]->name);
 
         // Scoped fetch by id returns nothing for the wrong user.
-        $this->assertCount(0, $this->data->retrieve(2, $mine->getUserSpreadId()));
-        $this->assertCount(1, $this->data->retrieve(1, $mine->getUserSpreadId()));
+        $this->assertCount(0, $this->data->retrieve(2, $mine->user_spread_id));
+        $this->assertCount(1, $this->data->retrieve(1, $mine->user_spread_id));
     }
 
     public function testFindByIdIgnoresOwnership(): void
     {
         // Used when generating a reading from any personal spread.
         $created = $this->data->store(5, ['name' => 'Anyone', 'positions' => $this->samplePositions()]);
-        $found = $this->data->findById($created->getUserSpreadId());
+        $found = $this->data->findById($created->user_spread_id);
         $this->assertInstanceOf(UserSpread::class, $found);
-        $this->assertSame(5, $found->getUserId());
+        $this->assertSame(5, $found->user_id);
         $this->assertNull($this->data->findById(99999));
     }
 
@@ -95,14 +95,14 @@ final class UserSpreadDataTest extends TestCase
     {
         $created = $this->data->store(1, ['name' => 'Start', 'positions' => $this->samplePositions(2)]);
 
-        $updated = $this->data->update(1, $created->getUserSpreadId(), [
+        $updated = $this->data->update(1, $created->user_spread_id, [
             'name'      => 'Grown',
             'positions' => $this->samplePositions(5),
         ]);
 
-        $this->assertSame('Grown', $updated->getName());
-        $this->assertSame(5, $updated->getCardCount()); // recomputed from positions
-        $this->assertCount(5, $updated->getPositions());
+        $this->assertSame('Grown', $updated->name);
+        $this->assertSame(5, $updated->card_count); // recomputed from positions
+        $this->assertCount(5, $updated->positions);
     }
 
     public function testUpdateCannotTouchAnotherUsersSpread(): void
@@ -110,21 +110,21 @@ final class UserSpreadDataTest extends TestCase
         $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
 
         // User 2 attempts to rename user 1's spread → no matching row, no change.
-        $result = $this->data->update(2, $created->getUserSpreadId(), ['name' => 'Hijacked']);
+        $result = $this->data->update(2, $created->user_spread_id, ['name' => 'Hijacked']);
         $this->assertNull($result);
-        $this->assertSame('Mine', $this->data->findById($created->getUserSpreadId())->getName());
+        $this->assertSame('Mine', $this->data->findById($created->user_spread_id)->name);
     }
 
     public function testUpdateWithNoFieldsReturnsNull(): void
     {
         $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
-        $this->assertNull($this->data->update(1, $created->getUserSpreadId(), []));
+        $this->assertNull($this->data->update(1, $created->user_spread_id, []));
     }
 
     public function testDeleteIsOwnershipScoped(): void
     {
         $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
-        $id = $created->getUserSpreadId();
+        $id = $created->user_spread_id;
 
         // Wrong owner can't delete it.
         $this->data->delete(2, $id);

@@ -17,15 +17,10 @@ class SpreadController extends AbstractController
     private const int SUBMIT_MAX_PER_WINDOW = 5;
     private const int SUBMIT_WINDOW_SECONDS = 3600;
 
-    private SpreadRepository $spreads;
-    private PendingSpreadRepository $pending;
-
     public function __construct(
-        SpreadRepository $spreads,
-        PendingSpreadRepository $pending
+        private readonly SpreadRepository $spreads,
+        private readonly PendingSpreadRepository $pending,
     ) {
-        $this->spreads = $spreads;
-        $this->pending = $pending;
     }
 
     /**
@@ -69,7 +64,7 @@ class SpreadController extends AbstractController
             );
         }
 
-        $params    = $request->getParsedBody() ?? [];
+        $params    = $this->parsedBody($request);
         $name      = trim((string)($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 

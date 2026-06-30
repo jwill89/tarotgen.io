@@ -66,8 +66,8 @@ final class DeckDataTest extends TestCase
         $deck = $this->data->store(['name' => 'Tall Deck', 'card_aspect_w' => 70.5, 'card_aspect_h' => 151.5]);
 
         $this->assertInstanceOf(Deck::class, $deck);
-        $this->assertSame(70.5, $deck->getCardAspectW());
-        $this->assertSame(151.5, $deck->getCardAspectH());
+        $this->assertSame(70.5, $deck->card_aspect_w);
+        $this->assertSame(151.5, $deck->card_aspect_h);
     }
 
     public function testStoreDefaultsAspectWhenOmitted(): void
@@ -75,34 +75,34 @@ final class DeckDataTest extends TestCase
         $deck = $this->data->store(['name' => 'Default Deck']);
 
         $this->assertInstanceOf(Deck::class, $deck);
-        $this->assertSame(5.0, $deck->getCardAspectW());
-        $this->assertSame(8.6, $deck->getCardAspectH());
+        $this->assertSame(5.0, $deck->card_aspect_w);
+        $this->assertSame(8.6, $deck->card_aspect_h);
     }
 
     public function testUpdateClampsAspectToAPositiveSaneRange(): void
     {
         $deck = $this->data->store(['name' => 'Deck']);
-        $id = $deck->getDeckId();
+        $id = $deck->deck_id;
 
         // Non-positive floors to 0.1 (never 0 or negative → no "/ 0" ratio).
         $floored = $this->data->update($id, ['card_aspect_w' => 0, 'card_aspect_h' => -3]);
-        $this->assertSame(0.1, $floored->getCardAspectW());
-        $this->assertSame(0.1, $floored->getCardAspectH());
+        $this->assertSame(0.1, $floored->card_aspect_w);
+        $this->assertSame(0.1, $floored->card_aspect_h);
 
         // Absurdly large values cap at the generous ceiling rather than overflow.
         $capped = $this->data->update($id, ['card_aspect_w' => 999999, 'card_aspect_h' => 1e9]);
-        $this->assertSame(100000.0, $capped->getCardAspectW());
-        $this->assertSame(100000.0, $capped->getCardAspectH());
+        $this->assertSame(100000.0, $capped->card_aspect_w);
+        $this->assertSame(100000.0, $capped->card_aspect_h);
 
         // A realistic mm value in the middle is preserved exactly.
         $mm = $this->data->update($id, ['card_aspect_h' => 120]);
-        $this->assertSame(120.0, $mm->getCardAspectH());
+        $this->assertSame(120.0, $mm->card_aspect_h);
     }
 
     public function testUpdateOnlyWritesAllowListedColumns(): void
     {
         $deck = $this->data->store(['name' => 'Original', 'additional_cards' => 0]);
-        $id = $deck->getDeckId();
+        $id = $deck->deck_id;
 
         // 'name' and 'additional_cards' are allowed; 'submitted_by' and an unknown
         // column are not and must be silently ignored (not error).
@@ -114,8 +114,8 @@ final class DeckDataTest extends TestCase
         ]);
 
         $this->assertInstanceOf(Deck::class, $updated);
-        $this->assertSame('Renamed', $updated->getName());
-        $this->assertSame(5, $updated->getAdditionalCards());
+        $this->assertSame('Renamed', $updated->name);
+        $this->assertSame(5, $updated->additional_cards);
         // submitted_by stays NULL (was never set, and update can't touch it).
         $row = $this->pdo->query('SELECT submitted_by FROM decks WHERE deck_id = ' . $id)->fetch(PDO::FETCH_ASSOC);
         $this->assertNull($row['submitted_by']);
@@ -124,7 +124,7 @@ final class DeckDataTest extends TestCase
     public function testUpdateReturnsNullWhenNoAllowedFieldsProvided(): void
     {
         $deck = $this->data->store(['name' => 'Deck']);
-        $result = $this->data->update($deck->getDeckId(), ['evil_column' => 'x']);
+        $result = $this->data->update($deck->deck_id, ['evil_column' => 'x']);
         $this->assertNull($result);
     }
 }

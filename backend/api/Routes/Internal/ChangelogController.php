@@ -10,11 +10,9 @@ use Tarot\Structure\ChangelogEntry;
 
 class ChangelogController extends AbstractController
 {
-    private ChangelogRepository $changelog;
-
-    public function __construct(ChangelogRepository $changelog)
-    {
-        $this->changelog = $changelog;
+    public function __construct(
+        private readonly ChangelogRepository $changelog,
+    ) {
     }
 
     /**

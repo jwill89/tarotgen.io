@@ -12,13 +12,10 @@ use Tarot\Utility\Session;
 
 class DeckController extends AbstractController
 {
-    private DeckRepository $decks;
-    private CardNameResolver $cardNames;
-
-    public function __construct(DeckRepository $decks, CardNameResolver $cardNames)
-    {
-        $this->decks     = $decks;
-        $this->cardNames = $cardNames;
+    public function __construct(
+        private readonly DeckRepository $decks,
+        private readonly CardNameResolver $cardNames,
+    ) {
     }
 
     /**
@@ -69,7 +66,7 @@ class DeckController extends AbstractController
 
         // Include extras so the user can place anything physically in the deck.
         $systemTotal = $deck->getEffectiveTotalCards();
-        $available = max(1, $systemTotal + $deck->getAdditionalCards());
+        $available = max(1, $systemTotal + $deck->additional_cards);
 
         $names = $this->cardNames->resolve($deck, range(1, $available)); // card_id => name
         ksort($names);
@@ -96,7 +93,7 @@ class DeckController extends AbstractController
             return $response->withJson(['error' => 'Not authenticated'], 401);
         }
 
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         $name   = trim((string)($params['name'] ?? ''));
         $artist = trim((string)($params['artist'] ?? ''));

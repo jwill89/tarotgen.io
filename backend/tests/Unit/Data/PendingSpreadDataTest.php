@@ -49,20 +49,20 @@ final class PendingSpreadDataTest extends TestCase
     {
         $created = $this->data->store($this->payload(), null);
         $this->assertNotNull($created);
-        $this->assertSame('Guest', $created->getSubmitter());
-        $this->assertNull($created->getUserId());
+        $this->assertSame('Guest', $created->submitter);
+        $this->assertNull($created->user_id);
     }
 
     public function testLoggedInSubmissionResolvesToDisplayName(): void
     {
         $created = $this->data->store($this->payload(), 1);
-        $this->assertSame('Stargazer', $created->getSubmitter());
-        $this->assertSame(1, $created->getUserId());
+        $this->assertSame('Stargazer', $created->submitter);
+        $this->assertSame(1, $created->user_id);
 
         // Renaming the account is reflected (resolved live, not snapshotted).
         $this->pdo->exec("UPDATE users SET display_name = 'New Name' WHERE user_id = 1");
-        $reloaded = $this->data->retrieve($created->getPendingId());
-        $this->assertSame('New Name', $reloaded[0]->getSubmitter());
+        $reloaded = $this->data->retrieve($created->pending_id);
+        $this->assertSame('New Name', $reloaded[0]->submitter);
     }
 
     public function testLegacyFreeTextSubmitterIsUsedWhenNoAccount(): void
@@ -70,6 +70,6 @@ final class PendingSpreadDataTest extends TestCase
         // Simulate a pre-migration row that stored a free-text name.
         $this->pdo->exec("INSERT INTO pending_spreads (name, positions, submitter) VALUES ('Old', '[]', 'Old Timer')");
         $rows = $this->data->retrieve();
-        $this->assertSame('Old Timer', $rows[0]->getSubmitter());
+        $this->assertSame('Old Timer', $rows[0]->submitter);
     }
 }

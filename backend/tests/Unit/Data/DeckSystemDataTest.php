@@ -78,19 +78,19 @@ final class DeckSystemDataTest extends TestCase
         ]);
 
         $this->assertInstanceOf(DeckSystem::class, $system);
-        $this->assertSame('Marseille', $system->getName());
-        $this->assertSame('TdM', $system->getShortName());
-        $this->assertSame(78, $system->getTotalCards());
-        $this->assertTrue($system->isApproved());
-        $this->assertSame(42, $system->getSubmittedBy());
+        $this->assertSame('Marseille', $system->name);
+        $this->assertSame('TdM', $system->short_name);
+        $this->assertSame(78, $system->total_cards);
+        $this->assertTrue($system->approved);
+        $this->assertSame(42, $system->submitted_by);
     }
 
     public function testStoreDefaultsToUnapproved(): void
     {
         // A public submission (no 'approved' key) defaults to pending.
         $system = $this->data->store(['name' => 'Pending Sys', 'short_name' => 'PS']);
-        $this->assertFalse($system->isApproved());
-        $this->assertNull($system->getSubmittedBy());
+        $this->assertFalse($system->approved);
+        $this->assertNull($system->submitted_by);
     }
 
     public function testRetrieveAllIsOrderedByName(): void
@@ -98,7 +98,7 @@ final class DeckSystemDataTest extends TestCase
         $this->data->store(['name' => 'Zeta', 'short_name' => 'Z', 'approved' => true]);
         $this->data->store(['name' => 'Alpha', 'short_name' => 'A', 'approved' => true]);
 
-        $names = array_map(fn(DeckSystem $s) => $s->getName(), $this->data->retrieve());
+        $names = array_map(fn(DeckSystem $s) => $s->name, $this->data->retrieve());
         $this->assertSame(['Alpha', 'Zeta'], $names);
     }
 
@@ -107,14 +107,14 @@ final class DeckSystemDataTest extends TestCase
         $this->data->store(['name' => 'Live', 'short_name' => 'L', 'approved' => true]);
         $this->data->store(['name' => 'Queued', 'short_name' => 'Q', 'approved' => false]);
 
-        $this->assertSame(['Live'], array_map(fn(DeckSystem $s) => $s->getName(), $this->data->retrieveApproved()));
-        $this->assertSame(['Queued'], array_map(fn(DeckSystem $s) => $s->getName(), $this->data->retrievePending()));
+        $this->assertSame(['Live'], array_map(fn(DeckSystem $s) => $s->name, $this->data->retrieveApproved()));
+        $this->assertSame(['Queued'], array_map(fn(DeckSystem $s) => $s->name, $this->data->retrievePending()));
     }
 
     public function testUpdateOnlyWritesAllowListedColumns(): void
     {
         $system = $this->data->store(['name' => 'Orig', 'short_name' => 'O', 'total_cards' => 78]);
-        $id = $system->getDeckSystemId();
+        $id = $system->deck_system_id;
 
         $updated = $this->data->update($id, [
             'name'         => 'Renamed',
@@ -124,25 +124,25 @@ final class DeckSystemDataTest extends TestCase
             'evil'         => 'DROP',  // unknown
         ]);
 
-        $this->assertSame('Renamed', $updated->getName());
-        $this->assertSame(40, $updated->getTotalCards());
-        $this->assertTrue($updated->isApproved());
+        $this->assertSame('Renamed', $updated->name);
+        $this->assertSame(40, $updated->total_cards);
+        $this->assertTrue($updated->approved);
         // submitted_by could not be touched by update.
-        $this->assertNull($updated->getSubmittedBy());
+        $this->assertNull($updated->submitted_by);
     }
 
     public function testUpdateReturnsNullWhenNoAllowedFields(): void
     {
         $system = $this->data->store(['name' => 'X', 'short_name' => 'X']);
-        $this->assertNull($this->data->update($system->getDeckSystemId(), ['evil' => 'x']));
+        $this->assertNull($this->data->update($system->deck_system_id, ['evil' => 'x']));
     }
 
     public function testDeleteRemovesTheSystem(): void
     {
         $system = $this->data->store(['name' => 'Doomed', 'short_name' => 'D']);
-        $this->assertTrue($this->data->delete($system->getDeckSystemId()));
-        $this->assertFalse($this->data->delete($system->getDeckSystemId())); // already gone
-        $this->assertSame([], $this->data->retrieve($system->getDeckSystemId()));
+        $this->assertTrue($this->data->delete($system->deck_system_id));
+        $this->assertFalse($this->data->delete($system->deck_system_id)); // already gone
+        $this->assertSame([], $this->data->retrieve($system->deck_system_id));
     }
 
     // ── Cards ────────────────────────────────────────────────────
@@ -150,38 +150,38 @@ final class DeckSystemDataTest extends TestCase
     public function testStoreCardsAndRetrieveOrderedByCardId(): void
     {
         $sys = $this->data->store(['name' => 'Sys', 'short_name' => 'S']);
-        $id = $sys->getDeckSystemId();
+        $id = $sys->deck_system_id;
 
         $this->data->storeCards($id, [$this->card(3, 'Three'), $this->card(1, 'One'), $this->card(2, 'Two')]);
 
         $cards = $this->data->retrieveCards($id);
         $this->assertCount(3, $cards);
-        $this->assertSame([1, 2, 3], array_map(fn(DeckSystemCard $c) => $c->getCardId(), $cards));
-        $this->assertSame('One', $cards[0]->getName());
-        $this->assertSame('kw1', $cards[0]->getKeywords());
+        $this->assertSame([1, 2, 3], array_map(fn(DeckSystemCard $c) => $c->card_id, $cards));
+        $this->assertSame('One', $cards[0]->name);
+        $this->assertSame('kw1', $cards[0]->keywords);
     }
 
     public function testStoreCardUpsertsOnConflict(): void
     {
         $sys = $this->data->store(['name' => 'Sys', 'short_name' => 'S']);
-        $id = $sys->getDeckSystemId();
+        $id = $sys->deck_system_id;
 
         $this->data->storeCard(['deck_system_id' => $id, 'card_id' => 1, 'name' => 'Original']);
         $this->data->storeCard(['deck_system_id' => $id, 'card_id' => 1, 'name' => 'Replaced']);
 
         $cards = $this->data->retrieveCards($id);
         $this->assertCount(1, $cards, 'same (system, card_id) is replaced, not duplicated');
-        $this->assertSame('Replaced', $cards[0]->getName());
+        $this->assertSame('Replaced', $cards[0]->name);
     }
 
     public function testRetrieveCardsByIdsReturnsSubsetAndEmptyForNoIds(): void
     {
         $sys = $this->data->store(['name' => 'Sys', 'short_name' => 'S']);
-        $id = $sys->getDeckSystemId();
+        $id = $sys->deck_system_id;
         $this->data->storeCards($id, [$this->card(1, 'One'), $this->card(2, 'Two'), $this->card(3, 'Three')]);
 
         $subset = $this->data->retrieveCardsByIds($id, [1, 3]);
-        $this->assertSame([1, 3], array_map(fn(DeckSystemCard $c) => $c->getCardId(), $subset));
+        $this->assertSame([1, 3], array_map(fn(DeckSystemCard $c) => $c->card_id, $subset));
 
         $this->assertSame([], $this->data->retrieveCardsByIds($id, []));
     }
@@ -190,19 +190,19 @@ final class DeckSystemDataTest extends TestCase
     {
         $a = $this->data->store(['name' => 'A', 'short_name' => 'A']);
         $b = $this->data->store(['name' => 'B', 'short_name' => 'B']);
-        $this->data->storeCards($a->getDeckSystemId(), [$this->card(1, 'A1')]);
-        $this->data->storeCards($b->getDeckSystemId(), [$this->card(1, 'B1')]);
+        $this->data->storeCards($a->deck_system_id, [$this->card(1, 'A1')]);
+        $this->data->storeCards($b->deck_system_id, [$this->card(1, 'B1')]);
 
-        $this->data->deleteCards($a->getDeckSystemId());
+        $this->data->deleteCards($a->deck_system_id);
 
-        $this->assertCount(0, $this->data->retrieveCards($a->getDeckSystemId()));
-        $this->assertCount(1, $this->data->retrieveCards($b->getDeckSystemId()));
+        $this->assertCount(0, $this->data->retrieveCards($a->deck_system_id));
+        $this->assertCount(1, $this->data->retrieveCards($b->deck_system_id));
     }
 
     public function testDeletingSystemCascadesToItsCards(): void
     {
         $sys = $this->data->store(['name' => 'Sys', 'short_name' => 'S']);
-        $id = $sys->getDeckSystemId();
+        $id = $sys->deck_system_id;
         $this->data->storeCards($id, [$this->card(1, 'One'), $this->card(2, 'Two')]);
 
         $this->data->delete($id);

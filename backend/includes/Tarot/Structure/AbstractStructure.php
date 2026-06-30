@@ -4,6 +4,7 @@ namespace Tarot\Structure;
 
 use JsonSerializable;
 use ReflectionClass;
+use ReflectionProperty;
 
 /**
  * Abstract class AbstractStructure
@@ -43,7 +44,10 @@ abstract class AbstractStructure implements JsonSerializable
     {
         foreach ($params as $property => $value) {
             if (property_exists($this, $property)) {
-                $this->$property = $value;
+                // Properties use asymmetric visibility (public read, private(set)),
+                // so a direct `$this->$property =` from this parent scope would be
+                // rejected. Reflection writes them across scope.
+                (new ReflectionProperty($this, $property))->setValue($this, $value);
             }
         }
     }
@@ -56,6 +60,7 @@ abstract class AbstractStructure implements JsonSerializable
      *
      * @return array<string,mixed> An associative array of the object's properties.
      */
+    #[\Override]
     public function jsonSerialize(): array
     {
         $class = static::class;

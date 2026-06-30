@@ -6,13 +6,10 @@ use Tarot\Data\DeckSystemData;
 use Tarot\Structure\DeckSystem;
 use Tarot\Structure\DeckSystemCard;
 
-class DeckSystemRepository
+readonly class DeckSystemRepository
 {
-    private DeckSystemData $data;
-
-    public function __construct(DeckSystemData $data)
+    public function __construct(private DeckSystemData $data)
     {
-        $this->data = $data;
     }
 
     /**

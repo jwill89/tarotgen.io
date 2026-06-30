@@ -2,12 +2,15 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class Spread extends AbstractStructure
 {
-    protected int $spread_id = 0;
-    protected string $name = '';
-    protected string $description = '';
-    protected int $card_count = 1;
+    public private(set) int $spread_id = 0;
+    public private(set) string $name = '';
+    public private(set) string $description = '';
+    public private(set) int $card_count = 1;
 
     /**
      * Array of position objects, each shaped:
@@ -15,33 +18,5 @@ class Spread extends AbstractStructure
      *
      * @var list<array<string,mixed>>
      */
-    protected array $positions = [];
-
-    public function getSpreadId(): int
-    {
-        return $this->spread_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
-    public function getCardCount(): int
-    {
-        return $this->card_count;
-    }
-
-    /**
-     * @return list<array<string,mixed>>
-     */
-    public function getPositions(): array
-    {
-        return $this->positions;
-    }
+    public private(set) array $positions = [];
 }

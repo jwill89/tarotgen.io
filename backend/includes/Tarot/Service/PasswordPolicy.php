@@ -26,7 +26,7 @@ final class PasswordPolicy
      * @return string|null  Null when the password is acceptable, otherwise a
      *                      human-readable reason it was rejected.
      */
-    public static function validate(string $password): ?string
+    public static function validate(#[\SensitiveParameter] string $password): ?string
     {
         $length = mb_strlen($password);
 

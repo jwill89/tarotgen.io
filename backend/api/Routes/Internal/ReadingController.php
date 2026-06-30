@@ -37,13 +37,13 @@ class ReadingController extends AbstractController
 
         Session::start();
         $viewerId = Session::userId() ?? 0;
-        $isOwner  = $reading->getUserId() !== null && $reading->getUserId() === $viewerId;
+        $isOwner  = $reading->user_id !== null && $reading->user_id === $viewerId;
 
         // Password gate: anyone who isn't the owner and hasn't already unlocked
         // this reading in their session gets only the locked stub.
-        if ($reading->isPasswordProtected() && !$isOwner && empty($_SESSION['unlocked_readings'][$reading_id])) {
+        if ($reading->password_protected && !$isOwner && empty($_SESSION['unlocked_readings'][$reading_id])) {
             return $response
-                ->withJson(['locked' => true, 'reading_name' => $reading->getReadingName()])
+                ->withJson(['locked' => true, 'reading_name' => $reading->reading_name])
                 ->withHeader('Cache-Control', 'private, no-store');
         }
 
@@ -67,15 +67,15 @@ class ReadingController extends AbstractController
 
         Session::start();
         $viewerId = Session::userId() ?? 0;
-        $isOwner  = $reading->getUserId() !== null && $reading->getUserId() === $viewerId;
+        $isOwner  = $reading->user_id !== null && $reading->user_id === $viewerId;
 
-        if (!$reading->isPasswordProtected() || $isOwner) {
+        if (!$reading->password_protected || $isOwner) {
             // Nothing to unlock — just return the reading.
             return $response->withJson($this->accessiblePayload($reading, $isOwner))
                 ->withHeader('Cache-Control', 'private, no-store');
         }
 
-        $password = (string)(($request->getParsedBody() ?? [])['password'] ?? '');
+        $password = (string)(($this->parsedBody($request))['password'] ?? '');
         if (!$this->readings->verifyPassword($reading_id, $password)) {
             return $response->withJson(['error' => 'Incorrect password.'], 401);
         }
@@ -93,7 +93,7 @@ class ReadingController extends AbstractController
     public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
-            $reading = $this->readingService->generate($request->getParsedBody() ?? [], $this->currentUserId());
+            $reading = $this->readingService->generate($this->parsedBody($request), $this->currentUserId());
             return $response->withJson($reading);
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
@@ -106,7 +106,7 @@ class ReadingController extends AbstractController
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
-            $reading = $this->readingService->createCustom($request->getParsedBody() ?? [], $this->currentUserId());
+            $reading = $this->readingService->createCustom($this->parsedBody($request), $this->currentUserId());
             return $response->withJson($reading);
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
@@ -133,18 +133,18 @@ class ReadingController extends AbstractController
         // Allow guests (by reading_id alone) or the owner — placement is done
         // immediately after generation, before the user navigates away.
         $userId = $this->currentUserId();
-        $isOwner = $reading->getUserId() !== null && $reading->getUserId() === $userId;
-        $isGuest = $reading->getUserId() === null;
+        $isOwner = $reading->user_id !== null && $reading->user_id === $userId;
+        $isGuest = $reading->user_id === null;
 
         if (!$isOwner && !$isGuest) {
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
-        if ($reading->isFinal()) {
+        if ($reading->is_final) {
             return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
         }
 
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $positions = $params['positions'] ?? [];
 
         if (!is_array($positions) || count($positions) === 0) {
@@ -152,7 +152,7 @@ class ReadingController extends AbstractController
         }
 
         // Decode existing reading_info.
-        $info = json_decode($reading->getReadingInfo(), true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($info)) {
             return $response->withJson(['error' => 'Invalid reading data.'], 500);
         }
@@ -227,15 +227,15 @@ class ReadingController extends AbstractController
         }
 
         $userId = $this->currentUserId();
-        if ($userId === null || $reading->getUserId() !== $userId) {
+        if ($userId === null || $reading->user_id !== $userId) {
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
-        if ($reading->isFinal()) {
+        if ($reading->is_final) {
             return $response->withJson(['error' => 'This reading is final and can no longer be changed.'], 409);
         }
 
-        $info = json_decode($reading->getReadingInfo(), true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($info)) {
             return $response->withJson(['error' => 'Invalid reading data.'], 500);
         }
@@ -245,7 +245,7 @@ class ReadingController extends AbstractController
         }
 
         try {
-            $updated = $this->readingService->drawAdditional($info, $request->getParsedBody() ?? []);
+            $updated = $this->readingService->drawAdditional($info, $this->parsedBody($request));
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
         }
@@ -281,7 +281,7 @@ class ReadingController extends AbstractController
         }
 
         $userId = $this->currentUserId();
-        if ($userId === null || $reading->getUserId() !== $userId) {
+        if ($userId === null || $reading->user_id !== $userId) {
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
@@ -305,7 +305,7 @@ class ReadingController extends AbstractController
     private function accessiblePayload(Reading $reading, bool $isOwner): array
     {
         // Decode reading_info so it's sent as a proper JSON object, not a string.
-        $info = json_decode($reading->getReadingInfo(), true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($info)) {
             $info = [];
         }
@@ -313,17 +313,17 @@ class ReadingController extends AbstractController
         // Only the owner of a randomly-generated (non-custom) reading that hasn't
         // been finalized may draw additional cards into it.
         $origin      = $info['origin'] ?? null;
-        $canDrawMore = $isOwner && !$reading->isFinal() && $origin !== 'custom';
+        $canDrawMore = $isOwner && !$reading->is_final && $origin !== 'custom';
 
         return [
-            'reading_id'    => $reading->getReadingId(),
+            'reading_id'    => $reading->reading_id,
             'reading_info'  => $info,
-            'reading_time'  => $reading->getReadingTime(),
-            'reading_name'  => $reading->getReadingName(),
-            'reading_notes' => $reading->getReadingNotes(),
+            'reading_time'  => $reading->reading_time,
+            'reading_name'  => $reading->reading_name,
+            'reading_notes' => $reading->reading_notes,
             'reader'        => $this->resolveReader($reading),
             'is_owner'      => $isOwner,
-            'is_final'      => $reading->isFinal(),
+            'is_final'      => $reading->is_final,
             'can_draw_more' => $canDrawMore,
             'locked'        => false,
         ];
@@ -335,12 +335,12 @@ class ReadingController extends AbstractController
      */
     private function resolveReader(Reading $reading): string
     {
-        if ($reading->getUserId() === null || $reading->isHideUser()) {
+        if ($reading->user_id === null || $reading->hide_user) {
             return 'Guest';
         }
 
-        $owner = $this->users->findById($reading->getUserId());
-        return $owner?->getDisplayName() ?? 'Guest';
+        $owner = $this->users->findById($reading->user_id);
+        return $owner !== null ? $owner->display_name : 'Guest';
     }
 
     private function currentUserId(): ?int

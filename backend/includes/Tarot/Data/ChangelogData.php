@@ -8,7 +8,7 @@ use Tarot\Structure\ChangelogEntry;
 class ChangelogData extends AbstractData
 {
     /**
-     * @return ChangelogEntry[]
+     * @return list<ChangelogEntry>
      */
     public function retrieve(?int $entry_id = null): array
     {
@@ -28,9 +28,10 @@ class ChangelogData extends AbstractData
         }
 
         $stmt->execute();
+        /** @var list<array<string,mixed>> $rows */
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map($this->hydrate(...), $rows);
     }
 
     /**

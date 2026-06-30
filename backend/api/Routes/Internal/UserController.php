@@ -49,7 +49,7 @@ class UserController extends AbstractController
             return $response->withJson(['error' => 'Too many sign-up attempts. Please try again later.'], 429);
         }
 
-        $params      = $request->getParsedBody() ?? [];
+        $params      = $this->parsedBody($request);
         $email       = (string)($params['email'] ?? '');
         $displayName = (string)($params['display_name'] ?? '');
         $password    = (string)($params['password'] ?? '');
@@ -81,7 +81,7 @@ class UserController extends AbstractController
 
     public function activate(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $token  = (string)($params['token'] ?? '');
 
         if ($this->auth->activate($token)) {
@@ -105,7 +105,7 @@ class UserController extends AbstractController
             return $response->withJson(['error' => 'Too many requests. Please try again later.'], 429);
         }
 
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $email  = (string)($params['email'] ?? '');
 
         $result = $this->auth->requestPasswordReset($email);
@@ -132,7 +132,7 @@ class UserController extends AbstractController
 
     public function resetPassword(Request $request, Response $response): Response|ResponseInterface
     {
-        $params   = $request->getParsedBody() ?? [];
+        $params   = $this->parsedBody($request);
         $token    = (string)($params['token'] ?? '');
         $password = (string)($params['password'] ?? '');
 
@@ -161,7 +161,7 @@ class UserController extends AbstractController
             return $response->withJson(['error' => 'Too many attempts. Please try again later.'], 429);
         }
 
-        $params     = $request->getParsedBody() ?? [];
+        $params     = $this->parsedBody($request);
         $email      = (string)($params['email'] ?? '');
         $password   = (string)($params['password'] ?? '');
         $rememberMe = !empty($params['remember_me']);
@@ -202,7 +202,7 @@ class UserController extends AbstractController
         $this->startSessionWithPersistence();
         // Rotate the session ID on privilege change to prevent fixation.
         Session::regenerate(persistent: $rememberMe);
-        $_SESSION['user_id'] = $result['user']->getUserId();
+        $_SESSION['user_id'] = $result['user']->user_id;
 
         // Extend session cookie lifetime when "Remember Me" is checked.
         if ($rememberMe) {

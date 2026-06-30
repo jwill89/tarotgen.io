@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\ContactData;
 use Tarot\Structure\Contact;
 
-class ContactRepository
+readonly class ContactRepository
 {
-    private ContactData $data;
-
-    public function __construct(ContactData $data)
+    public function __construct(private ContactData $data)
     {
-        $this->data = $data;
     }
 
     /**

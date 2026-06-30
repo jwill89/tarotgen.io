@@ -78,7 +78,7 @@ class ContactData extends AbstractData
      */
     public function countUnread(): int
     {
-        return (int)$this->db->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
+        return (int)$this->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
     }
 
     private function retrieveById(int $contact_id): ?Contact

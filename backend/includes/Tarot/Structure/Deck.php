@@ -2,93 +2,31 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class Deck extends AbstractStructure
 {
     /** Fallback standard card count when a deck's system is missing/orphaned. */
     public const int DEFAULT_TOTAL_CARDS = 78;
 
-    protected int $deck_id = 0;
-    protected int $deck_system_id = 1;
-    protected string $name = '';
-    protected string $artist = '';
-    protected string $purchase_url = '';
-    protected int $additional_cards = 0;
-    protected float $card_aspect_w = 5.0;
-    protected float $card_aspect_h = 8.6;
-    protected bool $approved = true;
-    protected bool $usable = true;
-    protected ?int $submitted_by = null;
+    public private(set) int $deck_id = 0;
+    public private(set) int $deck_system_id = 1;
+    public private(set) string $name = '';
+    public private(set) string $artist = '';
+    public private(set) string $purchase_url = '';
+    public private(set) int $additional_cards = 0;
+    public private(set) float $card_aspect_w = 5.0;
+    public private(set) float $card_aspect_h = 8.6;
+    public private(set) bool $approved = true;
+    public private(set) bool $usable = true;
+    public private(set) ?int $submitted_by = null;
 
     /** Populated by JOIN queries — the deck system's short name. */
-    protected string $system_short_name = '';
+    public private(set) string $system_short_name = '';
 
     /** Populated by JOIN queries — the deck system's total cards. */
-    protected int $system_total_cards = 0;
-
-    public function getDeckId(): int
-    {
-        return $this->deck_id;
-    }
-
-    public function getDeckSystemId(): int
-    {
-        return $this->deck_system_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getArtist(): string
-    {
-        return $this->artist;
-    }
-
-    public function getPurchaseUrl(): string
-    {
-        return $this->purchase_url;
-    }
-
-    public function getAdditionalCards(): int
-    {
-        return $this->additional_cards;
-    }
-
-    public function getCardAspectW(): float
-    {
-        return $this->card_aspect_w;
-    }
-
-    public function getCardAspectH(): float
-    {
-        return $this->card_aspect_h;
-    }
-
-    public function isApproved(): bool
-    {
-        return $this->approved;
-    }
-
-    public function isUsable(): bool
-    {
-        return $this->usable;
-    }
-
-    public function getSubmittedBy(): ?int
-    {
-        return $this->submitted_by;
-    }
-
-    public function getSystemShortName(): string
-    {
-        return $this->system_short_name;
-    }
-
-    public function getSystemTotalCards(): int
-    {
-        return $this->system_total_cards;
-    }
+    public private(set) int $system_total_cards = 0;
 
     /**
      * The authoritative standard card count for this deck: its deck system's

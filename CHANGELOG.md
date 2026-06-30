@@ -15,6 +15,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [3.4.0] — 2026-06-30
+
+Backend type-safety, modernization, and API documentation. No user-facing or API
+behavior changes — this release hardens the PHP backend and its tooling.
+
+### Added
+
+- **Full REST API reference** in [`API.md`](API.md), linked from the README.
+  Documents every `/api/*` endpoint with its method, auth requirement, request
+  body, responses, rate limits, and caching behavior.
+- **`AbstractController::parsedBody()`** — a single, typed
+  (`array<string,mixed>`) accessor for JSON request bodies, replacing the
+  repeated `$request->getParsedBody() ?? []` idiom across every controller and
+  giving the static analyzer a real offset-accessible type at each call site.
+- **Typed query helpers** in `StatsService` (`scalarInt`/`row`/`rows`) and
+  `AbstractData::query()`, collapsing the repeated
+  `query(...)->fetch*()` + `?: []` boilerplate and making PDO's exception-mode
+  contract explicit.
+
+### Changed
+
+- **PHPStan raised from level 6 to level 8** (`backend/phpstan.neon`), enforced
+  in CI via the existing `composer stan` step. Closed ~110 newly-surfaced
+  findings; the baseline now holds only 6 deliberately-defensive guards and an
+  interface-mandated `string|false` signature (down from 7).
+- **Strengthened data integrity at the boundaries.** `GoogleOAuthService` now
+  normalizes Google's raw payloads to their documented array shapes;
+  `UserData::findAuthByEmail()` returns a concrete `{user_id,password_hash,is_active}`
+  shape; the Data layer's list-returning methods are now `list<…>`-precise; and
+  `Env::get()` carries a conditional return type so callers with a non-null
+  fallback get a guaranteed `string`.
+- **PHP 8.x modernization to cut boilerplate:** constructor property promotion
+  across the Repository layer (now `readonly`), `StatsService`, `AbstractData`,
+  `ApiException`, and the remaining controllers; `#[\Override]` on the
+  `Structure` JSON serializers and every `DbSessionHandler` interface method; and
+  `#[\SensitiveParameter]` on all password / reset-token parameters in
+  `AuthService` and `PasswordPolicy` so secrets are redacted from stack traces.
+- **`Structure` entities are now immutable value objects.** Every property uses
+  PHP 8.4 asymmetric visibility (`public private(set)`): reads are public
+  (`$user->user_id` instead of `$user->getUserId()`), writes are private. PDO's
+  `FETCH_CLASS` hydration and the array constructor still populate them, but
+  external code can no longer mutate an entity after it's built. This removed
+  ~250 hand-written getters and their call sites across the backend; the small
+  number of genuinely computed accessors (e.g. `Deck::getEffectiveTotalCards()`,
+  `Contact::isRead()`) and `Reading`'s builder setters are retained.
+
 ## [3.3.0] — 2026-06-28
 
 Bot/abuse protection for the sign-in flow.

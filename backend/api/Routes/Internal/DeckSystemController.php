@@ -65,8 +65,8 @@ class DeckSystemController extends AbstractController
         // Admin status is a DB-backed fact (re-checked each request, as the
         // AdminAuth middleware does) — admins' submissions are auto-approved.
         $user    = $this->users->findById($userId);
-        $isAdmin = $user !== null && $user->isActive() && $user->isAdmin();
-        $params  = $request->getParsedBody() ?? [];
+        $isAdmin = $user !== null && $user->is_active && $user->is_admin;
+        $params  = $this->parsedBody($request);
 
         $name      = trim((string)($params['name'] ?? ''));
         $shortName = trim((string)($params['short_name'] ?? ''));
@@ -124,7 +124,7 @@ class DeckSystemController extends AbstractController
             ];
         }
 
-        $this->systems->saveCards($system->getDeckSystemId(), $cardData);
+        $this->systems->saveCards($system->deck_system_id, $cardData);
 
         return $response->withJson($system, 201);
     }

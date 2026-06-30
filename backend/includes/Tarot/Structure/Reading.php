@@ -2,108 +2,78 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): reads are public
+ * ($reading->reading_id), writes go through the setters below. PDO's FETCH_CLASS
+ * and the array constructor still hydrate rows, while external code cannot mutate
+ * the entity — only the Data/Service layer builds one up via the setters.
+ */
 class Reading extends AbstractStructure
 {
-    protected string $reading_id = '';
-    protected string $reading_info = '';
-    protected string $reading_time = '';
-    protected ?int $user_id = null;
-    protected bool $hide_user = false;
-    protected ?string $reading_name = null;
-    protected ?string $reading_notes = null;
+    public private(set) string $reading_id = '';
+    public private(set) string $reading_info = '';
+    public private(set) string $reading_time = '';
+    public private(set) ?int $user_id = null;
+    public private(set) bool $hide_user = false;
+    public private(set) ?string $reading_name = null;
+    public private(set) ?string $reading_notes = null;
     /** One-way lock: when true the owner can no longer draw additional cards. */
-    protected bool $is_final = false;
+    public private(set) bool $is_final = false;
     /** Derived flag — true when a view password is set. The hash itself is never exposed. */
-    protected bool $password_protected = false;
+    public private(set) bool $password_protected = false;
 
-    public function getReadingId(): string
-    {
-        return $this->reading_id;
-    }
-
-    public function setReadingId(string $reading_id): void
+    public function setReadingId(string $reading_id): self
     {
         $this->reading_id = $reading_id;
+        return $this;
     }
 
-    public function getReadingInfo(): string
-    {
-        return $this->reading_info;
-    }
-
-    public function setReadingInfo(string $reading_info): void
+    public function setReadingInfo(string $reading_info): self
     {
         $this->reading_info = $reading_info;
+        return $this;
     }
 
-    public function getReadingTime(): string
-    {
-        return $this->reading_time;
-    }
-
-    public function setReadingTime(string $reading_time): void
+    public function setReadingTime(string $reading_time): self
     {
         $this->reading_time = $reading_time;
+        return $this;
     }
 
-    public function getUserId(): ?int
-    {
-        return $this->user_id;
-    }
-
-    public function setUserId(?int $user_id): void
+    public function setUserId(?int $user_id): self
     {
         $this->user_id = $user_id;
+        return $this;
     }
 
-    public function isHideUser(): bool
-    {
-        return $this->hide_user;
-    }
-
-    public function setHideUser(bool $hide_user): void
+    public function setHideUser(bool $hide_user): self
     {
         $this->hide_user = $hide_user;
+        return $this;
     }
 
-    public function getReadingName(): ?string
-    {
-        return $this->reading_name;
-    }
-
-    public function setReadingName(?string $reading_name): void
+    public function setReadingName(?string $reading_name): self
     {
         $this->reading_name = $reading_name;
+        return $this;
     }
 
-    public function getReadingNotes(): ?string
-    {
-        return $this->reading_notes;
-    }
-
-    public function setReadingNotes(?string $reading_notes): void
+    public function setReadingNotes(?string $reading_notes): self
     {
         $this->reading_notes = $reading_notes;
+        return $this;
     }
 
-    public function isFinal(): bool
-    {
-        return $this->is_final;
-    }
-
-    public function setIsFinal(bool $is_final): void
+    public function setIsFinal(bool $is_final): self
     {
         $this->is_final = $is_final;
+        return $this;
     }
 
-    public function isPasswordProtected(): bool
-    {
-        return $this->password_protected;
-    }
-
-    public function setPasswordProtected(bool $password_protected): void
+    public function setPasswordProtected(bool $password_protected): self
     {
         $this->password_protected = $password_protected;
+        return $this;
     }
 
     /**
@@ -112,6 +82,7 @@ class Reading extends AbstractStructure
      *
      * @return array<string,mixed>
      */
+    #[\Override]
     public function jsonSerialize(): array
     {
         $data = parent::jsonSerialize();

@@ -54,7 +54,7 @@ class AuthService
      *   activation_link?: string
      * }
      */
-    public function register(string $email, string $displayName, string $password): array
+    public function register(string $email, string $displayName, #[\SensitiveParameter] string $password): array
     {
         $email       = strtolower(trim($email));
         $displayName = trim($displayName);
@@ -82,8 +82,8 @@ class AuthService
             return ['ok' => false, 'errors' => ['Could not create the account. Please try again.']];
         }
 
-        $link    = $this->issueActivationLink($user->getUserId());
-        $emailed = $this->mailer->sendActivation($user->getEmail(), $user->getDisplayName(), $link);
+        $link    = $this->issueActivationLink($user->user_id);
+        $emailed = $this->mailer->sendActivation($user->email, $user->display_name, $link);
 
         return [
             'ok'              => true,
@@ -97,7 +97,7 @@ class AuthService
      * Activate an account from a raw token. Returns true when a matching,
      * unused, unexpired activation token was found and consumed.
      */
-    public function activate(string $rawToken): bool
+    public function activate(#[\SensitiveParameter] string $rawToken): bool
     {
         $rawToken = trim($rawToken);
         if ($rawToken === '') {
@@ -127,12 +127,12 @@ class AuthService
         if ($user === null) {
             return ['ok' => false, 'error' => 'User not found.'];
         }
-        if ($user->isActive()) {
+        if ($user->is_active) {
             return ['ok' => false, 'error' => 'That account is already active.'];
         }
 
         $link    = $this->issueActivationLink($userId);
-        $emailed = $this->mailer->sendActivation($user->getEmail(), $user->getDisplayName(), $link);
+        $emailed = $this->mailer->sendActivation($user->email, $user->display_name, $link);
 
         return ['ok' => true, 'emailed' => $emailed, 'activation_link' => $link];
     }
@@ -143,7 +143,7 @@ class AuthService
      *
      * @return array{status:'ok'|'invalid'|'inactive'|'password_disabled', user?:User}
      */
-    public function authenticate(string $email, string $password): array
+    public function authenticate(string $email, #[\SensitiveParameter] string $password): array
     {
         $email = strtolower(trim($email));
         $auth  = $this->users->findAuthByEmail($email);
@@ -169,7 +169,14 @@ class AuthService
 
         $this->users->touchLogin($userId);
 
-        return ['status' => 'ok', 'user' => $this->users->findById($userId)];
+        $user = $this->users->findById($userId);
+        if ($user === null) {
+            // The row was verified moments ago; a null here means it vanished
+            // mid-request (e.g. concurrent deletion). Treat as a failed login.
+            return ['status' => 'invalid'];
+        }
+
+        return ['status' => 'ok', 'user' => $user];
     }
 
     /**
@@ -189,8 +196,8 @@ class AuthService
             return ['ok' => true, 'exists' => false];
         }
 
-        $link    = $this->issueResetLink($user->getUserId());
-        $emailed = $this->mailer->sendPasswordReset($user->getEmail(), $user->getDisplayName(), $link);
+        $link    = $this->issueResetLink($user->user_id);
+        $emailed = $this->mailer->sendPasswordReset($user->email, $user->display_name, $link);
 
         return ['ok' => true, 'exists' => true, 'emailed' => $emailed, 'reset_link' => $link];
     }
@@ -204,8 +211,10 @@ class AuthService
      *
      * @return array{status:'ok'|'invalid'|'weak', error?:string}
      */
-    public function resetPassword(string $rawToken, string $newPassword): array
-    {
+    public function resetPassword(
+        #[\SensitiveParameter] string $rawToken,
+        #[\SensitiveParameter] string $newPassword,
+    ): array {
         $rawToken = trim($rawToken);
         if ($rawToken === '') {
             return ['status' => 'invalid'];
@@ -252,7 +261,7 @@ class AuthService
         // Allow keeping the same name (e.g. a capitalisation change); otherwise
         // the name must be free.
         if (
-            mb_strtolower($displayName) !== mb_strtolower($current->getDisplayName())
+            mb_strtolower($displayName) !== mb_strtolower($current->display_name)
             && $this->users->displayNameExists($displayName)
         ) {
             return ['ok' => false, 'error' => 'That display name is already taken.'];
@@ -267,8 +276,11 @@ class AuthService
      *
      * @return array{ok:bool, error?:string}
      */
-    public function changePassword(int $userId, string $currentPassword, string $newPassword): array
-    {
+    public function changePassword(
+        int $userId,
+        #[\SensitiveParameter] string $currentPassword,
+        #[\SensitiveParameter] string $newPassword,
+    ): array {
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($currentPassword, $hash)) {
             return ['ok' => false, 'error' => 'Your current password is incorrect.'];
@@ -289,7 +301,7 @@ class AuthService
      *
      * @return array{ok:bool, error?:string}
      */
-    public function deleteAccount(int $userId, string $password): array
+    public function deleteAccount(int $userId, #[\SensitiveParameter] string $password): array
     {
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($password, $hash)) {

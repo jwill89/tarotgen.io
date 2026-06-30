@@ -3,6 +3,8 @@
 namespace Tarot\Data;
 
 use PDO;
+use PDOStatement;
+use RuntimeException;
 
 /**
  * Shared database plumbing for the Data layer: a PDO handle plus a couple of
@@ -14,11 +16,25 @@ use PDO;
  */
 abstract class AbstractData
 {
-    protected PDO $db;
-
-    public function __construct(PDO $db)
+    public function __construct(protected readonly PDO $db)
     {
-        $this->db = $db;
+    }
+
+    /**
+     * Run a parameterless query and return the executed statement.
+     *
+     * PDO is configured in exception mode (see Connection), so a failed query
+     * throws rather than returning `false`; this wrapper makes that contract
+     * explicit so callers can chain `->fetch*()` without a redundant guard.
+     */
+    protected function query(string $sql): PDOStatement
+    {
+        $stmt = $this->db->query($sql);
+        if ($stmt === false) {
+            throw new RuntimeException('Query failed: ' . $sql);
+        }
+
+        return $stmt;
     }
 
     /**
@@ -53,7 +69,12 @@ abstract class AbstractData
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
 
-        return $stmt->fetchAll(PDO::FETCH_CLASS, $class);
+        // FETCH_CLASS yields a sequentially-indexed array — a list<T> by
+        // construction, which PDO's signature can't express on its own.
+        /** @var list<T> $rows */
+        $rows = $stmt->fetchAll(PDO::FETCH_CLASS, $class);
+
+        return $rows;
     }
 
     /**

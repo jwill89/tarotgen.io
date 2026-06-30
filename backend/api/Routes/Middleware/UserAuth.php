@@ -27,13 +27,13 @@ readonly class UserAuth
 
         if ($userId !== null) {
             $user = $this->users->findById($userId);
-            if ($user !== null && $user->isActive()) {
+            if ($user !== null && $user->is_active) {
                 return $handler->handle($request);
             }
         }
 
         $response = new Response();
-        $response->getBody()->write(json_encode(['error' => 'Not authenticated']));
+        $response->getBody()->write(json_encode(['error' => 'Not authenticated'], JSON_THROW_ON_ERROR));
         return $response
             ->withStatus(401)
             ->withHeader('Content-Type', 'application/json');

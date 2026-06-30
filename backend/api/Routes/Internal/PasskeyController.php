@@ -62,9 +62,9 @@ class PasskeyController extends AbstractController
         );
 
         $createArgs = $webAuthn->getCreateArgs(
-            hex2bin(str_pad(dechex($userId), 16, '0', STR_PAD_LEFT)), // user id as binary
-            $user->getEmail(),
-            $user->getDisplayName(),
+            (string)hex2bin(str_pad(dechex($userId), 16, '0', STR_PAD_LEFT)), // user id as binary
+            $user->email,
+            $user->display_name,
             60, // timeout seconds
             'preferred', // resident key
             'preferred', // user verification
@@ -96,7 +96,7 @@ class PasskeyController extends AbstractController
             return $response->withJson(['error' => 'No pending registration challenge.'], 400);
         }
 
-        $body = $request->getParsedBody() ?? [];
+        $body = $this->parsedBody($request);
         $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
         $attestationObject = self::base64UrlDecode((string)($body['attestationObject'] ?? ''));
         $name = Input::string($body['name'] ?? 'My Passkey', 50) ?: 'My Passkey';
@@ -156,7 +156,7 @@ class PasskeyController extends AbstractController
     {
         $this->startSession();
 
-        $body  = $request->getParsedBody() ?? [];
+        $body  = $this->parsedBody($request);
         $email = strtolower(trim((string)($body['email'] ?? '')));
 
         $credentialIds = [];
@@ -169,7 +169,7 @@ class PasskeyController extends AbstractController
                 $credentialIds = [];
             } else {
                 // Check if password login is disabled, and check passkeys exist
-                $rawIds = $this->passkeys->getCredentialIds($user->getUserId());
+                $rawIds = $this->passkeys->getCredentialIds($user->user_id);
                 $credentialIds = array_map(
                     static fn(string $id) => new ByteBuffer(self::base64UrlDecode($id)),
                     $rawIds
@@ -208,7 +208,7 @@ class PasskeyController extends AbstractController
             return $response->withJson(['error' => 'No pending authentication challenge.'], 400);
         }
 
-        $body = $request->getParsedBody() ?? [];
+        $body = $this->parsedBody($request);
         $credentialIdB64  = (string)($body['id'] ?? '');
         $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
         $authenticatorData = self::base64UrlDecode((string)($body['authenticatorData'] ?? ''));
@@ -252,14 +252,14 @@ class PasskeyController extends AbstractController
             return $response->withJson(['error' => 'Account not found.'], 401);
         }
 
-        if (!$user->isActive()) {
+        if (!$user->is_active) {
             return $response->withJson(['error' => 'Your account is not activated.'], 403);
         }
 
-        $this->users->touchLogin($user->getUserId());
+        $this->users->touchLogin($user->user_id);
 
         Session::regenerate(persistent: true);
-        $_SESSION['user_id'] = $user->getUserId();
+        $_SESSION['user_id'] = $user->user_id;
 
         // Passkey login implies strong intent — always persist the session.
         $this->persistSession();
@@ -297,7 +297,7 @@ class PasskeyController extends AbstractController
         }
 
         $passkeyId = (int)($args['id'] ?? 0);
-        $body = $request->getParsedBody() ?? [];
+        $body = $this->parsedBody($request);
         $name = Input::string($body['name'] ?? '', 50);
 
         if ($name === '') {
@@ -328,7 +328,7 @@ class PasskeyController extends AbstractController
 
         // If password login is disabled, ensure at least one passkey remains.
         $user = $this->users->findById($userId);
-        if ($user !== null && $user->isPasswordLoginDisabled()) {
+        if ($user !== null && $user->password_login_disabled) {
             $count = $this->passkeys->countByUser($userId);
             if ($count <= 1) {
                 return $response->withJson([
@@ -355,7 +355,7 @@ class PasskeyController extends AbstractController
             return $response->withJson(['error' => 'Not authenticated.'], 401);
         }
 
-        $body = $request->getParsedBody() ?? [];
+        $body = $this->parsedBody($request);
         $disable = Input::bool($body['disable'] ?? null);
 
         if ($disable) {
@@ -385,7 +385,8 @@ class PasskeyController extends AbstractController
     private function createWebAuthn(): WebAuthn
     {
         $rpName = Env::get('APP_NAME', 'Tarot Generator');
-        $rpId   = Env::get('WEBAUTHN_RP_ID', parse_url(Env::get('APP_URL', 'https://tarotgen.io'), PHP_URL_HOST));
+        $host   = parse_url(Env::get('APP_URL', 'https://tarotgen.io'), PHP_URL_HOST);
+        $rpId   = Env::get('WEBAUTHN_RP_ID', is_string($host) ? $host : 'tarotgen.io');
 
         return new WebAuthn($rpName, $rpId, ['none', 'packed', 'fido-u2f', 'android-key', 'apple'], true);
     }

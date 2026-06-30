@@ -29,8 +29,8 @@ readonly class CardNameResolver
      */
     public function resolve(Deck $deck, array $card_ids): array
     {
-        $deck_id   = $deck->getDeckId();
-        $systemId  = $deck->getDeckSystemId();
+        $deck_id   = $deck->deck_id;
+        $systemId  = $deck->deck_system_id;
         $systemTotal = $deck->getEffectiveTotalCards();
 
         $standard_ids = [];
@@ -47,14 +47,14 @@ readonly class CardNameResolver
         $names = [];
 
         if (!empty($standard_ids)) {
-            foreach ($this->deckSystems->getCardsByIds($systemId, array_unique($standard_ids)) as $card) {
-                $names[$card->getCardId()] = $card->getName();
+            foreach ($this->deckSystems->getCardsByIds($systemId, array_values(array_unique($standard_ids))) as $card) {
+                $names[$card->card_id] = $card->name;
             }
         }
 
         if (!empty($special_ids)) {
-            foreach ($this->specialCards->getMultiple($deck_id, array_unique($special_ids)) as $card) {
-                $names[$card->getCardId()] = $card->getName();
+            foreach ($this->specialCards->getMultiple($deck_id, array_values(array_unique($special_ids))) as $card) {
+                $names[$card->card_id] = $card->name;
             }
         }
 

@@ -94,10 +94,10 @@ final class AuthServiceTest extends TestCase
 
         $this->assertTrue($result['ok']);
         $this->assertInstanceOf(User::class, $result['user']);
-        $this->assertFalse($result['user']->isActive());
-        $this->assertFalse($result['user']->isAdmin());
+        $this->assertFalse($result['user']->is_active);
+        $this->assertFalse($result['user']->is_admin);
         // Email is normalised to lowercase.
-        $this->assertSame('person@example.com', $result['user']->getEmail());
+        $this->assertSame('person@example.com', $result['user']->email);
         $this->assertStringContainsString('/activate?token=', $result['activation_link']);
     }
 
@@ -134,7 +134,7 @@ final class AuthServiceTest extends TestCase
         $ok = $this->auth->authenticate('FLOW@example.com', $password);
         $this->assertSame('ok', $ok['status']);
         $this->assertInstanceOf(User::class, $ok['user']);
-        $this->assertTrue($ok['user']->isActive());
+        $this->assertTrue($ok['user']->is_active);
 
         $this->assertSame('invalid', $this->auth->authenticate('flow@example.com', 'wrong password here')['status']);
     }
@@ -149,7 +149,7 @@ final class AuthServiceTest extends TestCase
         // account settings / passkey flow does.
         $this->pdo->exec(
             'UPDATE users SET password_login_disabled = 1 WHERE user_id = '
-            . (int)$reg['user']->getUserId()
+            . (int)$reg['user']->user_id
         );
 
         // Correct credentials are still refused — login must go via passkey/Google.
@@ -176,7 +176,7 @@ final class AuthServiceTest extends TestCase
     public function testResendActivationReissuesAWorkingTokenForInactiveUser(): void
     {
         $reg = $this->auth->register('resend@example.com', 'Resender', 'correct horse battery staple');
-        $userId = $reg['user']->getUserId();
+        $userId = $reg['user']->user_id;
 
         $resent = $this->auth->resendActivation($userId);
         $this->assertTrue($resent['ok']);
@@ -192,7 +192,7 @@ final class AuthServiceTest extends TestCase
         $reg = $this->auth->register('active@example.com', 'Active', 'correct horse battery staple');
         $this->auth->activate($this->tokenFromLink($reg['activation_link']));
 
-        $this->assertFalse($this->auth->resendActivation($reg['user']->getUserId())['ok']);
+        $this->assertFalse($this->auth->resendActivation($reg['user']->user_id)['ok']);
         $this->assertFalse($this->auth->resendActivation(99999)['ok']);
     }
 
@@ -259,23 +259,23 @@ final class AuthServiceTest extends TestCase
 
         $this->assertCount(2, $this->userRepo->getAll());
 
-        $this->assertTrue($this->userRepo->delete($a['user']->getUserId()));
+        $this->assertTrue($this->userRepo->delete($a['user']->user_id));
         $this->assertCount(1, $this->userRepo->getAll());
-        $this->assertNull($this->userRepo->findById($a['user']->getUserId()));
+        $this->assertNull($this->userRepo->findById($a['user']->user_id));
     }
 
     public function testSetAdminFlag(): void
     {
         $reg = $this->auth->register('boss@example.com', 'Boss', 'correct horse battery staple');
-        $userId = $reg['user']->getUserId();
+        $userId = $reg['user']->user_id;
 
-        $this->assertFalse($this->userRepo->findById($userId)->isAdmin());
+        $this->assertFalse($this->userRepo->findById($userId)->is_admin);
 
         $this->userRepo->setAdmin($userId, true);
-        $this->assertTrue($this->userRepo->findById($userId)->isAdmin());
+        $this->assertTrue($this->userRepo->findById($userId)->is_admin);
 
         $this->userRepo->setAdmin($userId, false);
-        $this->assertFalse($this->userRepo->findById($userId)->isAdmin());
+        $this->assertFalse($this->userRepo->findById($userId)->is_admin);
     }
 
     public function testChangeDisplayName(): void
@@ -284,19 +284,19 @@ final class AuthServiceTest extends TestCase
         $this->auth->register('b@example.com', 'Bravo', 'correct horse battery staple');
 
         // Taken name is rejected (case-insensitive).
-        $this->assertFalse($this->auth->changeDisplayName($a['user']->getUserId(), 'bravo')['ok']);
+        $this->assertFalse($this->auth->changeDisplayName($a['user']->user_id, 'bravo')['ok']);
         // Invalid characters rejected.
-        $this->assertFalse($this->auth->changeDisplayName($a['user']->getUserId(), 'no@good')['ok']);
+        $this->assertFalse($this->auth->changeDisplayName($a['user']->user_id, 'no@good')['ok']);
         // A free name succeeds.
-        $this->assertTrue($this->auth->changeDisplayName($a['user']->getUserId(), 'Alphonse')['ok']);
-        $this->assertSame('Alphonse', $this->userRepo->findById($a['user']->getUserId())->getDisplayName());
+        $this->assertTrue($this->auth->changeDisplayName($a['user']->user_id, 'Alphonse')['ok']);
+        $this->assertSame('Alphonse', $this->userRepo->findById($a['user']->user_id)->display_name);
     }
 
     public function testChangePassword(): void
     {
         $reg = $this->auth->register('pw@example.com', 'Pwuser', 'correct horse battery staple');
         $this->auth->activate($this->tokenFromLink($reg['activation_link']));
-        $id = $reg['user']->getUserId();
+        $id = $reg['user']->user_id;
 
         $this->assertFalse($this->auth->changePassword($id, 'wrong-current', 'a new long passphrase')['ok']);
         $this->assertFalse($this->auth->changePassword($id, 'correct horse battery staple', 'short')['ok']);
@@ -308,7 +308,7 @@ final class AuthServiceTest extends TestCase
     public function testDeleteAccountRequiresCorrectPassword(): void
     {
         $reg = $this->auth->register('del@example.com', 'Deleter', 'correct horse battery staple');
-        $id = $reg['user']->getUserId();
+        $id = $reg['user']->user_id;
 
         $this->assertFalse($this->auth->deleteAccount($id, 'nope nope nope')['ok']);
         $this->assertNotNull($this->userRepo->findById($id));

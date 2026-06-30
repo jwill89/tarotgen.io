@@ -14,8 +14,8 @@ class UserData extends AbstractData
      */
     public function getAll(): array
     {
-        $stmt = $this->db->query('SELECT * FROM users ORDER BY registered_at DESC, user_id DESC');
-        return array_map([$this, 'hydrate'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        $stmt = $this->query('SELECT * FROM users ORDER BY registered_at DESC, user_id DESC');
+        return array_map($this->hydrate(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     public function findById(int $userId): ?User
@@ -45,7 +45,15 @@ class UserData extends AbstractData
             [':email' => $email]
         );
 
-        return $row ?: null;
+        if ($row === null) {
+            return null;
+        }
+
+        return [
+            'user_id'       => (int)$row['user_id'],
+            'password_hash' => (string)$row['password_hash'],
+            'is_active'     => (int)$row['is_active'],
+        ];
     }
 
     public function emailExists(string $email): bool
@@ -188,7 +196,7 @@ class UserData extends AbstractData
             'is_admin'      => (bool)(int)$row['is_admin'],
             'registered_at' => (string)$row['registered_at'],
             'last_login_at' => $row['last_login_at'] !== null ? (string)$row['last_login_at'] : null,
-            'google_linked' => isset($row['google_id']) && $row['google_id'] !== null && $row['google_id'] !== '',
+            'google_linked' => isset($row['google_id']) && $row['google_id'] !== '',
             'password_login_disabled' => (bool)(int)($row['password_login_disabled'] ?? 0),
             'has_passkeys'  => $this->userHasPasskeys((int)$row['user_id']),
         ]);

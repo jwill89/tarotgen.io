@@ -11,11 +11,8 @@ use PDO;
  */
 class StatsService
 {
-    private PDO $db;
-
-    public function __construct(PDO $db)
+    public function __construct(private readonly PDO $db)
     {
-        $this->db = $db;
     }
 
     /**
@@ -55,24 +52,24 @@ class StatsService
     /** $table comes only from the fixed allow-list in counts(), never user input. */
     private function countRows(string $table): int
     {
-        return (int)$this->db->query("SELECT COUNT(*) FROM $table")->fetchColumn();
+        return $this->scalarInt("SELECT COUNT(*) FROM $table");
     }
 
     private function countUnreadContacts(): int
     {
-        return (int)$this->db->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
+        return $this->scalarInt("SELECT COUNT(*) FROM contacts WHERE is_read = 0");
     }
 
     /** @return array{readings:int,last7:int,last30:int} */
     private function totals(): array
     {
-        $row = $this->db->query(
+        $row = $this->row(
             "SELECT
                 COUNT(*) AS readings,
                 SUM(CASE WHEN reading_time >= datetime('now', '-7 days')  THEN 1 ELSE 0 END) AS last7,
                 SUM(CASE WHEN reading_time >= datetime('now', '-30 days') THEN 1 ELSE 0 END) AS last30
              FROM readings"
-        )->fetch(PDO::FETCH_ASSOC) ?: [];
+        );
 
         return [
             'readings' => (int)($row['readings'] ?? 0),
@@ -84,13 +81,13 @@ class StatsService
     /** @return array{freeDraw:int,spread:int,custom:int} */
     private function byType(): array
     {
-        $row = $this->db->query(
+        $row = $this->row(
             "SELECT
                 SUM(CASE WHEN json_extract(reading_info, '$.spread') IS NULL THEN 1 ELSE 0 END) AS free_draw,
                 SUM(CASE WHEN json_extract(reading_info, '$.spread.spread_id') > 0 THEN 1 ELSE 0 END) AS spread,
                 SUM(CASE WHEN json_extract(reading_info, '$.spread.spread_id') = 0 THEN 1 ELSE 0 END) AS custom
              FROM readings"
-        )->fetch(PDO::FETCH_ASSOC) ?: [];
+        );
 
         return [
             'freeDraw' => (int)($row['free_draw'] ?? 0),
@@ -102,17 +99,17 @@ class StatsService
     /** @return list<array{deck_id:int,name:string,count:int}> */
     private function topDecks(): array
     {
-        $rows = $this->db->query(
+        $rows = $this->rows(
             "SELECT json_extract(reading_info, '$.deck_id') AS deck_id, COUNT(*) AS count
              FROM readings
              GROUP BY deck_id
              ORDER BY count DESC
              LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
+        );
 
         // Resolve names in one pass instead of joining on a JSON-extracted column.
         $names = [];
-        foreach ($this->db->query("SELECT deck_id, name FROM decks")->fetchAll(PDO::FETCH_ASSOC) as $d) {
+        foreach ($this->rows("SELECT deck_id, name FROM decks") as $d) {
             $names[(int)$d['deck_id']] = (string)$d['name'];
         }
 
@@ -132,14 +129,14 @@ class StatsService
     /** @return list<array{name:string,count:int}> */
     private function topSpreads(): array
     {
-        $rows = $this->db->query(
+        $rows = $this->rows(
             "SELECT json_extract(reading_info, '$.spread.name') AS name, COUNT(*) AS count
              FROM readings
              WHERE json_extract(reading_info, '$.spread.spread_id') > 0
              GROUP BY name
              ORDER BY count DESC
              LIMIT 10"
-        )->fetchAll(PDO::FETCH_ASSOC);
+        );
 
         $out = [];
         foreach ($rows as $row) {
@@ -155,13 +152,13 @@ class StatsService
     /** @return list<array{date:string,count:int}> Readings per day for the last 14 days. */
     private function daily(): array
     {
-        $rows = $this->db->query(
+        $rows = $this->rows(
             "SELECT date(reading_time) AS date, COUNT(*) AS count
              FROM readings
              WHERE reading_time >= datetime('now', '-13 days')
              GROUP BY date
              ORDER BY date"
-        )->fetchAll(PDO::FETCH_ASSOC);
+        );
 
         $out = [];
         foreach ($rows as $row) {
@@ -169,5 +166,51 @@ class StatsService
         }
 
         return $out;
+    }
+
+    // ── Query helpers ────────────────────────────────────────────
+    // PDO runs in exception mode (see Connection), so query() never returns
+    // false — these wrappers make that explicit and remove the repeated
+    // fetch-mode/`?: []` boilerplate from every aggregate above.
+
+    /** A single scalar COUNT/aggregate as an int (0 when there's no row). */
+    private function scalarInt(string $sql): int
+    {
+        return (int)$this->run($sql)->fetchColumn();
+    }
+
+    /**
+     * The first row as an associative array (empty when there's no match).
+     *
+     * @return array<string,mixed>
+     */
+    private function row(string $sql): array
+    {
+        $row = $this->run($sql)->fetch(PDO::FETCH_ASSOC);
+
+        return is_array($row) ? $row : [];
+    }
+
+    /**
+     * Every row as a list of associative arrays.
+     *
+     * @return list<array<string,mixed>>
+     */
+    private function rows(string $sql): array
+    {
+        /** @var list<array<string,mixed>> $rows */
+        $rows = $this->run($sql)->fetchAll(PDO::FETCH_ASSOC);
+
+        return $rows;
+    }
+
+    private function run(string $sql): \PDOStatement
+    {
+        $stmt = $this->db->query($sql);
+        if ($stmt === false) {
+            throw new \RuntimeException('Stats query failed: ' . $sql);
+        }
+
+        return $stmt;
     }
 }

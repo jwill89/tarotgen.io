@@ -2,60 +2,18 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class DeckSystemCard extends AbstractStructure
 {
-    protected int $deck_system_id = 0;
-    protected int $card_id = 0;
-    protected string $name = '';
-    protected ?string $keywords = null;
-    protected ?string $meaning = null;
-    protected ?string $advice = null;
-    protected ?string $reversed_keywords = null;
-    protected ?string $reversed_meaning = null;
-    protected ?string $reversed_advice = null;
-
-    public function getDeckSystemId(): int
-    {
-        return $this->deck_system_id;
-    }
-
-    public function getCardId(): int
-    {
-        return $this->card_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getKeywords(): ?string
-    {
-        return $this->keywords;
-    }
-
-    public function getMeaning(): ?string
-    {
-        return $this->meaning;
-    }
-
-    public function getAdvice(): ?string
-    {
-        return $this->advice;
-    }
-
-    public function getReversedKeywords(): ?string
-    {
-        return $this->reversed_keywords;
-    }
-
-    public function getReversedMeaning(): ?string
-    {
-        return $this->reversed_meaning;
-    }
-
-    public function getReversedAdvice(): ?string
-    {
-        return $this->reversed_advice;
-    }
+    public private(set) int $deck_system_id = 0;
+    public private(set) int $card_id = 0;
+    public private(set) string $name = '';
+    public private(set) ?string $keywords = null;
+    public private(set) ?string $meaning = null;
+    public private(set) ?string $advice = null;
+    public private(set) ?string $reversed_keywords = null;
+    public private(set) ?string $reversed_meaning = null;
+    public private(set) ?string $reversed_advice = null;
 }

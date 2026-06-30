@@ -29,13 +29,13 @@ readonly class AdminAuth
 
         if ($userId !== null) {
             $user = $this->users->findById($userId);
-            if ($user !== null && $user->isActive() && $user->isAdmin()) {
+            if ($user !== null && $user->is_active && $user->is_admin) {
                 return $handler->handle($request);
             }
         }
 
         $response = new Response();
-        $response->getBody()->write(json_encode(['error' => 'Unauthorized']));
+        $response->getBody()->write(json_encode(['error' => 'Unauthorized'], JSON_THROW_ON_ERROR));
         return $response
             ->withStatus(401)
             ->withHeader('Content-Type', 'application/json');

@@ -2,12 +2,15 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class PendingSpread extends AbstractStructure
 {
-    protected int $pending_id = 0;
-    protected string $name = '';
-    protected string $description = '';
-    protected int $card_count = 1;
+    public private(set) int $pending_id = 0;
+    public private(set) string $name = '';
+    public private(set) string $description = '';
+    public private(set) int $card_count = 1;
 
     /**
      * Array of position objects, each shaped:
@@ -15,53 +18,10 @@ class PendingSpread extends AbstractStructure
      *
      * @var list<array<string,mixed>>
      */
-    protected array $positions = [];
+    public private(set) array $positions = [];
 
     /** Resolved submitter label: the linked account's display name, or "Guest". */
-    protected string $submitter = '';
-    protected ?int $user_id = null;
-    protected string $submitted_at = '';
-
-    public function getPendingId(): int
-    {
-        return $this->pending_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getDescription(): string
-    {
-        return $this->description;
-    }
-
-    public function getCardCount(): int
-    {
-        return $this->card_count;
-    }
-
-    /**
-     * @return list<array<string,mixed>>
-     */
-    public function getPositions(): array
-    {
-        return $this->positions;
-    }
-
-    public function getSubmitter(): string
-    {
-        return $this->submitter;
-    }
-
-    public function getUserId(): ?int
-    {
-        return $this->user_id;
-    }
-
-    public function getSubmittedAt(): string
-    {
-        return $this->submitted_at;
-    }
+    public private(set) string $submitter = '';
+    public private(set) ?int $user_id = null;
+    public private(set) string $submitted_at = '';
 }

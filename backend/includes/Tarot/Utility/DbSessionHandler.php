@@ -31,17 +31,20 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
     {
     }
 
+    #[\Override]
     public function open(string $path, string $name): bool
     {
         return true;
     }
 
+    #[\Override]
     public function close(): bool
     {
         return true;
     }
 
     /** Return the stored payload for a live session, or '' (new/expired). */
+    #[\Override]
     public function read(string $id): string|false
     {
         try {
@@ -61,6 +64,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
     }
 
     /** Insert or update the session payload with a fresh sliding expiry. */
+    #[\Override]
     public function write(string $id, string $data): bool
     {
         try {
@@ -80,6 +84,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
         }
     }
 
+    #[\Override]
     public function destroy(string $id): bool
     {
         try {
@@ -93,6 +98,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
     }
 
     /** Sweep expired rows. Called by PHP's probabilistic GC (see Session::start). */
+    #[\Override]
     public function gc(int $max_lifetime): int|false
     {
         try {
@@ -110,6 +116,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
      * and that hasn't expired. Unknown ids cause PHP to mint a fresh one,
      * blocking session-fixation.
      */
+    #[\Override]
     public function validateId(string $id): bool
     {
         try {
@@ -128,6 +135,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
      * Slide an unchanged session's expiry forward (lazy_write path) so an
      * actively-browsing user is never logged out mid-session.
      */
+    #[\Override]
     public function updateTimestamp(string $id, string $data): bool
     {
         try {

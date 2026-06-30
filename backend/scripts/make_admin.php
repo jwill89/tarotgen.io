@@ -36,12 +36,12 @@ if ($user === null) {
 }
 
 if ($revoke) {
-    $users->setAdmin($user->getUserId(), false);
-    echo "Revoked admin from {$email} (user #{$user->getUserId()}).\n";
+    $users->setAdmin($user->user_id, false);
+    echo "Revoked admin from {$email} (user #{$user->user_id}).\n";
     exit(0);
 }
 
-$users->setAdmin($user->getUserId(), true);
-$users->activate($user->getUserId()); // ensure a pending account can still sign in
-echo "Granted admin to {$email} (user #{$user->getUserId()}) and ensured the account is active.\n";
+$users->setAdmin($user->user_id, true);
+$users->activate($user->user_id); // ensure a pending account can still sign in
+echo "Granted admin to {$email} (user #{$user->user_id}) and ensured the account is active.\n";
 exit(0);

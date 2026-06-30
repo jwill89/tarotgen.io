@@ -29,11 +29,11 @@ final class StructureTest extends TestCase
             'additional_cards'   => 3,
         ]);
 
-        $this->assertSame(7, $deck->getDeckId());
-        $this->assertSame('Thoth', $deck->getName());
-        $this->assertSame(2, $deck->getDeckSystemId());
+        $this->assertSame(7, $deck->deck_id);
+        $this->assertSame('Thoth', $deck->name);
+        $this->assertSame(2, $deck->deck_system_id);
         $this->assertSame(78, $deck->getEffectiveTotalCards());
-        $this->assertSame(3, $deck->getAdditionalCards());
+        $this->assertSame(3, $deck->additional_cards);
     }
 
     public function testUnknownPropertiesAreIgnored(): void
@@ -43,7 +43,7 @@ final class StructureTest extends TestCase
             'does_not_exist' => 'ignored',
         ]);
 
-        $this->assertSame(3, $deck->getDeckId());
+        $this->assertSame(3, $deck->deck_id);
         $this->assertObjectNotHasProperty('does_not_exist', $deck);
     }
 
@@ -51,8 +51,8 @@ final class StructureTest extends TestCase
     {
         $deck = new Deck();
 
-        $this->assertSame(0, $deck->getDeckId());
-        $this->assertSame(0, $deck->getAdditionalCards());
+        $this->assertSame(0, $deck->deck_id);
+        $this->assertSame(0, $deck->additional_cards);
         // No system on a bare deck → effective total falls back to a standard 78.
         $this->assertSame(78, $deck->getEffectiveTotalCards());
     }
@@ -98,9 +98,9 @@ final class StructureTest extends TestCase
         $reading->setReadingInfo('{"draw":[]}');
         $reading->setReadingTime('2026-05-29 12:00:00');
 
-        $this->assertSame('abc123', $reading->getReadingId());
-        $this->assertSame('{"draw":[]}', $reading->getReadingInfo());
-        $this->assertSame('2026-05-29 12:00:00', $reading->getReadingTime());
+        $this->assertSame('abc123', $reading->reading_id);
+        $this->assertSame('{"draw":[]}', $reading->reading_info);
+        $this->assertSame('2026-05-29 12:00:00', $reading->reading_time);
     }
 
     public function testContactConstructorAndAccessors(): void
@@ -115,26 +115,26 @@ final class StructureTest extends TestCase
             'submitted_at' => '2026-06-01 10:00:00',
         ]);
 
-        $this->assertSame(42, $contact->getContactId());
-        $this->assertSame(3, $contact->getUserId());
-        $this->assertSame('Alice', $contact->getName());
-        $this->assertSame('alice@example.com', $contact->getEmail());
-        $this->assertSame('Hello world', $contact->getMessage());
+        $this->assertSame(42, $contact->contact_id);
+        $this->assertSame(3, $contact->user_id);
+        $this->assertSame('Alice', $contact->name);
+        $this->assertSame('alice@example.com', $contact->email);
+        $this->assertSame('Hello world', $contact->message);
         $this->assertTrue($contact->isRead());
-        $this->assertSame('2026-06-01 10:00:00', $contact->getSubmittedAt());
+        $this->assertSame('2026-06-01 10:00:00', $contact->submitted_at);
     }
 
     public function testContactDefaults(): void
     {
         $contact = new Contact();
 
-        $this->assertSame(0, $contact->getContactId());
-        $this->assertNull($contact->getUserId());
-        $this->assertSame('', $contact->getName());
-        $this->assertSame('', $contact->getEmail());
-        $this->assertSame('', $contact->getMessage());
+        $this->assertSame(0, $contact->contact_id);
+        $this->assertNull($contact->user_id);
+        $this->assertSame('', $contact->name);
+        $this->assertSame('', $contact->email);
+        $this->assertSame('', $contact->message);
         $this->assertFalse($contact->isRead());
-        $this->assertSame('', $contact->getSubmittedAt());
+        $this->assertSame('', $contact->submitted_at);
     }
 
     public function testContactJsonSerializeIncludesAllFields(): void

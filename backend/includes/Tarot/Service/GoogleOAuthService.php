@@ -86,7 +86,12 @@ class GoogleOAuthService
             return null;
         }
 
-        return $data;
+        // Normalize to the documented shape rather than passing Google's raw,
+        // loosely-typed payload upward.
+        return [
+            'access_token' => (string)$data['access_token'],
+            'id_token'     => (string)($data['id_token'] ?? ''),
+        ];
     }
 
     /**
@@ -119,6 +124,12 @@ class GoogleOAuthService
             return null;
         }
 
-        return $data;
+        return [
+            'sub'            => (string)$data['sub'],
+            'email'          => (string)$data['email'],
+            'email_verified' => (bool)($data['email_verified'] ?? false),
+            'name'           => (string)($data['name'] ?? ''),
+            'picture'        => (string)($data['picture'] ?? ''),
+        ];
     }
 }

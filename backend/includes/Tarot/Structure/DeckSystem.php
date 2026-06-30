@@ -2,42 +2,15 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class DeckSystem extends AbstractStructure
 {
-    protected int $deck_system_id = 0;
-    protected string $name = '';
-    protected string $short_name = '';
-    protected int $total_cards = 78;
-    protected bool $approved = true;
-    protected ?int $submitted_by = null;
-
-    public function getDeckSystemId(): int
-    {
-        return $this->deck_system_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getShortName(): string
-    {
-        return $this->short_name;
-    }
-
-    public function getTotalCards(): int
-    {
-        return $this->total_cards;
-    }
-
-    public function isApproved(): bool
-    {
-        return $this->approved;
-    }
-
-    public function getSubmittedBy(): ?int
-    {
-        return $this->submitted_by;
-    }
+    public private(set) int $deck_system_id = 0;
+    public private(set) string $name = '';
+    public private(set) string $short_name = '';
+    public private(set) int $total_cards = 78;
+    public private(set) bool $approved = true;
+    public private(set) ?int $submitted_by = null;
 }

@@ -66,14 +66,14 @@ class ReadingService
             $loaded = $this->spreads->get((int)$spread_id);
             if ($loaded instanceof Spread) {
                 $spread          = $loaded;
-                $number_of_cards = max(1, $spread->getCardCount());
+                $number_of_cards = max(1, $spread->card_count);
             }
         } elseif ($user_spread_id !== null && $user_spread_id !== '' && (int)$user_spread_id > 0) {
             $loaded = $this->userSpreads->findById((int)$user_spread_id);
             if ($loaded instanceof UserSpread) {
                 // Wrap user spread into the same shape used for snapshots.
                 $spread          = $this->userSpreadAsSpread($loaded);
-                $number_of_cards = max(1, $spread->getCardCount());
+                $number_of_cards = max(1, $spread->card_count);
             }
         }
 
@@ -86,7 +86,7 @@ class ReadingService
 
         // If flag was sent, use additional cards. Default is 0 so mistakes won't affect outcome.
         if ($use_additional_cards) {
-            $total_cards += $deck->getAdditionalCards();
+            $total_cards += $deck->additional_cards;
         }
 
         // Never draw (or allocate work for) more cards than the deck holds.
@@ -162,7 +162,7 @@ class ReadingService
 
         $total_cards = $deck->getEffectiveTotalCards();
         if ($use_additional_cards) {
-            $total_cards += $deck->getAdditionalCards();
+            $total_cards += $deck->additional_cards;
         }
 
         $existing = is_array($info['draw'] ?? null) ? $info['draw'] : [];
@@ -246,7 +246,7 @@ class ReadingService
             throw new ApiException('InvalidDeckID', 400);
         }
 
-        $available = max(1, $deck->getEffectiveTotalCards() + $deck->getAdditionalCards());
+        $available = max(1, $deck->getEffectiveTotalCards() + $deck->additional_cards);
 
         // Never store more cards than the deck physically holds.
         $cards = array_slice(array_values($cards), 0, $available);
@@ -376,7 +376,7 @@ class ReadingService
      */
     private function buildSpreadSnapshot(Spread $spread, mixed $rawTitles): array
     {
-        $positions = $spread->getPositions();
+        $positions = $spread->positions;
 
         $custom_titles = [];
         if (is_string($rawTitles) && $rawTitles !== '') {
@@ -398,9 +398,9 @@ class ReadingService
         }
 
         return [
-            'spread_id'   => $spread->getSpreadId(),
-            'name'        => $spread->getName(),
-            'description' => $spread->getDescription(),
+            'spread_id'   => $spread->spread_id,
+            'name'        => $spread->name,
+            'description' => $spread->description,
             'positions'   => $positions,
         ];
     }
@@ -413,10 +413,10 @@ class ReadingService
     {
         return new Spread([
             'spread_id'   => 0, // not a public spread
-            'name'        => $userSpread->getName(),
-            'description' => $userSpread->getDescription(),
-            'card_count'  => $userSpread->getCardCount(),
-            'positions'   => $userSpread->getPositions(),
+            'name'        => $userSpread->name,
+            'description' => $userSpread->description,
+            'card_count'  => $userSpread->card_count,
+            'positions'   => $userSpread->positions,
         ]);
     }
 
@@ -489,9 +489,18 @@ class ReadingService
         // Every card starts upright; a turned packet flips its cards.
         $orientations = array_fill(0, $count, false);
 
-        // Split into a handful of packets at random, unique boundaries.
-        $max_cuts  = min($count - 1, 6);
-        $cut_count = $max_cuts > 0 ? random_int(min(3, $max_cuts), $max_cuts) : 0;
+        // Split into a handful of packets at random, unique boundaries. Aim for
+        // 3–6 cuts, but a very small packet can't support that many: with ≤3
+        // possible boundaries take them all, and only randomize once there's
+        // genuine room (keeps the random bounds provably ordered, too).
+        $max_cuts = min($count - 1, 6);
+        if ($max_cuts <= 0) {
+            $cut_count = 0;
+        } elseif ($max_cuts <= 3) {
+            $cut_count = $max_cuts;
+        } else {
+            $cut_count = random_int(3, $max_cuts);
+        }
 
         $cuts = [];
         while (count($cuts) < $cut_count) {

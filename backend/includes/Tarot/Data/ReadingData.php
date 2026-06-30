@@ -50,16 +50,16 @@ class ReadingData extends AbstractData
              VALUES (:reading_id, :reading_info, CURRENT_TIMESTAMP, :user_id, :hide_user, :reading_name, :reading_notes, :password_hash)'
         );
         $stmt->execute([
-            ':reading_id'    => $reading->getReadingId(),
-            ':reading_info'  => $reading->getReadingInfo(),
-            ':user_id'       => $reading->getUserId(),
-            ':hide_user'     => $reading->isHideUser() ? 1 : 0,
-            ':reading_name'  => $reading->getReadingName(),
-            ':reading_notes' => $reading->getReadingNotes(),
+            ':reading_id'    => $reading->reading_id,
+            ':reading_info'  => $reading->reading_info,
+            ':user_id'       => $reading->user_id,
+            ':hide_user'     => $reading->hide_user ? 1 : 0,
+            ':reading_name'  => $reading->reading_name,
+            ':reading_notes' => $reading->reading_notes,
             ':password_hash' => $passwordHash,
         ]);
 
-        return $this->retrieve($reading->getReadingId());
+        return $this->retrieve($reading->reading_id);
     }
 
     /** Verify a view password against the stored hash. */
@@ -163,7 +163,7 @@ class ReadingData extends AbstractData
         // relying on it. Report success only when the row belongs to this owner
         // (guards against an unknown id or a non-owner caller).
         $reading = $this->retrieve($reading_id);
-        if ($reading === null || $reading->getUserId() !== $userId) {
+        if ($reading === null || $reading->user_id !== $userId) {
             return null;
         }
 
@@ -195,7 +195,7 @@ class ReadingData extends AbstractData
      */
     public function listAll(int $limit, int $offset): array
     {
-        $total = (int)$this->db->query('SELECT COUNT(*) FROM readings')->fetchColumn();
+        $total = (int)$this->query('SELECT COUNT(*) FROM readings')->fetchColumn();
 
         $stmt = $this->db->prepare(
             "SELECT r.reading_id, r.reading_info, r.reading_time, r.user_id,

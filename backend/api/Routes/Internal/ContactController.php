@@ -37,7 +37,7 @@ class ContactController extends AbstractController
             );
         }
 
-        $params  = $request->getParsedBody() ?? [];
+        $params  = $this->parsedBody($request);
         $name    = trim((string)($params['name'] ?? ''));
         $email   = trim((string)($params['email'] ?? ''));
         $message = trim((string)($params['message'] ?? ''));

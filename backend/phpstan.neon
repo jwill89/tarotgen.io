@@ -5,11 +5,13 @@ includes:
     - phpstan-baseline.neon
 
 parameters:
-    # Level 6 additionally requires every array/iterable to declare its value
-    # type — the Data/Repository/Structure layers and controller route args are
-    # all annotated, so this bar is enforced for new code too. Raise toward `max`
-    # incrementally from here.
-    level: 6
+    # Level 8 adds full null-safety on top of the level-6 array value-type rules:
+    # every nullable access must be guarded, and request/PDO/env values are
+    # narrowed to concrete types before use. The baseline holds only a handful of
+    # deliberately-defensive guards (GD dimension checks, malformed rate-limit
+    # entries) and an interface-mandated `string|false` signature. Burn it down
+    # over time; the bar for all new code is a clean level-8 run.
+    level: 8
     paths:
         - includes/Tarot
         - api/Routes

@@ -30,9 +30,10 @@ class SpreadData extends AbstractData
         }
 
         $stmt->execute();
+        /** @var list<array<string,mixed>> $rows */
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        return array_map([$this, 'hydrate'], $rows);
+        return array_map($this->hydrate(...), $rows);
     }
 
     /**

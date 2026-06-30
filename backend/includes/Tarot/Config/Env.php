@@ -16,6 +16,9 @@ final class Env
         }
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if ($lines === false) {
+            return;
+        }
 
         foreach ($lines as $line) {
             $line = trim($line);
@@ -48,7 +51,13 @@ final class Env
     }
 
     /**
-     * Retrieve an environment variable.
+     * Retrieve an environment variable, or $default when it is unset or empty.
+     *
+     * The return type is conditional on $default: callers that pass a non-null
+     * fallback are guaranteed a `string` back, so they don't need to re-coalesce
+     * a possible null at every call site.
+     *
+     * @return ($default is null ? string|null : string)
      */
     public static function get(string $key, ?string $default = null): ?string
     {
@@ -59,7 +68,7 @@ final class Env
             return $default;
         }
 
-        return $value;
+        return (string)$value;
     }
 
     /**

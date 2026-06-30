@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\UserSpreadData;
 use Tarot\Structure\UserSpread;
 
-class UserSpreadRepository
+readonly class UserSpreadRepository
 {
-    private UserSpreadData $data;
-
-    public function __construct(UserSpreadData $data)
+    public function __construct(private UserSpreadData $data)
     {
-        $this->data = $data;
     }
 
     /**

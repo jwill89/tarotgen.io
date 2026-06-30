@@ -46,7 +46,7 @@ class AccountController extends AbstractController
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
-        $body       = $request->getParsedBody() ?? [];
+        $body       = $this->parsedBody($request);
         $fields     = [];
 
         if (array_key_exists('reading_name', $body)) {
@@ -103,7 +103,7 @@ class AccountController extends AbstractController
 
     public function changeDisplayName(Request $request, Response $response): Response|ResponseInterface
     {
-        $name   = (string)(($request->getParsedBody() ?? [])['display_name'] ?? '');
+        $name   = (string)(($this->parsedBody($request))['display_name'] ?? '');
         $result = $this->auth->changeDisplayName($this->userId(), $name);
 
         if (!$result['ok']) {
@@ -115,7 +115,7 @@ class AccountController extends AbstractController
 
     public function changePassword(Request $request, Response $response): Response|ResponseInterface
     {
-        $body    = $request->getParsedBody() ?? [];
+        $body    = $this->parsedBody($request);
         $current = (string)($body['current_password'] ?? '');
         $new     = (string)($body['new_password'] ?? '');
 
@@ -129,7 +129,7 @@ class AccountController extends AbstractController
 
     public function deleteAccount(Request $request, Response $response): Response|ResponseInterface
     {
-        $password = (string)(($request->getParsedBody() ?? [])['password'] ?? '');
+        $password = (string)(($this->parsedBody($request))['password'] ?? '');
 
         $result = $this->auth->deleteAccount($this->userId(), $password);
         if (!$result['ok']) {
@@ -154,7 +154,7 @@ class AccountController extends AbstractController
     /** Create a new personal spread. */
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
-        $params    = $request->getParsedBody() ?? [];
+        $params    = $this->parsedBody($request);
         $name      = trim((string)($params['name'] ?? ''));
         $positions = $params['positions'] ?? [];
 
@@ -182,7 +182,7 @@ class AccountController extends AbstractController
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
-        $params   = $request->getParsedBody() ?? [];
+        $params   = $this->parsedBody($request);
 
         $updated = $this->userSpreads->update($this->userId(), $spreadId, $params);
         if ($updated === null) {
@@ -227,10 +227,10 @@ class AccountController extends AbstractController
         }
 
         $pending = $this->pendingSpreads->create([
-            'name'        => $spread->getName(),
-            'description' => $spread->getDescription(),
-            'card_count'  => $spread->getCardCount(),
-            'positions'   => $spread->getPositions(),
+            'name'        => $spread->name,
+            'description' => $spread->description,
+            'card_count'  => $spread->card_count,
+            'positions'   => $spread->positions,
         ], $this->userId());
 
         if ($pending === null) {
@@ -251,7 +251,7 @@ class AccountController extends AbstractController
     /** Add a spread to the current user's favorites. */
     public function addFavorite(Request $request, Response $response): Response|ResponseInterface
     {
-        $params     = $request->getParsedBody() ?? [];
+        $params     = $this->parsedBody($request);
         $spreadType = (string)($params['spread_type'] ?? '');
         $spreadId   = (int)($params['spread_id'] ?? 0);
 
@@ -267,7 +267,7 @@ class AccountController extends AbstractController
     /** Remove a spread from the current user's favorites. */
     public function removeFavorite(Request $request, Response $response): Response|ResponseInterface
     {
-        $params     = $request->getParsedBody() ?? [];
+        $params     = $this->parsedBody($request);
         $spreadType = (string)($params['spread_type'] ?? '');
         $spreadId   = (int)($params['spread_id'] ?? 0);
 
@@ -289,7 +289,7 @@ class AccountController extends AbstractController
 
     public function addFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $deckId = (int)($params['deck_id'] ?? 0);
 
         if ($deckId < 1) {
@@ -303,7 +303,7 @@ class AccountController extends AbstractController
 
     public function removeFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $deckId = (int)($params['deck_id'] ?? 0);
 
         if ($deckId < 1) {

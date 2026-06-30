@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\SpecialCardData;
 use Tarot\Structure\SpecialCard;
 
-class SpecialCardRepository
+readonly class SpecialCardRepository
 {
-    private SpecialCardData $data;
-
-    public function __construct(SpecialCardData $data)
+    public function __construct(private SpecialCardData $data)
     {
-        $this->data = $data;
     }
 
     public function get(int $deck_id, int $card_id): ?SpecialCard

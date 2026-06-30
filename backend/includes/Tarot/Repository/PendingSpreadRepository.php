@@ -8,17 +8,13 @@ use Tarot\Data\PendingSpreadData;
 use Tarot\Structure\PendingSpread;
 use Tarot\Structure\Spread;
 
-class PendingSpreadRepository
+readonly class PendingSpreadRepository
 {
-    private PendingSpreadData $data;
-    private SpreadRepository $spreads;
-    private PDO $db;
-
-    public function __construct(PendingSpreadData $data, SpreadRepository $spreads, PDO $db)
-    {
-        $this->data    = $data;
-        $this->spreads = $spreads;
-        $this->db      = $db;
+    public function __construct(
+        private PendingSpreadData $data,
+        private SpreadRepository $spreads,
+        private PDO $db,
+    ) {
     }
 
     /**
@@ -67,10 +63,10 @@ class PendingSpreadRepository
             $this->db->beginTransaction();
 
             $spread = $this->spreads->create([
-                'name'        => $pending->getName(),
-                'description' => $pending->getDescription(),
-                'card_count'  => $pending->getCardCount(),
-                'positions'   => $pending->getPositions(),
+                'name'        => $pending->name,
+                'description' => $pending->description,
+                'card_count'  => $pending->card_count,
+                'positions'   => $pending->positions,
             ]);
 
             if ($spread === null) {

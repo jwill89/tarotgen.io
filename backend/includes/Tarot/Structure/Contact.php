@@ -2,48 +2,22 @@
 
 namespace Tarot\Structure;
 
+/**
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
 class Contact extends AbstractStructure
 {
-    protected int $contact_id = 0;
-    protected ?int $user_id = null;
-    protected string $name = '';
-    protected string $email = '';
-    protected string $message = '';
-    protected int $is_read = 0;
-    protected string $submitted_at = '';
+    public private(set) int $contact_id = 0;
+    public private(set) ?int $user_id = null;
+    public private(set) string $name = '';
+    public private(set) string $email = '';
+    public private(set) string $message = '';
+    public private(set) int $is_read = 0;
+    public private(set) string $submitted_at = '';
 
-    public function getContactId(): int
-    {
-        return $this->contact_id;
-    }
-
-    public function getUserId(): ?int
-    {
-        return $this->user_id;
-    }
-
-    public function getName(): string
-    {
-        return $this->name;
-    }
-
-    public function getEmail(): string
-    {
-        return $this->email;
-    }
-
-    public function getMessage(): string
-    {
-        return $this->message;
-    }
-
+    /** Whether the message has been read (the stored column is a 0/1 int). */
     public function isRead(): bool
     {
         return (bool)$this->is_read;
-    }
-
-    public function getSubmittedAt(): string
-    {
-        return $this->submitted_at;
     }
 }

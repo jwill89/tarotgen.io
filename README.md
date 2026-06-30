@@ -13,7 +13,7 @@ the two folders into that web root.
 
 > **For contributors and AI agents:** [`AGENTS.md`](AGENTS.md) is the deep guide —
 > architecture, the backend layering rule, conventions, and gotchas. This README is
-> the quick orientation.
+> the quick orientation, and [`API.md`](API.md) is the REST endpoint reference.
 
 ## Where things live
 
@@ -28,7 +28,7 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `frontend/src/` | Vue 3 (`<script setup>` + TS), Vue Router, Bulma, TipTap. Views, components, composables, utils, types. Specs in `src/__tests__/`. |
 | `frontend/index.html` | SPA entry HTML (Vite). |
 | `frontend/public/` | PWA assets (manifest, service worker, icons), `robots.txt`, `sitemap.xml`, self-hosted fonts. |
-| `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. |
+| `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. See [`API.md`](API.md) for the endpoint reference. |
 | `backend/includes/Tarot/` | Domain code (PSR-4 `Tarot\`): Data → Repository → Service → Structure, plus Config/Database/Utility. |
 | `backend/og.php` | Server-rendered Open Graph meta for `/reading/{id}` shares. |
 | `backend/tests/Unit/` | PHPUnit tests. |

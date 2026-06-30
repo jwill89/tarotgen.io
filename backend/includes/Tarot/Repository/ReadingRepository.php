@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\ReadingData;
 use Tarot\Structure\Reading;
 
-class ReadingRepository
+readonly class ReadingRepository
 {
-    private ReadingData $data;
-
-    public function __construct(ReadingData $data)
+    public function __construct(private ReadingData $data)
     {
-        $this->data = $data;
     }
 
     public function get(string $reading_id): ?Reading

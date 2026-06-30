@@ -50,12 +50,12 @@ final class ContactDataTest extends TestCase
         ]);
 
         $this->assertNotNull($contact);
-        $this->assertSame(1, $contact->getContactId());
-        $this->assertSame('Alice', $contact->getName());
-        $this->assertSame('alice@example.com', $contact->getEmail());
-        $this->assertSame('Hello there!', $contact->getMessage());
+        $this->assertSame(1, $contact->contact_id);
+        $this->assertSame('Alice', $contact->name);
+        $this->assertSame('alice@example.com', $contact->email);
+        $this->assertSame('Hello there!', $contact->message);
         $this->assertFalse($contact->isRead());
-        $this->assertNull($contact->getUserId());
+        $this->assertNull($contact->user_id);
     }
 
     public function testStoreWithUserIdLinksToAccount(): void
@@ -68,10 +68,10 @@ final class ContactDataTest extends TestCase
         ]);
 
         $this->assertNotNull($contact);
-        $this->assertSame(1, $contact->getUserId());
+        $this->assertSame(1, $contact->user_id);
         // Name/email resolved from the users table.
-        $this->assertSame('Stargazer', $contact->getName());
-        $this->assertSame('star@example.com', $contact->getEmail());
+        $this->assertSame('Stargazer', $contact->name);
+        $this->assertSame('star@example.com', $contact->email);
     }
 
     public function testRetrieveReturnsAllContactsNewestFirst(): void
@@ -83,8 +83,8 @@ final class ContactDataTest extends TestCase
         $all = $this->data->retrieve();
         $this->assertCount(2, $all);
         // Newest first.
-        $this->assertSame('B', $all[0]->getName());
-        $this->assertSame('A', $all[1]->getName());
+        $this->assertSame('B', $all[0]->name);
+        $this->assertSame('A', $all[1]->name);
     }
 
     public function testRetrieveUnreadOnlyFiltersReadContacts(): void
@@ -95,7 +95,7 @@ final class ContactDataTest extends TestCase
 
         $unread = $this->data->retrieve(true);
         $this->assertCount(1, $unread);
-        $this->assertSame('B', $unread[0]->getName());
+        $this->assertSame('B', $unread[0]->name);
     }
 
     public function testMarkReadTogglesReadStatus(): void
@@ -136,8 +136,8 @@ final class ContactDataTest extends TestCase
         $this->pdo->exec("UPDATE users SET display_name = 'New Name', email = 'new@example.com' WHERE user_id = 1");
 
         $contacts = $this->data->retrieve();
-        $this->assertSame('New Name', $contacts[0]->getName());
-        $this->assertSame('new@example.com', $contacts[0]->getEmail());
+        $this->assertSame('New Name', $contacts[0]->name);
+        $this->assertSame('new@example.com', $contacts[0]->email);
     }
 
     public function testStoreTrimAndTruncatesNameAndEmail(): void
@@ -149,7 +149,7 @@ final class ContactDataTest extends TestCase
             'message' => '  Hello  ',
         ]);
 
-        $this->assertSame(200, mb_strlen($contact->getName()));
-        $this->assertSame('Hello', $contact->getMessage());
+        $this->assertSame(200, mb_strlen($contact->name));
+        $this->assertSame('Hello', $contact->message);
     }
 }

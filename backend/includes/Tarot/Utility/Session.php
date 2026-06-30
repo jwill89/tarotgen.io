@@ -142,8 +142,8 @@ final class Session
     private static function sendCookie(int $lifetime): void
     {
         setcookie(
-            session_name(),
-            session_id(),
+            (string)session_name(),
+            (string)session_id(),
             [
                 'expires'  => time() + $lifetime,
                 'path'     => '/',

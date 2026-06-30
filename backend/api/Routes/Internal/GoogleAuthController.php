@@ -96,9 +96,9 @@ class GoogleAuthController extends AbstractController
             return $this->redirectToFrontend($response, '/login', 'Could not retrieve your Google profile.');
         }
 
-        $googleId = (string)$info['sub'];
-        $email    = strtolower(trim((string)$info['email']));
-        $name     = trim((string)($info['name'] ?? ''));
+        $googleId = $info['sub'];
+        $email    = strtolower(trim($info['email']));
+        $name     = trim($info['name']);
 
         $intent = $_SESSION['google_oauth_intent'] ?? 'login';
         unset($_SESSION['google_oauth_intent']);
@@ -166,7 +166,7 @@ class GoogleAuthController extends AbstractController
             $user = $this->users->findByEmail($email);
             if ($user !== null) {
                 // Auto-link the Google account to the existing user.
-                $this->users->setGoogleId($user->getUserId(), $googleId);
+                $this->users->setGoogleId($user->user_id, $googleId);
             }
         }
 
@@ -179,16 +179,16 @@ class GoogleAuthController extends AbstractController
             }
         }
 
-        if (!$user->isActive()) {
+        if (!$user->is_active) {
             // Activate since Google has verified the email.
-            $this->users->activate($user->getUserId());
+            $this->users->activate($user->user_id);
         }
 
-        $this->users->touchLogin($user->getUserId());
+        $this->users->touchLogin($user->user_id);
 
         // Establish session.
         Session::regenerate(persistent: true);
-        $_SESSION['user_id'] = $user->getUserId();
+        $_SESSION['user_id'] = $user->user_id;
 
         // OAuth login implies strong intent — always persist the session.
         $this->persistSession();
@@ -219,10 +219,10 @@ class GoogleAuthController extends AbstractController
             return $this->redirectToFrontend($response, '/register', 'Could not create your account.');
         }
 
-        $this->users->touchLogin($user->getUserId());
+        $this->users->touchLogin($user->user_id);
 
         Session::regenerate(persistent: true);
-        $_SESSION['user_id'] = $user->getUserId();
+        $_SESSION['user_id'] = $user->user_id;
 
         // New OAuth registration — persist the session.
         $this->persistSession();
@@ -239,7 +239,7 @@ class GoogleAuthController extends AbstractController
 
         // Ensure this Google account isn't already linked to another user.
         $existing = $this->users->findByGoogleId($googleId);
-        if ($existing !== null && $existing->getUserId() !== $userId) {
+        if ($existing !== null && $existing->user_id !== $userId) {
             return $this->redirectToFrontend(
                 $response,
                 '/account/settings',

@@ -5,13 +5,10 @@ namespace Tarot\Repository;
 use Tarot\Data\DeckData;
 use Tarot\Structure\Deck;
 
-class DeckRepository
+readonly class DeckRepository
 {
-    private DeckData $data;
-
-    public function __construct(DeckData $data)
+    public function __construct(private DeckData $data)
     {
-        $this->data = $data;
     }
 
     /**
@@ -26,6 +23,17 @@ class DeckRepository
         }
 
         return $results;
+    }
+
+    /**
+     * Every deck, regardless of approval/usable state (admin-wide operations
+     * such as thumbnail generation and reading deck-name resolution).
+     *
+     * @return list<Deck>
+     */
+    public function getAll(): array
+    {
+        return $this->data->retrieve();
     }
 
     /**

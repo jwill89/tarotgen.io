@@ -83,7 +83,7 @@ class AdminController extends AbstractController
 
     public function createDeck(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         // Admin-created decks are auto-approved but NOT auto-usable.
         $params['approved'] = true;
         $params['usable']   = false;
@@ -118,7 +118,7 @@ class AdminController extends AbstractController
     public function markDeckUsable(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
-        $params  = $request->getParsedBody() ?? [];
+        $params  = $this->parsedBody($request);
         $usable  = (bool)($params['usable'] ?? true);
 
         $deck = $this->decks->update($deck_id, ['usable' => $usable]);
@@ -129,7 +129,7 @@ class AdminController extends AbstractController
 
         // Create the on-disk image folders when marking a deck usable.
         if ($usable) {
-            $this->thumbnails->ensureDeckFolders($deck->getDeckId());
+            $this->thumbnails->ensureDeckFolders($deck->deck_id);
         }
 
         return $response->withJson($deck);
@@ -157,8 +157,8 @@ class AdminController extends AbstractController
         @set_time_limit(0);
 
         $ids = [];
-        foreach ($this->decks->get() as $deck) {
-            $ids[] = $deck->getDeckId();
+        foreach ($this->decks->getAll() as $deck) {
+            $ids[] = $deck->deck_id;
         }
 
         return $response->withJson($this->thumbnails->generateAll($ids));
@@ -170,7 +170,7 @@ class AdminController extends AbstractController
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         $deck = $this->decks->update($deck_id, $params);
 
@@ -209,7 +209,7 @@ class AdminController extends AbstractController
 
     public function createSpecialCard(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $card = $this->specialCards->create($params);
 
         if ($card === null) {
@@ -226,7 +226,7 @@ class AdminController extends AbstractController
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
         $card_id = (int)($args['card_id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         $card = $this->specialCards->update($deck_id, $card_id, $params);
 
@@ -263,7 +263,7 @@ class AdminController extends AbstractController
 
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $spread = $this->spreads->create($params);
 
         if ($spread === null) {
@@ -279,7 +279,7 @@ class AdminController extends AbstractController
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spread_id = (int)($args['spread_id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         $spread = $this->spreads->update($spread_id, $params);
 
@@ -357,7 +357,7 @@ class AdminController extends AbstractController
 
     public function createChangelogEntry(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $entry = $this->changelog->create($params);
 
         if ($entry === null) {
@@ -373,7 +373,7 @@ class AdminController extends AbstractController
     public function updateChangelogEntry(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $entry_id = (int)($args['entry_id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         $entry = $this->changelog->update($entry_id, $params);
 
@@ -434,7 +434,7 @@ class AdminController extends AbstractController
             return $response->withJson(['error' => 'User not found'], 404);
         }
 
-        $params  = $request->getParsedBody() ?? [];
+        $params  = $this->parsedBody($request);
         $isAdmin = (bool)($params['is_admin'] ?? false);
 
         $this->users->setAdmin($user_id, $isAdmin);
@@ -498,7 +498,7 @@ class AdminController extends AbstractController
     public function markContactRead(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $contact_id = (int)($args['contact_id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $read = (bool)($params['is_read'] ?? true);
 
         if ($contact_id < 1) {
@@ -522,8 +522,8 @@ class AdminController extends AbstractController
 
         // Resolve deck names for the listing.
         $deckNames = [];
-        foreach ($this->decks->get() as $deck) {
-            $deckNames[$deck->getDeckId()] = $deck->getName();
+        foreach ($this->decks->getAll() as $deck) {
+            $deckNames[$deck->deck_id] = $deck->name;
         }
 
         foreach ($result['rows'] as &$row) {
@@ -556,7 +556,7 @@ class AdminController extends AbstractController
 
     public function cleanReadings(Request $request, Response $response): Response|ResponseInterface
     {
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
         $days   = (int)($params['days'] ?? 0);
 
         $allowed = [7, 14, 30, 60, 90, 180, 365];
@@ -623,7 +623,7 @@ class AdminController extends AbstractController
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id     = (int)($args['id'] ?? 0);
-        $params = $request->getParsedBody() ?? [];
+        $params = $this->parsedBody($request);
 
         // The system must exist; but an edit that only changes card definitions
         // (no name/short_name/total_cards/approved change) is still valid, so a

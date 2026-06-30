@@ -56,10 +56,10 @@ final class ReadingDataTest extends TestCase
 
         $loaded = $this->data->retrieve('r1');
         $this->assertNotNull($loaded);
-        $this->assertSame(7, $loaded->getUserId());
-        $this->assertSame('My Spread', $loaded->getReadingName());
-        $this->assertTrue($loaded->isHideUser());
-        $this->assertTrue($loaded->isPasswordProtected());
+        $this->assertSame(7, $loaded->user_id);
+        $this->assertSame('My Spread', $loaded->reading_name);
+        $this->assertTrue($loaded->hide_user);
+        $this->assertTrue($loaded->password_protected);
 
         // The serialized form must not contain the hash.
         $this->assertArrayNotHasKey('password_hash', $loaded->jsonSerialize());
@@ -72,14 +72,14 @@ final class ReadingDataTest extends TestCase
         $this->data->store($r, null);
 
         $loaded = $this->data->retrieve('notes1');
-        $this->assertSame('# Heading\n\nSome **markdown** notes.', $loaded->getReadingNotes());
+        $this->assertSame('# Heading\n\nSome **markdown** notes.', $loaded->reading_notes);
 
         // Owner can edit; clearing sets it back to null.
         $this->data->updateMeta('notes1', 3, ['reading_notes' => 'Updated notes']);
-        $this->assertSame('Updated notes', $this->data->retrieve('notes1')->getReadingNotes());
+        $this->assertSame('Updated notes', $this->data->retrieve('notes1')->reading_notes);
 
         $this->data->updateMeta('notes1', 3, ['reading_notes' => null]);
-        $this->assertNull($this->data->retrieve('notes1')->getReadingNotes());
+        $this->assertNull($this->data->retrieve('notes1')->reading_notes);
     }
 
     public function testVerifyPassword(): void
@@ -123,16 +123,16 @@ final class ReadingDataTest extends TestCase
 
         // Wrong owner can't lock it.
         $this->assertNull($this->data->markFinal('lockme', 99));
-        $this->assertFalse($this->data->retrieve('lockme')->isFinal());
+        $this->assertFalse($this->data->retrieve('lockme')->is_final);
 
         // The owner can, and a repeat call still reports the (final) state.
-        $this->assertTrue($this->data->markFinal('lockme', 5)->isFinal());
-        $this->assertTrue($this->data->markFinal('lockme', 5)->isFinal());
+        $this->assertTrue($this->data->markFinal('lockme', 5)->is_final);
+        $this->assertTrue($this->data->markFinal('lockme', 5)->is_final);
     }
 
     private function assertFalseOrNullFinal(string $id): void
     {
-        $this->assertFalse($this->data->retrieve($id)->isFinal());
+        $this->assertFalse($this->data->retrieve($id)->is_final);
     }
 
     public function testUpdateReadingInfoAppendsDraw(): void
@@ -146,7 +146,7 @@ final class ReadingDataTest extends TestCase
         );
         $this->assertNotNull($updated);
 
-        $info = json_decode($updated->getReadingInfo(), true);
+        $info = json_decode($updated->reading_info, true);
         $this->assertCount(1, $info['draw']);
         $this->assertSame(4, $info['draw'][0]['card_id']);
 
@@ -168,11 +168,11 @@ final class ReadingDataTest extends TestCase
             'password_hash' => password_hash('pw', PASSWORD_DEFAULT),
         ]);
         $this->assertNotNull($updated);
-        $this->assertSame('Renamed', $updated->getReadingName());
-        $this->assertTrue($updated->isHideUser());
-        $this->assertTrue($updated->isPasswordProtected());
+        $this->assertSame('Renamed', $updated->reading_name);
+        $this->assertTrue($updated->hide_user);
+        $this->assertTrue($updated->password_protected);
 
         $cleared = $this->data->updateMeta('owned', 1, ['password_hash' => null]);
-        $this->assertFalse($cleared->isPasswordProtected());
+        $this->assertFalse($cleared->password_protected);
     }
 }
