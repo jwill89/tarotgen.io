@@ -256,7 +256,10 @@ rm -rf '$remoteNew'
 # ══ Backend ═══════════════════════════════════════════════════════════════════
 # Runtime PHP payload (everything the live site executes); deliberately excludes
 # vendor/ (regenerated on the droplet), and the server-only db/, .env, assets/.
-$BackendPayload = @('api', 'includes', 'og.php', 'composer.json', 'composer.lock', '.htaccess')
+# openapi.json is the committed API spec served at /api/openapi.json and rendered
+# by Scalar at /api/docs — it must ship even though swagger-php (which generates
+# it) is a dev-only dependency not installed in production.
+$BackendPayload = @('api', 'includes', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
 
 function Deploy-Backend {
     $remoteStageRoot = "$WebRoot/.deploy.new"

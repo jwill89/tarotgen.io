@@ -1,5 +1,6 @@
 import { ref, type Ref } from 'vue'
 import { apiFetch } from './useApi'
+import { endpoints } from '@/api/endpoints'
 
 export interface FavoriteEntry {
     spread_type: 'public' | 'personal'
@@ -10,7 +11,7 @@ const favorites: Ref<FavoriteEntry[]> = ref([])
 
 export function useFavoriteSpreads() {
     async function fetchFavorites(): Promise<void> {
-        const data = await apiFetch<FavoriteEntry[]>('/account/favorites/')
+        const data = await apiFetch<FavoriteEntry[]>(endpoints.account.favorites)
         if (data) favorites.value = data
     }
 
@@ -19,7 +20,7 @@ export function useFavoriteSpreads() {
     }
 
     async function addFavorite(spreadType: 'public' | 'personal', spreadId: number): Promise<boolean> {
-        const res = await fetch('/api/account/favorites/', {
+        const res = await fetch('/api' + endpoints.account.favorites, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ spread_type: spreadType, spread_id: spreadId }),
@@ -30,10 +31,8 @@ export function useFavoriteSpreads() {
     }
 
     async function removeFavorite(spreadType: 'public' | 'personal', spreadId: number): Promise<boolean> {
-        const res = await fetch('/api/account/favorites/', {
+        const res = await fetch('/api' + endpoints.account.favoriteById(spreadType, spreadId), {
             method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ spread_type: spreadType, spread_id: spreadId }),
         })
         if (!res.ok) return false
         favorites.value = favorites.value.filter(

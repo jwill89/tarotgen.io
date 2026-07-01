@@ -13,7 +13,9 @@ the two folders into that web root.
 
 > **For contributors and AI agents:** [`AGENTS.md`](AGENTS.md) is the deep guide —
 > architecture, the backend layering rule, conventions, and gotchas. This README is
-> the quick orientation, and [`API.md`](API.md) is the REST endpoint reference.
+> the quick orientation; [`API.md`](API.md) covers the hybrid-REST conventions, and
+> the live endpoint reference is generated from the code — browse it at **`/api/docs`**
+> (Scalar) or read the raw spec at [`backend/openapi.json`](backend/openapi.json).
 
 ## Where things live
 
@@ -28,7 +30,7 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `frontend/src/` | Vue 3 (`<script setup>` + TS), Vue Router, Bulma, TipTap. Views, components, composables, utils, types. Specs in `src/__tests__/`. |
 | `frontend/index.html` | SPA entry HTML (Vite). |
 | `frontend/public/` | PWA assets (manifest, service worker, icons), `robots.txt`, `sitemap.xml`, self-hosted fonts. |
-| `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. See [`API.md`](API.md) for the endpoint reference. |
+| `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. Endpoints are documented via swagger-php attributes → `backend/openapi.json` (`composer docs`), served at `/api/docs`. |
 | `backend/includes/Tarot/` | Domain code (PSR-4 `Tarot\`): Data → Repository → Service → Structure, plus Config/Database/Utility. |
 | `backend/og.php` | Server-rendered Open Graph meta for `/reading/{id}` shares. |
 | `backend/tests/Unit/` | PHPUnit tests. |
@@ -62,6 +64,20 @@ cd frontend ; npm run dev
 cd frontend ; npm run type-check ; npm run lint ; npm test
 cd backend  ; composer test ; composer stan ; composer lint
 ```
+
+## API docs
+
+The REST API is described by an OpenAPI 3.1 spec generated from swagger-php attributes
+on the controllers/Structures. Browse it interactively at **`/api/docs`** (Scalar) when
+the backend is running; the raw spec is at [`backend/openapi.json`](backend/openapi.json).
+
+```powershell
+cd backend  ; composer docs         # regenerate backend/openapi.json (CI fails if it's stale)
+cd frontend ; npm run gen:types     # regenerate src/types/api.generated.ts from the spec
+```
+
+Run both after changing a route or a response shape, and commit the results. See
+[`API.md`](API.md) for the hybrid-REST conventions.
 
 ## Build & deploy
 

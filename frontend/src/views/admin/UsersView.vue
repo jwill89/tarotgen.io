@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
@@ -31,13 +32,13 @@ const { search, sortKey, sortDir, rows: visibleUsers, toggleSort } = useDataTabl
 })
 
 async function fetchUsers() {
-    const data = await api.get<User[]>('/users')
+    const data = await api.get<User[]>(endpoints.admin.users.list)
     if (data) users.value = data
 }
 
 async function activate(user: User) {
     busyId.value = user.user_id
-    const result = await api.post('/users/' + user.user_id + '/activate', {}, `${user.display_name} activated.`)
+    const result = await api.post(endpoints.admin.users.activate(user.user_id), {}, `${user.display_name} activated.`)
     busyId.value = null
     if (result) await fetchUsers()
 }
@@ -45,7 +46,7 @@ async function activate(user: User) {
 async function resend(user: User) {
     busyId.value = user.user_id
     const result = await api.post<{ success: boolean; emailed: boolean; activation_link?: string }>(
-        '/users/' + user.user_id + '/resend-activation',
+        endpoints.admin.users.resendActivation(user.user_id),
         {},
     )
     busyId.value = null
@@ -75,8 +76,8 @@ async function toggleAdmin(user: User) {
     if (!ok) return
 
     busyId.value = user.user_id
-    const result = await api.post<User>(
-        '/users/' + user.user_id + '/admin',
+    const result = await api.patch<User>(
+        endpoints.admin.users.byId(user.user_id),
         { is_admin: makingAdmin },
         makingAdmin ? `${user.display_name} is now an admin.` : `Admin removed from ${user.display_name}.`,
     )
@@ -92,7 +93,7 @@ async function remove(user: User) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/users/' + user.user_id, 'Account deleted.')
+    const result = await api.del(endpoints.admin.users.byId(user.user_id), 'Account deleted.')
     if (result) await fetchUsers()
 }
 

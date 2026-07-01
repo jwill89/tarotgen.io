@@ -11,6 +11,7 @@ import { useLayoutTools } from '@/composables/useLayoutTools'
 import { useUndoRedo } from '@/composables/useUndoRedo'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { readApiError } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import type { ReadingInfo, Deck } from '@/types'
@@ -72,7 +73,7 @@ const spreadSaving = ref(false)
 // Fetch the reading data
 onMounted(async () => {
     try {
-        const res = await fetch(`/api/reading/${readingId.value}`)
+        const res = await fetch('/api' + endpoints.readings.byId(readingId.value))
         if (!res.ok) {
             toasts.error('Could not load the reading.')
             router.replace({ name: 'home' })
@@ -238,7 +239,7 @@ async function finalizePlacement() {
             rotation: s.rotation,
         }))
 
-        const res = await fetch(`/api/reading/${readingId.value}/placement`, {
+        const res = await fetch('/api' + endpoints.readings.placement(readingId.value), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -303,7 +304,7 @@ async function saveSpread() {
             }
         } else {
             // Submit as public
-            const res = await fetch('/api/spread/submit', {
+            const res = await fetch('/api' + endpoints.spreads.list, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload),

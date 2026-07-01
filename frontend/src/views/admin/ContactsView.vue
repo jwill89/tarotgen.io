@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import BaseModal from '@/components/BaseModal.vue'
@@ -32,14 +33,14 @@ const modalActive = computed(() => viewingContact.value !== null)
 const modalHtml = computed(() => renderMarkdown(viewingContact.value?.message ?? ''))
 
 async function fetchContacts() {
-    const data = await api.get<Contact[]>('/contacts?show_read=' + (showRead.value ? '1' : '0'))
+    const data = await api.get<Contact[]>(endpoints.admin.contacts.list(showRead.value))
     if (data) contacts.value = data
 }
 
 async function toggleRead(contact: Contact) {
     const newRead = !contact.is_read
     busyId.value = contact.contact_id
-    const result = await api.post('/contacts/' + contact.contact_id + '/read', { is_read: newRead })
+    const result = await api.patch(endpoints.admin.contacts.byId(contact.contact_id), { is_read: newRead })
     busyId.value = null
     if (result) await fetchContacts()
 }

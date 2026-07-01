@@ -7,6 +7,7 @@ import { useUser } from '@/composables/useUser'
 import { usePasskeys } from '@/composables/usePasskeys'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 
 const router = useRouter()
 const route = useRoute()
@@ -135,14 +136,14 @@ onMounted(() => {
 })
 
 function linkGoogle() {
-    window.location.href = '/api/auth/google?intent=link'
+    window.location.href = '/api' + endpoints.authGoogle.start + '?intent=link'
 }
 
 async function unlinkGoogle() {
     googleError.value = ''
     unlinking.value = true
     try {
-        const res = await fetch('/api/auth/google/unlink', { method: 'POST' })
+        const res = await fetch('/api' + endpoints.authGoogle.unlink, { method: 'POST' })
         const data = await res.json()
         if (res.ok) {
             toasts.success('Google account unlinked.')

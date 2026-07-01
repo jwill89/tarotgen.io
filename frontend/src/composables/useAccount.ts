@@ -1,4 +1,5 @@
 import { useUser } from './useUser'
+import { endpoints } from '@/api/endpoints'
 import type { AccountReading, User } from '@/types'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
@@ -24,7 +25,7 @@ export function useAccount() {
 
     async function listReadings(): Promise<AccountReading[]> {
         try {
-            const res = await fetch('/api/account/readings')
+            const res = await fetch('/api' + endpoints.account.readings)
             if (!res.ok) return []
             return await res.json() as AccountReading[]
         } catch {
@@ -34,8 +35,8 @@ export function useAccount() {
 
     async function updateReading(id: string, payload: ReadingMetaUpdate): Promise<{ ok: boolean; reading?: AccountReading; error?: string }> {
         try {
-            const res = await fetch('/api/account/readings/' + encodeURIComponent(id), {
-                method: 'PUT',
+            const res = await fetch('/api' + endpoints.account.readingById(encodeURIComponent(id)), {
+                method: 'PATCH',
                 headers: JSON_HEADERS,
                 body: JSON.stringify(payload),
             })
@@ -49,7 +50,7 @@ export function useAccount() {
 
     async function deleteReading(id: string): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch('/api/account/readings/' + encodeURIComponent(id), { method: 'DELETE' })
+            const res = await fetch('/api' + endpoints.account.readingById(encodeURIComponent(id)), { method: 'DELETE' })
             const data = await parseJson(res)
             if (res.ok) return { ok: true }
             return { ok: false, error: typeof data.error === 'string' ? data.error : 'Could not delete reading.' }
@@ -60,8 +61,8 @@ export function useAccount() {
 
     async function changeDisplayName(displayName: string): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch('/api/account/display-name', {
-                method: 'PUT',
+            const res = await fetch('/api' + endpoints.account.profile, {
+                method: 'PATCH',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ display_name: displayName }),
             })
@@ -78,8 +79,8 @@ export function useAccount() {
 
     async function changePassword(currentPassword: string, newPassword: string): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch('/api/account/password', {
-                method: 'PUT',
+            const res = await fetch('/api' + endpoints.account.changePassword, {
+                method: 'POST',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
             })
@@ -93,7 +94,7 @@ export function useAccount() {
 
     async function deleteAccount(password: string): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch('/api/account', {
+            const res = await fetch('/api' + endpoints.account.root, {
                 method: 'DELETE',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ password }),

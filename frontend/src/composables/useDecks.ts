@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import { endpoints } from '@/api/endpoints'
 import type { Deck } from '@/types'
 
 const decks: Ref<Deck[]> = ref([])
@@ -13,7 +14,7 @@ export function useDecks() {
         }
 
         try {
-            const res = await fetch('/api/deck/')
+            const res = await fetch('/api' + endpoints.decks.list)
             if (!res.ok) {
                 return
             }

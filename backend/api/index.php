@@ -91,35 +91,73 @@ $app->add(function ($request, $handler) use ($allowed_origin) {
 // Safe methods (incl. the GET OAuth callback) and same-origin requests pass.
 $app->add(OriginGuard::class);
 
-// Deck Controllers
-$app->group('/deck', function (RouteCollectorProxy $group) {
-    $group->post('/submit[/]', DeckController::class . ':submitDeck');
+// ── API documentation ────────────────────────────────────────────────────────
+// The raw OpenAPI 3.1 spec (generated from the swagger-php attributes via
+// `composer docs`) and the Scalar reference UI that renders it. Both are public,
+// safe GETs and are deliberately NOT part of the documented API surface.
+$app->get('/openapi.json', function ($request, $response) {
+    $path = __DIR__ . '/../openapi.json';
+    $spec = is_file($path) ? file_get_contents($path) : false;
+
+    if ($spec === false) {
+        $response->getBody()->write('{"error":"API specification has not been generated. Run: composer docs"}');
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+
+    $response->getBody()->write($spec);
+    return $response
+        ->withHeader('Content-Type', 'application/json')
+        ->withHeader('Cache-Control', 'public, max-age=300');
+});
+
+$app->get('/docs', function ($request, $response) {
+    $response->getBody()->write(<<<'HTML'
+        <!doctype html>
+        <html>
+          <head>
+            <meta charset="utf-8" />
+            <meta name="viewport" content="width=device-width, initial-scale=1" />
+            <title>TarotGen.io — API Reference</title>
+          </head>
+          <body>
+            <script id="api-reference" data-url="/api/openapi.json"></script>
+            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+          </body>
+        </html>
+        HTML);
+
+    return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+});
+
+// ── Decks (public read + user submission) ────────────────────────────────────
+$app->group('/decks', function (RouteCollectorProxy $group) {
     $group->get('/{deck_id}/cards[/]', DeckController::class . ':getDeckCards');
-    $group->get('/[{deck_id}[/]]', DeckController::class . ':getDeck');
+    $group->get('[/{deck_id}[/]]', DeckController::class . ':getDeck');
+    $group->post('[/]', DeckController::class . ':submitDeck');
 });
 
-// Deck System Controllers
-$app->group('/deck-system', function (RouteCollectorProxy $group) {
-    $group->post('/submit[/]', DeckSystemController::class . ':submitSystem');
-    $group->get('/[/]', DeckSystemController::class . ':getSystems');
+// ── Deck systems (public read + user submission) ─────────────────────────────
+$app->group('/deck-systems', function (RouteCollectorProxy $group) {
     $group->get('/{id}[/]', DeckSystemController::class . ':getSystem');
+    $group->get('[/]', DeckSystemController::class . ':getSystems');
+    $group->post('[/]', DeckSystemController::class . ':submitSystem');
 });
 
-// Reading Controllers
-$app->group('/reading', function (RouteCollectorProxy $group) {
-    $group->post('/new[/]', ReadingController::class . ':newReading');
-    $group->post('/custom[/]', ReadingController::class . ':customReading');
+// ── Readings ─────────────────────────────────────────────────────────────────
+$app->group('/readings', function (RouteCollectorProxy $group) {
+    $group->post('/generate[/]', ReadingController::class . ':newReading');
+    $group->post('[/]', ReadingController::class . ':customReading');
     $group->put('/{reading_id}/placement[/]', ReadingController::class . ':updatePlacement');
     $group->post('/{reading_id}/draw[/]', ReadingController::class . ':drawCards');
-    $group->put('/{reading_id}/finalize[/]', ReadingController::class . ':finalizeReading');
+    $group->post('/{reading_id}/finalize[/]', ReadingController::class . ':finalizeReading');
     $group->post('/{reading_id}/unlock[/]', ReadingController::class . ':unlockReading');
     $group->get('/{reading_id}[/]', ReadingController::class . ':getReading');
 });
 
-// Account (signed-in user self-service: readings, spreads, settings, deletion)
+// ── Account (signed-in user self-service: readings, spreads, settings, deletion)
 $app->group('/account', function (RouteCollectorProxy $group) {
     $group->get('/readings[/]', AccountController::class . ':myReadings');
-    $group->put('/readings/{reading_id}[/]', AccountController::class . ':updateReadingMeta');
+    $group->patch('/readings/{reading_id}[/]', AccountController::class . ':updateReadingMeta');
     $group->delete('/readings/{reading_id}[/]', AccountController::class . ':deleteReading');
     $group->get('/spreads[/]', AccountController::class . ':mySpreads');
     $group->post('/spreads[/]', AccountController::class . ':createSpread');
@@ -128,36 +166,36 @@ $app->group('/account', function (RouteCollectorProxy $group) {
     $group->post('/spreads/{user_spread_id}/submit[/]', AccountController::class . ':submitSpreadAsPublic');
     $group->get('/favorites[/]', AccountController::class . ':myFavorites');
     $group->post('/favorites[/]', AccountController::class . ':addFavorite');
-    $group->delete('/favorites[/]', AccountController::class . ':removeFavorite');
+    $group->delete('/favorites/{spread_type}/{spread_id}[/]', AccountController::class . ':removeFavorite');
     $group->get('/favorite-decks[/]', AccountController::class . ':myFavoriteDecks');
     $group->post('/favorite-decks[/]', AccountController::class . ':addFavoriteDeck');
-    $group->delete('/favorite-decks[/]', AccountController::class . ':removeFavoriteDeck');
-    $group->put('/display-name[/]', AccountController::class . ':changeDisplayName');
-    $group->put('/password[/]', AccountController::class . ':changePassword');
+    $group->delete('/favorite-decks/{deck_id}[/]', AccountController::class . ':removeFavoriteDeck');
+    $group->post('/change-password[/]', AccountController::class . ':changePassword');
+    $group->patch('[/]', AccountController::class . ':updateProfile');
     $group->delete('[/]', AccountController::class . ':deleteAccount');
 })->add(UserAuth::class);
 
-// Spread Controllers (public read + public submission)
-$app->group('/spread', function (RouteCollectorProxy $group) {
-    $group->post('/submit[/]', SpreadController::class . ':submitSpread');
-    $group->get('/[{spread_id}[/]]', SpreadController::class . ':getSpread');
+// ── Spreads (public read + public submission) ────────────────────────────────
+$app->group('/spreads', function (RouteCollectorProxy $group) {
+    $group->get('[/{spread_id}[/]]', SpreadController::class . ':getSpread');
+    $group->post('[/]', SpreadController::class . ':submitSpread');
 });
 
-// Contact Form (public submission)
-$app->group('/contact', function (RouteCollectorProxy $group) {
-    $group->post('/[/]', ContactController::class . ':submit');
+// ── Contact form (public submission) ─────────────────────────────────────────
+$app->group('/contacts', function (RouteCollectorProxy $group) {
+    $group->post('[/]', ContactController::class . ':submit');
 });
 
-// Changelog Controllers (public read)
+// ── Changelog (public read) ──────────────────────────────────────────────────
 $app->group('/changelog', function (RouteCollectorProxy $group) {
-    $group->get('/[{entry_id}[/]]', ChangelogController::class . ':getChangelog');
+    $group->get('[/{entry_id}[/]]', ChangelogController::class . ':getChangelog');
 });
 
 // Public runtime config (non-secret values the SPA needs, e.g. Turnstile site key)
 $app->get('/config[/]', ConfigController::class . ':get');
 
-// User Accounts (public: register, activate, login, logout, session check)
-$app->group('/user', function (RouteCollectorProxy $group) {
+// ── Authentication (credentials + session). Action-oriented by design. ───────
+$app->group('/auth', function (RouteCollectorProxy $group) {
     $group->post('/register[/]', UserController::class . ':register');
     $group->post('/activate[/]', UserController::class . ':activate');
     $group->post('/forgot-password[/]', UserController::class . ':forgotPassword');
@@ -174,19 +212,19 @@ $app->group('/auth/google', function (RouteCollectorProxy $group) {
     $group->post('/unlink[/]', GoogleAuthController::class . ':unlink');
 });
 
-// Passkey / WebAuthn (registration requires auth; login is public)
-$app->group('/auth/passkey', function (RouteCollectorProxy $group) {
+// Passkeys / WebAuthn (registration requires auth; login is public)
+$app->group('/auth/passkeys', function (RouteCollectorProxy $group) {
     $group->post('/register/options[/]', PasskeyController::class . ':registerOptions');
     $group->post('/register[/]', PasskeyController::class . ':register');
     $group->post('/login/options[/]', PasskeyController::class . ':loginOptions');
     $group->post('/login[/]', PasskeyController::class . ':login');
     $group->get('[/]', PasskeyController::class . ':list');
-    $group->put('/password-login[/]', PasskeyController::class . ':togglePasswordLogin');
-    $group->put('/{id}[/]', PasskeyController::class . ':rename');
+    $group->patch('/password-login[/]', PasskeyController::class . ':togglePasswordLogin');
+    $group->patch('/{id}[/]', PasskeyController::class . ':rename');
     $group->delete('/{id}[/]', PasskeyController::class . ':delete');
 });
 
-// Admin Routes (require a logged-in, active, is_admin user account)
+// ── Admin Routes (require a logged-in, active, is_admin user account) ─────────
 $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->get('/auth-check[/]', AdminController::class . ':checkAuth');
 
@@ -194,17 +232,19 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->get('/stats[/]', AdminController::class . ':getStats');
     $group->get('/summary[/]', AdminController::class . ':getSummary');
 
-
-    // Decks
+    // Decks. Static routes registered before the {deck_id} placeholder.
     $group->get('/decks[/]', AdminController::class . ':getDecks');
     $group->get('/decks/pending[/]', AdminController::class . ':getPendingDecks');
     $group->post('/decks[/]', AdminController::class . ':createDeck');
-    // Static thumbnail routes registered before the {deck_id} placeholder.
     $group->post('/decks/thumbnails[/]', AdminController::class . ':generateAllThumbnails');
+    // Special cards, nested under their deck.
+    $group->get('/decks/{deck_id}/special-cards[/]', AdminController::class . ':getSpecialCards');
+    $group->post('/decks/{deck_id}/special-cards[/]', AdminController::class . ':createSpecialCard');
+    $group->put('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':updateSpecialCard');
+    $group->delete('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':deleteSpecialCard');
     $group->post('/decks/{deck_id}/approve[/]', AdminController::class . ':approveDeck');
-    $group->post('/decks/{deck_id}/usable[/]', AdminController::class . ':markDeckUsable');
     $group->post('/decks/{deck_id}/thumbnails[/]', AdminController::class . ':generateDeckThumbnails');
-    $group->put('/decks/{deck_id}[/]', AdminController::class . ':updateDeck');
+    $group->patch('/decks/{deck_id}[/]', AdminController::class . ':updateDeck');
     $group->delete('/decks/{deck_id}[/]', AdminController::class . ':deleteDeck');
 
     // Deck Systems
@@ -214,12 +254,6 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->post('/deck-systems/{id}/approve[/]', AdminController::class . ':approveDeckSystem');
     $group->put('/deck-systems/{id}[/]', AdminController::class . ':updateDeckSystem');
     $group->delete('/deck-systems/{id}[/]', AdminController::class . ':deleteDeckSystem');
-
-    // Special Cards
-    $group->get('/special-cards[/]', AdminController::class . ':getSpecialCards');
-    $group->post('/special-cards[/]', AdminController::class . ':createSpecialCard');
-    $group->put('/special-cards/{deck_id}/{card_id}[/]', AdminController::class . ':updateSpecialCard');
-    $group->delete('/special-cards/{deck_id}/{card_id}[/]', AdminController::class . ':deleteSpecialCard');
 
     // Spreads
     $group->get('/spreads[/]', AdminController::class . ':getSpreads');
@@ -232,9 +266,9 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->post('/pending-spreads/{pending_id}/approve[/]', AdminController::class . ':approvePendingSpread');
     $group->delete('/pending-spreads/{pending_id}[/]', AdminController::class . ':rejectPendingSpread');
 
-    // Readings
+    // Readings. Bulk delete ("/all") registered before the {reading_id} placeholder.
     $group->get('/readings[/]', AdminController::class . ':getReadings');
-    $group->post('/readings/clean[/]', AdminController::class . ':cleanReadings');
+    $group->delete('/readings/all[/]', AdminController::class . ':cleanReadings');
     $group->delete('/readings/{reading_id}[/]', AdminController::class . ':deleteReading');
 
     // Changelog
@@ -246,13 +280,13 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     // Users (management)
     $group->get('/users[/]', AdminController::class . ':getUsers');
     $group->post('/users/{user_id}/activate[/]', AdminController::class . ':activateUser');
-    $group->post('/users/{user_id}/admin[/]', AdminController::class . ':setUserAdmin');
     $group->post('/users/{user_id}/resend-activation[/]', AdminController::class . ':resendActivation');
+    $group->patch('/users/{user_id}[/]', AdminController::class . ':updateUser');
     $group->delete('/users/{user_id}[/]', AdminController::class . ':deleteUser');
 
     // Contacts (submitted via public contact form)
     $group->get('/contacts[/]', AdminController::class . ':getContacts');
-    $group->post('/contacts/{contact_id}/read[/]', AdminController::class . ':markContactRead');
+    $group->patch('/contacts/{contact_id}[/]', AdminController::class . ':updateContact');
 })->add(AdminAuth::class);
 
 // Run the App

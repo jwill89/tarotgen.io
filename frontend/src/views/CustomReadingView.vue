@@ -13,6 +13,7 @@ import { STORAGE_KEYS } from '@/constants'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { readApiError } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { defaultDeckId } from '@/utils/deck'
 import { usePanZoom } from '@/composables/usePanZoom'
 import { useLayoutTools } from '@/composables/useLayoutTools'
@@ -140,7 +141,7 @@ watch(deckId, async (val) => {
     slots.forEach(s => { s.cardId = null })
     loadingCards.value = true
     try {
-        const res = await fetch('/api/deck/' + val + '/cards')
+        const res = await fetch('/api' + endpoints.decks.cards(val))
         deckCards.value = res.ok ? (await res.json() as DeckCard[]) : []
     } catch {
         deckCards.value = []
@@ -312,7 +313,7 @@ async function submit() {
 
     isLoading.value = true
     try {
-        const res = await fetch('/api/reading/custom/', {
+        const res = await fetch('/api' + endpoints.readings.create, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),

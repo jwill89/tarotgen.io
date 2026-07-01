@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -40,6 +41,27 @@ class UserController extends AbstractController
     ) {
     }
 
+    #[OA\Post(
+        path: '/auth/register',
+        summary: 'Create an account (inactive until email activation). Rate-limited: 5/IP/hour.',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'display_name', 'password'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'display_name', type: 'string'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 12),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Account created'),
+            new OA\Response(response: 422, description: 'Validation/uniqueness failure'),
+            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+        ]
+    )]
     public function register(Request $request, Response $response): Response|ResponseInterface
     {
         $limiter = new RateLimiter('user_register', self::REGISTER_MAX, self::REGISTER_WINDOW);
@@ -79,6 +101,19 @@ class UserController extends AbstractController
         return $response->withJson($payload, 201);
     }
 
+    #[OA\Post(
+        path: '/auth/activate',
+        summary: 'Activate an account from the emailed token',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['token'], properties: [new OA\Property(property: 'token', type: 'string')])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Account activated'),
+            new OA\Response(response: 400, description: 'Invalid/expired token'),
+        ]
+    )]
     public function activate(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
@@ -96,6 +131,19 @@ class UserController extends AbstractController
         ], 400);
     }
 
+    #[OA\Post(
+        path: '/auth/forgot-password',
+        summary: 'Begin a password reset (always answers 200 — no account enumeration). Rate-limited: 5/IP/hour.',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['email'], properties: [new OA\Property(property: 'email', type: 'string', format: 'email')])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Identical response whether or not the account exists'),
+            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+        ]
+    )]
     public function forgotPassword(Request $request, Response $response): Response|ResponseInterface
     {
         $limiter = new RateLimiter('user_forgot', self::FORGOT_MAX, self::FORGOT_WINDOW);
@@ -130,6 +178,26 @@ class UserController extends AbstractController
         return $response->withJson($payload);
     }
 
+    #[OA\Post(
+        path: '/auth/reset-password',
+        summary: 'Complete a password reset',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['token', 'password'],
+                properties: [
+                    new OA\Property(property: 'token', type: 'string'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password updated; account marked active'),
+            new OA\Response(response: 400, description: 'Invalid/expired token'),
+            new OA\Response(response: 422, description: 'New password too weak (token not consumed)'),
+        ]
+    )]
     public function resetPassword(Request $request, Response $response): Response|ResponseInterface
     {
         $params   = $this->parsedBody($request);
@@ -152,6 +220,37 @@ class UserController extends AbstractController
         ]);
     }
 
+    #[OA\Post(
+        path: '/auth/login',
+        summary: 'Password sign-in. Rate-limited: 10 failed attempts/IP/15 min.',
+        tags: ['Authentication'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['email', 'password'],
+                properties: [
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                    new OA\Property(property: 'remember_me', type: 'boolean'),
+                    new OA\Property(property: 'turnstile_token', type: 'string', description: 'Required when Turnstile is configured'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Signed in; sets the session cookie',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean'),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Captcha failed'),
+            new OA\Response(response: 401, description: 'Invalid credentials'),
+            new OA\Response(response: 403, description: 'Inactive or password-login disabled'),
+            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+        ]
+    )]
     public function login(Request $request, Response $response): Response|ResponseInterface
     {
         $limiter = new RateLimiter('user_login', self::LOGIN_MAX, self::LOGIN_WINDOW);
@@ -212,6 +311,12 @@ class UserController extends AbstractController
         return $response->withJson(['success' => true, 'user' => $result['user']]);
     }
 
+    #[OA\Post(
+        path: '/auth/logout',
+        summary: 'Clear the session',
+        tags: ['Authentication'],
+        responses: [new OA\Response(response: 200, description: 'Signed out')]
+    )]
     public function logout(Request $request, Response $response): Response|ResponseInterface
     {
         $this->startSessionWithPersistence();
@@ -222,6 +327,20 @@ class UserController extends AbstractController
         return $response->withJson(['success' => true]);
     }
 
+    #[OA\Get(
+        path: '/auth/me',
+        summary: 'The current signed-in user',
+        tags: ['Authentication'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The current user',
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'user', ref: '#/components/schemas/User')])
+            ),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     public function me(Request $request, Response $response): Response|ResponseInterface
     {
         $this->startSessionWithPersistence();

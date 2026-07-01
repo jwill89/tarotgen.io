@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import type { DeckSystem } from '@/types'
 
 const { isLoggedIn } = useUser()
@@ -20,7 +21,7 @@ const errorMsg = ref('')
 
 async function fetchDeckSystems() {
     try {
-        const res = await fetch('/api/deck-system/')
+        const res = await fetch('/api' + endpoints.deckSystems.list)
         if (res.ok) {
             deckSystems.value = await res.json()
             if (deckSystems.value.length > 0 && deckSystemId.value === null) {
@@ -50,7 +51,7 @@ async function submitDeck() {
 
     submitting.value = true
     try {
-        const res = await fetch('/api/deck/submit', {
+        const res = await fetch('/api' + endpoints.decks.list, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

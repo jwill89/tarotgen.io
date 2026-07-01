@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -21,6 +22,34 @@ class DeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
+    #[OA\Get(
+        path: '/decks',
+        summary: 'List usable decks',
+        tags: ['Decks'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of usable decks',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Deck'))
+            ),
+        ]
+    )]
+    #[OA\Get(
+        path: '/decks/{deck_id}',
+        summary: 'A single deck',
+        tags: ['Decks'],
+        parameters: [
+            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The deck',
+                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+            ),
+            new OA\Response(response: 404, description: 'InvalidDeckID'),
+        ]
+    )]
     public function getDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = $args['deck_id'] ?? null;
@@ -55,6 +84,28 @@ class DeckController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Get(
+        path: '/decks/{deck_id}/cards',
+        summary: 'List every card available in a deck (for the custom-reading picker)',
+        tags: ['Decks'],
+        parameters: [
+            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of {card_id, name}',
+                content: new OA\JsonContent(
+                    type: 'array',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'card_id', type: 'integer'),
+                        new OA\Property(property: 'name', type: 'string'),
+                    ])
+                )
+            ),
+            new OA\Response(response: 404, description: 'InvalidDeckID'),
+        ]
+    )]
     public function getDeckCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = (int)($args['deck_id'] ?? 0);
@@ -80,6 +131,34 @@ class DeckController extends AbstractController
             ->withHeader('Cache-Control', 'public, max-age=300');
     }
 
+    #[OA\Post(
+        path: '/decks',
+        summary: 'Submit a new deck for review (requires a signed-in user)',
+        tags: ['Decks'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'artist'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'artist', type: 'string'),
+                    new OA\Property(property: 'purchase_url', type: 'string'),
+                    new OA\Property(property: 'deck_system_id', type: 'integer'),
+                    new OA\Property(property: 'additional_cards', type: 'integer'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'The created (unapproved) deck',
+                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+            ),
+            new OA\Response(response: 400, description: 'Name and artist are required'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * Submit a new deck (requires a logged-in user). The deck is created
      * as unapproved (pending admin review).

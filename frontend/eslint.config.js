@@ -16,6 +16,8 @@ export default defineConfigWithVueTs(
             'vendor/**',
             'public/**',
             'coverage/**',
+            // Auto-generated from backend/openapi.json via `npm run gen:types`.
+            'src/types/api.generated.ts',
         ],
     },
     pluginVue.configs['flat/essential'],

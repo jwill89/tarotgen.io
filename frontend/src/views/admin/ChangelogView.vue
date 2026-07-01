@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import BaseModal from '@/components/BaseModal.vue'
 import type { ChangelogEntry } from '@/types'
@@ -26,7 +27,7 @@ function todayIso(): string {
 }
 
 async function fetchChangelog() {
-    const data = await api.get<ChangelogEntry[]>('/changelog')
+    const data = await api.get<ChangelogEntry[]>(endpoints.admin.changelog.list)
     if (data) entries.value = data
 }
 
@@ -64,8 +65,8 @@ async function saveEntry() {
     saving.value = true
     try {
         const result = editingId.value !== null
-            ? await api.put<ChangelogEntry>('/changelog/' + editingId.value, payload, 'Entry updated.')
-            : await api.post<ChangelogEntry>('/changelog', payload, 'Entry created.')
+            ? await api.put<ChangelogEntry>(endpoints.admin.changelog.byId(editingId.value), payload, 'Entry updated.')
+            : await api.post<ChangelogEntry>(endpoints.admin.changelog.list, payload, 'Entry created.')
 
         if (result) {
             await fetchChangelog()
@@ -86,7 +87,7 @@ async function deleteEntry(entry: ChangelogEntry) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/changelog/' + entry.entry_id, 'Entry deleted.')
+    const result = await api.del(endpoints.admin.changelog.byId(entry.entry_id), 'Entry deleted.')
     if (result) await fetchChangelog()
 }
 

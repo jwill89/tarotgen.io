@@ -5,6 +5,7 @@ namespace Routes\Internal;
 use lbuchs\WebAuthn\WebAuthn;
 use lbuchs\WebAuthn\Binary\ByteBuffer;
 use lbuchs\WebAuthn\WebAuthnException;
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -17,14 +18,14 @@ use Tarot\Utility\Session;
 /**
  * WebAuthn/Passkey endpoints:
  *
- *  POST /auth/passkey/register/options   → Get credential creation options (requires session)
- *  POST /auth/passkey/register           → Complete passkey registration
- *  POST /auth/passkey/login/options      → Get assertion options (public, requires email)
- *  POST /auth/passkey/login              → Authenticate with passkey
- *  GET  /auth/passkey                    → List current user's passkeys
- *  PUT  /auth/passkey/{id}               → Rename a passkey
- *  DELETE /auth/passkey/{id}             → Delete a passkey
- *  PUT  /auth/passkey/password-login     → Toggle password login on/off
+ *  POST   /auth/passkeys/register/options → Get credential creation options (requires session)
+ *  POST   /auth/passkeys/register         → Complete passkey registration
+ *  POST   /auth/passkeys/login/options    → Get assertion options (public, requires email)
+ *  POST   /auth/passkeys/login            → Authenticate with passkey
+ *  GET    /auth/passkeys                  → List current user's passkeys
+ *  PATCH  /auth/passkeys/{id}             → Rename a passkey
+ *  DELETE /auth/passkeys/{id}             → Delete a passkey
+ *  PATCH  /auth/passkeys/password-login   → Toggle password login on/off
  */
 class PasskeyController extends AbstractController
 {
@@ -36,6 +37,17 @@ class PasskeyController extends AbstractController
 
     // ── Registration ─────────────────────────────────────────────────
 
+    #[OA\Post(
+        path: '/auth/passkeys/register/options',
+        summary: 'Credential-creation options (requires session)',
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(response: 200, description: 'WebAuthn creation options', content: new OA\JsonContent(type: 'object')),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OA\Response(response: 404, description: 'User not found'),
+        ]
+    )]
     /**
      * Generate WebAuthn credential creation options for the logged-in user.
      */
@@ -78,6 +90,28 @@ class PasskeyController extends AbstractController
         return $response->withJson($createArgs);
     }
 
+    #[OA\Post(
+        path: '/auth/passkeys/register',
+        summary: 'Complete passkey registration',
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['clientDataJSON', 'attestationObject'],
+                properties: [
+                    new OA\Property(property: 'clientDataJSON', type: 'string'),
+                    new OA\Property(property: 'attestationObject', type: 'string'),
+                    new OA\Property(property: 'name', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Passkey registered'),
+            new OA\Response(response: 400, description: 'Missing/invalid attestation'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * Complete passkey registration: verify attestation and store credential.
      */
@@ -152,6 +186,17 @@ class PasskeyController extends AbstractController
      * Accepts optional email to scope to a specific user's credentials,
      * or no email for a discoverable-credential (resident key) flow.
      */
+    #[OA\Post(
+        path: '/auth/passkeys/login/options',
+        summary: "Assertion options; optional email scopes to a user's credentials",
+        tags: ['Passkeys'],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [new OA\Property(property: 'email', type: 'string', format: 'email')])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'WebAuthn assertion options', content: new OA\JsonContent(type: 'object')),
+        ]
+    )]
     public function loginOptions(Request $request, Response $response): Response|ResponseInterface
     {
         $this->startSession();
@@ -194,6 +239,36 @@ class PasskeyController extends AbstractController
         return $response->withJson($getArgs);
     }
 
+    #[OA\Post(
+        path: '/auth/passkeys/login',
+        summary: 'Verify an assertion and sign in',
+        tags: ['Passkeys'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['id', 'clientDataJSON', 'authenticatorData', 'signature'],
+                properties: [
+                    new OA\Property(property: 'id', type: 'string'),
+                    new OA\Property(property: 'clientDataJSON', type: 'string'),
+                    new OA\Property(property: 'authenticatorData', type: 'string'),
+                    new OA\Property(property: 'signature', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Signed in',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean'),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Missing assertion data'),
+            new OA\Response(response: 401, description: 'Authentication failed'),
+            new OA\Response(response: 403, description: 'Account not activated'),
+        ]
+    )]
     /**
      * Verify a passkey assertion and log the user in.
      */
@@ -269,6 +344,20 @@ class PasskeyController extends AbstractController
 
     // ── Management ───────────────────────────────────────────────────
 
+    #[OA\Get(
+        path: '/auth/passkeys',
+        summary: "List the current user's passkeys",
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of passkeys',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(type: 'object'))
+            ),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * List the logged-in user's passkeys.
      */
@@ -288,6 +377,25 @@ class PasskeyController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Patch(
+        path: '/auth/passkeys/{id}',
+        summary: 'Rename a passkey',
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['name'], properties: [new OA\Property(property: 'name', type: 'string')])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Renamed'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OA\Response(response: 404, description: 'Passkey not found'),
+            new OA\Response(response: 422, description: 'Name is required'),
+        ]
+    )]
     public function rename(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $this->startSession();
@@ -316,6 +424,21 @@ class PasskeyController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Delete(
+        path: '/auth/passkeys/{id}',
+        summary: 'Delete a passkey (blocked if it is the last one while password login is disabled)',
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Deleted'),
+            new OA\Response(response: 400, description: 'Cannot delete the last passkey'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OA\Response(response: 404, description: 'Passkey not found'),
+        ]
+    )]
     public function delete(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $this->startSession();
@@ -341,9 +464,24 @@ class PasskeyController extends AbstractController
             return $response->withJson(['error' => 'Passkey not found.'], 404);
         }
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
+    #[OA\Patch(
+        path: '/auth/passkeys/password-login',
+        summary: 'Toggle password login on/off (requires ≥1 passkey before disabling)',
+        tags: ['Passkeys'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(properties: [new OA\Property(property: 'disable', type: 'boolean')])
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Updated'),
+            new OA\Response(response: 400, description: 'Must have a passkey before disabling'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * Toggle password login enabled/disabled.
      */

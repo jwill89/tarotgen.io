@@ -135,6 +135,23 @@ resource. Admin routes are under `/admin` and guarded by `AdminAuth`; account
 self-service routes under `/account` are guarded by `UserAuth`. Trailing-slash
 variants are allowed via `[/]`.
 
+The API is **hybrid REST** (see [`API.md`](API.md) for the full rulebook):
+collections are plural nouns (`/decks`, `/readings`); `GET` reads, `POST` creates
+(→`201`) or runs a command, `PUT` replaces, `PATCH` does a partial update / flag
+toggle, `DELETE` removes (→`204`). Non-CRUD state transitions are
+`POST /<resource>/{id}/<verb>` (`…/finalize`, `…/approve`, …); credential/session
+endpoints stay action-oriented under `/auth/*`.
+
+### API docs (OpenAPI + Scalar)
+Endpoints are documented with **swagger-php** attributes (`#[OA\...]`) on the
+controllers, plus `#[OA\Schema]` on the `Structure` classes. `composer docs`
+regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's served raw at
+`GET /api/openapi.json` and rendered by **Scalar** at `GET /api/docs` (both public,
+declared in `index.php`). `OpenApiSpecTest` fails if the committed spec drifts from
+the attributes — so **after changing a route or a response shape, run `composer docs`
+and commit `openapi.json`** (and `npm run gen:types` for the frontend types). Global
+metadata (info, server, security scheme, tags) lives in `api/Routes/OpenApiSpec.php`.
+
 ### Auth & security
 - Sessions use PHP sessions hardened in `index.php` (HttpOnly, SameSite=Lax,
   Secure in production). Admin access requires a **user account with the
@@ -175,8 +192,11 @@ meta tags injected (and is careful not to leak password-protected readings).
   failure; `readApiError()`/`messageFromBody()` extract the message. Note
   `apiClient.ts` imports nothing local (so `useUser` can use it without an import
   cycle); the Vue-aware `useAdminApi` stays in `useApi.ts`.
-- **Types:** `src/types/index.ts` mirrors API JSON payloads. Keep these in sync
-  with backend `Structure`/controller output when changing a response shape.
+- **Types:** `src/types/index.ts` holds the hand-written API payload types.
+  `src/types/api.generated.ts` is **generated** from `backend/openapi.json` via
+  `npm run gen:types` (openapi-typescript) — never edit it by hand; regenerate it
+  after the backend spec changes. Keep hand-written types in sync with backend
+  `Structure`/controller output when changing a response shape.
 - **Routing/guards:** `src/router/index.ts`. Route `meta` flags drive guards:
   `admin` (requires `is_admin`), `userOnly` (requires login),
   `userGuest` (redirect away if logged in). Page titles come from `meta.title`.
@@ -216,6 +236,7 @@ npm run lint           # eslint . (flat config; lints src/ TS + Vue SFCs)
 npm run lint:fix       # eslint . --fix
 npm test               # vitest run (single pass)
 npm run test:watch     # vitest watch mode
+npm run gen:types      # regenerate src/types/api.generated.ts from backend/openapi.json
 ```
 
 > **`frontend/.npmrc` is required to `npm install`.** The icon packages come from a
@@ -232,6 +253,7 @@ composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 6, --memory-limit=512M baked in)
 composer lint          # PHP_CodeSniffer (alias for `phpcs`)
 composer lint:fix      # php-cs-fixer fix (auto-fix code style)
+composer docs          # regenerate backend/openapi.json from the swagger-php attributes
 vendor\bin\phpunit     # run PHPUnit directly
 ```
 

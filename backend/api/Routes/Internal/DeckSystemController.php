@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -18,6 +19,18 @@ class DeckSystemController extends AbstractController
     ) {
     }
 
+    #[OA\Get(
+        path: '/deck-systems',
+        summary: 'List all approved deck systems',
+        tags: ['Deck Systems'],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of deck systems',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/DeckSystem'))
+            ),
+        ]
+    )]
     /**
      * Public: list all approved deck systems.
      */
@@ -32,6 +45,22 @@ class DeckSystemController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Get(
+        path: '/deck-systems/{id}',
+        summary: 'A single deck system with its cards',
+        tags: ['Deck Systems'],
+        parameters: [
+            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The deck system plus its cards array',
+                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+            ),
+            new OA\Response(response: 404, description: 'Deck system not found'),
+        ]
+    )]
     public function getSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id = (int)($args['id'] ?? 0);
@@ -50,6 +79,37 @@ class DeckSystemController extends AbstractController
             ->withHeader('Cache-Control', 'public, max-age=300');
     }
 
+    #[OA\Post(
+        path: '/deck-systems',
+        summary: 'Submit a new deck system (requires a signed-in user; admins are auto-approved)',
+        tags: ['Deck Systems'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'short_name', 'cards'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'short_name', type: 'string'),
+                    new OA\Property(property: 'total_cards', type: 'integer'),
+                    new OA\Property(
+                        property: 'cards',
+                        type: 'array',
+                        items: new OA\Items(properties: [new OA\Property(property: 'name', type: 'string')])
+                    ),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'The created deck system',
+                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+            ),
+            new OA\Response(response: 400, description: 'Validation failure'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * Submit a new deck system (requires auth). If admin, auto-approved.
      */

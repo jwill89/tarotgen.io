@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted, useTemplateRef } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import BaseModal from '@/components/BaseModal.vue'
@@ -32,12 +33,12 @@ const { search, sortKey, sortDir, rows: visibleSpreads, toggleSort } = useDataTa
 })
 
 async function fetchSpreads() {
-    const data = await api.get<Spread[]>('/spreads')
+    const data = await api.get<Spread[]>(endpoints.admin.spreads.list)
     if (data) spreads.value = data
 }
 
 async function fetchPending() {
-    const data = await api.get<PendingSpread[]>('/pending-spreads')
+    const data = await api.get<PendingSpread[]>(endpoints.admin.pendingSpreads.list)
     if (data) pending.value = data
 }
 
@@ -47,7 +48,7 @@ function sortedPositions(p: PendingSpread): SpreadPosition[] {
 
 async function approvePending(p: PendingSpread) {
     busyPendingId.value = p.pending_id
-    const result = await api.post<Spread>('/pending-spreads/' + p.pending_id + '/approve', {}, 'Spread approved and published.')
+    const result = await api.post<Spread>(endpoints.admin.pendingSpreads.approve(p.pending_id), {}, 'Spread approved and published.')
     busyPendingId.value = null
     if (result) {
         if (previewing.value?.pending_id === p.pending_id) previewing.value = null
@@ -64,7 +65,7 @@ async function rejectPending(p: PendingSpread) {
     })
     if (!ok) return
     busyPendingId.value = p.pending_id
-    const result = await api.del('/pending-spreads/' + p.pending_id, 'Submission rejected.')
+    const result = await api.del(endpoints.admin.pendingSpreads.byId(p.pending_id), 'Submission rejected.')
     busyPendingId.value = null
     if (!result) return
     if (previewing.value?.pending_id === p.pending_id) previewing.value = null
@@ -89,9 +90,9 @@ function cancelEdit() {
 async function saveSpread(payload: { name: string; description: string; card_count: number; positions: SpreadPosition[] }) {
     let result: Spread | null
     if (editing.value) {
-        result = await api.put<Spread>('/spreads/' + editing.value.spread_id, payload, 'Spread updated.')
+        result = await api.put<Spread>(endpoints.admin.spreads.byId(editing.value.spread_id), payload, 'Spread updated.')
     } else {
-        result = await api.post<Spread>('/spreads', payload, 'Spread created.')
+        result = await api.post<Spread>(endpoints.admin.spreads.list, payload, 'Spread created.')
     }
 
     if (result) {
@@ -111,7 +112,7 @@ async function deleteSpread(spread: Spread) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/spreads/' + spread.spread_id, 'Spread deleted.')
+    const result = await api.del(endpoints.admin.spreads.byId(spread.spread_id), 'Spread deleted.')
     if (result) await fetchSpreads()
 }
 

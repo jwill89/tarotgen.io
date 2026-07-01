@@ -45,9 +45,30 @@ export type ApiResult<T> =
     | { ok: false; status: number; data: unknown; error: string; networkError: boolean }
 
 /**
+ * True when the response provably carries no body — a `204 No Content`, a `205`,
+ * or an explicit `Content-Length: 0`. Used to avoid calling `res.json()` (which
+ * throws on an empty body) for the DELETE/PATCH endpoints that answer 204.
+ */
+function hasNoBody(res: Response): boolean {
+    if (res.status === 204 || res.status === 205) return true
+    // `headers` may be absent on hand-rolled test doubles; guard defensively.
+    return res.headers?.get?.('content-length') === '0'
+}
+
+/** Parse a JSON body, returning `null` for an empty or non-JSON body. */
+async function parseJsonSafe(res: Response): Promise<unknown> {
+    try {
+        return await res.json()
+    } catch {
+        return null
+    }
+}
+
+/**
  * Core fetch wrapper. Always resolves (never throws): a rejected fetch becomes a
  * `networkError` failure, an error status becomes a failure carrying the server's
- * message, and a 2xx becomes a success carrying the parsed JSON body.
+ * message, and a 2xx becomes a success carrying the parsed JSON body (or `null`
+ * for a 204 No Content).
  *
  * `apiFetch` and `useAdminApi` are both built on this; prefer it directly when
  * you need the status or error message rather than just the data.
@@ -65,12 +86,10 @@ export async function apiRequest<T>(
     }
 
     // Parse the body once; tolerate an empty/non-JSON body (e.g. 204, HTML error).
-    let body: unknown = null
-    try {
-        body = await res.json()
-    } catch {
-        // Leave body as null.
-    }
+    // Several DELETE/PATCH endpoints now answer 204 No Content with no body, so
+    // skip parsing entirely when there is provably nothing to read — calling
+    // `res.json()` on an empty body throws.
+    const body = hasNoBody(res) ? null : await parseJsonSafe(res)
 
     if (res.ok) {
         return { ok: true, status: res.status, data: body as T }

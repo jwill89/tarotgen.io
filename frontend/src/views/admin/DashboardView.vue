@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { APP_VERSION } from '@/constants'
 import type { UsageStats } from '@/types'
 
@@ -22,7 +23,7 @@ function dayLabel(date: string): string {
 }
 
 onMounted(async () => {
-    const data = await api.get<{ counts: typeof counts.value; stats: UsageStats }>('/summary')
+    const data = await api.get<{ counts: typeof counts.value; stats: UsageStats }>(endpoints.admin.dashboard.summary)
     if (data) {
         counts.value = data.counts
         stats.value = data.stats

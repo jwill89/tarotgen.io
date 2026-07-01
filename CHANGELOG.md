@@ -15,6 +15,64 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [4.0.0] — 2026-07-01
+
+API normalization and machine-readable documentation. The HTTP API is reshaped
+into a consistent hybrid-REST design and published as an interactive reference.
+
+> **Breaking (API).** Nearly every endpoint path — and several methods — changed.
+> This is a first-party API (session-cookie auth, no external consumers) and the
+> SPA was migrated in lockstep, so no backward-compatible aliases are kept. This
+> warrants a **major** version bump (→ 4.0.0) when released.
+
+### Added
+
+- **OpenAPI 3.1 specification** ([`backend/openapi.json`](backend/openapi.json))
+  generated from `zircote/swagger-php` attributes on every controller operation
+  and on each `Structure` schema. Root metadata — API info, the `/api` server, the
+  `sessionCookie` security scheme, and the tag groupings — lives in
+  `backend/api/Routes/OpenApiSpec.php`.
+- **Interactive API reference served by the app itself:** [Scalar](https://scalar.com/)
+  at **`GET /api/docs`**, backed by the raw spec at **`GET /api/openapi.json`**.
+  No separate hosting or build step — the PHP app serves both at runtime wherever
+  the API is deployed (Scalar's viewer script loads from a CDN).
+- **`composer docs`** regenerates the committed spec, and a new `OpenApiSpecTest`
+  (PHPUnit) fails if the committed `openapi.json` drifts from the attributes —
+  keeping the docs honest the same way `composer stan`/`lint` keep the code honest.
+- **Generated frontend types:** `frontend/src/types/api.generated.ts`, produced from
+  the spec by `npm run gen:types` (openapi-typescript), plus a central
+  `frontend/src/api/endpoints.ts` module that all SPA call sites now route through.
+- CI (`.github/workflows/ci.yml`) now verifies both artifacts are current: it
+  regenerates the spec (`composer docs`) and the types (`npm run gen:types`) and
+  fails on any diff.
+
+### Changed
+
+- **Resources are now plural nouns:** `/deck`→`/decks`, `/deck-system`→`/deck-systems`,
+  `/spread`→`/spreads`, `/reading/{id}`→`/readings/{id}`, `/contact`→`/contacts`, and
+  the passkey routes move under `/auth/passkeys`.
+- **Consistent method semantics:** creates return **`201`** and deletes return
+  **`204`**; a random reading is `POST /readings/generate` and a custom one is
+  `POST /readings`; `finalize` is now `POST /readings/{id}/finalize` (was `PUT`).
+- **Flag toggles became `PATCH` on the resource** instead of bespoke `POST` actions —
+  a deck's `usable`, a user's `is_admin`, a contact's `is_read`, and the account
+  display name (`PATCH /account`). Genuine state transitions/commands stay as
+  `POST /<resource>/{id}/<verb>` (`…/approve`, `…/draw`, `…/unlock`, …).
+- **Credential/session endpoints consolidated under `/auth/*`** (`/auth/login`,
+  `/auth/register`, `/auth/activate`, `/auth/me`, …); the password change moved to
+  `POST /account/change-password`.
+- **Retention cleanup is now a bulk delete:**
+  `DELETE /admin/readings/all?older_than_days=` returning `{ "deleted": N }`.
+- Special cards are nested under their deck
+  (`/admin/decks/{deck_id}/special-cards/{card_id}`), and favorites are removed by
+  path (`DELETE /account/favorites/{type}/{id}`) rather than by request body.
+- The SPA API client tolerates empty `204` responses and gained a `patch` helper;
+  the backend deploy payload now ships `openapi.json` so the runtime docs work in
+  production.
+- **`API.md` rewritten** as the hybrid-REST *conventions* guide that points at the
+  generated reference; `AGENTS.md` and `README.md` document the `composer docs` /
+  `npm run gen:types` workflow and the `/api/docs` URL.
+
 ## [3.4.0] — 2026-06-30
 
 Backend type-safety, modernization, and API documentation. No user-facing or API
@@ -303,7 +361,9 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v3.3.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v4.0.0...HEAD
+[4.0.0]: https://github.com/jwill89/tarot-site/compare/v3.4.0...v4.0.0
+[3.4.0]: https://github.com/jwill89/tarot-site/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/jwill89/tarot-site/compare/v3.2.0...v3.3.0
 [3.2.0]: https://github.com/jwill89/tarot-site/compare/v3.1.0...v3.2.0
 [3.1.0]: https://github.com/jwill89/tarot-site/compare/v3.0.0...v3.1.0
