@@ -12,6 +12,7 @@ import { useSpreadLayout } from '@/composables/useSpreadLayout'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { readApiError } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { renderMarkdown } from '@/utils/markdown'
 import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
@@ -252,7 +253,7 @@ async function submitNewReading() {
             if (opts.password) body.set('password', opts.password)
         }
 
-        const res = await fetch('/api/reading/new/', {
+        const res = await fetch('/api' + endpoints.readings.generate, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString(),

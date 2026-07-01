@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -26,6 +27,22 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
+    #[OA\Get(
+        path: '/readings/{reading_id}',
+        summary: 'Fetch a reading (password-protected readings return a locked stub to non-owners)',
+        tags: ['Readings'],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The reading, or a { locked, reading_name } stub',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 404, description: 'InvalidReadingID'),
+        ]
+    )]
     public function getReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -56,6 +73,30 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
+    #[OA\Post(
+        path: '/readings/{reading_id}/unlock',
+        summary: 'Unlock a password-protected reading for this session',
+        tags: ['Readings'],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['password'],
+                properties: [new OA\Property(property: 'password', type: 'string')]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The unlocked reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 401, description: 'Incorrect password'),
+            new OA\Response(response: 404, description: 'InvalidReadingID'),
+        ]
+    )]
     public function unlockReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -90,11 +131,29 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
+    #[OA\Post(
+        path: '/readings/generate',
+        summary: 'Generate a random reading from a draw spec',
+        tags: ['Readings'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            description: 'Draw spec: deck, spread or card count, and options',
+            content: new OA\JsonContent(type: 'object')
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'The created reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 400, description: 'Invalid draw spec'),
+        ]
+    )]
     public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
             $reading = $this->readingService->generate($this->parsedBody($request), $this->currentUserId());
-            return $response->withJson($reading);
+            return $response->withJson($reading, 201);
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
         }
@@ -103,11 +162,28 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
+    #[OA\Post(
+        path: '/readings',
+        summary: 'Create a custom reading from explicitly chosen cards/positions',
+        tags: ['Readings'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(type: 'object')
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'The created reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 400, description: 'Invalid input'),
+        ]
+    )]
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
             $reading = $this->readingService->createCustom($this->parsedBody($request), $this->currentUserId());
-            return $response->withJson($reading);
+            return $response->withJson($reading, 201);
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
         }
@@ -121,6 +197,38 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
+    #[OA\Put(
+        path: '/readings/{reading_id}/placement',
+        summary: 'Save spread/placement positions onto an existing reading',
+        tags: ['Readings'],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['positions'],
+                properties: [
+                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'spread_name', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Saved',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean'),
+                    new OA\Property(property: 'reading_id', type: 'string'),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Position count mismatch or invalid data'),
+            new OA\Response(response: 403, description: 'Not the owner'),
+            new OA\Response(response: 404, description: 'Reading not found'),
+            new OA\Response(response: 409, description: 'Reading is final'),
+        ]
+    )]
     public function updatePlacement(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -217,6 +325,26 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
+    #[OA\Post(
+        path: '/readings/{reading_id}/draw',
+        summary: 'Draw additional cards into a non-final, non-custom reading you own',
+        tags: ['Readings'],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(type: 'object')),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The updated reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 400, description: 'Custom readings cannot draw'),
+            new OA\Response(response: 403, description: 'Not the owner'),
+            new OA\Response(response: 404, description: 'Reading not found'),
+            new OA\Response(response: 409, description: 'Reading is final'),
+        ]
+    )]
     public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -271,6 +399,23 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
+    #[OA\Post(
+        path: '/readings/{reading_id}/finalize',
+        summary: 'Permanently lock a reading against further draws (owner-only, one-way)',
+        tags: ['Readings'],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The finalized reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 403, description: 'Not the owner'),
+            new OA\Response(response: 404, description: 'Reading not found'),
+        ]
+    )]
     public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');

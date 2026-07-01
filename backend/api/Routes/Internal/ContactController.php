@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -20,6 +21,31 @@ class ContactController extends AbstractController
     ) {
     }
 
+    #[OA\Post(
+        path: '/contacts',
+        summary: 'Submit a contact-form message (rate-limited: 5/IP/hour)',
+        tags: ['Contact'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'email', 'message'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'email', type: 'string', format: 'email'),
+                    new OA\Property(property: 'message', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Submitted',
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'success', type: 'boolean')])
+            ),
+            new OA\Response(response: 400, description: 'Missing/invalid fields'),
+            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+        ]
+    )]
     /**
      * Public endpoint: submit a contact form message.
      * Rate-limited per IP to prevent spam.

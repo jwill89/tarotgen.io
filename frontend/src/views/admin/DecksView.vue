@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import { useToasts } from '@/composables/useToasts'
@@ -46,17 +47,17 @@ function emptyDeck(): Partial<Deck> {
 }
 
 async function fetchDecks() {
-    const data = await api.get<Deck[]>('/decks')
+    const data = await api.get<Deck[]>(endpoints.admin.decks.list)
     if (data) decks.value = data
 }
 
 async function fetchPendingDecks() {
-    const data = await api.get<Deck[]>('/decks/pending')
+    const data = await api.get<Deck[]>(endpoints.admin.decks.pending)
     if (data) pendingDecks.value = data
 }
 
 async function fetchDeckSystems() {
-    const data = await api.get<DeckSystem[]>('/deck-systems')
+    const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.list)
     if (data) deckSystems.value = data
 }
 
@@ -79,8 +80,8 @@ async function saveDeck() {
     saving.value = true
     try {
         const result = isNew.value
-            ? await api.post('/decks', editingDeck.value, 'Deck created.')
-            : await api.put('/decks/' + editingDeck.value.deck_id, editingDeck.value, 'Deck updated.')
+            ? await api.post(endpoints.admin.decks.create, editingDeck.value, 'Deck created.')
+            : await api.patch(endpoints.admin.decks.byId(editingDeck.value.deck_id), editingDeck.value, 'Deck updated.')
         if (!result) return
         await fetchDecks()
         await fetchPendingDecks()
@@ -98,7 +99,7 @@ async function deleteDeck(deck: Deck) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/decks/' + deck.deck_id, 'Deck deleted.')
+    const result = await api.del(endpoints.admin.decks.byId(deck.deck_id), 'Deck deleted.')
     if (result) {
         await fetchDecks()
         await fetchPendingDecks()
@@ -106,7 +107,7 @@ async function deleteDeck(deck: Deck) {
 }
 
 async function approveDeck(deck: Deck) {
-    const result = await api.post('/decks/' + deck.deck_id + '/approve', {}, 'Deck approved.')
+    const result = await api.post(endpoints.admin.decks.approve(deck.deck_id), {}, 'Deck approved.')
     if (result) {
         await fetchDecks()
         await fetchPendingDecks()
@@ -116,7 +117,7 @@ async function approveDeck(deck: Deck) {
 async function toggleUsable(deck: Deck) {
     const newUsable = !deck.usable
     const msg = newUsable ? 'Deck marked usable.' : 'Deck marked unusable.'
-    const result = await api.post('/decks/' + deck.deck_id + '/usable', { usable: newUsable }, msg)
+    const result = await api.patch(endpoints.admin.decks.byId(deck.deck_id), { usable: newUsable }, msg)
     if (result) {
         await fetchDecks()
     }
@@ -126,7 +127,7 @@ interface ThumbResult { deck_id?: number; generated: number; skipped: number; de
 
 async function generateThumbnails(deck: Deck) {
     thumbBusyId.value = deck.deck_id
-    const res = await api.post<ThumbResult>('/decks/' + deck.deck_id + '/thumbnails', {})
+    const res = await api.post<ThumbResult>(endpoints.admin.decks.thumbnails(deck.deck_id), {})
     thumbBusyId.value = null
     if (res) {
         toasts.success(`"${deck.name}": ${res.generated} thumbnail(s) generated, ${res.skipped} already existed.`)
@@ -135,7 +136,7 @@ async function generateThumbnails(deck: Deck) {
 
 async function generateAllThumbnails() {
     generatingAll.value = true
-    const res = await api.post<ThumbResult>('/decks/thumbnails', {})
+    const res = await api.post<ThumbResult>(endpoints.admin.decks.allThumbnails, {})
     generatingAll.value = false
     if (res) {
         toasts.success(`Generated ${res.generated} thumbnail(s) across ${res.decks} deck(s); ${res.skipped} already existed.`)

@@ -5,6 +5,7 @@ import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import type { SpreadPosition } from '@/types'
 import SpreadEditor from '@/components/admin/SpreadEditor.vue'
 
@@ -30,7 +31,7 @@ async function submitSpread(payload: { name: string; description: string; card_c
             return
         }
 
-        const res = await fetch('/api/spread/submit', {
+        const res = await fetch('/api' + endpoints.spreads.list, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),

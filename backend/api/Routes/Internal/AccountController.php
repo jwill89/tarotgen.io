@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -32,6 +33,19 @@ class AccountController extends AbstractController
     ) {
     }
 
+    #[OA\Get(
+        path: '/account/readings',
+        summary: "The current user's readings, newest first",
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of readings',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Reading'))
+            ),
+        ]
+    )]
     /** All of the current user's readings, newest first. */
     public function myReadings(Request $request, Response $response): Response|ResponseInterface
     {
@@ -43,6 +57,34 @@ class AccountController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Patch(
+        path: '/account/readings/{reading_id}',
+        summary: "Update a reading's name, notes, hidden-author flag, or view password",
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'reading_name', type: 'string', nullable: true),
+                new OA\Property(property: 'reading_notes', type: 'string', nullable: true),
+                new OA\Property(property: 'hide_user', type: 'boolean'),
+                new OA\Property(property: 'password', type: 'string'),
+                new OA\Property(property: 'remove_password', type: 'boolean'),
+            ])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The updated reading',
+                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+            ),
+            new OA\Response(response: 400, description: 'No changes provided'),
+            new OA\Response(response: 404, description: 'Reading not found'),
+            new OA\Response(response: 422, description: 'Password too short'),
+        ]
+    )]
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -90,6 +132,19 @@ class AccountController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Delete(
+        path: '/account/readings/{reading_id}',
+        summary: 'Delete one of the user\'s readings',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Deleted'),
+            new OA\Response(response: 404, description: 'Reading not found'),
+        ]
+    )]
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = (string)($args['reading_id'] ?? '');
@@ -98,21 +153,68 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
-    public function changeDisplayName(Request $request, Response $response): Response|ResponseInterface
+    /**
+     * Partial update of the current account's profile. Currently the only
+     * editable field is the display name (previously the dedicated
+     * PUT /account/display-name).
+     */
+    #[OA\Patch(
+        path: '/account',
+        summary: 'Update the account profile (currently the display name)',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            content: new OA\JsonContent(properties: [new OA\Property(property: 'display_name', type: 'string')])
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The updated account',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean'),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                ])
+            ),
+            new OA\Response(response: 422, description: 'Policy/uniqueness failure'),
+        ]
+    )]
+    public function updateProfile(Request $request, Response $response): Response|ResponseInterface
     {
-        $name   = (string)(($this->parsedBody($request))['display_name'] ?? '');
-        $result = $this->auth->changeDisplayName($this->userId(), $name);
+        $body = $this->parsedBody($request);
 
-        if (!$result['ok']) {
-            return $response->withJson(['error' => $result['error'] ?? 'Could not update display name.'], 422);
+        if (array_key_exists('display_name', $body)) {
+            $result = $this->auth->changeDisplayName($this->userId(), (string)$body['display_name']);
+            if (!$result['ok']) {
+                return $response->withJson(['error' => $result['error'] ?? 'Could not update display name.'], 422);
+            }
         }
 
         return $response->withJson(['success' => true, 'user' => $this->users->findById($this->userId())]);
     }
 
+    #[OA\Post(
+        path: '/account/change-password',
+        summary: 'Change the account password',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['current_password', 'new_password'],
+                properties: [
+                    new OA\Property(property: 'current_password', type: 'string', format: 'password'),
+                    new OA\Property(property: 'new_password', type: 'string', format: 'password'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 200, description: 'Password updated'),
+            new OA\Response(response: 422, description: 'Wrong current password or weak new password'),
+        ]
+    )]
     public function changePassword(Request $request, Response $response): Response|ResponseInterface
     {
         $body    = $this->parsedBody($request);
@@ -127,6 +229,20 @@ class AccountController extends AbstractController
         return $response->withJson(['success' => true, 'message' => 'Your password has been updated.']);
     }
 
+    #[OA\Delete(
+        path: '/account',
+        summary: 'Delete the account after re-entering the password (cascades readings)',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['password'], properties: [new OA\Property(property: 'password', type: 'string', format: 'password')])
+        ),
+        responses: [
+            new OA\Response(response: 204, description: 'Account deleted'),
+            new OA\Response(response: 403, description: 'Wrong password'),
+        ]
+    )]
     public function deleteAccount(Request $request, Response $response): Response|ResponseInterface
     {
         $password = (string)(($this->parsedBody($request))['password'] ?? '');
@@ -140,17 +256,54 @@ class AccountController extends AbstractController
         unset($_SESSION['user_id']);
         Session::regenerate();
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
     // ── User Spreads ─────────────────────────────────────────────────────────
 
+    #[OA\Get(
+        path: '/account/spreads',
+        summary: "The user's personal spreads",
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of personal spreads',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/UserSpread'))
+            ),
+        ]
+    )]
     /** List all of the current user's personal spreads. */
     public function mySpreads(Request $request, Response $response): Response|ResponseInterface
     {
         return $response->withJson($this->userSpreads->listByUser($this->userId()));
     }
 
+    #[OA\Post(
+        path: '/account/spreads',
+        summary: 'Create a personal spread',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name', 'positions'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string'),
+                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(type: 'object')),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'The created spread',
+                content: new OA\JsonContent(ref: '#/components/schemas/UserSpread')
+            ),
+            new OA\Response(response: 400, description: 'Name and positions required'),
+        ]
+    )]
     /** Create a new personal spread. */
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
@@ -179,6 +332,24 @@ class AccountController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Put(
+        path: '/account/spreads/{user_spread_id}',
+        summary: 'Update a personal spread',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'user_spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(content: new OA\JsonContent(type: 'object')),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'The updated spread',
+                content: new OA\JsonContent(ref: '#/components/schemas/UserSpread')
+            ),
+            new OA\Response(response: 404, description: 'Spread not found'),
+        ]
+    )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
@@ -197,6 +368,19 @@ class AccountController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Delete(
+        path: '/account/spreads/{user_spread_id}',
+        summary: 'Delete a personal spread (and any favorites pointing to it)',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'user_spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Deleted'),
+            new OA\Response(response: 404, description: 'Spread not found'),
+        ]
+    )]
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
@@ -208,7 +392,7 @@ class AccountController extends AbstractController
         // Remove any favorites pointing to this deleted personal spread.
         $this->favorites->removeBySpread('personal', $spreadId);
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
     /**
@@ -217,6 +401,19 @@ class AccountController extends AbstractController
      *
      * @param array<string,string> $args
      */
+    #[OA\Post(
+        path: '/account/spreads/{user_spread_id}/submit',
+        summary: 'Submit a personal spread to the public pending queue',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'user_spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 201, description: 'Submitted for review'),
+            new OA\Response(response: 404, description: 'Spread not found'),
+        ]
+    )]
     public function submitSpreadAsPublic(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
@@ -242,12 +439,39 @@ class AccountController extends AbstractController
 
     // ── Favorite Spreads ────────────────────────────────────────────────────
 
+    #[OA\Get(
+        path: '/account/favorites',
+        summary: 'Favorited spreads',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        responses: [new OA\Response(response: 200, description: 'Array of favorited spreads', content: new OA\JsonContent(type: 'array', items: new OA\Items(type: 'object')))]
+    )]
     /** List the current user's favorited spreads. */
     public function myFavorites(Request $request, Response $response): Response|ResponseInterface
     {
         return $response->withJson($this->favorites->listByUser($this->userId()));
     }
 
+    #[OA\Post(
+        path: '/account/favorites',
+        summary: 'Add a favorite spread',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['spread_type', 'spread_id'],
+                properties: [
+                    new OA\Property(property: 'spread_type', type: 'string', enum: ['public', 'personal']),
+                    new OA\Property(property: 'spread_id', type: 'integer'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Added'),
+            new OA\Response(response: 400, description: 'Invalid spread type or ID'),
+        ]
+    )]
     /** Add a spread to the current user's favorites. */
     public function addFavorite(Request $request, Response $response): Response|ResponseInterface
     {
@@ -264,12 +488,30 @@ class AccountController extends AbstractController
         return $response->withJson(['success' => true], 201);
     }
 
-    /** Remove a spread from the current user's favorites. */
-    public function removeFavorite(Request $request, Response $response): Response|ResponseInterface
+    /**
+     * Remove a spread from the current user's favorites. The favorite is
+     * identified by its type and id in the path.
+     *
+     * @param array<string,string> $args
+     */
+    #[OA\Delete(
+        path: '/account/favorites/{spread_type}/{spread_id}',
+        summary: 'Remove a favorite spread',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'spread_type', in: 'path', required: true, schema: new OA\Schema(type: 'string', enum: ['public', 'personal'])),
+            new OA\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Removed'),
+            new OA\Response(response: 400, description: 'Invalid spread type or ID'),
+        ]
+    )]
+    public function removeFavorite(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $params     = $this->parsedBody($request);
-        $spreadType = (string)($params['spread_type'] ?? '');
-        $spreadId   = (int)($params['spread_id'] ?? 0);
+        $spreadType = (string)($args['spread_type'] ?? '');
+        $spreadId   = (int)($args['spread_id'] ?? 0);
 
         if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {
             return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
@@ -277,16 +519,43 @@ class AccountController extends AbstractController
 
         $this->favorites->remove($this->userId(), $spreadType, $spreadId);
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
     // ── Favorite Decks ───────────────────────────────────────────
 
+    #[OA\Get(
+        path: '/account/favorite-decks',
+        summary: 'Favorited decks',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Array of favorited decks',
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Deck'))
+            ),
+        ]
+    )]
     public function myFavoriteDecks(Request $request, Response $response): Response|ResponseInterface
     {
         return $response->withJson($this->favoriteDecks->listByUser($this->userId()));
     }
 
+    #[OA\Post(
+        path: '/account/favorite-decks',
+        summary: 'Add a favorite deck',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(required: ['deck_id'], properties: [new OA\Property(property: 'deck_id', type: 'integer')])
+        ),
+        responses: [
+            new OA\Response(response: 201, description: 'Added'),
+            new OA\Response(response: 400, description: 'Invalid deck ID'),
+        ]
+    )]
     public function addFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
@@ -301,10 +570,25 @@ class AccountController extends AbstractController
         return $response->withJson(['success' => true], 201);
     }
 
-    public function removeFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
+    /**
+     * @param array<string,string> $args
+     */
+    #[OA\Delete(
+        path: '/account/favorite-decks/{deck_id}',
+        summary: 'Remove a favorite deck',
+        tags: ['Account'],
+        security: [['sessionCookie' => []]],
+        parameters: [
+            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Removed'),
+            new OA\Response(response: 400, description: 'Invalid deck ID'),
+        ]
+    )]
+    public function removeFavoriteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $params = $this->parsedBody($request);
-        $deckId = (int)($params['deck_id'] ?? 0);
+        $deckId = (int)($args['deck_id'] ?? 0);
 
         if ($deckId < 1) {
             return $response->withJson(['error' => 'Invalid deck ID.'], 400);
@@ -312,7 +596,7 @@ class AccountController extends AbstractController
 
         $this->favoriteDecks->remove($this->userId(), $deckId);
 
-        return $response->withJson(['success' => true]);
+        return $response->withStatus(204);
     }
 
     private function userId(): int

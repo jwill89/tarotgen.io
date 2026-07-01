@@ -35,13 +35,15 @@
         "phpstan/phpstan": "^2.2",
         "phpunit/phpunit": "^13.0",
         "roave/security-advisories": "dev-latest",
-        "squizlabs/php_codesniffer": "*"
+        "squizlabs/php_codesniffer": "*",
+        "zircote/swagger-php": "^6.0"
     },
     "scripts": {
         "dev": "php -S localhost:80 dev-router.php",
         "test": "phpunit",
         "stan": "phpstan analyse --memory-limit=512M",
         "lint": "phpcs",
-        "lint:fix": "php-cs-fixer fix"
+        "lint:fix": "php-cs-fixer fix",
+        "docs": "openapi api includes --version 3.1.0 --format json --output openapi.json"
     }
 }

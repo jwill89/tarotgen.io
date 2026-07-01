@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted, useTemplateRef, nextTick } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
@@ -74,7 +75,7 @@ const cleanOptions = [7, 14, 30, 60, 90, 180, 365]
 
 async function fetchReadings() {
     loading.value = true
-    const data = await api.get<{ rows: AdminReading[]; total: number }>('/readings?limit=100000&offset=0')
+    const data = await api.get<{ rows: AdminReading[]; total: number }>(endpoints.admin.readings.list + '?limit=100000&offset=0')
     if (data) {
         allReadings.value = data.rows
     }
@@ -107,7 +108,7 @@ async function deleteReading(reading: AdminReading) {
     })
     if (!ok) return
 
-    const result = await api.del('/readings/' + reading.reading_id, 'Reading deleted.')
+    const result = await api.del(endpoints.admin.readings.byId(reading.reading_id), 'Reading deleted.')
     if (result) {
         allReadings.value = allReadings.value.filter(r => r.reading_id !== reading.reading_id)
     }
@@ -115,9 +116,8 @@ async function deleteReading(reading: AdminReading) {
 
 async function cleanOldReadings() {
     cleanBusy.value = true
-    const result = await api.post<{ success: boolean; deleted: number }>(
-        '/readings/clean',
-        { days: cleanDays.value },
+    const result = await api.del<{ success: boolean; deleted: number }>(
+        endpoints.admin.readings.clean(cleanDays.value),
     )
     cleanBusy.value = false
 

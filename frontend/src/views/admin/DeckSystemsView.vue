@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, nextTick, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import { useToasts } from '@/composables/useToasts'
@@ -53,12 +54,12 @@ function emptyCard(cardId: number): DeckSystemCard {
 }
 
 async function fetchSystems() {
-    const data = await api.get<DeckSystem[]>('/deck-systems')
+    const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.list)
     if (data) systems.value = data
 }
 
 async function fetchPendingSystems() {
-    const data = await api.get<DeckSystem[]>('/deck-systems/pending')
+    const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.pending)
     if (data) pendingSystems.value = data
 }
 
@@ -76,7 +77,7 @@ function openAdd() {
 async function openEdit(system: DeckSystem) {
     isNew.value = false
     expandedCardIndex.value = -1
-    const full = await api.get<DeckSystemWithCards>('/deck-systems/' + system.deck_system_id)
+    const full = await api.get<DeckSystemWithCards>(endpoints.admin.deckSystems.byId(system.deck_system_id))
     if (full) {
         editingSystem.value = { ...full }
     }
@@ -150,7 +151,7 @@ async function saveSystem() {
     try {
         let result
         if (isNew.value) {
-            const res = await fetch('/api/deck-system/submit', {
+            const res = await fetch('/api' + endpoints.deckSystems.list, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(editingSystem.value),
@@ -164,7 +165,7 @@ async function saveSystem() {
                 return
             }
         } else {
-            result = await api.put('/deck-systems/' + editingSystem.value.deck_system_id, editingSystem.value, 'Deck system updated.')
+            result = await api.put(endpoints.admin.deckSystems.byId(editingSystem.value.deck_system_id), editingSystem.value, 'Deck system updated.')
         }
         if (!result) return
         await fetchSystems()
@@ -176,7 +177,7 @@ async function saveSystem() {
 }
 
 async function approveSystem(system: DeckSystem) {
-    const result = await api.post('/deck-systems/' + system.deck_system_id + '/approve', {}, 'Deck system approved.')
+    const result = await api.post(endpoints.admin.deckSystems.approve(system.deck_system_id), {}, 'Deck system approved.')
     if (result) {
         await fetchSystems()
         await fetchPendingSystems()
@@ -191,7 +192,7 @@ async function deleteSystem(system: DeckSystem) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/deck-systems/' + system.deck_system_id, 'Deck system deleted.')
+    const result = await api.del(endpoints.admin.deckSystems.byId(system.deck_system_id), 'Deck system deleted.')
     if (result) {
         await fetchSystems()
         await fetchPendingSystems()

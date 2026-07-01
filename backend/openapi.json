@@ -1,0 +1,4507 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "TarotGen.io API",
+        "description": "The backend for **TarotGen.io** — a PHP 8.5 / Slim 4 hybrid-REST API.\n\n- Resources are plural nouns (`/decks`, `/readings`); items are `/{id}`.\n- `GET` reads, `POST` creates (→`201`) or runs a command, `PUT` replaces,\n  `PATCH` applies a partial update / flag toggle, `DELETE` removes (→`204`).\n- State transitions that aren't a plain field-set are `POST …/{id}/{verb}`\n  (e.g. `…/finalize`, `…/approve`, `…/draw`).\n- Errors are `{ \"error\": \"…\" }`; multi-message validation is `{ \"errors\": […] }`.\n- Auth is a session cookie (`PHPSESSID`) set by the `/auth/*` endpoints —\n  there are no API keys or bearer tokens for first-party calls.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/api",
+            "description": "Same-origin API base path"
+        }
+    ],
+    "paths": {
+        "/account/readings": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "The current user's readings, newest first",
+                "description": "All of the current user's readings, newest first.",
+                "operationId": "52d06296825f7d5198b9620f6ee0c77a",
+                "responses": {
+                    "200": {
+                        "description": "Array of readings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Reading"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/readings/{reading_id}": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Delete one of the user's readings",
+                "description": "Delete one of the current user's readings.",
+                "operationId": "792ad97854ffdc3eb107f4dd771de15c",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Update a reading's name, notes, hidden-author flag, or view password",
+                "description": "Update a reading the current user owns: name, hidden author, view password.",
+                "operationId": "f2bf91c45a8fdd7232feb63c43aec389",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "reading_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "reading_notes": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "hide_user": {
+                                        "type": "boolean"
+                                    },
+                                    "password": {
+                                        "type": "string"
+                                    },
+                                    "remove_password": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "No changes provided"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    },
+                    "422": {
+                        "description": "Password too short"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Delete the account after re-entering the password (cascades readings)",
+                "operationId": "f494bd5d0850bf24d66ae14b041e3bb3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Account deleted"
+                    },
+                    "403": {
+                        "description": "Wrong password"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Update the account profile (currently the display name)",
+                "description": "Partial update of the current account's profile. Currently the only\neditable field is the display name (previously the dedicated\nPUT /account/display-name).",
+                "operationId": "54aecbcbefb600912a309f51b00f7e75",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "display_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated account",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Policy/uniqueness failure"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/change-password": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Change the account password",
+                "operationId": "70ac3d9471f6b7020edd89bfa6393c36",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "current_password",
+                                    "new_password"
+                                ],
+                                "properties": {
+                                    "current_password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "new_password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password updated"
+                    },
+                    "422": {
+                        "description": "Wrong current password or weak new password"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/spreads": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "The user's personal spreads",
+                "description": "List all of the current user's personal spreads.",
+                "operationId": "ceaddfbd98f26bc7789dee48819d5aa7",
+                "responses": {
+                    "200": {
+                        "description": "Array of personal spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/UserSpread"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Create a personal spread",
+                "description": "Create a new personal spread.",
+                "operationId": "56f0901cbf14761ffc8d5a07d6ebab60",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "positions"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserSpread"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Name and positions required"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/spreads/{user_spread_id}": {
+            "put": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Update a personal spread",
+                "description": "Update one of the current user's personal spreads.",
+                "operationId": "bbdd9aef607e7cc144ad271c72c4eaaa",
+                "parameters": [
+                    {
+                        "name": "user_spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserSpread"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Spread not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Delete a personal spread (and any favorites pointing to it)",
+                "description": "Delete one of the current user's personal spreads.",
+                "operationId": "15da64eba58ebb911fc9c77a94b011ed",
+                "parameters": [
+                    {
+                        "name": "user_spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Spread not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/spreads/{user_spread_id}/submit": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Submit a personal spread to the public pending queue",
+                "description": "Submit one of the user's personal spreads as a public spread (copies into\npending queue; the personal copy remains untouched).",
+                "operationId": "b9dc0edda704ab480743c02a096bda87",
+                "parameters": [
+                    {
+                        "name": "user_spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Submitted for review"
+                    },
+                    "404": {
+                        "description": "Spread not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/favorites": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Favorited spreads",
+                "description": "List the current user's favorited spreads.",
+                "operationId": "f8f5a8fd3678844a3bcfc8097d730158",
+                "responses": {
+                    "200": {
+                        "description": "Array of favorited spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Add a favorite spread",
+                "description": "Add a spread to the current user's favorites.",
+                "operationId": "1b7f1fc01290224b3a61a261509890ee",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "spread_type",
+                                    "spread_id"
+                                ],
+                                "properties": {
+                                    "spread_type": {
+                                        "type": "string",
+                                        "enum": [
+                                            "public",
+                                            "personal"
+                                        ]
+                                    },
+                                    "spread_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Added"
+                    },
+                    "400": {
+                        "description": "Invalid spread type or ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/favorites/{spread_type}/{spread_id}": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Remove a favorite spread",
+                "description": "Remove a spread from the current user's favorites. The favorite is\nidentified by its type and id in the path.",
+                "operationId": "f31110088e93c51c5f1230c736104f8e",
+                "parameters": [
+                    {
+                        "name": "spread_type",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "public",
+                                "personal"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Removed"
+                    },
+                    "400": {
+                        "description": "Invalid spread type or ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/favorite-decks": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Favorited decks",
+                "operationId": "500d622501da7d4d3a6095afe2bd3211",
+                "responses": {
+                    "200": {
+                        "description": "Array of favorited decks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Deck"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Add a favorite deck",
+                "operationId": "18ab45d4893bbf74ac64355b0909ff2e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "deck_id"
+                                ],
+                                "properties": {
+                                    "deck_id": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Added"
+                    },
+                    "400": {
+                        "description": "Invalid deck ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/favorite-decks/{deck_id}": {
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Remove a favorite deck",
+                "operationId": "a36a1df9e05e86af5d021f81a6617030",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Removed"
+                    },
+                    "400": {
+                        "description": "Invalid deck ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/stats": {
+            "get": {
+                "tags": [
+                    "Admin · Dashboard"
+                ],
+                "summary": "Usage statistics",
+                "operationId": "564908295a8037f98024862589d858d2",
+                "responses": {
+                    "200": {
+                        "description": "Usage statistics",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/summary": {
+            "get": {
+                "tags": [
+                    "Admin · Dashboard"
+                ],
+                "summary": "Dashboard counts + stats",
+                "description": "One-shot dashboard payload: entity counts (cheap COUNT(*) queries) plus the\nusage stats overview — so the dashboard loads with a single request.",
+                "operationId": "6bdc81aacff8514be8da0e7db3684755",
+                "responses": {
+                    "200": {
+                        "description": "Dashboard counts + stats",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/auth-check": {
+            "get": {
+                "tags": [
+                    "Admin · Dashboard"
+                ],
+                "summary": "Verify the admin session",
+                "operationId": "eaf153d9a18290f970305d4b73952233",
+                "responses": {
+                    "200": {
+                        "description": "Admin session is valid"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks": {
+            "get": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "List all approved decks",
+                "operationId": "c83fae3240884db64da34d8e9cf31946",
+                "responses": {
+                    "200": {
+                        "description": "Array of decks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Deck"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Create a deck",
+                "operationId": "728d1da9a243acef05d922e937a5e1c3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "artist": {
+                                        "type": "string"
+                                    },
+                                    "purchase_url": {
+                                        "type": "string"
+                                    },
+                                    "deck_system_id": {
+                                        "type": "integer"
+                                    },
+                                    "additional_cards": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create deck"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/pending": {
+            "get": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "List decks awaiting approval",
+                "operationId": "e980978d904bf888f10d25839a8490c1",
+                "responses": {
+                    "200": {
+                        "description": "Array of pending decks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Deck"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/{deck_id}/approve": {
+            "post": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Approve a pending deck",
+                "operationId": "9d2c5430d3b9c94e310a0cfa96f2493b",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Approved deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/{deck_id}/thumbnails": {
+            "post": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Generate thumbnails for a deck",
+                "operationId": "d1b0e7867c5636fd30959dd2cc974308",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Thumbnail generation result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid deck ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/thumbnails": {
+            "post": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Generate thumbnails for all decks",
+                "operationId": "13c6e696187dc1b44d1c3023a1c5602f",
+                "responses": {
+                    "200": {
+                        "description": "Thumbnail generation result",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/{deck_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Delete a deck",
+                "operationId": "4c8136b9b48d42032d27f875751e9440",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "500": {
+                        "description": "Failed to delete deck"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Partially update a deck",
+                "operationId": "ab525eb2a3711e22471e1c59424a3e43",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Partial set of deck fields to update",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "artist": {
+                                        "type": "string"
+                                    },
+                                    "usable": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/{deck_id}/special-cards": {
+            "get": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "List a deck's special cards",
+                "operationId": "a45eaf2d7ac519112f22a2ed3bdba167",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of special cards",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SpecialCard"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Add a special card to a deck",
+                "operationId": "d77766c800e30b26b89c34f2c338967f",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "card_id"
+                                ],
+                                "properties": {
+                                    "card_id": {
+                                        "type": "integer"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created special card",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SpecialCard"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create special card"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/decks/{deck_id}/special-cards/{card_id}": {
+            "put": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Update a special card",
+                "operationId": "97e1632326a8023eacc56141af719117",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "card_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated special card",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SpecialCard"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Special card not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Delete a special card",
+                "operationId": "bcfc1b17250534379b5cf4dae1a20ade",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "card_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "500": {
+                        "description": "Failed to delete special card"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spreads": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "List all public spreads",
+                "operationId": "29bc23aeb92d01a27e93bc5910402b4b",
+                "responses": {
+                    "200": {
+                        "description": "Array of spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Spread"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Create a public spread",
+                "operationId": "d5e4220b8f0d3496598708944c8561f7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spreads/{spread_id}": {
+            "put": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Update a public spread",
+                "operationId": "901464b751af0be1d7bd0bcfafbeba06",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Spread not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Delete a public spread",
+                "operationId": "ab089dbb64f24606cc78b790c2a791a9",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "List pending spread submissions",
+                "operationId": "2895eca3438911f3fc425b5a4902e524",
+                "responses": {
+                    "200": {
+                        "description": "Pending spread submissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads/{pending_id}/approve": {
+            "post": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Approve a pending spread submission",
+                "operationId": "0a0af8c29cdc8bd35ccfbd611a6be954",
+                "parameters": [
+                    {
+                        "name": "pending_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Approved spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to approve spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads/{pending_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Reject a pending spread submission",
+                "operationId": "e41c7ee10ef064de515a00e869bb6e50",
+                "parameters": [
+                    {
+                        "name": "pending_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Rejected"
+                    },
+                    "500": {
+                        "description": "Failed to reject spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/changelog": {
+            "get": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "List all changelog entries",
+                "operationId": "0757fbeac3b799a788522ce6e9b09f25",
+                "responses": {
+                    "200": {
+                        "description": "Array of changelog entries",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChangelogEntry"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Create a changelog entry",
+                "operationId": "6e9f0a5446d11c32eab08f177e1619a8",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created changelog entry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChangelogEntry"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create changelog entry"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/changelog/{entry_id}": {
+            "put": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Update a changelog entry",
+                "operationId": "9bcd6e838f9130f77f5719876ce31f66",
+                "parameters": [
+                    {
+                        "name": "entry_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated changelog entry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChangelogEntry"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Changelog entry not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Delete a changelog entry",
+                "operationId": "1eb64d0db94b4934c1a9ca7fe126de12",
+                "parameters": [
+                    {
+                        "name": "entry_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "List all user accounts",
+                "operationId": "cdea4e075c6c798dde424a3e4a759589",
+                "responses": {
+                    "200": {
+                        "description": "Array of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}/activate": {
+            "post": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Activate a user account",
+                "operationId": "4216f498546950d5001341d596a66b43",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Delete a user account",
+                "operationId": "5aa20650a21fca3d5ad0bacb93eca0e5",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Partially update a user account",
+                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
+                "operationId": "1ef503cc872e0d9800bd34f8a842043e",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "is_admin": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}/resend-activation": {
+            "post": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Resend a user activation email",
+                "operationId": "b05396913af62a2069929bee0ccf151e",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Activation resent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Could not resend activation"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/contacts": {
+            "get": {
+                "tags": [
+                    "Admin · Contacts"
+                ],
+                "summary": "List submitted contact messages",
+                "operationId": "86b2ef376508d0f3371743442a3e7c14",
+                "parameters": [
+                    {
+                        "name": "show_read",
+                        "in": "query",
+                        "description": "Set to \"1\" to include already-read messages",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "0",
+                                "1"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of contacts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Contact"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/contacts/{contact_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Contacts"
+                ],
+                "summary": "Partially update a contact message",
+                "description": "Partial update of a contact message. Currently the only editable field is\nthe `is_read` flag (previously the dedicated POST …/read action).",
+                "operationId": "669cf3fd1c418c672661ad1e5665be88",
+                "parameters": [
+                    {
+                        "name": "contact_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "is_read": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid contact ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings": {
+            "get": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "List readings (paginated)",
+                "operationId": "35423e051e7b9c0f5b0a7bf063c8a467",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated readings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings/{reading_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "Delete a single reading",
+                "operationId": "48bda4292e30898944c6415da0fe7eb3",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings/all": {
+            "delete": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "Purge guest readings older than a given age",
+                "description": "Bulk delete: purge guest readings older than the given age. The window is\nan allow-listed number of days passed as the `older_than_days` query param.",
+                "operationId": "8b280a4dd7b0681169fb771ad4a4808c",
+                "parameters": [
+                    {
+                        "name": "older_than_days",
+                        "in": "query",
+                        "description": "Allow-listed retention window in days",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                7,
+                                14,
+                                30,
+                                60,
+                                90,
+                                180,
+                                365
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Number of deleted readings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "deleted": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid day range"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/deck-systems": {
+            "get": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "List all approved deck systems",
+                "operationId": "5372c3f2201596bfed8d42a49a826eb4",
+                "responses": {
+                    "200": {
+                        "description": "Array of deck systems",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DeckSystem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/deck-systems/pending": {
+            "get": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "List deck systems awaiting approval",
+                "operationId": "e0094b772a5746f947cb919f018990db",
+                "responses": {
+                    "200": {
+                        "description": "Array of pending deck systems",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DeckSystem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/deck-systems/{id}": {
+            "get": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "Get a single deck system with its cards",
+                "operationId": "084845af38d9f1ae0b44d21bd4c0874d",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Deck system",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeckSystem"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck system not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "Update a deck system and its cards",
+                "operationId": "b0ac6a3c1f1eb92be7294d1a3e59b5eb",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "short_name": {
+                                        "type": "string"
+                                    },
+                                    "total_cards": {
+                                        "type": "integer"
+                                    },
+                                    "cards": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated deck system",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeckSystem"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck system not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "Delete a deck system",
+                "operationId": "71104af0988b8d21fbbe29b0aa69ac87",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Deck system not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/deck-systems/{id}/approve": {
+            "post": {
+                "tags": [
+                    "Admin · Deck Systems"
+                ],
+                "summary": "Approve a pending deck system",
+                "operationId": "d34ce25954ce6ae467918b54163ab929",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Approved deck system",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeckSystem"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck system not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/changelog": {
+            "get": {
+                "tags": [
+                    "Changelog"
+                ],
+                "summary": "List changelog entries (newest first)",
+                "operationId": "8437968cb314700306428ee06ad0a2ab",
+                "responses": {
+                    "200": {
+                        "description": "Array of changelog entries",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChangelogEntry"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/changelog/{entry_id}": {
+            "get": {
+                "tags": [
+                    "Changelog"
+                ],
+                "summary": "A single changelog entry",
+                "operationId": "7bddbbd5c9a8ec0ae3dcd15368d8ce9c",
+                "parameters": [
+                    {
+                        "name": "entry_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The changelog entry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChangelogEntry"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "InvalidEntryID"
+                    }
+                }
+            }
+        },
+        "/config": {
+            "get": {
+                "tags": [
+                    "Config"
+                ],
+                "summary": "Public runtime configuration",
+                "operationId": "b1095774e7659df4e39a60882dd3de86",
+                "responses": {
+                    "200": {
+                        "description": "Non-secret config the SPA needs before rendering",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "turnstile_sitekey": {
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ]
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/contacts": {
+            "post": {
+                "tags": [
+                    "Contact"
+                ],
+                "summary": "Submit a contact-form message (rate-limited: 5/IP/hour)",
+                "description": "Public endpoint: submit a contact form message.\nRate-limited per IP to prevent spam.",
+                "operationId": "b49307dba89fa7fec7b08d62c3bdb293",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "message"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "message": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Submitted",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid fields"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/decks": {
+            "get": {
+                "tags": [
+                    "Decks"
+                ],
+                "summary": "List usable decks",
+                "operationId": "0a8eb5d39515515620b6216b0ac3663b",
+                "responses": {
+                    "200": {
+                        "description": "Array of usable decks",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Deck"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Decks"
+                ],
+                "summary": "Submit a new deck for review (requires a signed-in user)",
+                "description": "Submit a new deck (requires a logged-in user). The deck is created\nas unapproved (pending admin review).",
+                "operationId": "42cce4ae745ef2783978cb4dbb96c66e",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "artist"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "artist": {
+                                        "type": "string"
+                                    },
+                                    "purchase_url": {
+                                        "type": "string"
+                                    },
+                                    "deck_system_id": {
+                                        "type": "integer"
+                                    },
+                                    "additional_cards": {
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created (unapproved) deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Name and artist are required"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/decks/{deck_id}": {
+            "get": {
+                "tags": [
+                    "Decks"
+                ],
+                "summary": "A single deck",
+                "operationId": "77514664c8ab4ae75bdf7be42489b661",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "InvalidDeckID"
+                    }
+                }
+            }
+        },
+        "/decks/{deck_id}/cards": {
+            "get": {
+                "tags": [
+                    "Decks"
+                ],
+                "summary": "List every card available in a deck (for the custom-reading picker)",
+                "description": "List every card available in a deck as {card_id, name}, so the custom\nreading screen can offer a picker. Mirrors the reading engine's card\nresolution.",
+                "operationId": "bb79a67ed79d6c8d5d0dc4674f91230c",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of {card_id, name}",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "properties": {
+                                            "card_id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "InvalidDeckID"
+                    }
+                }
+            }
+        },
+        "/deck-systems": {
+            "get": {
+                "tags": [
+                    "Deck Systems"
+                ],
+                "summary": "List all approved deck systems",
+                "description": "Public: list all approved deck systems.",
+                "operationId": "8f43d9086aec20629eb658aa8c5d783f",
+                "responses": {
+                    "200": {
+                        "description": "Array of deck systems",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DeckSystem"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Deck Systems"
+                ],
+                "summary": "Submit a new deck system (requires a signed-in user; admins are auto-approved)",
+                "description": "Submit a new deck system (requires auth). If admin, auto-approved.",
+                "operationId": "403abaa11f580894f02adf2c494ec668",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "short_name",
+                                    "cards"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "short_name": {
+                                        "type": "string"
+                                    },
+                                    "total_cards": {
+                                        "type": "integer"
+                                    },
+                                    "cards": {
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "name": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created deck system",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeckSystem"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failure"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/deck-systems/{id}": {
+            "get": {
+                "tags": [
+                    "Deck Systems"
+                ],
+                "summary": "A single deck system with its cards",
+                "description": "Public: get a single deck system with its cards.",
+                "operationId": "bc7cfc91f621470189981f4ff529c799",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The deck system plus its cards array",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DeckSystem"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck system not found"
+                    }
+                }
+            }
+        },
+        "/auth/google": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Redirect to Google's consent screen",
+                "description": "Initiate the OAuth flow. Accepts an optional ?intent query param\n('login', 'register', or 'link') so the callback knows what to do.",
+                "operationId": "eac6533cfebab1e8ffaeaaadc83f09d3",
+                "parameters": [
+                    {
+                        "name": "intent",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "login",
+                                "register",
+                                "link"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect to Google"
+                    },
+                    "401": {
+                        "description": "The link intent requires a session"
+                    },
+                    "503": {
+                        "description": "Google OAuth is not configured"
+                    }
+                }
+            }
+        },
+        "/auth/google/callback": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "OAuth callback — redirects back into the SPA on success/failure",
+                "description": "Handle the OAuth callback from Google.",
+                "operationId": "735cd3cd48a4b0bc2f174da448838cf8",
+                "parameters": [
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "state",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "Redirect into the SPA"
+                    }
+                }
+            }
+        },
+        "/auth/google/unlink": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Unlink Google from the current account",
+                "description": "Unlink Google from the currently logged-in account.",
+                "operationId": "f8948158ac3bd6844a2eae03c72c562d",
+                "responses": {
+                    "200": {
+                        "description": "Unlinked",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Account has no password set"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/auth/passkeys/register/options": {
+            "post": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Credential-creation options (requires session)",
+                "description": "Generate WebAuthn credential creation options for the logged-in user.",
+                "operationId": "1c6d1617755db2b2ab76ff5731f64fe2",
+                "responses": {
+                    "200": {
+                        "description": "WebAuthn creation options",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/auth/passkeys/register": {
+            "post": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Complete passkey registration",
+                "description": "Complete passkey registration: verify attestation and store credential.",
+                "operationId": "f1ab928d4d3d8324cb34b6f8d1f58ae6",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "clientDataJSON",
+                                    "attestationObject"
+                                ],
+                                "properties": {
+                                    "clientDataJSON": {
+                                        "type": "string"
+                                    },
+                                    "attestationObject": {
+                                        "type": "string"
+                                    },
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Passkey registered"
+                    },
+                    "400": {
+                        "description": "Missing/invalid attestation"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/auth/passkeys/login/options": {
+            "post": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Assertion options; optional email scopes to a user's credentials",
+                "description": "Generate assertion options for passkey login.\nAccepts optional email to scope to a specific user's credentials,\nor no email for a discoverable-credential (resident key) flow.",
+                "operationId": "59834f0fd79251a07923def0d9118df8",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "WebAuthn assertion options",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/passkeys/login": {
+            "post": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Verify an assertion and sign in",
+                "description": "Verify a passkey assertion and log the user in.",
+                "operationId": "417be337f1c619ab905aa2a49bb67b43",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "id",
+                                    "clientDataJSON",
+                                    "authenticatorData",
+                                    "signature"
+                                ],
+                                "properties": {
+                                    "id": {
+                                        "type": "string"
+                                    },
+                                    "clientDataJSON": {
+                                        "type": "string"
+                                    },
+                                    "authenticatorData": {
+                                        "type": "string"
+                                    },
+                                    "signature": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Signed in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing assertion data"
+                    },
+                    "401": {
+                        "description": "Authentication failed"
+                    },
+                    "403": {
+                        "description": "Account not activated"
+                    }
+                }
+            }
+        },
+        "/auth/passkeys": {
+            "get": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "List the current user's passkeys",
+                "description": "List the logged-in user's passkeys.",
+                "operationId": "8d8d12a5010630a66b31a11a817f4e40",
+                "responses": {
+                    "200": {
+                        "description": "Array of passkeys",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/auth/passkeys/{id}": {
+            "delete": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Delete a passkey (blocked if it is the last one while password login is disabled)",
+                "description": "Delete a passkey.",
+                "operationId": "ba3bc4c7b907f6c53e9b361ea4e79ee6",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "400": {
+                        "description": "Cannot delete the last passkey"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    },
+                    "404": {
+                        "description": "Passkey not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Rename a passkey",
+                "description": "Rename a passkey.",
+                "operationId": "5ead26b56432728e40d91991d9b5a3ce",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Renamed"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    },
+                    "404": {
+                        "description": "Passkey not found"
+                    },
+                    "422": {
+                        "description": "Name is required"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/auth/passkeys/password-login": {
+            "patch": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Toggle password login on/off (requires ≥1 passkey before disabling)",
+                "description": "Toggle password login enabled/disabled.",
+                "operationId": "70778fa07ca73639c4b6466288c18676",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "disable": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated"
+                    },
+                    "400": {
+                        "description": "Must have a passkey before disabling"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/readings/{reading_id}": {
+            "get": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Fetch a reading (password-protected readings return a locked stub to non-owners)",
+                "operationId": "e7982bebe092fc207c5d04e2c203ecba",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The reading, or a { locked, reading_name } stub",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "InvalidReadingID"
+                    }
+                }
+            }
+        },
+        "/readings/{reading_id}/unlock": {
+            "post": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Unlock a password-protected reading for this session",
+                "operationId": "510c945a2fb0ffe6c221f7483e01f021",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "password"
+                                ],
+                                "properties": {
+                                    "password": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The unlocked reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Incorrect password"
+                    },
+                    "404": {
+                        "description": "InvalidReadingID"
+                    }
+                }
+            }
+        },
+        "/readings/generate": {
+            "post": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Generate a random reading from a draw spec",
+                "operationId": "d8750b5a23fd03c315941e4facfd28ee",
+                "requestBody": {
+                    "description": "Draw spec: deck, spread or card count, and options",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid draw spec"
+                    }
+                }
+            }
+        },
+        "/readings": {
+            "post": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Create a custom reading from explicitly chosen cards/positions",
+                "operationId": "3e30d906e6fde22906f101631e2f600d",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input"
+                    }
+                }
+            }
+        },
+        "/readings/{reading_id}/placement": {
+            "put": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Save spread/placement positions onto an existing reading",
+                "description": "Update a reading's spread/placement information after a \"Free Draw With Placement\"\nhas been generated. The caller provides position data which is merged into the\nexisting reading_info JSON as a spread snapshot.",
+                "operationId": "36bf5ca46d89e9e49656c8a282962abc",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "positions"
+                                ],
+                                "properties": {
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "spread_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Saved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "reading_id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Position count mismatch or invalid data"
+                    },
+                    "403": {
+                        "description": "Not the owner"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    },
+                    "409": {
+                        "description": "Reading is final"
+                    }
+                }
+            }
+        },
+        "/readings/{reading_id}/draw": {
+            "post": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Draw additional cards into a non-final, non-custom reading you own",
+                "description": "Draw additional cards into an existing generated reading owned by the\ncaller. The new cards are appended to the draw; for a spread reading the\nclient then opens the placement editor to position them.",
+                "operationId": "add5b38b9a8b679c94913d175f42e088",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Custom readings cannot draw"
+                    },
+                    "403": {
+                        "description": "Not the owner"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    },
+                    "409": {
+                        "description": "Reading is final"
+                    }
+                }
+            }
+        },
+        "/readings/{reading_id}/finalize": {
+            "post": {
+                "tags": [
+                    "Readings"
+                ],
+                "summary": "Permanently lock a reading against further draws (owner-only, one-way)",
+                "description": "Mark a reading as final, permanently locking it against further draws.\nOne-way: there is no endpoint to undo it. Owner-only.",
+                "operationId": "590c79f6c9fbc27357aae420968f729c",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The finalized reading",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Reading"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Not the owner"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    }
+                }
+            }
+        },
+        "/spreads": {
+            "get": {
+                "tags": [
+                    "Spreads"
+                ],
+                "summary": "List all public spreads",
+                "operationId": "5adec7eae6420940ee831f754e2f977d",
+                "responses": {
+                    "200": {
+                        "description": "Array of spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Spread"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Spreads"
+                ],
+                "summary": "Submit a spread into the moderation queue (rate-limited: 5/IP/hour)",
+                "description": "Public endpoint: accept a user-submitted spread into the pending queue.\nRate-limited per IP to prevent spam. Never exposes the stored row.",
+                "operationId": "c8dd5d463f67b61e59d160ecb62b0f24",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name",
+                                    "positions"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "description": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "type": "object"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Accepted into the pending queue",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Validation failure"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/spreads/{spread_id}": {
+            "get": {
+                "tags": [
+                    "Spreads"
+                ],
+                "summary": "A single public spread",
+                "operationId": "c4565a7c707bdeb7725c417c3d679de9",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "InvalidSpreadID"
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Create an account (inactive until email activation). Rate-limited: 5/IP/hour.",
+                "operationId": "ad99e4939452f71308786370a3ed004a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "display_name",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "display_name": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "minLength": 12
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Account created"
+                    },
+                    "422": {
+                        "description": "Validation/uniqueness failure"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/auth/activate": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Activate an account from the emailed token",
+                "operationId": "d075a756fc5035127185002a45e641da",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Account activated"
+                    },
+                    "400": {
+                        "description": "Invalid/expired token"
+                    }
+                }
+            }
+        },
+        "/auth/forgot-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Begin a password reset (always answers 200 — no account enumeration). Rate-limited: 5/IP/hour.",
+                "operationId": "7503c8a7c06e754ba9f789130cba405a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Identical response whether or not the account exists"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/auth/reset-password": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Complete a password reset",
+                "operationId": "1fb4bc9555f6546ebf8546a28aa1c9d3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "token",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "token": {
+                                        "type": "string"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Password updated; account marked active"
+                    },
+                    "400": {
+                        "description": "Invalid/expired token"
+                    },
+                    "422": {
+                        "description": "New password too weak (token not consumed)"
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Password sign-in. Rate-limited: 10 failed attempts/IP/15 min.",
+                "operationId": "ba29841b2cc01b0ea43c8ad6b1b529b3",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    },
+                                    "remember_me": {
+                                        "type": "boolean"
+                                    },
+                                    "turnstile_token": {
+                                        "description": "Required when Turnstile is configured",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Signed in; sets the session cookie",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Captcha failed"
+                    },
+                    "401": {
+                        "description": "Invalid credentials"
+                    },
+                    "403": {
+                        "description": "Inactive or password-login disabled"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "Clear the session",
+                "operationId": "4270df40a09756890af53dba5e2fca63",
+                "responses": {
+                    "200": {
+                        "description": "Signed out"
+                    }
+                }
+            }
+        },
+        "/auth/me": {
+            "get": {
+                "tags": [
+                    "Authentication"
+                ],
+                "summary": "The current signed-in user",
+                "operationId": "52cfc3cd232677cba8f2f06f7104633a",
+                "responses": {
+                    "200": {
+                        "description": "The current user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "user": {
+                                            "$ref": "#/components/schemas/User"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ChangelogEntry": {
+                "description": "A changelog entry.",
+                "properties": {
+                    "entry_id": {
+                        "type": "integer"
+                    },
+                    "title": {
+                        "type": "string"
+                    },
+                    "body": {
+                        "type": "string"
+                    },
+                    "entry_date": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Contact": {
+                "description": "A contact-form submission.",
+                "properties": {
+                    "contact_id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "is_read": {
+                        "type": "integer"
+                    },
+                    "submitted_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Deck": {
+                "description": "A tarot deck.",
+                "properties": {
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_system_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "artist": {
+                        "type": "string"
+                    },
+                    "purchase_url": {
+                        "type": "string"
+                    },
+                    "additional_cards": {
+                        "type": "integer"
+                    },
+                    "card_aspect_w": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "card_aspect_h": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "approved": {
+                        "type": "boolean"
+                    },
+                    "usable": {
+                        "type": "boolean"
+                    },
+                    "submitted_by": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "system_short_name": {
+                        "description": "Populated by JOIN queries — the deck system's short name.",
+                        "type": "string"
+                    },
+                    "system_total_cards": {
+                        "description": "Populated by JOIN queries — the deck system's total cards.",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "DeckSystem": {
+                "description": "A tarot deck system (a family of decks sharing a card structure).",
+                "properties": {
+                    "deck_system_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "short_name": {
+                        "type": "string"
+                    },
+                    "total_cards": {
+                        "type": "integer"
+                    },
+                    "approved": {
+                        "type": "boolean"
+                    },
+                    "submitted_by": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "DeckSystemCard": {
+                "description": "A card definition within a deck system.",
+                "properties": {
+                    "deck_system_id": {
+                        "type": "integer"
+                    },
+                    "card_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meaning": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "advice": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reversed_keywords": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reversed_meaning": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reversed_advice": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "PendingSpread": {
+                "description": "A user-submitted spread awaiting moderation.",
+                "properties": {
+                    "pending_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "card_count": {
+                        "type": "integer"
+                    },
+                    "positions": {
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "submitter": {
+                        "description": "Resolved submitter label: the linked account's display name, or \"Guest\".",
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "submitted_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "Reading": {
+                "description": "A saved tarot reading.",
+                "properties": {
+                    "reading_id": {
+                        "type": "string"
+                    },
+                    "reading_info": {
+                        "description": "Serialized to a nested JSON object in the response (see jsonSerialize).",
+                        "type": "object"
+                    },
+                    "reading_time": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "hide_user": {
+                        "type": "boolean"
+                    },
+                    "reading_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reading_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "is_final": {
+                        "description": "One-way lock: when true the owner can no longer draw additional cards.",
+                        "type": "boolean"
+                    },
+                    "password_protected": {
+                        "description": "Derived flag — true when a view password is set. The hash itself is never exposed.",
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "SpecialCard": {
+                "description": "A deck-specific special (custom) card.",
+                "properties": {
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "card_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "keywords": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meaning": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "advice": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "keywords_reversed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "meaning_reversed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "advice_reversed": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "Spread": {
+                "description": "A predefined tarot spread layout.",
+                "properties": {
+                    "spread_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "card_count": {
+                        "type": "integer"
+                    },
+                    "positions": {
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "User": {
+                "description": "A user account in its safe shape (no secrets or hashes).",
+                "properties": {
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "email": {
+                        "type": "string"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "is_admin": {
+                        "type": "boolean"
+                    },
+                    "registered_at": {
+                        "type": "string"
+                    },
+                    "last_login_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "google_linked": {
+                        "type": "boolean"
+                    },
+                    "password_login_disabled": {
+                        "type": "boolean"
+                    },
+                    "has_passkeys": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "UserSpread": {
+                "description": "A user-created custom spread.",
+                "properties": {
+                    "user_spread_id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "card_count": {
+                        "type": "integer"
+                    },
+                    "positions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "updated_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sessionCookie": {
+                "type": "apiKey",
+                "description": "Session cookie issued on sign-in. Sent automatically by the browser.",
+                "name": "PHPSESSID",
+                "in": "cookie"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Config",
+            "description": "Public runtime configuration."
+        },
+        {
+            "name": "Decks",
+            "description": "Tarot decks: public browsing and user submissions."
+        },
+        {
+            "name": "Deck Systems",
+            "description": "Card systems (e.g. Rider–Waite) a deck can follow."
+        },
+        {
+            "name": "Spreads",
+            "description": "Public spread layouts and user submissions."
+        },
+        {
+            "name": "Readings",
+            "description": "Generating, viewing, and modifying readings."
+        },
+        {
+            "name": "Contact",
+            "description": "Public contact-form submissions."
+        },
+        {
+            "name": "Changelog",
+            "description": "Public changelog entries."
+        },
+        {
+            "name": "Authentication",
+            "description": "Registration, sign-in/out, and session."
+        },
+        {
+            "name": "Passkeys",
+            "description": "WebAuthn passkey registration and login."
+        },
+        {
+            "name": "Account",
+            "description": "The signed-in user's self-service area."
+        },
+        {
+            "name": "Admin · Dashboard",
+            "description": "Admin session check and usage stats."
+        },
+        {
+            "name": "Admin · Decks",
+            "description": "Deck moderation and special cards."
+        },
+        {
+            "name": "Admin · Deck Systems",
+            "description": "Deck-system moderation."
+        },
+        {
+            "name": "Admin · Spreads",
+            "description": "Public-spread CRUD and the pending queue."
+        },
+        {
+            "name": "Admin · Readings",
+            "description": "Reading listing and retention cleanup."
+        },
+        {
+            "name": "Admin · Changelog",
+            "description": "Changelog entry CRUD."
+        },
+        {
+            "name": "Admin · Users",
+            "description": "Account administration."
+        },
+        {
+            "name": "Admin · Contacts",
+            "description": "Submitted contact messages."
+        }
+    ]
+}

@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
+import { endpoints } from '@/api/endpoints'
 
 const route = useRoute()
 const router = useRouter()
@@ -54,7 +55,7 @@ async function submit() {
 }
 
 function registerWithGoogle() {
-    window.location.href = '/api/auth/google?intent=register'
+    window.location.href = '/api' + endpoints.authGoogle.start + '?intent=register'
 }
 </script>
 

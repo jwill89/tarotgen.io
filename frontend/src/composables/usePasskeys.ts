@@ -1,5 +1,6 @@
 import { ref } from 'vue'
 import { useUser } from './useUser'
+import { endpoints } from '@/api/endpoints'
 import type { User } from '@/types'
 
 export interface Passkey {
@@ -49,7 +50,7 @@ export function usePasskeys() {
     async function listPasskeys(): Promise<void> {
         loading.value = true
         try {
-            const res = await fetch('/api/auth/passkey')
+            const res = await fetch('/api' + endpoints.passkeys.list)
             if (res.ok) {
                 passkeys.value = await res.json() as Passkey[]
             }
@@ -61,7 +62,7 @@ export function usePasskeys() {
     async function registerPasskey(name: string): Promise<{ ok: boolean; error?: string; passkey?: Passkey }> {
         try {
             // 1. Get creation options from server.
-            const optRes = await fetch('/api/auth/passkey/register/options', { method: 'POST' })
+            const optRes = await fetch('/api' + endpoints.passkeys.registerOptions, { method: 'POST' })
             if (!optRes.ok) {
                 const data = await parseJson(optRes)
                 return { ok: false, error: typeof data.error === 'string' ? data.error : 'Failed to get registration options.' }
@@ -88,7 +89,7 @@ export function usePasskeys() {
             const attestationResponse = credential.response as AuthenticatorAttestationResponse
 
             // 4. Send attestation to server.
-            const regRes = await fetch('/api/auth/passkey/register', {
+            const regRes = await fetch('/api' + endpoints.passkeys.register, {
                 method: 'POST',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({
@@ -117,7 +118,7 @@ export function usePasskeys() {
     async function loginWithPasskey(email?: string): Promise<{ ok: boolean; error?: string }> {
         try {
             // 1. Get assertion options.
-            const optRes = await fetch('/api/auth/passkey/login/options', {
+            const optRes = await fetch('/api' + endpoints.passkeys.loginOptions, {
                 method: 'POST',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ email: email ?? '' }),
@@ -145,7 +146,7 @@ export function usePasskeys() {
             const assertionResponse = assertion.response as AuthenticatorAssertionResponse
 
             // 3. Send assertion to server.
-            const loginRes = await fetch('/api/auth/passkey/login', {
+            const loginRes = await fetch('/api' + endpoints.passkeys.login, {
                 method: 'POST',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({
@@ -172,8 +173,8 @@ export function usePasskeys() {
 
     async function renamePasskey(id: number, name: string): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch(`/api/auth/passkey/${id}`, {
-                method: 'PUT',
+            const res = await fetch('/api' + endpoints.passkeys.byId(id), {
+                method: 'PATCH',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ name }),
             })
@@ -191,7 +192,7 @@ export function usePasskeys() {
 
     async function deletePasskey(id: number): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch(`/api/auth/passkey/${id}`, { method: 'DELETE' })
+            const res = await fetch('/api' + endpoints.passkeys.byId(id), { method: 'DELETE' })
             const data = await parseJson(res)
             if (res.ok) {
                 passkeys.value = passkeys.value.filter(p => p.passkey_id !== id)
@@ -206,8 +207,8 @@ export function usePasskeys() {
 
     async function togglePasswordLogin(disable: boolean): Promise<{ ok: boolean; error?: string }> {
         try {
-            const res = await fetch('/api/auth/passkey/password-login', {
-                method: 'PUT',
+            const res = await fetch('/api' + endpoints.passkeys.passwordLogin, {
+                method: 'PATCH',
                 headers: JSON_HEADERS,
                 body: JSON.stringify({ disable }),
             })

@@ -5,6 +5,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { usePasskeys } from '@/composables/usePasskeys'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
 
 const router = useRouter()
@@ -58,7 +59,7 @@ async function submit() {
 }
 
 function loginWithGoogle() {
-    window.location.href = '/api/auth/google?intent=login'
+    window.location.href = '/api' + endpoints.authGoogle.start + '?intent=login'
 }
 
 async function handlePasskeyLogin() {

@@ -22,20 +22,20 @@ describe('apiFetch', () => {
         const fetchMock = vi.fn().mockResolvedValue(fakeResponse([{ id: 1 }]))
         vi.stubGlobal('fetch', fetchMock)
 
-        const result = await apiFetch<{ id: number }[]>('/deck/')
+        const result = await apiFetch<{ id: number }[]>('/decks')
 
-        expect(fetchMock).toHaveBeenCalledWith('/api/deck/', undefined)
+        expect(fetchMock).toHaveBeenCalledWith('/api/decks', undefined)
         expect(result).toEqual([{ id: 1 }])
     })
 
     it('returns null on a non-ok response', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(null, { ok: false, status: 500 })))
-        expect(await apiFetch('/deck/')).toBeNull()
+        expect(await apiFetch('/decks')).toBeNull()
     })
 
     it('returns null when fetch rejects (network error)', async () => {
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-        expect(await apiFetch('/deck/')).toBeNull()
+        expect(await apiFetch('/decks')).toBeNull()
     })
 })
 
@@ -43,7 +43,7 @@ describe('apiRequest', () => {
     it('returns ok with parsed data and status on success', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({ id: 1 }, { status: 201 })))
 
-        const res = await apiRequest<{ id: number }>('/deck/')
+        const res = await apiRequest<{ id: number }>('/decks')
 
         expect(res).toEqual({ ok: true, status: 201, data: { id: 1 } })
     })
@@ -53,7 +53,7 @@ describe('apiRequest', () => {
             fakeResponse({ error: 'Bad deck' }, { ok: false, status: 400 }),
         ))
 
-        const res = await apiRequest('/deck/')
+        const res = await apiRequest('/decks')
 
         expect(res.ok).toBe(false)
         if (!res.ok) {
@@ -67,7 +67,7 @@ describe('apiRequest', () => {
     it('uses the supplied fallback when the error body has no message', async () => {
         vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({}, { ok: false, status: 500 })))
 
-        const res = await apiRequest('/deck/', undefined, 'Custom fallback.')
+        const res = await apiRequest('/decks', undefined, 'Custom fallback.')
 
         expect(res.ok).toBe(false)
         if (!res.ok) expect(res.error).toBe('Custom fallback.')
@@ -76,13 +76,39 @@ describe('apiRequest', () => {
     it('flags transport failures with networkError=true and status 0', async () => {
         vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
 
-        const res = await apiRequest('/deck/')
+        const res = await apiRequest('/decks')
 
         expect(res.ok).toBe(false)
         if (!res.ok) {
             expect(res.networkError).toBe(true)
             expect(res.status).toBe(0)
         }
+    })
+
+    it('returns ok with null data for a 204 No Content (no body parse)', async () => {
+        // A 204 double whose json() would throw if called — asserts the client
+        // does not attempt to parse an empty body.
+        const jsonSpy = vi.fn(async () => { throw new Error('should not be called') })
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+            { ok: true, status: 204, json: jsonSpy, headers: new Headers() } as unknown as Response,
+        ))
+
+        const res = await apiRequest('/account/readings/abc')
+
+        expect(res).toEqual({ ok: true, status: 204, data: null })
+        expect(jsonSpy).not.toHaveBeenCalled()
+    })
+
+    it('returns ok with null data when Content-Length is 0', async () => {
+        const jsonSpy = vi.fn(async () => { throw new Error('should not be called') })
+        vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+            { ok: true, status: 200, json: jsonSpy, headers: new Headers({ 'content-length': '0' }) } as unknown as Response,
+        ))
+
+        const res = await apiRequest('/account/favorites/public/1')
+
+        expect(res).toEqual({ ok: true, status: 200, data: null })
+        expect(jsonSpy).not.toHaveBeenCalled()
     })
 })
 
@@ -155,6 +181,18 @@ describe('useAdminApi', () => {
         expect(fetchMock).toHaveBeenCalledWith('/api/admin/decks', expect.objectContaining({
             method: 'POST',
             body: JSON.stringify({ name: 'New Deck' }),
+        }))
+    })
+
+    it('sends PATCH with a JSON-encoded body', async () => {
+        const fetchMock = vi.fn().mockResolvedValue(fakeResponse({ updated: true }))
+        vi.stubGlobal('fetch', fetchMock)
+
+        await useAdminApi().patch('/decks/5', { usable: true })
+
+        expect(fetchMock).toHaveBeenCalledWith('/api/admin/decks/5', expect.objectContaining({
+            method: 'PATCH',
+            body: JSON.stringify({ usable: true }),
         }))
     })
 

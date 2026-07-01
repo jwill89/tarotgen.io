@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import BaseModal from '@/components/BaseModal.vue'
@@ -42,12 +43,21 @@ const { search, sortKey, sortDir, rows: visibleCards, toggleSort } = useDataTabl
 })
 
 async function fetchData() {
-    const [sc, dk] = await Promise.all([
-        api.get<SpecialCard[]>('/special-cards'),
-        api.get<Deck[]>('/decks'),
-    ])
-    if (sc) specialCards.value = sc
+    // Special cards are now nested under decks (`/decks/{id}/special-cards`), so
+    // there is no single "all cards" endpoint — fetch decks first, then each
+    // deck's special cards and flatten. When a deck filter is active, fetch only
+    // that deck to avoid the fan-out.
+    const dk = await api.get<Deck[]>(endpoints.admin.decks.list)
     if (dk) decks.value = dk
+
+    const targetDecks = filterDeckId.value === null
+        ? decks.value
+        : decks.value.filter(d => d.deck_id === filterDeckId.value)
+
+    const results = await Promise.all(
+        targetDecks.map(d => api.get<SpecialCard[]>(endpoints.admin.decks.specialCards(d.deck_id))),
+    )
+    specialCards.value = results.flatMap(r => r ?? [])
 }
 
 function openAdd() {
@@ -73,8 +83,8 @@ async function saveCard() {
     saving.value = true
     try {
         const result = isNew.value
-            ? await api.post('/special-cards', editing.value, 'Special card created.')
-            : await api.put('/special-cards/' + editing.value.deck_id + '/' + editing.value.card_id, editing.value, 'Special card updated.')
+            ? await api.post(endpoints.admin.decks.specialCards(editing.value.deck_id!), editing.value, 'Special card created.')
+            : await api.put(endpoints.admin.decks.specialCardById(editing.value.deck_id!, editing.value.card_id!), editing.value, 'Special card updated.')
         if (!result) return
         await fetchData()
         closeEdit()
@@ -92,7 +102,7 @@ async function deleteCard(card: SpecialCard) {
         danger: true,
     })
     if (!ok) return
-    const result = await api.del('/special-cards/' + card.deck_id + '/' + card.card_id, 'Special card deleted.')
+    const result = await api.del(endpoints.admin.decks.specialCardById(card.deck_id, card.card_id), 'Special card deleted.')
     if (result) await fetchData()
 }
 

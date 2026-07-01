@@ -2,6 +2,7 @@
 
 namespace Routes\Internal;
 
+use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Random\RandomException;
 use Slim\Http\ServerRequest as Request;
@@ -28,6 +29,24 @@ class GoogleAuthController extends AbstractController
     ) {
     }
 
+    #[OA\Get(
+        path: '/auth/google',
+        summary: "Redirect to Google's consent screen",
+        tags: ['Authentication'],
+        parameters: [
+            new OA\Parameter(
+                name: 'intent',
+                in: 'query',
+                required: false,
+                schema: new OA\Schema(type: 'string', enum: ['login', 'register', 'link'])
+            ),
+        ],
+        responses: [
+            new OA\Response(response: 302, description: 'Redirect to Google'),
+            new OA\Response(response: 401, description: 'The link intent requires a session'),
+            new OA\Response(response: 503, description: 'Google OAuth is not configured'),
+        ]
+    )]
     /**
      * Initiate the OAuth flow. Accepts an optional ?intent query param
      * ('login', 'register', or 'link') so the callback knows what to do.
@@ -59,6 +78,16 @@ class GoogleAuthController extends AbstractController
         return $response->withRedirect($url, 302);
     }
 
+    #[OA\Get(
+        path: '/auth/google/callback',
+        summary: 'OAuth callback — redirects back into the SPA on success/failure',
+        tags: ['Authentication'],
+        parameters: [
+            new OA\Parameter(name: 'code', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OA\Parameter(name: 'state', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+        ],
+        responses: [new OA\Response(response: 302, description: 'Redirect into the SPA')]
+    )]
     /**
      * Handle the OAuth callback from Google.
      */
@@ -124,6 +153,24 @@ class GoogleAuthController extends AbstractController
         };
     }
 
+    #[OA\Post(
+        path: '/auth/google/unlink',
+        summary: 'Unlink Google from the current account',
+        tags: ['Authentication'],
+        security: [['sessionCookie' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Unlinked',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'success', type: 'boolean'),
+                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                ])
+            ),
+            new OA\Response(response: 400, description: 'Account has no password set'),
+            new OA\Response(response: 401, description: 'Not authenticated'),
+        ]
+    )]
     /**
      * Unlink Google from the currently logged-in account.
      */

@@ -10,7 +10,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: vi.fn() }) }))
  * various response-handling paths.
  */
 
-const API_URL = '/api/contact/'
+const API_URL = '/api/contacts'
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
 
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
@@ -49,7 +49,7 @@ describe('Contact form submission', () => {
         vi.unstubAllGlobals()
     })
 
-    it('sends a POST with JSON body to /api/contact/', async () => {
+    it('sends a POST with JSON body to /api/contacts', async () => {
         const fetchMock = vi.fn().mockResolvedValue(fakeResponse({ success: true }))
         vi.stubGlobal('fetch', fetchMock)
 

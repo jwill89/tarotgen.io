@@ -2,6 +2,7 @@ import { ref, computed, watch } from 'vue'
 import { session } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
 import { apiRequest } from './apiClient'
+import { endpoints } from '@/api/endpoints'
 import type { User } from '@/types'
 
 const USER_KEY = STORAGE_KEYS.currentUser
@@ -45,13 +46,13 @@ export function useUser() {
 
     /** Revalidate the session against the server. */
     async function fetchMe(): Promise<void> {
-        const res = await apiRequest<MeResponse>('/user/me')
+        const res = await apiRequest<MeResponse>(endpoints.auth.me)
         currentUser.value = res.ok ? (res.data.user ?? null) : null
     }
 
     async function register(email: string, displayName: string, password: string): Promise<RegisterResult> {
         const res = await apiRequest<RegisterResponse>(
-            '/user/register',
+            endpoints.auth.register,
             jsonPost({ email, display_name: displayName, password }),
             'Registration failed.',
         )
@@ -70,14 +71,14 @@ export function useUser() {
     }
 
     async function activate(token: string): Promise<{ ok: boolean; message?: string; error?: string }> {
-        const res = await apiRequest<MessageResponse>('/user/activate', jsonPost({ token }), 'Activation failed.')
+        const res = await apiRequest<MessageResponse>(endpoints.auth.activate, jsonPost({ token }), 'Activation failed.')
         return res.ok
             ? { ok: true, message: typeof res.data.message === 'string' ? res.data.message : undefined }
             : { ok: false, error: res.error }
     }
 
     async function requestPasswordReset(email: string): Promise<{ ok: boolean; message?: string; resetLink?: string }> {
-        const res = await apiRequest<ForgotResponse>('/user/forgot-password', jsonPost({ email }), 'Request failed.')
+        const res = await apiRequest<ForgotResponse>(endpoints.auth.forgotPassword, jsonPost({ email }), 'Request failed.')
         return res.ok
             ? {
                 ok: true,
@@ -88,7 +89,7 @@ export function useUser() {
     }
 
     async function resetPassword(token: string, password: string): Promise<{ ok: boolean; message?: string; error?: string }> {
-        const res = await apiRequest<MessageResponse>('/user/reset-password', jsonPost({ token, password }), 'Reset failed.')
+        const res = await apiRequest<MessageResponse>(endpoints.auth.resetPassword, jsonPost({ token, password }), 'Reset failed.')
         return res.ok
             ? { ok: true, message: typeof res.data.message === 'string' ? res.data.message : undefined }
             : { ok: false, error: res.error }
@@ -101,7 +102,7 @@ export function useUser() {
         turnstileToken = '',
     ): Promise<{ ok: boolean; error?: string }> {
         const res = await apiRequest<LoginResponse>(
-            '/user/login',
+            endpoints.auth.login,
             jsonPost({ email, password, remember_me: rememberMe, turnstile_token: turnstileToken }),
             'Login failed.',
         )
@@ -115,7 +116,7 @@ export function useUser() {
 
     async function logout(): Promise<void> {
         // Best-effort: clear local state regardless of the server's response.
-        await apiRequest('/user/logout', { method: 'POST' })
+        await apiRequest(endpoints.auth.logout, { method: 'POST' })
         currentUser.value = null
     }
 

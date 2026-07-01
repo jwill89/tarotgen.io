@@ -55,9 +55,13 @@ export function useAdminApi() {
         return request<T>(path, { method: 'PUT', body: JSON.stringify(data) }, successMessage)
     }
 
+    function patch<T>(path: string, data: unknown, successMessage?: string) {
+        return request<T>(path, { method: 'PATCH', body: JSON.stringify(data) }, successMessage)
+    }
+
     function del<T>(path: string, successMessage?: string) {
         return request<T>(path, { method: 'DELETE' }, successMessage)
     }
 
-    return { get, post, put, del }
+    return { get, post, put, patch, del }
 }

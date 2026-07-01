@@ -1,12 +1,13 @@
 import { ref, type Ref } from 'vue'
 import type { UserSpread } from '@/types'
 import { apiFetch } from './useApi'
+import { endpoints } from '@/api/endpoints'
 
 const userSpreads: Ref<UserSpread[]> = ref([])
 
 export function useUserSpreads() {
     async function fetchUserSpreads(): Promise<void> {
-        const data = await apiFetch<UserSpread[]>('/account/spreads/')
+        const data = await apiFetch<UserSpread[]>(endpoints.account.spreads)
         if (data) userSpreads.value = data
     }
 
@@ -16,7 +17,7 @@ export function useUserSpreads() {
         card_count: number
         positions: unknown[]
     }): Promise<UserSpread | null> {
-        const res = await fetch('/api/account/spreads/', {
+        const res = await fetch('/api' + endpoints.account.spreads, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -31,7 +32,7 @@ export function useUserSpreads() {
         id: number,
         payload: { name?: string; description?: string; card_count?: number; positions?: unknown[] }
     ): Promise<UserSpread | null> {
-        const res = await fetch(`/api/account/spreads/${id}/`, {
+        const res = await fetch('/api' + endpoints.account.spreadById(id), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
@@ -45,14 +46,14 @@ export function useUserSpreads() {
     }
 
     async function deleteUserSpread(id: number): Promise<boolean> {
-        const res = await fetch(`/api/account/spreads/${id}/`, { method: 'DELETE' })
+        const res = await fetch('/api' + endpoints.account.spreadById(id), { method: 'DELETE' })
         if (!res.ok) return false
         userSpreads.value = userSpreads.value.filter(s => s.user_spread_id !== id)
         return true
     }
 
     async function submitAsPublic(id: number): Promise<boolean> {
-        const res = await fetch(`/api/account/spreads/${id}/submit/`, { method: 'POST' })
+        const res = await fetch('/api' + endpoints.account.spreadSubmit(id), { method: 'POST' })
         return res.ok
     }
 

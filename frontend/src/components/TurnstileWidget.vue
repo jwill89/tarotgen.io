@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount } from 'vue'
 import { apiFetch } from '@/composables/apiClient'
+import { endpoints } from '@/api/endpoints'
 
 /**
  * Cloudflare Turnstile widget. Self-configuring: it fetches the public site key
@@ -57,7 +58,7 @@ const container = ref<HTMLDivElement | null>(null)
 let widgetId: string | null = null
 
 onMounted(async () => {
-    const config = await apiFetch<{ turnstile_sitekey?: string | null }>('/config')
+    const config = await apiFetch<{ turnstile_sitekey?: string | null }>(endpoints.config)
     const siteKey = config?.turnstile_sitekey
     if (!siteKey || !container.value) {
         return

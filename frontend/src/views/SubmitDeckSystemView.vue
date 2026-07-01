@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, nextTick } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import type { DeckSystemCard } from '@/types'
 
 const { isLoggedIn } = useUser()
@@ -110,7 +111,7 @@ async function submitSystem() {
 
     submitting.value = true
     try {
-        const res = await fetch('/api/deck-system/submit', {
+        const res = await fetch('/api' + endpoints.deckSystems.list, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

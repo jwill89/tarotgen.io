@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import type { Spread, SpreadOption } from '@/types'
 import { apiFetch } from './useApi'
+import { endpoints } from '@/api/endpoints'
 import { useUserSpreads } from './useUserSpreads'
 import { useFavoriteSpreads } from './useFavoriteSpreads'
 import { useUser } from './useUser'
@@ -13,7 +14,7 @@ export function useSpreads() {
     const { isLoggedIn } = useUser()
 
     async function fetchSpreads(): Promise<void> {
-        const data = await apiFetch<Spread[]>('/spread/')
+        const data = await apiFetch<Spread[]>(endpoints.spreads.list)
         if (data) spreads.value = data
         // Also fetch user spreads and favorites if logged in.
         if (isLoggedIn.value) {

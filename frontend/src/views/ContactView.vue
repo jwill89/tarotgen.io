@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 
 const { currentUser, isLoggedIn } = useUser()
@@ -30,7 +31,7 @@ async function submit() {
     submitting.value = true
 
     try {
-        const res = await fetch('/api/contact/', {
+        const res = await fetch('/api' + endpoints.contacts, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({

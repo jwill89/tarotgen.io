@@ -10,6 +10,7 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useReadingExport } from '@/composables/useReadingExport'
 import { readApiError } from '@/composables/useApi'
+import { endpoints } from '@/api/endpoints'
 import { renderMarkdown } from '@/utils/markdown'
 import { formatDateTime } from '@/utils/datetime'
 import { cardAspectStyle } from '@/utils/cardAspect'
@@ -130,7 +131,7 @@ async function submitDrawMore() {
             use_reversals: String(drawForm.useReversals),
             use_additional_cards: String(drawForm.useAdditionalCards),
         })
-        const res = await fetch('/api/reading/' + encodeURIComponent(id) + '/draw', {
+        const res = await fetch('/api' + endpoints.readings.draw(encodeURIComponent(id)), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: body.toString(),
@@ -167,8 +168,8 @@ async function markFinal() {
     if (!ok) return
     const id = reading.value.reading_id
     try {
-        const res = await fetch('/api/reading/' + encodeURIComponent(id) + '/finalize', {
-            method: 'PUT',
+        const res = await fetch('/api' + endpoints.readings.finalize(encodeURIComponent(id)), {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
         })
         if (!res.ok) {
@@ -348,7 +349,7 @@ async function fetchReading(id: string) {
     readingNotes.value = null
     readerName.value = 'Guest'
     try {
-        const res = await fetch('/api/reading/' + encodeURIComponent(id))
+        const res = await fetch('/api' + endpoints.readings.byId(encodeURIComponent(id)))
         if (!res.ok) {
             notFound.value = true
             toasts.error('We couldn\'t find a reading with that code.')
@@ -375,7 +376,7 @@ async function unlock() {
     unlocking.value = true
     unlockError.value = ''
     try {
-        const res = await fetch('/api/reading/' + encodeURIComponent(id) + '/unlock', {
+        const res = await fetch('/api' + endpoints.readings.unlock(encodeURIComponent(id)), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ password: unlockPassword.value }),

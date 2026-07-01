@@ -46,6 +46,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # The generated API types must match the committed OpenAPI spec.
+      - name: Verify generated API types are current
+        run: |
+          npm run gen:types
+          git diff --exit-code src/types/api.generated.ts
+
       - name: Type-check
         run: npm run type-check
 
@@ -84,6 +90,13 @@ jobs:
 
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
+
+      # The committed OpenAPI spec must match the swagger-php attributes.
+      # (composer test also enforces this via OpenApiSpecTest.)
+      - name: Verify OpenAPI spec is current
+        run: |
+          composer docs
+          git diff --exit-code openapi.json
 
       - name: Coding standard (PHPCS / PSR-12)
         run: composer lint
