@@ -18,11 +18,17 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
         with:
-          node-version: '22'
+          submodules: recursive # frontend/eslint-config (shared @jwill89/eslint-config)
+          # The default GITHUB_TOKEN can't read the private eslint-config repo, so
+          # supply a PAT with read access to both repos (checkout reuses it for
+          # submodule fetches on github.com). Falls back to GITHUB_TOKEN locally.
+          token: ${{ secrets.ESLINT_CONFIG_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -58,6 +64,9 @@ jobs:
       - name: Lint
         run: npm run lint
 
+      - name: Check formatting (Prettier)
+        run: npm run format:check
+
       - name: Unit tests
         run: npm run test
 
@@ -71,7 +80,7 @@ jobs:
       run:
         working-directory: backend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -82,7 +91,7 @@ jobs:
           tools: composer
 
       - name: Cache Composer dependencies
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: backend/vendor
           key: composer-${{ runner.os }}-${{ hashFiles('backend/composer.lock') }}

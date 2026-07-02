@@ -21,7 +21,7 @@ app.use(router)
 // single failing component (e.g. a <RouterLink> to an unregistered route) throw
 // out of mount and blank the entire app.
 app.config.errorHandler = (err, _instance, info) => {
-    console.error(`[app] Unhandled error during ${info}:`, err)
+  console.error(`[app] Unhandled error during ${info}:`, err)
 }
 
 // Register the FA Vue components globally so templates can use them without a
@@ -35,30 +35,32 @@ initHeadingFont()
 
 // Register the service worker (production only) to enable "Add to Home Screen".
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => { /* non-fatal */ })
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      /* non-fatal */
     })
+  })
 }
 
 /** Fade out and remove the index.html boot loader once the app is on screen. */
 function hideBootLoader(): void {
-    const el = document.getElementById('app-loading')
-    if (!el) return
-    el.classList.add('is-hiding')
-    el.addEventListener('transitionend', () => el.remove(), { once: true })
-    // Fallback in case the transition is skipped (e.g. reduced-motion / no repaint).
-    setTimeout(() => el.remove(), 600)
+  const el = document.getElementById('app-loading')
+  if (!el) return
+  el.classList.add('is-hiding')
+  el.addEventListener('transitionend', () => el.remove(), { once: true })
+  // Fallback in case the transition is skipped (e.g. reduced-motion / no repaint).
+  setTimeout(() => el.remove(), 600)
 }
 
 // Revalidate any existing user session before mounting so router guards (incl.
 // admin, which depends on the user's is_admin flag) work immediately.
 const { fetchMe } = useUser()
-fetchMe().finally(async () => {
-    markAuthChecked()
-    // Wait for the initial route's lazily-loaded component (and its guards) to
-    // resolve before mounting, so the app shell and the view paint together
-    // rather than the background/navbar flashing in ahead of the content.
-    await router.isReady()
-    app.mount('#app')
-    hideBootLoader()
+void fetchMe().finally(async () => {
+  markAuthChecked()
+  // Wait for the initial route's lazily-loaded component (and its guards) to
+  // resolve before mounting, so the app shell and the view paint together
+  // rather than the background/navbar flashing in ahead of the content.
+  await router.isReady()
+  app.mount('#app')
+  hideBootLoader()
 })

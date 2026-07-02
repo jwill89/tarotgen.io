@@ -12,13 +12,13 @@ export const NETWORK_ERROR_MESSAGE = 'Network error. Please check your connectio
  * backend returns `{ "error": "..." }` bodies; fall back when it's missing.
  */
 export function messageFromBody(body: unknown, fallback: string): string {
-    if (body && typeof body === 'object') {
-        const err = (body as { error?: unknown }).error
-        if (typeof err === 'string' && err.trim() !== '') {
-            return err
-        }
+  if (body && typeof body === 'object') {
+    const err = (body as { error?: unknown }).error
+    if (typeof err === 'string' && err.trim() !== '') {
+      return err
     }
-    return fallback
+  }
+  return fallback
 }
 
 /**
@@ -26,12 +26,12 @@ export function messageFromBody(body: unknown, fallback: string): string {
  * that only hold the raw response; internally it defers to {@link messageFromBody}.
  */
 export async function readApiError(res: Response, fallback: string): Promise<string> {
-    try {
-        return messageFromBody(await res.clone().json(), fallback)
-    } catch {
-        // Non-JSON or empty body — use the fallback.
-        return fallback
-    }
+  try {
+    return messageFromBody(await res.clone().json(), fallback)
+  } catch {
+    // Non-JSON or empty body — use the fallback.
+    return fallback
+  }
 }
 
 /**
@@ -41,8 +41,8 @@ export async function readApiError(res: Response, fallback: string): Promise<str
  * whether the failure was a transport error vs. an error response.
  */
 export type ApiResult<T> =
-    | { ok: true; status: number; data: T }
-    | { ok: false; status: number; data: unknown; error: string; networkError: boolean }
+  | { ok: true; status: number; data: T }
+  | { ok: false; status: number; data: unknown; error: string; networkError: boolean }
 
 /**
  * True when the response provably carries no body — a `204 No Content`, a `205`,
@@ -50,18 +50,19 @@ export type ApiResult<T> =
  * throws on an empty body) for the DELETE/PATCH endpoints that answer 204.
  */
 function hasNoBody(res: Response): boolean {
-    if (res.status === 204 || res.status === 205) return true
-    // `headers` may be absent on hand-rolled test doubles; guard defensively.
-    return res.headers?.get?.('content-length') === '0'
+  if (res.status === 204 || res.status === 205) return true
+  // `headers` may be absent on hand-rolled test doubles; guard defensively.
+  const headers = res.headers as Headers | undefined
+  return headers?.get('content-length') === '0'
 }
 
 /** Parse a JSON body, returning `null` for an empty or non-JSON body. */
 async function parseJsonSafe(res: Response): Promise<unknown> {
-    try {
-        return await res.json()
-    } catch {
-        return null
-    }
+  try {
+    return await res.json()
+  } catch {
+    return null
+  }
 }
 
 /**
@@ -74,34 +75,34 @@ async function parseJsonSafe(res: Response): Promise<unknown> {
  * you need the status or error message rather than just the data.
  */
 export async function apiRequest<T>(
-    path: string,
-    options?: RequestInit,
-    fallbackError = 'Request failed. Please try again.',
+  path: string,
+  options?: RequestInit,
+  fallbackError = 'Request failed. Please try again.',
 ): Promise<ApiResult<T>> {
-    let res: Response
-    try {
-        res = await fetch('/api' + path, options)
-    } catch {
-        return { ok: false, status: 0, data: null, error: NETWORK_ERROR_MESSAGE, networkError: true }
-    }
+  let res: Response
+  try {
+    res = await fetch('/api' + path, options)
+  } catch {
+    return { ok: false, status: 0, data: null, error: NETWORK_ERROR_MESSAGE, networkError: true }
+  }
 
-    // Parse the body once; tolerate an empty/non-JSON body (e.g. 204, HTML error).
-    // Several DELETE/PATCH endpoints now answer 204 No Content with no body, so
-    // skip parsing entirely when there is provably nothing to read — calling
-    // `res.json()` on an empty body throws.
-    const body = hasNoBody(res) ? null : await parseJsonSafe(res)
+  // Parse the body once; tolerate an empty/non-JSON body (e.g. 204, HTML error).
+  // Several DELETE/PATCH endpoints now answer 204 No Content with no body, so
+  // skip parsing entirely when there is provably nothing to read — calling
+  // `res.json()` on an empty body throws.
+  const body = hasNoBody(res) ? null : await parseJsonSafe(res)
 
-    if (res.ok) {
-        return { ok: true, status: res.status, data: body as T }
-    }
+  if (res.ok) {
+    return { ok: true, status: res.status, data: body as T }
+  }
 
-    return {
-        ok: false,
-        status: res.status,
-        data: body,
-        error: messageFromBody(body, fallbackError),
-        networkError: false,
-    }
+  return {
+    ok: false,
+    status: res.status,
+    data: body,
+    error: messageFromBody(body, fallbackError),
+    networkError: false,
+  }
 }
 
 /**
@@ -110,6 +111,6 @@ export async function apiRequest<T>(
  * apart or surface the server's message.
  */
 export async function apiFetch<T>(path: string, options?: RequestInit): Promise<T | null> {
-    const result = await apiRequest<T>(path, options)
-    return result.ok ? result.data : null
+  const result = await apiRequest<T>(path, options)
+  return result.ok ? result.data : null
 }

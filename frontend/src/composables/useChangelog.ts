@@ -6,10 +6,10 @@ import { endpoints } from '@/api/endpoints'
 const entries: Ref<ChangelogEntry[]> = ref([])
 
 export function useChangelog() {
-    async function fetchChangelog(): Promise<void> {
-        const data = await apiFetch<ChangelogEntry[]>(endpoints.changelog.list)
-        if (data) entries.value = data
-    }
+  async function fetchChangelog(): Promise<void> {
+    const data = await apiFetch<ChangelogEntry[]>(endpoints.changelog.list)
+    if (data) entries.value = data
+  }
 
-    return { entries, fetchChangelog }
+  return { entries, fetchChangelog }
 }

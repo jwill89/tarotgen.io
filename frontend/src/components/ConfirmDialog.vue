@@ -8,21 +8,21 @@ const { state, settle } = useConfirm()
 </script>
 
 <template>
-    <BaseModal :active="state.active" :title="state.title" @close="settle(false)">
-        <p>{{ state.message }}</p>
+  <BaseModal :active="state.active" :title="state.title" @close="settle(false)">
+    <p>{{ state.message }}</p>
 
-        <template #footer>
-            <button class="button" type="button" @click="settle(false)">
-                {{ state.cancelLabel }}
-            </button>
-            <button
-                class="button"
-                type="button"
-                :class="state.danger ? 'is-danger' : 'is-primary'"
-                @click="settle(true)"
-            >
-                {{ state.confirmLabel }}
-            </button>
-        </template>
-    </BaseModal>
+    <template #footer>
+      <button class="button" type="button" @click="settle(false)">
+        {{ state.cancelLabel }}
+      </button>
+      <button
+        class="button"
+        type="button"
+        :class="state.danger ? 'is-danger' : 'is-primary'"
+        @click="settle(true)"
+      >
+        {{ state.confirmLabel }}
+      </button>
+    </template>
+  </BaseModal>
 </template>

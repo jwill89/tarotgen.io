@@ -1,0 +1,6 @@
+dist
+coverage
+node_modules
+eslint-config
+public
+src/types/api.generated.ts

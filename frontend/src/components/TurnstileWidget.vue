@@ -17,15 +17,15 @@ import { endpoints } from '@/api/endpoints'
  */
 
 interface TurnstileApi {
-    render: (el: HTMLElement, opts: Record<string, unknown>) => string
-    reset: (id?: string) => void
-    remove: (id?: string) => void
+  render: (el: HTMLElement, opts: Record<string, unknown>) => string
+  reset: (id?: string) => void
+  remove: (id?: string) => void
 }
 
 declare global {
-    interface Window {
-        turnstile?: TurnstileApi
-    }
+  interface Window {
+    turnstile?: TurnstileApi
+  }
 }
 
 const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit'
@@ -33,22 +33,22 @@ const SCRIPT_SRC = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render
 // Load the Turnstile script once per page, shared across any widget instances.
 let scriptPromise: Promise<void> | null = null
 function loadScript(): Promise<void> {
-    if (window.turnstile) return Promise.resolve()
-    if (scriptPromise) return scriptPromise
+  if (window.turnstile) return Promise.resolve()
+  if (scriptPromise) return scriptPromise
 
-    scriptPromise = new Promise<void>((resolve, reject) => {
-        const script = document.createElement('script')
-        script.src = SCRIPT_SRC
-        script.async = true
-        script.defer = true
-        script.onload = () => resolve()
-        script.onerror = () => {
-            scriptPromise = null
-            reject(new Error('Failed to load Turnstile.'))
-        }
-        document.head.appendChild(script)
-    })
-    return scriptPromise
+  scriptPromise = new Promise<void>((resolve, reject) => {
+    const script = document.createElement('script')
+    script.src = SCRIPT_SRC
+    script.async = true
+    script.defer = true
+    script.onload = () => resolve()
+    script.onerror = () => {
+      scriptPromise = null
+      reject(new Error('Failed to load Turnstile.'))
+    }
+    document.head.appendChild(script)
+  })
+  return scriptPromise
 }
 
 const token = defineModel<string>({ default: '' })
@@ -58,49 +58,55 @@ const container = ref<HTMLDivElement | null>(null)
 let widgetId: string | null = null
 
 onMounted(async () => {
-    const config = await apiFetch<{ turnstile_sitekey?: string | null }>(endpoints.config)
-    const siteKey = config?.turnstile_sitekey
-    if (!siteKey || !container.value) {
-        return
-    }
+  const config = await apiFetch<{ turnstile_sitekey?: string | null }>(endpoints.config)
+  const siteKey = config?.turnstile_sitekey
+  if (!siteKey || !container.value) {
+    return
+  }
 
-    enabled.value = true
+  enabled.value = true
 
-    try {
-        await loadScript()
-    } catch {
-        return
-    }
+  try {
+    await loadScript()
+  } catch {
+    return
+  }
 
-    if (!window.turnstile || !container.value) return
+  if (!window.turnstile || !container.value) return
 
-    widgetId = window.turnstile.render(container.value, {
-        sitekey: siteKey,
-        theme: 'auto',
-        callback: (t: string) => { token.value = t },
-        'expired-callback': () => { token.value = '' },
-        'error-callback': () => { token.value = '' },
-    })
+  widgetId = window.turnstile.render(container.value, {
+    sitekey: siteKey,
+    theme: 'auto',
+    callback: (t: string) => {
+      token.value = t
+    },
+    'expired-callback': () => {
+      token.value = ''
+    },
+    'error-callback': () => {
+      token.value = ''
+    },
+  })
 })
 
 onBeforeUnmount(() => {
-    if (widgetId && window.turnstile) {
-        window.turnstile.remove(widgetId)
-    }
+  if (widgetId && window.turnstile) {
+    window.turnstile.remove(widgetId)
+  }
 })
 
 function reset(): void {
-    token.value = ''
-    if (widgetId && window.turnstile) {
-        window.turnstile.reset(widgetId)
-    }
+  token.value = ''
+  if (widgetId && window.turnstile) {
+    window.turnstile.reset(widgetId)
+  }
 }
 
 defineExpose({ reset })
 </script>
 
 <template>
-    <div v-show="enabled" class="field">
-        <div ref="container"></div>
-    </div>
+  <div v-show="enabled" class="field">
+    <div ref="container"></div>
+  </div>
 </template>

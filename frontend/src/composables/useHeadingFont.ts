@@ -13,26 +13,34 @@ import { ref } from 'vue'
 import { STORAGE_KEYS } from '@/constants'
 
 export interface HeadingFont {
-    /** Stable id persisted to storage. */
-    id: string
-    /** Human label shown in the switcher. */
-    label: string
-    /** Full CSS font-family stack (with fallbacks). */
-    stack: string
+  /** Stable id persisted to storage. */
+  id: string
+  /** Human label shown in the switcher. */
+  label: string
+  /** Full CSS font-family stack (with fallbacks). */
+  stack: string
 }
 
 /** Available heading fonts. `cinzel` is the default (loaded via Google Fonts). */
 export const HEADING_FONTS: readonly HeadingFont[] = [
-    { id: 'cinzel', label: 'Cinzel', stack: '"Cinzel", Georgia, "Times New Roman", serif' },
-    { id: 'against', label: 'Against', stack: '"Against", Georgia, "Times New Roman", serif' },
-    { id: 'belgiano', label: 'Belgiano Serif', stack: '"Belgiano Serif", Georgia, "Times New Roman", serif' },
-    { id: 'tarotheque', label: 'Tarotheque', stack: '"Tarotheque", Georgia, "Times New Roman", serif' },
+  { id: 'cinzel', label: 'Cinzel', stack: '"Cinzel", Georgia, "Times New Roman", serif' },
+  { id: 'against', label: 'Against', stack: '"Against", Georgia, "Times New Roman", serif' },
+  {
+    id: 'belgiano',
+    label: 'Belgiano Serif',
+    stack: '"Belgiano Serif", Georgia, "Times New Roman", serif',
+  },
+  {
+    id: 'tarotheque',
+    label: 'Tarotheque',
+    stack: '"Tarotheque", Georgia, "Times New Roman", serif',
+  },
 ] as const
 
 const DEFAULT_FONT_ID = 'cinzel'
 
 function resolveFont(id: string | null): HeadingFont {
-    return HEADING_FONTS.find((f) => f.id === id) ?? HEADING_FONTS[0]
+  return HEADING_FONTS.find((f) => f.id === id) ?? HEADING_FONTS[0]
 }
 
 // Module-scoped so every caller shares one source of truth.
@@ -40,7 +48,7 @@ const currentFontId = ref<string>(DEFAULT_FONT_ID)
 
 /** Write the active stack to the CSS variable that all heading styles read. */
 function applyToDocument(font: HeadingFont): void {
-    document.documentElement.style.setProperty('--myst-heading-font', font.stack)
+  document.documentElement.style.setProperty('--myst-heading-font', font.stack)
 }
 
 /**
@@ -48,29 +56,28 @@ function applyToDocument(font: HeadingFont): void {
  * the chosen font paints on the first frame instead of flashing the default.
  */
 export function initHeadingFont(): void {
-    let saved: string | null = null
-    try {
-        saved = localStorage.getItem(STORAGE_KEYS.headingFont)
-    } catch {
-        // Storage may be unavailable (private mode); fall back to the default.
-    }
-    const font = resolveFont(saved)
-    currentFontId.value = font.id
-    applyToDocument(font)
+  let saved: string | null = null
+  try {
+    saved = localStorage.getItem(STORAGE_KEYS.headingFont)
+  } catch {
+    // Storage may be unavailable (private mode); fall back to the default.
+  }
+  const font = resolveFont(saved)
+  currentFontId.value = font.id
+  applyToDocument(font)
 }
 
 export function useHeadingFont() {
-    function setHeadingFont(id: string): void {
-        const font = resolveFont(id)
-        currentFontId.value = font.id
-        applyToDocument(font)
-        try {
-            localStorage.setItem(STORAGE_KEYS.headingFont, font.id)
-        } catch {
-            // Persisting is best-effort; the in-memory choice still applies.
-        }
+  function setHeadingFont(id: string): void {
+    const font = resolveFont(id)
+    currentFontId.value = font.id
+    applyToDocument(font)
+    try {
+      localStorage.setItem(STORAGE_KEYS.headingFont, font.id)
+    } catch {
+      // Persisting is best-effort; the in-memory choice still applies.
     }
+  }
 
-    return { fonts: HEADING_FONTS, currentFontId, setHeadingFont }
+  return { fonts: HEADING_FONTS, currentFontId, setHeadingFont }
 }
-
