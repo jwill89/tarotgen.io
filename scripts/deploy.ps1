@@ -360,6 +360,13 @@ function Deploy-Plugin {
     if (-not (Test-Path $pluginProj)) { Fail "Plugin project not found: $pluginProj" }
 
     Write-Step "Building plugin (Release)..."
+    # Clean bin/obj first. DalamudPackager's incremental packaging can otherwise
+    # leave a STALE latest.zip whose embedded manifest version lags the freshly
+    # generated repo.json — Dalamud then offers an update it can never reconcile
+    # (the downloaded zip reports the old version). A clean build guarantees the
+    # zip's manifest matches the version advertised in repo.json.
+    $pluginRoot = Join-Path $RepoRoot 'plugin\TarotGen.Plugin'
+    Remove-Item -Recurse -Force (Join-Path $pluginRoot 'bin'), (Join-Path $pluginRoot 'obj') -ErrorAction SilentlyContinue
     & dotnet build $pluginProj -c Release --nologo | Out-Host
     if ($LASTEXITCODE -ne 0) { Fail "Plugin build failed (exit $LASTEXITCODE). Live repo untouched." }
 
@@ -374,9 +381,16 @@ function Deploy-Plugin {
     # Build the repo manifest (pluginmaster): the packaged manifest + download links.
     $base = 'https://tarotgen.io/plugin'
     $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
-    $m | Add-Member -NotePropertyName DownloadLinkInstall -NotePropertyValue "$base/latest.zip" -Force
-    $m | Add-Member -NotePropertyName DownloadLinkUpdate  -NotePropertyValue "$base/latest.zip" -Force
-    $m | Add-Member -NotePropertyName DownloadLinkTesting -NotePropertyValue "$base/latest.zip" -Force
+    # Cache-bust the download URL with the version. Cloudflare caches `latest.zip`
+    # (a static extension) keyed by full URL, so after a new upload it keeps serving
+    # the STALE cached zip — repo.json then advertises the new version while the
+    # downloaded zip reports the old one, and the in-game update can never reconcile.
+    # A per-version query string gives each release a distinct cache key (a miss),
+    # so Dalamud always pulls the matching zip fresh from the origin.
+    $zipUrl = "$base/latest.zip?v=$($m.AssemblyVersion)"
+    $m | Add-Member -NotePropertyName DownloadLinkInstall -NotePropertyValue $zipUrl -Force
+    $m | Add-Member -NotePropertyName DownloadLinkUpdate  -NotePropertyValue $zipUrl -Force
+    $m | Add-Member -NotePropertyName DownloadLinkTesting -NotePropertyValue $zipUrl -Force
     $m | Add-Member -NotePropertyName IconUrl -NotePropertyValue "$base/icon.png" -Force
 
     Write-Step "Staging plugin repo files..."
