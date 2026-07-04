@@ -666,6 +666,40 @@ export interface paths {
         patch: operations["669cf3fd1c418c672661ad1e5665be88"];
         trace?: never;
     };
+    "/admin/card-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reported card scans (open first; pass ?show_resolved=1 for all) */
+        get: operations["47c6f9a250e71454f6aa7b427865ff1e"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/card-reports/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Mark a card report resolved / reopened */
+        patch: operations["037d49bac3021d8eae5c8d48a210bb17"];
+        trace?: never;
+    };
     "/admin/readings": {
         parameters: {
             query?: never;
@@ -785,6 +819,23 @@ export interface paths {
         put?: never;
         /** Approve a pending deck system */
         post: operations["d34ce25954ce6ae467918b54163ab929"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/card-reports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Report a card scan as needing a re-scan (rate-limited) */
+        post: operations["7121e0ef3d6914631c4b1b46a5d6a143"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1175,6 +1226,159 @@ export interface paths {
         patch: operations["70778fa07ca73639c4b6466288c18676"];
         trace?: never;
     };
+    "/plugin/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a plugin link and mint a PKCE authorization code (browser, session-authed) */
+        post: operations["301fe6924d359eff76b20d5ba0753ac7"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/guest-authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mint a guest relay client token (no account required) */
+        post: operations["522aa817019a865df06d50132bd83c0c"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange a PKCE authorization code for a plugin Bearer token */
+        post: operations["9cee09bafbc85842806ed3b5d8696f77"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/tokens": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The signed-in user's linked plugin tokens (Connected Apps) */
+        get: operations["d450210a2d907e5c68ab062d90422d58"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/tokens/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a linked plugin token (forces the plugin to re-link) */
+        delete: operations["c7e190b264e9c6ecaa242c88ec6bd95f"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/clients/register": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Publish this install's recipient identity + consent tier (and refresh presence) */
+        post: operations["f95a22f0d59b6a5732c36d5090f49f3e"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Drain queued shares for this install (delivers each once) */
+        get: operations["b72bdeb4a0d80ddbfbba0b3f6bc203be"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/share": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Push a reading share to a self-published Character@World */
+        post: operations["e76fc4f31ddc2fc6ebbd7e99e63a5f9a"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/clients/block": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Block or unblock a sender by their routing id */
+        post: operations["9057316b75c5bb6724228457df73bd4f"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/readings/{reading_id}": {
         parameters: {
             query?: never;
@@ -1470,6 +1674,21 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A report that a card scan needs re-scanning. */
+        CardReport: {
+            report_id?: number;
+            deck_id?: number;
+            /** @description Resolved deck name (from the decks table). */
+            deck_name?: string;
+            card_id?: number;
+            card_name?: string;
+            /** @description How many times this card has been reported. */
+            report_count?: number;
+            /** @description When an admin marked it handled; null = open. */
+            resolved_at?: string | null;
+            first_reported_at?: string;
+            last_reported_at?: string;
+        };
         /** @description A changelog entry. */
         ChangelogEntry: {
             entry_id?: number;
@@ -1543,6 +1762,45 @@ export interface components {
             submitter?: string;
             user_id?: number | null;
             submitted_at?: string;
+        };
+        /** @description A plugin install's relay routing identity (no secret value exposed). */
+        PluginClient: {
+            client_id?: number;
+            /** @description Linked account id, or null for a guest install. */
+            user_id?: number | null;
+            /** @description Who may push a share: nobody | friends | party_or_friends | anyone. */
+            accept_tier?: string;
+            last_seen?: string | null;
+            created_at?: string;
+            revoked_at?: string | null;
+        };
+        /** @description A queued share delivered to a recipient plugin install. */
+        PluginMessage: {
+            id?: number;
+            /** @description Display name shown in the popup (the sender). */
+            sender_label?: string;
+            /** @description Sender routing id (for client-side block/report). */
+            sender_client_id?: number;
+            /** @description Sender's self-disclosed character (for the party consent filter). */
+            sender_character?: string | null;
+            /** @description Sender's self-disclosed home world. */
+            sender_world?: string | null;
+            /** @description Message kind; currently always "reading_share". */
+            type?: string;
+            /** @description The shared reading share code (dereferenced only on View). */
+            payload?: string;
+            created_at?: string;
+        };
+        /** @description A linked-plugin personal access token (no secret value exposed). */
+        PluginToken: {
+            id?: number;
+            user_id?: number;
+            label?: string;
+            scope?: string;
+            created_at?: string;
+            last_used_at?: string | null;
+            expires_at?: string | null;
+            revoked_at?: string | null;
         };
         /** @description A saved tarot reading. */
         Reading: {
@@ -3016,6 +3274,65 @@ export interface operations {
             };
         };
     };
+    "47c6f9a250e71454f6aa7b427865ff1e": {
+        parameters: {
+            query?: {
+                show_resolved?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of card reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardReport"][];
+                };
+            };
+        };
+    };
+    "037d49bac3021d8eae5c8d48a210bb17": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    resolved?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid report ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "35423e051e7b9c0f5b0a7bf063c8a467": {
         parameters: {
             query?: {
@@ -3254,6 +3571,61 @@ export interface operations {
             };
             /** @description Deck system not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "7121e0ef3d6914631c4b1b46a5d6a143": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    deck_id: number;
+                    card_id: number;
+                    card_name?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Already reported this card recently (counter not bumped) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Report recorded */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        status?: string;
+                    };
+                };
+            };
+            /** @description Missing/invalid deck or card id */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many reports from this IP */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3995,6 +4367,339 @@ export interface operations {
             };
         };
     };
+    "301fe6924d359eff76b20d5ba0753ac7": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code_challenge: string;
+                    /** @default S256 */
+                    code_challenge_method?: string;
+                    /** @description Loopback URI, e.g. http://127.0.0.1:<port>/callback */
+                    redirect_uri: string;
+                    state?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Loopback redirect target carrying the authorization code */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redirect_uri?: string;
+                    };
+                };
+            };
+            /** @description Invalid challenge or non-loopback redirect_uri */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "522aa817019a865df06d50132bd83c0c": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Loopback URI, e.g. http://127.0.0.1:<port>/callback */
+                    redirect_uri: string;
+                    state?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Loopback redirect target carrying the guest client token */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redirect_uri?: string;
+                    };
+                };
+            };
+            /** @description Non-loopback redirect_uri */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Too many guest tokens issued from this IP */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "9cee09bafbc85842806ed3b5d8696f77": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    code_verifier: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The issued token (returned once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        token?: string;
+                        token_type?: string;
+                        scope?: string;
+                        display_name?: string;
+                        /** @description Relay routing token */
+                        client_token?: string;
+                        client_id?: number;
+                    };
+                };
+            };
+            /** @description Invalid or expired authorization code */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    d450210a2d907e5c68ab062d90422d58: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of linked tokens (never includes the token value) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PluginToken"][];
+                };
+            };
+        };
+    };
+    c7e190b264e9c6ecaa242c88ec6bd95f: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Revoked */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Token not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    f95a22f0d59b6a5732c36d5090f49f3e: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    character_name?: string | null;
+                    world?: string | null;
+                    /** @enum {string} */
+                    accept_tier?: "nobody" | "friends" | "party_or_friends" | "anyone";
+                };
+            };
+        };
+        responses: {
+            /** @description The updated client view */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PluginClient"];
+                };
+            };
+            /** @description Invalid or missing client token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    b72bdeb4a0d80ddbfbba0b3f6bc203be: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Queued shares (may be empty) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PluginMessage"][];
+                };
+            };
+            /** @description Invalid or missing client token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    e76fc4f31ddc2fc6ebbd7e99e63a5f9a: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Recipient's character */
+                    character_name: string;
+                    /** @description Recipient's home world */
+                    world: string;
+                    /** @description The share code to deliver */
+                    reading_id: string;
+                    /** @description Display name shown to the recipient */
+                    sender_label?: string;
+                    /** @description Sender's own character */
+                    sender_character?: string;
+                    /** @description Sender's own home world */
+                    sender_world?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted (delivered only if the recipient is reachable and accepting) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Malformed request (missing recipient or reading) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Sending too quickly */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "9057316b75c5bb6724228457df73bd4f": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    action: "block" | "unblock";
+                    /** @description The sender routing id to (un)block */
+                    client_id: number;
+                };
+            };
+        };
+        responses: {
+            /** @description Applied */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Unknown action */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid or missing client token */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     e7982bebe092fc207c5d04e2c203ecba: {
         parameters: {
             query?: never;
@@ -4017,6 +4722,13 @@ export interface operations {
             };
             /** @description InvalidReadingID */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4064,6 +4776,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Too many password attempts */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     d8750b5a23fd03c315941e4facfd28ee: {
@@ -4091,6 +4810,13 @@ export interface operations {
             };
             /** @description Invalid draw spec */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
