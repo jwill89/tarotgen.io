@@ -28,7 +28,9 @@ readonly class UserAuth
         if ($userId !== null) {
             $user = $this->users->findById($userId);
             if ($user !== null && $user->is_active) {
-                return $handler->handle($request);
+                // Expose the resolved id so controllers read one source regardless
+                // of which middleware (session or plugin token) authenticated them.
+                return $handler->handle($request->withAttribute('auth_user_id', $userId));
             }
         }
 

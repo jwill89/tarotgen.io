@@ -272,6 +272,16 @@ async function doUserLogout() {
                 </router-link>
                 <router-link
                   class="navbar-item"
+                  :to="{ name: 'admin-card-reports' }"
+                  @click="burgerOpen = false"
+                >
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['triangle-exclamation']"
+                  /></span>
+                  <span>Errored Cards</span>
+                </router-link>
+                <router-link
+                  class="navbar-item"
                   :to="{ name: 'admin-changelog' }"
                   @click="burgerOpen = false"
                 >

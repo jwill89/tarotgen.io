@@ -146,6 +146,72 @@ CREATE TABLE user_tokens (
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
     );
 
+CREATE TABLE plugin_tokens (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id      INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        token_hash   TEXT    NOT NULL,
+        label        TEXT    NOT NULL DEFAULT 'TarotGen plugin',
+        scope        TEXT    NOT NULL DEFAULT 'account',
+        created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TEXT    DEFAULT NULL,
+        expires_at   TEXT    DEFAULT NULL,
+        revoked_at   TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_auth_codes (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id        INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        code_hash      TEXT    NOT NULL,
+        code_challenge TEXT    NOT NULL,
+        scope          TEXT    NOT NULL DEFAULT 'account',
+        created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at     TEXT    NOT NULL,
+        used_at        TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE card_reports (
+        report_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        deck_id           INTEGER NOT NULL REFERENCES "decks"(deck_id) ON DELETE CASCADE,
+        card_id           INTEGER NOT NULL,
+        card_name         TEXT    NOT NULL DEFAULT '',
+        report_count      INTEGER NOT NULL DEFAULT 1,
+        resolved_at       TEXT    DEFAULT NULL,
+        first_reported_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_reported_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
+CREATE TABLE plugin_clients (
+        client_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        token_hash     TEXT    NOT NULL,
+        user_id        INTEGER NULL REFERENCES users(user_id) ON DELETE SET NULL,
+        identity_hash  TEXT    DEFAULT NULL,
+        accept_tier    TEXT    NOT NULL DEFAULT 'party_or_friends',
+        last_seen      TEXT    DEFAULT NULL,
+        created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        revoked_at     TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_messages (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipient_client_id INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
+        sender_client_id    INTEGER NOT NULL,
+        sender_label        TEXT    NOT NULL,
+        sender_character    TEXT    DEFAULT NULL,
+        sender_world        TEXT    DEFAULT NULL,
+        type                TEXT    NOT NULL DEFAULT 'reading_share',
+        payload             TEXT    NOT NULL,
+        created_at          TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        delivered_at        TEXT    DEFAULT NULL,
+        expires_at          TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_blocks (
+        owner_client_id   INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
+        blocked_client_id INTEGER NOT NULL,
+        created_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (owner_client_id, blocked_client_id)
+    );
+
 CREATE TABLE users (
         user_id        INTEGER PRIMARY KEY AUTOINCREMENT,
         email          TEXT    NOT NULL COLLATE NOCASE,
@@ -180,6 +246,22 @@ CREATE INDEX idx_user_spreads_user ON user_spreads (user_id);
 CREATE UNIQUE INDEX idx_user_tokens_hash ON user_tokens (token_hash);
 
 CREATE INDEX idx_user_tokens_user ON user_tokens (user_id, type);
+
+CREATE UNIQUE INDEX idx_plugin_tokens_hash ON plugin_tokens (token_hash);
+
+CREATE INDEX idx_plugin_tokens_user ON plugin_tokens (user_id);
+
+CREATE UNIQUE INDEX idx_plugin_auth_codes_hash ON plugin_auth_codes (code_hash);
+
+CREATE UNIQUE INDEX idx_card_reports_card ON card_reports (deck_id, card_id);
+
+CREATE UNIQUE INDEX idx_plugin_clients_hash ON plugin_clients (token_hash);
+
+CREATE INDEX idx_plugin_clients_identity ON plugin_clients (identity_hash);
+
+CREATE INDEX idx_plugin_clients_user ON plugin_clients (user_id);
+
+CREATE INDEX idx_plugin_messages_inbox ON plugin_messages (recipient_client_id, delivered_at);
 
 CREATE UNIQUE INDEX idx_users_display_name ON users (display_name COLLATE NOCASE);
 

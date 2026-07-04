@@ -12,6 +12,17 @@ export interface User {
   has_passkeys: boolean
 }
 
+/** A linked-plugin personal access token, as shown in "Connected Apps". */
+export interface PluginToken {
+  id: number
+  label: string
+  scope: string
+  created_at: string
+  last_used_at: string | null
+  expires_at: string | null
+  revoked_at: string | null
+}
+
 export interface Deck {
   deck_id: number
   deck_system_id: number
@@ -206,4 +217,17 @@ export interface Contact {
   message: string
   is_read: number
   submitted_at: string
+}
+
+/** A reported card scan needing a re-scan (admin panel). */
+export interface CardReport {
+  report_id: number
+  deck_id: number
+  deck_name: string
+  card_id: number
+  card_name: string
+  report_count: number
+  resolved_at: string | null
+  first_reported_at: string
+  last_reported_at: string
 }

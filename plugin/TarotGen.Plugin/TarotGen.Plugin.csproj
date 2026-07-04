@@ -1,0 +1,33 @@
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
+  <!--
+    The Dalamud.NET.Sdk pulls in the Dalamud assemblies, ImGui bindings, Lumina,
+    FFXIVClientStructs and DalamudPackager automatically. Building requires the
+    Dalamud dev distribution to be present (XIVLauncher installs it to
+    %AppData%\XIVLauncher\addon\Hooks\dev). Open in VS 2026 / Rider with the
+    Dalamud dev environment; `dotnet build` alone (without Dalamud present) will
+    not resolve the Dalamud references.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>TarotGen.Plugin</AssemblyName>
+    <RootNamespace>TarotGen.Plugin</RootNamespace>
+    <Version>0.3.0</Version>
+    <Deterministic>true</Deterministic>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <!-- Ship the manifest alongside the DLL for DalamudPackager. -->
+  <ItemGroup>
+    <None Include="TarotGen.Plugin.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <!-- Windows DPAPI for at-rest token encryption (bundled by DalamudPackager). -->
+  <ItemGroup>
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
+  </ItemGroup>
+</Project>

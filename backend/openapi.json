@@ -38,6 +38,9 @@
                 "security": [
                     {
                         "sessionCookie": []
+                    },
+                    {
+                        "pluginToken": []
                     }
                 ]
             }
@@ -2013,6 +2016,104 @@
                 ]
             }
         },
+        "/admin/card-reports": {
+            "get": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "List reported card scans (open first; pass ?show_resolved=1 for all)",
+                "operationId": "47c6f9a250e71454f6aa7b427865ff1e",
+                "parameters": [
+                    {
+                        "name": "show_resolved",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of card reports",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CardReport"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/card-reports/{report_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "Mark a card report resolved / reopened",
+                "operationId": "037d49bac3021d8eae5c8d48a210bb17",
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "resolved": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/admin/readings": {
             "get": {
                 "tags": [
@@ -2372,6 +2473,78 @@
                         "sessionCookie": []
                     }
                 ]
+            }
+        },
+        "/card-reports": {
+            "post": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Report a card scan as needing a re-scan (rate-limited)",
+                "operationId": "7121e0ef3d6914631c4b1b46a5d6a143",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "deck_id",
+                                    "card_id"
+                                ],
+                                "properties": {
+                                    "deck_id": {
+                                        "type": "integer"
+                                    },
+                                    "card_id": {
+                                        "type": "integer"
+                                    },
+                                    "card_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Report recorded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Already reported this card recently (counter not bumped)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid deck or card id"
+                    },
+                    "429": {
+                        "description": "Too many reports from this IP"
+                    }
+                }
             }
         },
         "/changelog": {
@@ -3283,6 +3456,467 @@
                 ]
             }
         },
+        "/plugin/authorize": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Approve a plugin link and mint a PKCE authorization code (browser, session-authed)",
+                "operationId": "301fe6924d359eff76b20d5ba0753ac7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_challenge",
+                                    "redirect_uri"
+                                ],
+                                "properties": {
+                                    "code_challenge": {
+                                        "type": "string"
+                                    },
+                                    "code_challenge_method": {
+                                        "type": "string",
+                                        "default": "S256"
+                                    },
+                                    "redirect_uri": {
+                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback",
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Loopback redirect target carrying the authorization code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "redirect_uri": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid challenge or non-loopback redirect_uri"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/plugin/guest-authorize": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Mint a guest relay client token (no account required)",
+                "operationId": "522aa817019a865df06d50132bd83c0c",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "redirect_uri"
+                                ],
+                                "properties": {
+                                    "redirect_uri": {
+                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback",
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Loopback redirect target carrying the guest client token",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "redirect_uri": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Non-loopback redirect_uri"
+                    },
+                    "429": {
+                        "description": "Too many guest tokens issued from this IP"
+                    }
+                }
+            }
+        },
+        "/plugin/token": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Exchange a PKCE authorization code for a plugin Bearer token",
+                "operationId": "9cee09bafbc85842806ed3b5d8696f77",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "code_verifier"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "code_verifier": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The issued token (returned once)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string"
+                                        },
+                                        "scope": {
+                                            "type": "string"
+                                        },
+                                        "display_name": {
+                                            "type": "string"
+                                        },
+                                        "client_token": {
+                                            "description": "Relay routing token",
+                                            "type": "string"
+                                        },
+                                        "client_id": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired authorization code"
+                    }
+                }
+            }
+        },
+        "/account/tokens": {
+            "get": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "The signed-in user's linked plugin tokens (Connected Apps)",
+                "operationId": "d450210a2d907e5c68ab062d90422d58",
+                "responses": {
+                    "200": {
+                        "description": "Array of linked tokens (never includes the token value)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PluginToken"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/tokens/{id}": {
+            "delete": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Revoke a linked plugin token (forces the plugin to re-link)",
+                "operationId": "c7e190b264e9c6ecaa242c88ec6bd95f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Revoked"
+                    },
+                    "404": {
+                        "description": "Token not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/plugin/clients/register": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Publish this install's recipient identity + consent tier (and refresh presence)",
+                "operationId": "f95a22f0d59b6a5732c36d5090f49f3e",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "character_name": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "world": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ]
+                                    },
+                                    "accept_tier": {
+                                        "type": "string",
+                                        "enum": [
+                                            "nobody",
+                                            "friends",
+                                            "party_or_friends",
+                                            "anyone"
+                                        ]
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated client view",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/PluginClient"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or missing client token"
+                    }
+                },
+                "security": [
+                    {
+                        "clientToken": []
+                    }
+                ]
+            }
+        },
+        "/plugin/inbox": {
+            "get": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Drain queued shares for this install (delivers each once)",
+                "operationId": "b72bdeb4a0d80ddbfbba0b3f6bc203be",
+                "responses": {
+                    "200": {
+                        "description": "Queued shares (may be empty)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PluginMessage"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Invalid or missing client token"
+                    }
+                },
+                "security": [
+                    {
+                        "clientToken": []
+                    }
+                ]
+            }
+        },
+        "/plugin/share": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Push a reading share to a self-published Character@World",
+                "operationId": "e76fc4f31ddc2fc6ebbd7e99e63a5f9a",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "character_name",
+                                    "world",
+                                    "reading_id"
+                                ],
+                                "properties": {
+                                    "character_name": {
+                                        "description": "Recipient's character",
+                                        "type": "string"
+                                    },
+                                    "world": {
+                                        "description": "Recipient's home world",
+                                        "type": "string"
+                                    },
+                                    "reading_id": {
+                                        "description": "The share code to deliver",
+                                        "type": "string"
+                                    },
+                                    "sender_label": {
+                                        "description": "Display name shown to the recipient",
+                                        "type": "string"
+                                    },
+                                    "sender_character": {
+                                        "description": "Sender's own character",
+                                        "type": "string"
+                                    },
+                                    "sender_world": {
+                                        "description": "Sender's own home world",
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Accepted (delivered only if the recipient is reachable and accepting)"
+                    },
+                    "400": {
+                        "description": "Malformed request (missing recipient or reading)"
+                    },
+                    "429": {
+                        "description": "Sending too quickly"
+                    }
+                },
+                "security": [
+                    {
+                        "clientToken": []
+                    }
+                ]
+            }
+        },
+        "/plugin/clients/block": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Block or unblock a sender by their routing id",
+                "operationId": "9057316b75c5bb6724228457df73bd4f",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "action",
+                                    "client_id"
+                                ],
+                                "properties": {
+                                    "action": {
+                                        "type": "string",
+                                        "enum": [
+                                            "block",
+                                            "unblock"
+                                        ]
+                                    },
+                                    "client_id": {
+                                        "description": "The sender routing id to (un)block",
+                                        "type": "integer"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "204": {
+                        "description": "Applied"
+                    },
+                    "400": {
+                        "description": "Unknown action"
+                    },
+                    "401": {
+                        "description": "Invalid or missing client token"
+                    }
+                },
+                "security": [
+                    {
+                        "clientToken": []
+                    }
+                ]
+            }
+        },
         "/readings/{reading_id}": {
             "get": {
                 "tags": [
@@ -3313,6 +3947,9 @@
                     },
                     "404": {
                         "description": "InvalidReadingID"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -3368,6 +4005,9 @@
                     },
                     "404": {
                         "description": "InvalidReadingID"
+                    },
+                    "429": {
+                        "description": "Too many password attempts"
                     }
                 }
             }
@@ -3403,6 +4043,9 @@
                     },
                     "400": {
                         "description": "Invalid draw spec"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -4011,6 +4654,45 @@
     },
     "components": {
         "schemas": {
+            "CardReport": {
+                "description": "A report that a card scan needs re-scanning.",
+                "properties": {
+                    "report_id": {
+                        "type": "integer"
+                    },
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_name": {
+                        "description": "Resolved deck name (from the decks table).",
+                        "type": "string"
+                    },
+                    "card_id": {
+                        "type": "integer"
+                    },
+                    "card_name": {
+                        "type": "string"
+                    },
+                    "report_count": {
+                        "description": "How many times this card has been reported.",
+                        "type": "integer"
+                    },
+                    "resolved_at": {
+                        "description": "When an admin marked it handled; null = open.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "first_reported_at": {
+                        "type": "string"
+                    },
+                    "last_reported_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "ChangelogEntry": {
                 "description": "A changelog entry.",
                 "properties": {
@@ -4227,6 +4909,122 @@
                 },
                 "type": "object"
             },
+            "PluginClient": {
+                "description": "A plugin install's relay routing identity (no secret value exposed).",
+                "properties": {
+                    "client_id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "description": "Linked account id, or null for a guest install.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "accept_tier": {
+                        "description": "Who may push a share: nobody | friends | party_or_friends | anyone.",
+                        "type": "string"
+                    },
+                    "last_seen": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "revoked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "PluginMessage": {
+                "description": "A queued share delivered to a recipient plugin install.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "sender_label": {
+                        "description": "Display name shown in the popup (the sender).",
+                        "type": "string"
+                    },
+                    "sender_client_id": {
+                        "description": "Sender routing id (for client-side block/report).",
+                        "type": "integer"
+                    },
+                    "sender_character": {
+                        "description": "Sender's self-disclosed character (for the party consent filter).",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "sender_world": {
+                        "description": "Sender's self-disclosed home world.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "type": {
+                        "description": "Message kind; currently always \"reading_share\".",
+                        "type": "string"
+                    },
+                    "payload": {
+                        "description": "The shared reading share code (dereferenced only on View).",
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "PluginToken": {
+                "description": "A linked-plugin personal access token (no secret value exposed).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "revoked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "Reading": {
                 "description": "A saved tarot reading.",
                 "properties": {
@@ -4427,6 +5225,16 @@
                 "description": "Session cookie issued on sign-in. Sent automatically by the browser.",
                 "name": "PHPSESSID",
                 "in": "cookie"
+            },
+            "pluginToken": {
+                "type": "http",
+                "description": "Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).",
+                "scheme": "bearer"
+            },
+            "clientToken": {
+                "type": "http",
+                "description": "Relay routing token held by every plugin install, guest or linked (Authorization: Bearer …).",
+                "scheme": "bearer"
             }
         }
     },
@@ -4452,6 +5260,10 @@
             "description": "Generating, viewing, and modifying readings."
         },
         {
+            "name": "Cards",
+            "description": "Card-level actions (e.g. reporting a scan issue)."
+        },
+        {
             "name": "Contact",
             "description": "Public contact-form submissions."
         },
@@ -4470,6 +5282,10 @@
         {
             "name": "Account",
             "description": "The signed-in user's self-service area."
+        },
+        {
+            "name": "Plugin",
+            "description": "Dalamud plugin account linking (OAuth PKCE) and token management."
         },
         {
             "name": "Admin · Dashboard",
@@ -4502,6 +5318,10 @@
         {
             "name": "Admin · Contacts",
             "description": "Submitted contact messages."
+        },
+        {
+            "name": "Admin · Card Reports",
+            "description": "Reported card scans needing a re-scan."
         }
     ]
 }

@@ -133,6 +133,18 @@ onMounted(async () => {
           </router-link>
         </div>
         <div class="column is-3">
+          <router-link
+            :to="{ name: 'admin-card-reports' }"
+            class="box home-action has-text-centered"
+          >
+            <span class="icon is-large has-text-warning">
+              <FontAwesomeIcon :icon="byPrefixAndName.fad['circle-exclamation']" size="2x" />
+            </span>
+            <p class="title is-4 mt-3">Errored Cards</p>
+            <p class="subtitle is-6">Reported scans</p>
+          </router-link>
+        </div>
+        <div class="column is-3">
           <router-link :to="{ name: 'admin-changelog' }" class="box home-action has-text-centered">
             <span class="icon is-large has-text-danger">
               <FontAwesomeIcon :icon="byPrefixAndName.fad['newspaper']" size="2x" />

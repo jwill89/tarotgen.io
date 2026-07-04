@@ -11,6 +11,12 @@ It's a **Vue 3 SPA frontend + PHP REST API backend**, split into `frontend/` and
 server-rendered by `og.php` for social link previews). The deploy script flattens
 the two folders into that web root.
 
+A companion **FFXIV Dalamud plugin** lives in `plugin/` — a self-contained C# /
+.NET subproject that talks to the same API to draw, view, and share readings
+in-game. It is built and distributed independently (its own `latest.zip` served
+from a custom Dalamud repo), so the site deploy never touches it. See
+[`plugin/README.md`](plugin/README.md).
+
 > **For contributors and AI agents:** [`AGENTS.md`](AGENTS.md) is the deep guide —
 > architecture, the backend layering rule, conventions, and gotchas. This README is
 > the quick orientation; [`API.md`](API.md) covers the hybrid-REST conventions, and
@@ -22,6 +28,7 @@ the two folders into that web root.
 ```
 frontend/   Vue 3 SPA — npm project root
 backend/    PHP API — composer project root
+plugin/     FFXIV Dalamud plugin — C# subproject (built & distributed independently)
 scripts/    deploy.ps1 (repo-level orchestration)
 ```
 
@@ -37,7 +44,8 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `backend/scripts/` | PHP/Python CLI utilities (`make_admin.php`, `indexnow.php`, …). |
 | `backend/{phpunit.xml,phpstan.neon}` | QA configs (auto-discovered when running `composer` from `backend/`). |
 | `backend/{db,assets/decks}/` | SQLite DB and per-deck card images — server-side data, gitignored, **never** in a deploy payload. |
-| `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend). |
+| `plugin/TarotGen.Plugin/` | FFXIV Dalamud plugin (C#, .NET 10, Dalamud API 15). Built by DalamudPackager; published to a custom Dalamud repo via `deploy.ps1 -Target plugin`. See [`plugin/README.md`](plugin/README.md). |
+| `scripts/deploy.ps1` | Build & deploy orchestration (frontend + backend + plugin). |
 | `*/{node_modules,vendor,dist}/` | Generated dependency / build output. |
 
 ## Quickstart (local dev)
@@ -87,6 +95,7 @@ cd frontend ; npm run build              # production SPA build → frontend/dis
 .\scripts\deploy.ps1                     # build + deploy frontend (atomic dist swap)
 .\scripts\deploy.ps1 -Target backend     # deploy PHP code; composer install on the droplet if deps changed
 .\scripts\deploy.ps1 -Target both        # frontend, then backend
+.\scripts\deploy.ps1 -Target plugin      # build the plugin (Release) + publish latest.zip/icon/repo.json
 .\scripts\deploy.ps1 -SkipBuild          # deploy the existing frontend/dist without rebuilding
 ```
 

@@ -37,7 +37,7 @@ class AccountController extends AbstractController
         path: '/account/readings',
         summary: "The current user's readings, newest first",
         tags: ['Account'],
-        security: [['sessionCookie' => []]],
+        security: [['sessionCookie' => []], ['pluginToken' => []]],
         responses: [
             new OA\Response(
                 response: 200,
@@ -49,7 +49,7 @@ class AccountController extends AbstractController
     /** All of the current user's readings, newest first. */
     public function myReadings(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->readings->listByUser($this->userId()));
+        return $response->withJson($this->readings->listByUser($this->userId($request)));
     }
 
     /**
@@ -119,7 +119,7 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'No changes provided.'], 400);
         }
 
-        $updated = $this->readings->updateMeta($reading_id, $this->userId(), $fields);
+        $updated = $this->readings->updateMeta($reading_id, $this->userId($request), $fields);
         if ($updated === null) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
@@ -149,7 +149,7 @@ class AccountController extends AbstractController
     {
         $reading_id = (string)($args['reading_id'] ?? '');
 
-        if (!$this->readings->deleteOwned($reading_id, $this->userId())) {
+        if (!$this->readings->deleteOwned($reading_id, $this->userId($request))) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
 
@@ -186,13 +186,13 @@ class AccountController extends AbstractController
         $body = $this->parsedBody($request);
 
         if (array_key_exists('display_name', $body)) {
-            $result = $this->auth->changeDisplayName($this->userId(), (string)$body['display_name']);
+            $result = $this->auth->changeDisplayName($this->userId($request), (string)$body['display_name']);
             if (!$result['ok']) {
                 return $response->withJson(['error' => $result['error'] ?? 'Could not update display name.'], 422);
             }
         }
 
-        return $response->withJson(['success' => true, 'user' => $this->users->findById($this->userId())]);
+        return $response->withJson(['success' => true, 'user' => $this->users->findById($this->userId($request))]);
     }
 
     #[OA\Post(
@@ -221,7 +221,7 @@ class AccountController extends AbstractController
         $current = (string)($body['current_password'] ?? '');
         $new     = (string)($body['new_password'] ?? '');
 
-        $result = $this->auth->changePassword($this->userId(), $current, $new);
+        $result = $this->auth->changePassword($this->userId($request), $current, $new);
         if (!$result['ok']) {
             return $response->withJson(['error' => $result['error'] ?? 'Could not change password.'], 422);
         }
@@ -247,7 +247,7 @@ class AccountController extends AbstractController
     {
         $password = (string)(($this->parsedBody($request))['password'] ?? '');
 
-        $result = $this->auth->deleteAccount($this->userId(), $password);
+        $result = $this->auth->deleteAccount($this->userId($request), $password);
         if (!$result['ok']) {
             return $response->withJson(['error' => $result['error'] ?? 'Could not delete account.'], 403);
         }
@@ -277,7 +277,7 @@ class AccountController extends AbstractController
     /** List all of the current user's personal spreads. */
     public function mySpreads(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->userSpreads->listByUser($this->userId()));
+        return $response->withJson($this->userSpreads->listByUser($this->userId($request)));
     }
 
     #[OA\Post(
@@ -318,7 +318,7 @@ class AccountController extends AbstractController
             );
         }
 
-        $created = $this->userSpreads->create($this->userId(), $params);
+        $created = $this->userSpreads->create($this->userId($request), $params);
 
         if ($created === null) {
             return $response->withJson(['error' => 'Failed to save the spread.'], 500);
@@ -355,7 +355,7 @@ class AccountController extends AbstractController
         $spreadId = (int)($args['user_spread_id'] ?? 0);
         $params   = $this->parsedBody($request);
 
-        $updated = $this->userSpreads->update($this->userId(), $spreadId, $params);
+        $updated = $this->userSpreads->update($this->userId($request), $spreadId, $params);
         if ($updated === null) {
             return $response->withJson(['error' => 'Spread not found.'], 404);
         }
@@ -385,7 +385,7 @@ class AccountController extends AbstractController
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
 
-        if (!$this->userSpreads->delete($this->userId(), $spreadId)) {
+        if (!$this->userSpreads->delete($this->userId($request), $spreadId)) {
             return $response->withJson(['error' => 'Spread not found.'], 404);
         }
 
@@ -417,7 +417,7 @@ class AccountController extends AbstractController
     public function submitSpreadAsPublic(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
-        $spread   = $this->userSpreads->get($this->userId(), $spreadId);
+        $spread   = $this->userSpreads->get($this->userId($request), $spreadId);
 
         if ($spread === null) {
             return $response->withJson(['error' => 'Spread not found.'], 404);
@@ -428,7 +428,7 @@ class AccountController extends AbstractController
             'description' => $spread->description,
             'card_count'  => $spread->card_count,
             'positions'   => $spread->positions,
-        ], $this->userId());
+        ], $this->userId($request));
 
         if ($pending === null) {
             return $response->withJson(['error' => 'Failed to submit the spread for review.'], 500);
@@ -449,7 +449,7 @@ class AccountController extends AbstractController
     /** List the current user's favorited spreads. */
     public function myFavorites(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->favorites->listByUser($this->userId()));
+        return $response->withJson($this->favorites->listByUser($this->userId($request)));
     }
 
     #[OA\Post(
@@ -483,7 +483,7 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
         }
 
-        $this->favorites->add($this->userId(), $spreadType, $spreadId);
+        $this->favorites->add($this->userId($request), $spreadType, $spreadId);
 
         return $response->withJson(['success' => true], 201);
     }
@@ -517,7 +517,7 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'Invalid spread type or ID.'], 400);
         }
 
-        $this->favorites->remove($this->userId(), $spreadType, $spreadId);
+        $this->favorites->remove($this->userId($request), $spreadType, $spreadId);
 
         return $response->withStatus(204);
     }
@@ -539,7 +539,7 @@ class AccountController extends AbstractController
     )]
     public function myFavoriteDecks(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->favoriteDecks->listByUser($this->userId()));
+        return $response->withJson($this->favoriteDecks->listByUser($this->userId($request)));
     }
 
     #[OA\Post(
@@ -565,7 +565,7 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'Invalid deck ID.'], 400);
         }
 
-        $this->favoriteDecks->add($this->userId(), $deckId);
+        $this->favoriteDecks->add($this->userId($request), $deckId);
 
         return $response->withJson(['success' => true], 201);
     }
@@ -594,13 +594,19 @@ class AccountController extends AbstractController
             return $response->withJson(['error' => 'Invalid deck ID.'], 400);
         }
 
-        $this->favoriteDecks->remove($this->userId(), $deckId);
+        $this->favoriteDecks->remove($this->userId($request), $deckId);
 
         return $response->withStatus(204);
     }
 
-    private function userId(): int
+    private function userId(Request $request): int
     {
+        // Set by AccountAuth (session or plugin token) or UserAuth (session).
+        $id = $request->getAttribute('auth_user_id');
+        if (is_int($id) && $id > 0) {
+            return $id;
+        }
+
         Session::start();
         return Session::userId() ?? 0;
     }

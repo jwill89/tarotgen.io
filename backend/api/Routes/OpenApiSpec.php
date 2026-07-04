@@ -37,16 +37,30 @@ use OpenApi\Attributes as OA;
     name: 'PHPSESSID',
     description: 'Session cookie issued on sign-in. Sent automatically by the browser.'
 )]
+#[OA\SecurityScheme(
+    securityScheme: 'pluginToken',
+    type: 'http',
+    scheme: 'bearer',
+    description: 'Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).'
+)]
+#[OA\SecurityScheme(
+    securityScheme: 'clientToken',
+    type: 'http',
+    scheme: 'bearer',
+    description: 'Relay routing token held by every plugin install, guest or linked (Authorization: Bearer …).'
+)]
 #[OA\Tag(name: 'Config', description: 'Public runtime configuration.')]
 #[OA\Tag(name: 'Decks', description: 'Tarot decks: public browsing and user submissions.')]
 #[OA\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
 #[OA\Tag(name: 'Spreads', description: 'Public spread layouts and user submissions.')]
 #[OA\Tag(name: 'Readings', description: 'Generating, viewing, and modifying readings.')]
+#[OA\Tag(name: 'Cards', description: 'Card-level actions (e.g. reporting a scan issue).')]
 #[OA\Tag(name: 'Contact', description: 'Public contact-form submissions.')]
 #[OA\Tag(name: 'Changelog', description: 'Public changelog entries.')]
 #[OA\Tag(name: 'Authentication', description: 'Registration, sign-in/out, and session.')]
 #[OA\Tag(name: 'Passkeys', description: 'WebAuthn passkey registration and login.')]
 #[OA\Tag(name: 'Account', description: "The signed-in user's self-service area.")]
+#[OA\Tag(name: 'Plugin', description: 'Dalamud plugin account linking (OAuth PKCE) and token management.')]
 #[OA\Tag(name: 'Admin · Dashboard', description: 'Admin session check and usage stats.')]
 #[OA\Tag(name: 'Admin · Decks', description: 'Deck moderation and special cards.')]
 #[OA\Tag(name: 'Admin · Deck Systems', description: 'Deck-system moderation.')]
@@ -55,6 +69,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Admin · Changelog', description: 'Changelog entry CRUD.')]
 #[OA\Tag(name: 'Admin · Users', description: 'Account administration.')]
 #[OA\Tag(name: 'Admin · Contacts', description: 'Submitted contact messages.')]
+#[OA\Tag(name: 'Admin · Card Reports', description: 'Reported card scans needing a re-scan.')]
 final class OpenApiSpec
 {
 }
