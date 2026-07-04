@@ -37,7 +37,8 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^13` |
-| BE linting  | `squizlabs/php_codesniffer` (PSR-12, `phpcs.xml`), `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 6, baselined) |
+| BE linting  | `squizlabs/php_codesniffer` (PSR-12, `phpcs.xml`), `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 8, baselined) |
+| Plugin      | **FFXIV Dalamud plugin** (`plugin/`) — C# / **.NET 10** (`net10.0-windows`), Dalamud **API 15** (`Dalamud.NET.Sdk/15.0.0`), ImGui via `Dalamud.Bindings.ImGui`. Windows-only, built independently — see §12. |
 | Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
 
 ---
@@ -94,7 +95,11 @@ flattens both into the live server's single flat web root.
 │   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
 │   └── vendor/             # Composer deps (generated).
 │
-├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend).
+├── plugin/                 # FFXIV Dalamud plugin — self-contained C# subproject (§12).
+│   ├── TarotGen.Plugin.sln
+│   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
+│
+├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin).
 ├── README.md               # Human-facing quick orientation.
 ├── .gitignore / .gitattributes
 └── (frontend/dist, */node_modules — generated)
@@ -250,14 +255,14 @@ cd backend
 composer install       # install PHP deps
 composer dev           # PHP built-in server on :80 via dev-router.php (the API backend)
 composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
-composer stan          # PHPStan static analysis (backend/phpstan.neon, level 6, --memory-limit=512M baked in)
+composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
 composer lint          # PHP_CodeSniffer (alias for `phpcs`)
 composer lint:fix      # php-cs-fixer fix (auto-fix code style)
 composer docs          # regenerate backend/openapi.json from the swagger-php attributes
 vendor\bin\phpunit     # run PHPUnit directly
 ```
 
-> PHPStan runs at **level 6** with a baseline (`phpstan-baseline.neon`) capturing
+> PHPStan runs at **level 8** with a baseline (`phpstan-baseline.neon`) capturing
 > a handful of pre-existing findings, so `composer stan` fails only on *new* issues.
 > The Data/Repository/Structure layers and controller route `$args` are fully
 > annotated (`array<string,mixed>`, `list<Structure>`, `array<string,string>`,
@@ -294,13 +299,16 @@ The site runs on a DigitalOcean droplet (Apache + PHP 8.5) at
 .\scripts\deploy.ps1                    # frontend (default): npm build + atomic dist swap
 .\scripts\deploy.ps1 -Target backend    # PHP code; runs composer install on the droplet if composer.lock changed
 .\scripts\deploy.ps1 -Target both       # frontend, then backend
+.\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
 ```
 
 The script flattens the repo into the server layout and **never** uploads the
 server-side `db/`, `.env`, or `assets/decks/`. Frontend keeps a `dist.old` rollback;
-backend archives the previous code to `.deploy/backend-prev.tgz`. It keeps each
-target to ≤3 SSH connections (the droplet runs `ufw limit ssh`).
+backend archives the previous code to `.deploy/backend-prev.tgz`. The `plugin`
+target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
+`$WebRoot/plugin`. It keeps each target to ≤3 SSH connections (the droplet runs
+`ufw limit ssh`).
 
 ---
 
@@ -391,4 +399,40 @@ target to ≤3 SSH connections (the droplet runs `ufw limit ssh`).
 | Change a DB schema                  | new `db/migrate_*.php` script |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
 | Adjust auth/session/CSRF            | `api/index.php` + `api/Routes/Middleware/*` |
+
+---
+
+## 12. The FFXIV Dalamud plugin (`plugin/`)
+
+A self-contained **C# / .NET 10** Dalamud plugin (Dalamud **API 15**,
+`Dalamud.NET.Sdk/15.0.0`, Windows-only) that talks to the same public API to
+draw, view, and share readings in-game. It is **built and distributed
+independently** of the site — the frontend/backend deploy targets don't touch it,
+and it has its own version, package, and release channel.
+
+- **Build:** `dotnet build plugin/TarotGen.Plugin/TarotGen.Plugin.csproj -c Release`
+  (needs the Dalamud dev SDK on disk — XIVLauncher installs it to
+  `%AppData%\XIVLauncher\addon\Hooks\dev`). A Release build runs **DalamudPackager**,
+  which emits `bin/Release/TarotGen.Plugin/latest.zip` + manifest. The plugin
+  **version** comes from `<Version>` in the `.csproj` — bump it to make Dalamud
+  offer an update to installed testers.
+- **Distribute:** `scripts/deploy.ps1 -Target plugin` builds Release and uploads
+  `latest.zip` / `icon.png` / a generated `repo.json` (the pluginmaster) to
+  `$WebRoot/plugin`. Testers add `https://tarotgen.io/plugin/repo.json` as a
+  custom repo under Dalamud's `/xlsettings`.
+- **Layout:** `Plugin.cs` (composition root + lifecycle), `Services/`
+  (`TarotApiClient`, `CardTextureCache`, `LinkService` account link, `ShareRelay`
+  share relay, `TokenStore` DPAPI), `Windows/` (`MainWindow`, `ReadingPanel`,
+  `SharePrompt`), `Models/ApiModels.cs` (DTOs), `Configuration.cs`.
+- **Talks to the API over HTTPS with Bearer tokens** (not the session cookie): a
+  per-account token for the account routes (`AccountAuth`) and a per-install
+  **client token** for the share relay (`ClientAuth`). Both are obtained through a
+  browser loopback + PKCE flow on the site's `/authorize` page and stored
+  DPAPI-encrypted. The endpoints it uses are the `Plugin`/`Cards`-tagged routes in
+  `api/index.php` (`/plugin/*`, `/account/tokens`, `/card-reports`).
+- **Conventions/gotchas:** ImGui is `Dalamud.Bindings.ImGui` (not `ImGuiNET`);
+  **never block the framework thread** (all HTTP runs async off-thread; results are
+  read in `Draw`); read local-player identity from `IPlayerState` (v15 removed
+  `IClientState.LocalPlayer`). See [`plugin/README.md`](plugin/README.md) for the
+  build/install walkthrough and the in/out-of-scope feature list.
 

@@ -15,6 +15,97 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Nothing yet.
 
+## [4.1.0] — 2026-07-04
+
+An in-game companion and a card-quality feedback loop. This release adds a
+**Final Fantasy XIV Dalamud plugin** that talks to the existing API, the
+server-side features that back it (optional account linking and a chatless
+reading-share relay), and a way for anyone to flag a card scan that needs
+re-scanning. Every change is **additive** — no existing endpoint or behavior
+changed — so first-party session-cookie auth is untouched.
+
+### Added
+
+#### FFXIV Dalamud plugin (`plugin/`)
+
+- A new **self-contained C# subproject** (Dalamud **API 15**, **.NET 10**, built
+  and packaged independently by DalamudPackager — the site deploy never touches
+  it) that draws and views TarotGen readings **in-game**: pick a public spread or
+  a free draw, render the spread canvas with positioned/rotated cards, open any
+  reading by its share code, and click a card for a full-res lightbox.
+- **Optional account linking** — an OAuth-style **loopback + PKCE** flow opens the
+  site's authorize page in the browser and hands a revocable token back to a local
+  listener (no copy-paste). Linking unlocks locking/finalizing a reading,
+  favorites-sorted pickers, and "My Readings". Tokens are **DPAPI-encrypted** at
+  rest and revocable from the account's "Connected Apps" screen.
+- **Chatless reading share** — push a reading to another plugin user, who gets a
+  passive in-game *"‹A› wants to share a Tarot reading"* popup (no chat, no
+  clipboard). Recipients pick a consent tier (party members / anyone / off) and
+  can block a sender.
+- **Published to a self-hosted "custom repo"** (`https://tarotgen.io/plugin/repo.json`)
+  that testers add under Dalamud's settings; a new `deploy.ps1 -Target plugin`
+  builds Release and uploads `latest.zip` + `icon.png` + `repo.json`.
+
+#### Backend — plugin account linking
+
+- **`plugin_tokens`** (long-lived, revocable, hashed) and **`plugin_auth_codes`**
+  (short-lived, single-use PKCE codes) tables, a `PluginTokenService`, and the
+  `POST /api/plugin/authorize` (session) → `POST /api/plugin/token` (public
+  code→token swap) endpoints. An **`AccountAuth`** middleware accepts *either* a
+  session *or* a plugin Bearer token on the read-only account routes a plugin is
+  allowed to reach, while destructive/profile routes stay session-only. Linked
+  tokens are listed and revoked via `GET`/`DELETE /api/account/tokens`.
+
+#### Backend — chatless share relay
+
+- **`plugin_clients` / `plugin_messages` / `plugin_blocks`** tables, a
+  **`ClientAuth`** middleware, and `POST /api/plugin/guest-authorize` (mint a
+  no-account client token), `POST /api/plugin/clients/register`,
+  `GET /api/plugin/inbox`, `POST /api/plugin/share`, and
+  `POST /api/plugin/clients/block`. Delivery is a short-TTL server inbox drained
+  by a jittered background poll, so a plain short-poll behaves as a push.
+  Harassment controls: a server-enforced `nobody` tier + block list,
+  per-sender/per-IP throttles, and a distinct-recipient fan-out cap;
+  party/friends filtering happens client-side (the server never sees game state).
+
+#### Backend — card scan-error reports
+
+- **`card_reports`** table and a public **`POST /api/card-reports`** endpoint.
+  Reporting a card upserts one row per `(deck, card)` and bumps a counter;
+  admins review them at **`GET`/`PATCH /api/admin/card-reports`**.
+
+#### Frontend
+
+- A browser **"Connect the plugin"** authorize page (`/authorize`) offering
+  *log in to link your account* **or** *continue as a guest*, and a
+  **"Report scan issue"** button in the card lightbox with success feedback.
+- An admin **"Errored Cards"** page (nav + dashboard) listing reported scans
+  (thumbnail, deck, card, count, dates) with resolve/reopen, plus the
+  **"Connected Apps"** revoke UI in Account Settings.
+
+### Security
+
+- The share relay never stores a plaintext roster of players: a recipient's
+  `Character@World` is kept only as a **keyed HMAC hash** (optional
+  `PLUGIN_IDENTITY_SALT`). And `POST /api/plugin/share` returns a **uniform
+  response** whether or not a recipient exists / accepts / has blocked the sender,
+  so it can't be used to probe who runs the plugin.
+- Card reports are rate-limited two ways — an overall per-IP cap plus a
+  per-IP-per-card cooldown so a card's count can't be inflated.
+- The plugin authenticates with **Bearer tokens** (a per-account token for account
+  routes, a per-install client token for the relay) over HTTPS — additive to, and
+  separate from, the first-party session cookie. A native `HttpClient` sends no
+  `Origin`, which `OriginGuard` already permits.
+
+### Developer experience
+
+- New optional env var **`PLUGIN_IDENTITY_SALT`** (documented in
+  `backend/.env.example`); new one-off migrations `db/migrate_plugin_tokens.php`,
+  `migrate_plugin_clients.php`, and `migrate_card_reports.php`.
+- Two new OpenAPI security schemes (`pluginToken`, `clientToken`) and tag groups
+  (`Plugin`, `Cards`, `Admin · Card Reports`); `README.md` and `AGENTS.md` now
+  document the `plugin/` subproject and its `deploy.ps1 -Target plugin` target.
+
 ## [4.0.0] — 2026-07-01
 
 API normalization and machine-readable documentation. The HTTP API is reshaped
@@ -361,7 +452,8 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v4.0.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v4.1.0...HEAD
+[4.1.0]: https://github.com/jwill89/tarot-site/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/jwill89/tarot-site/compare/v3.4.0...v4.0.0
 [3.4.0]: https://github.com/jwill89/tarot-site/compare/v3.3.0...v3.4.0
 [3.3.0]: https://github.com/jwill89/tarot-site/compare/v3.2.0...v3.3.0

@@ -56,15 +56,24 @@ action endpoints for operations that aren't a plain field-set.
 
 ### Authentication & authorization
 
-A signed-in user is identified by the `PHPSESSID` **session cookie** (HttpOnly,
-SameSite=Lax, Secure in production). There are no API keys or bearer tokens for
-first-party calls. In OpenAPI this is the `sessionCookie` security scheme.
+A signed-in **browser** user is identified by the `PHPSESSID` **session cookie**
+(HttpOnly, SameSite=Lax, Secure in production) — the `sessionCookie` OpenAPI
+scheme. The first-party SPA uses only this; there are no API keys.
+
+The **Dalamud plugin** is the one non-browser client and authenticates with
+**Bearer tokens** over HTTPS instead (a native `HttpClient` sends no `Origin`,
+which `OriginGuard` already permits): a per-account **plugin token**
+(`pluginToken` scheme) for the read-only account routes it may reach, and a
+per-install **client token** (`clientToken` scheme) for the share relay. Both are
+minted via a browser loopback + PKCE consent flow and are individually revocable.
 
 | Audience | How a request authenticates | Guard |
 |----------|-----------------------------|-------|
 | Public | No session needed | — |
 | Signed-in user (`/account/*`) | `PHPSESSID` for an **active** account | `UserAuth` → `401 Not authenticated` |
 | Admin (`/admin/*`) | `PHPSESSID` for an active **`is_admin`** account | `AdminAuth` → `401 Unauthorized` |
+| Linked plugin (account routes it may reach) | session **or** a plugin Bearer token | `AccountAuth` → `401 Not authenticated` |
+| Plugin share relay (`/plugin/inbox`, `/plugin/share`, …) | a per-install client Bearer token | `ClientAuth` → `401` |
 
 - **CSRF** — the `OriginGuard` middleware rejects state-changing requests
   (`POST`/`PUT`/`PATCH`/`DELETE`) from a foreign origin. Safe methods and the GET OAuth
