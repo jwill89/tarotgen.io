@@ -55,6 +55,7 @@ public sealed class MainWindow : Window, IDisposable
     private string myReadingsFilter = string.Empty;
 
     private bool switchToReadingTab;
+    private bool switchToSettingsTab;
 
     public MainWindow(
         TarotApiClient api,
@@ -89,6 +90,13 @@ public sealed class MainWindow : Window, IDisposable
         this.IsOpen = true;
     }
 
+    /// <summary>Open the window on the Settings tab (the config/gear button).</summary>
+    public void ShowSettings()
+    {
+        this.switchToSettingsTab = true;
+        this.IsOpen = true;
+    }
+
     public override void Draw()
     {
         if (!this.catalogRequested)
@@ -119,7 +127,9 @@ public sealed class MainWindow : Window, IDisposable
                 DrawMyReadingsTab();
         }
 
-        using (var t = ImRaii.TabItem("Settings"))
+        var settingsFlags = this.switchToSettingsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+        this.switchToSettingsTab = false;
+        using (var t = ImRaii.TabItem("Settings", settingsFlags))
         {
             if (t)
                 DrawSettingsTab();

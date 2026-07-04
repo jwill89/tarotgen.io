@@ -127,6 +127,6 @@ public sealed class Plugin : IDalamudPlugin
 
     private void OpenMain() => this.mainWindow.Toggle();
 
-    // The config/gear button opens the main window (settings live in its Account tab).
-    private void OpenConfig() => this.mainWindow.IsOpen = true;
+    // The config/gear button opens the window on its Settings tab.
+    private void OpenConfig() => this.mainWindow.ShowSettings();
 }
