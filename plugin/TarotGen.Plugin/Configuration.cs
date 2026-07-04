@@ -34,6 +34,18 @@ public sealed class Configuration : IPluginConfiguration
     public bool TokenIsEncrypted { get; set; }
     public string? LinkedName { get; set; }
 
+    // Share relay (P2). Every connected install holds a client (routing) token —
+    // guest by default, linked when the account token is present. Encrypted the
+    // same way as the account token; ClientId is the server-side routing id.
+    public string? EncryptedClientToken { get; set; }
+    public bool ClientTokenIsEncrypted { get; set; }
+    public int ClientId { get; set; }
+
+    // Whether to receive incoming shares (opt-in), and from whom. AcceptTier is
+    // one of: nobody | party_or_friends | anyone (nobody == receiving disabled).
+    public bool IncomingSharesEnabled { get; set; }
+    public string AcceptTier { get; set; } = "party_or_friends";
+
     public void Save(IDalamudPluginInterface pluginInterface)
         => pluginInterface.SavePluginConfig(this);
 }

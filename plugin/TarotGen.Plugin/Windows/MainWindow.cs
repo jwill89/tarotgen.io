@@ -27,6 +27,7 @@ public sealed class MainWindow : Window, IDisposable
     private readonly TarotApiClient api;
     private readonly ReadingPanel readingPanel;
     private readonly LinkService linkService;
+    private readonly ShareRelay shareRelay;
     private readonly Configuration config;
     private readonly IDalamudPluginInterface pluginInterface;
 
@@ -59,6 +60,7 @@ public sealed class MainWindow : Window, IDisposable
         TarotApiClient api,
         ReadingPanel readingPanel,
         LinkService linkService,
+        ShareRelay shareRelay,
         Configuration config,
         IDalamudPluginInterface pluginInterface)
         : base("TarotGen###TarotGenMain")
@@ -66,6 +68,7 @@ public sealed class MainWindow : Window, IDisposable
         this.api = api;
         this.readingPanel = readingPanel;
         this.linkService = linkService;
+        this.shareRelay = shareRelay;
         this.config = config;
         this.pluginInterface = pluginInterface;
         this.freeDrawCount = Math.Max(1, config.FreeDrawCount);
@@ -436,38 +439,53 @@ public sealed class MainWindow : Window, IDisposable
             SaveFreeDrawCountOnEdit();
         }
 
-        Section("Account");
-        if (this.api.IsLinked)
+        Section("Connection");
+        if (this.api.IsConnected)
         {
-            ImGui.TextColored(LinkedColor, $"Linked as {this.api.LinkedName}");
-            ImGui.TextDisabled("Lets you lock readings and see the readings saved to your account.");
+            if (this.api.IsLinked)
+            {
+                ImGui.TextColored(LinkedColor, $"Linked as {this.api.LinkedName}");
+                ImGui.TextDisabled("Account features (locking, favorites, My Readings) are available.");
+            }
+            else
+            {
+                ImGui.TextColored(LinkedColor, "Connected as guest");
+                ImGui.TextDisabled("You can send and receive shared readings — no account needed.");
+                ImGui.Spacing();
+                using (ImRaii.Disabled(this.linkService.IsBusy))
+                {
+                    if (ImGui.Button("Log in to link an account…"))
+                        this.linkService.StartLink();
+                }
+            }
+
+            ImGui.Spacing();
             using (ImRaii.Disabled(this.linkService.IsBusy))
             {
-                if (ImGui.Button("Unlink"))
+                if (ImGui.Button("Disconnect"))
                     this.linkService.Unlink();
             }
         }
         else
         {
             ImGui.TextWrapped(
-                "Link your TarotGen account to lock readings and see your saved readings. "
-                + "Optional — everything else works without it.");
+                "Connect to TarotGen.io to send and receive shared readings. Log in for account "
+                + "features (locking, favorites, My Readings), or continue as a guest — no account needed.");
+            ImGui.Spacing();
             using (ImRaii.Disabled(this.linkService.IsBusy))
+            using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.46f, 0.33f, 0.66f, 1f)))
+            using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.54f, 0.40f, 0.74f, 1f)))
+            using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.40f, 0.28f, 0.58f, 1f)))
             {
-                if (ImGui.Button("Link account…"))
+                if (ImGui.Button("Connect to TarotGen.io", new Vector2(-1, 34 * ImGuiHelpers.GlobalScale)))
                     this.linkService.StartLink();
             }
+        }
 
-            ImGui.SameLine();
-            if (this.linkService.IsBusy)
-            {
-                if (ImGui.Button("Cancel"))
-                    this.linkService.Cancel();
-            }
-            else
-            {
-                ImGui.TextDisabled("(opens your browser)");
-            }
+        if (this.linkService.IsBusy)
+        {
+            if (ImGui.Button("Cancel"))
+                this.linkService.Cancel();
         }
 
         if (!string.IsNullOrEmpty(this.linkService.Status))
@@ -475,6 +493,9 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.Spacing();
             ImGui.TextWrapped(this.linkService.Status);
         }
+
+        if (this.api.IsConnected)
+            DrawSharingSettings();
 
         Section("TarotGen.io");
         float scale = ImGuiHelpers.GlobalScale;
@@ -484,6 +505,41 @@ public sealed class MainWindow : Window, IDisposable
         {
             if (ImGui.Button("Open TarotGen.io in your browser", new Vector2(-1, 38 * scale)))
                 Util.OpenLink(this.api.SiteBase);
+        }
+    }
+
+    private void DrawSharingSettings()
+    {
+        Section("Sharing");
+
+        bool incoming = this.config.IncomingSharesEnabled;
+        if (ImGui.Checkbox("Receive shared readings", ref incoming))
+        {
+            this.config.IncomingSharesEnabled = incoming;
+            this.config.Save(this.pluginInterface);
+        }
+        ImGui.TextDisabled("A popup appears in-game when someone shares a reading with you.");
+
+        if (this.config.IncomingSharesEnabled)
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled("Accept shares from:");
+            DrawTierRadio("Party members", "party_or_friends");
+            ImGui.SameLine();
+            DrawTierRadio("Anyone", "anyone");
+            ImGui.Spacing();
+            ImGui.TextWrapped(
+                "While this is on, your character name and home world are shared with the relay so "
+                + "others can send you readings. Turn it off to stop receiving and hide your name.");
+        }
+    }
+
+    private void DrawTierRadio(string label, string tier)
+    {
+        if (ImGui.RadioButton(label, this.config.AcceptTier == tier))
+        {
+            this.config.AcceptTier = tier;
+            this.config.Save(this.pluginInterface);
         }
     }
 

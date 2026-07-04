@@ -16,11 +16,13 @@ use Routes\Internal\{AccountController,
     GoogleAuthController,
     PasskeyController,
     PluginAuthController,
+    PluginShareController,
     ReadingController,
     SpreadController,
     UserController};
 use Routes\Middleware\AccountAuth;
 use Routes\Middleware\AdminAuth;
+use Routes\Middleware\ClientAuth;
 use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
 use Tarot\Config\Env;
@@ -187,11 +189,22 @@ $app->group('/account', function (RouteCollectorProxy $group) {
 })->add(UserAuth::class);
 
 // ── Plugin account linking (OAuth-style, PKCE public client). `authorize` is the
-// browser consent step (session); `token` is the plugin's public code→token swap.
+// browser consent step (session); `token` is the plugin's public code→token swap;
+// `guest-authorize` mints a no-account relay client token (browser, IP-limited).
 $app->group('/plugin', function (RouteCollectorProxy $group) {
     $group->post('/token[/]', PluginAuthController::class . ':token');
+    $group->post('/guest-authorize[/]', PluginAuthController::class . ':guestAuthorize');
     $group->post('/authorize[/]', PluginAuthController::class . ':authorize')->add(UserAuth::class);
 });
+
+// ── Plugin share relay (client-token authed). Register presence/identity, drain
+// the inbox, push a share to a self-published Character@World, block a sender.
+$app->group('/plugin', function (RouteCollectorProxy $group) {
+    $group->post('/clients/register[/]', PluginShareController::class . ':register');
+    $group->get('/inbox[/]', PluginShareController::class . ':inbox');
+    $group->post('/share[/]', PluginShareController::class . ':share');
+    $group->post('/clients/block[/]', PluginShareController::class . ':block');
+})->add(ClientAuth::class);
 
 // ── Spreads (public read + public submission) ────────────────────────────────
 $app->group('/spreads', function (RouteCollectorProxy $group) {

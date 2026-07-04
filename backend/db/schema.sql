@@ -169,6 +169,38 @@ CREATE TABLE plugin_auth_codes (
         used_at        TEXT    DEFAULT NULL
     );
 
+CREATE TABLE plugin_clients (
+        client_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        token_hash     TEXT    NOT NULL,
+        user_id        INTEGER NULL REFERENCES users(user_id) ON DELETE SET NULL,
+        identity_hash  TEXT    DEFAULT NULL,
+        accept_tier    TEXT    NOT NULL DEFAULT 'party_or_friends',
+        last_seen      TEXT    DEFAULT NULL,
+        created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        revoked_at     TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_messages (
+        id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+        recipient_client_id INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
+        sender_client_id    INTEGER NOT NULL,
+        sender_label        TEXT    NOT NULL,
+        sender_character    TEXT    DEFAULT NULL,
+        sender_world        TEXT    DEFAULT NULL,
+        type                TEXT    NOT NULL DEFAULT 'reading_share',
+        payload             TEXT    NOT NULL,
+        created_at          TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        delivered_at        TEXT    DEFAULT NULL,
+        expires_at          TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_blocks (
+        owner_client_id   INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
+        blocked_client_id INTEGER NOT NULL,
+        created_at        TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (owner_client_id, blocked_client_id)
+    );
+
 CREATE TABLE users (
         user_id        INTEGER PRIMARY KEY AUTOINCREMENT,
         email          TEXT    NOT NULL COLLATE NOCASE,
@@ -209,6 +241,14 @@ CREATE UNIQUE INDEX idx_plugin_tokens_hash ON plugin_tokens (token_hash);
 CREATE INDEX idx_plugin_tokens_user ON plugin_tokens (user_id);
 
 CREATE UNIQUE INDEX idx_plugin_auth_codes_hash ON plugin_auth_codes (code_hash);
+
+CREATE UNIQUE INDEX idx_plugin_clients_hash ON plugin_clients (token_hash);
+
+CREATE INDEX idx_plugin_clients_identity ON plugin_clients (identity_hash);
+
+CREATE INDEX idx_plugin_clients_user ON plugin_clients (user_id);
+
+CREATE INDEX idx_plugin_messages_inbox ON plugin_messages (recipient_client_id, delivered_at);
 
 CREATE UNIQUE INDEX idx_users_display_name ON users (display_name COLLATE NOCASE);
 

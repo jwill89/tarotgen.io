@@ -8,6 +8,8 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
+use Tarot\Service\ShareService;
+use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 
 /**
@@ -20,8 +22,13 @@ use Tarot\Utility\Session;
  */
 class PluginAuthController extends AbstractController
 {
+    /** Guest client tokens are cheap to mint, so cap issuance per IP. */
+    private const int GUEST_ISSUE_MAX_PER_WINDOW = 10;
+    private const int GUEST_ISSUE_WINDOW_SECONDS = 3600;
+
     public function __construct(
         private readonly PluginTokenService $pluginTokens,
+        private readonly ShareService $shares,
         private readonly UserRepository $users,
     ) {
     }
@@ -86,6 +93,72 @@ class PluginAuthController extends AbstractController
     }
 
     #[OA\Post(
+        path: '/plugin/guest-authorize',
+        summary: 'Mint a guest relay client token (no account required)',
+        tags: ['Plugin'],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['redirect_uri'],
+                properties: [
+                    new OA\Property(
+                        property: 'redirect_uri',
+                        type: 'string',
+                        description: 'Loopback URI, e.g. http://127.0.0.1:<port>/callback'
+                    ),
+                    new OA\Property(property: 'state', type: 'string'),
+                ]
+            )
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Loopback redirect target carrying the guest client token',
+                content: new OA\JsonContent(properties: [new OA\Property(property: 'redirect_uri', type: 'string')])
+            ),
+            new OA\Response(response: 400, description: 'Non-loopback redirect_uri'),
+            new OA\Response(response: 429, description: 'Too many guest tokens issued from this IP'),
+        ]
+    )]
+    public function guestAuthorize(Request $request, Response $response): Response|ResponseInterface
+    {
+        $ip      = $this->clientIp($request);
+        $limiter = new RateLimiter(
+            'plugin_guest_issue',
+            self::GUEST_ISSUE_MAX_PER_WINDOW,
+            self::GUEST_ISSUE_WINDOW_SECONDS
+        );
+        if ($limiter->isLimited($ip)) {
+            return $response->withJson(
+                ['error' => 'Too many guest connections from this network. Try again later.'],
+                429
+            );
+        }
+
+        $body        = $this->parsedBody($request);
+        $redirectUri = trim((string)($body['redirect_uri'] ?? ''));
+        $state       = (string)($body['state'] ?? '');
+
+        // The token is handed to a loopback listener the plugin controls; refusing
+        // any non-loopback target stops a crafted link from exfiltrating it.
+        if (!$this->isLoopbackUri($redirectUri)) {
+            return $response->withJson(['error' => 'redirect_uri must be a loopback address.'], 400);
+        }
+
+        $limiter->hit($ip);
+        $client = $this->shares->issueClient(null);
+
+        $glue   = str_contains($redirectUri, '?') ? '&' : '?';
+        $target = $redirectUri . $glue . http_build_query([
+            'client_token' => $client['token'],
+            'client_id'    => $client['client_id'],
+            'state'        => $state,
+        ]);
+
+        return $response->withJson(['redirect_uri' => $target]);
+    }
+
+    #[OA\Post(
         path: '/plugin/token',
         summary: 'Exchange a PKCE authorization code for a plugin Bearer token',
         tags: ['Plugin'],
@@ -108,6 +181,8 @@ class PluginAuthController extends AbstractController
                     new OA\Property(property: 'token_type', type: 'string'),
                     new OA\Property(property: 'scope', type: 'string'),
                     new OA\Property(property: 'display_name', type: 'string'),
+                    new OA\Property(property: 'client_token', type: 'string', description: 'Relay routing token'),
+                    new OA\Property(property: 'client_id', type: 'integer'),
                 ])
             ),
             new OA\Response(response: 400, description: 'Invalid or expired authorization code'),
@@ -135,11 +210,17 @@ class PluginAuthController extends AbstractController
             }
         }
 
+        // Every linked install also gets a routing client token for the share relay,
+        // tied to the same account so its send limits sit above a guest's.
+        $client = $this->shares->issueClient($userId);
+
         return $response->withJson([
             'token'        => $token,
             'token_type'   => 'Bearer',
             'scope'        => 'account',
             'display_name' => $displayName,
+            'client_token' => $client['token'],
+            'client_id'    => $client['client_id'],
         ]);
     }
 

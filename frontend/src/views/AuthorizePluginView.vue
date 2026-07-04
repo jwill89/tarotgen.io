@@ -7,7 +7,7 @@ import { usePluginLink } from '@/composables/usePluginLink'
 // The plugin opens this page with the PKCE + loopback query params.
 const route = useRoute()
 const { currentUser, isLoggedIn, fetchMe } = useUser()
-const { authorize } = usePluginLink()
+const { authorize, connectGuest } = usePluginLink()
 
 const q = route.query
 const codeChallenge = String(q.code_challenge ?? '')
@@ -15,12 +15,16 @@ const method = String(q.code_challenge_method ?? 'S256')
 const redirectUri = String(q.redirect_uri ?? '')
 const state = String(q.state ?? '')
 
-// Only a loopback redirect is ever legitimate here (the code goes to the plugin's
-// local listener). The server enforces this too; the client check is UX.
+// Only a loopback redirect is ever legitimate here (the code/token goes to the
+// plugin's local listener). The server enforces this too; the client check is UX.
 const isLoopback = computed(() =>
   /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(redirectUri),
 )
-const paramsValid = computed(() => codeChallenge !== '' && method === 'S256' && isLoopback.value)
+// The guest path needs only a loopback redirect; the account path also needs PKCE.
+const paramsValid = computed(() => isLoopback.value)
+const accountParamsValid = computed(
+  () => codeChallenge !== '' && method === 'S256' && isLoopback.value,
+)
 
 const checkingSession = ref(true)
 const submitting = ref(false)
@@ -48,14 +52,25 @@ async function approve(): Promise<void> {
     state,
   })
 
-  submitting.value = false
+  finish(res)
+}
 
+async function approveGuest(): Promise<void> {
+  submitting.value = true
+  error.value = null
+
+  const res = await connectGuest({ redirect_uri: redirectUri, state })
+  finish(res)
+}
+
+function finish(res: { ok: boolean; redirectUri?: string; error?: string }): void {
+  submitting.value = false
   if (res.ok && res.redirectUri) {
     done.value = true
-    // Hand the authorization code back to the plugin's loopback listener.
+    // Hand the code / client token back to the plugin's loopback listener.
     window.location.href = res.redirectUri
   } else {
-    error.value = res.error ?? 'Authorization failed.'
+    error.value = res.error ?? 'Connection failed.'
   }
 }
 </script>
@@ -63,56 +78,69 @@ async function approve(): Promise<void> {
 <template>
   <section class="section">
     <div class="container" style="max-width: 40rem">
-      <h1 class="title">Link a Plugin</h1>
+      <h1 class="title">Connect the TarotGen Plugin</h1>
 
       <div v-if="!paramsValid" class="notification is-warning">
-        This authorization link is missing or has invalid parameters. Please start the link from the
-        plugin's settings in-game.
+        This connection link is missing or has invalid parameters. Please start it from the plugin's
+        settings in-game.
       </div>
 
       <div v-else-if="checkingSession" class="has-text-grey">Checking your session…</div>
 
-      <div v-else-if="!isLoggedIn" class="box">
-        <p class="mb-4">Sign in to your TarotGen account to link the plugin.</p>
-        <router-link class="button is-primary" :to="loginTo">Log in to continue</router-link>
-      </div>
-
       <div v-else-if="done" class="notification is-success">
-        <p><strong>Plugin linked.</strong> You can close this tab and return to the game.</p>
+        <p><strong>Connected.</strong> You can close this tab and return to the game.</p>
       </div>
 
       <div v-else class="box">
         <p class="mb-4">
-          The <strong>TarotGen FFXIV plugin</strong> wants to link to your account (<strong>{{
-            currentUser?.display_name
-          }}</strong
-          >).
-        </p>
-
-        <p class="mb-2">Once linked, the plugin will be able to:</p>
-        <ul class="mb-4 ml-5" style="list-style: disc">
-          <li>See the readings and favorites saved to your account</li>
-          <li>Track readings you generate to your account</li>
-          <li>Lock a reading you own</li>
-        </ul>
-
-        <p class="mb-4 has-text-grey">
-          It <strong>cannot</strong> change your password, delete your account, or manage other
-          links. You can revoke this link any time from Account Settings.
+          Choose how the <strong>TarotGen FFXIV plugin</strong> connects to TarotGen.io:
         </p>
 
         <p v-if="error" class="help is-danger mb-3">{{ error }}</p>
 
-        <div class="buttons">
+        <!-- Account link -->
+        <div class="mb-4">
+          <p class="mb-1"><strong>Link your account</strong></p>
+          <p class="is-size-7 has-text-grey mb-2">
+            Unlocks locking readings, favorites, and My Readings — plus sending &amp; receiving
+            shared readings. The plugin <strong>cannot</strong> change your password, delete your
+            account, or manage other links, and you can revoke it any time from Account Settings.
+          </p>
           <button
+            v-if="isLoggedIn && accountParamsValid"
             class="button is-primary"
             :class="{ 'is-loading': submitting }"
             :disabled="submitting"
             @click="approve"
           >
-            Authorize
+            Authorize as {{ currentUser?.display_name }}
           </button>
-          <router-link class="button" :to="{ name: 'home' }">Cancel</router-link>
+          <router-link v-else class="button is-primary" :to="loginTo">
+            Log in to link your account
+          </router-link>
+        </div>
+
+        <hr />
+
+        <!-- Guest -->
+        <div class="mb-2">
+          <p class="mb-1"><strong>Continue as a guest</strong></p>
+          <p class="is-size-7 has-text-grey mb-2">
+            No account needed. You can send and receive shared readings. You can link an account
+            later from the plugin's settings.
+          </p>
+          <button
+            class="button"
+            :class="{ 'is-loading': submitting }"
+            :disabled="submitting"
+            @click="approveGuest"
+          >
+            Continue as guest
+          </button>
+        </div>
+
+        <div class="mt-4">
+          <router-link class="button is-text" :to="{ name: 'home' }">Cancel</router-link>
         </div>
       </div>
     </div>

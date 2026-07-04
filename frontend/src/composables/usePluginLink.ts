@@ -32,6 +32,26 @@ export function usePluginLink() {
     return { ok: false, error: res.ok ? 'The server returned an unexpected response.' : res.error }
   }
 
+  /**
+   * Connect the plugin as a guest — no account required. Mints a relay client
+   * token and returns the loopback redirect that hands it back to the plugin.
+   */
+  async function connectGuest(params: {
+    redirect_uri: string
+    state: string
+  }): Promise<{ ok: boolean; redirectUri?: string; error?: string }> {
+    const res = await apiRequest<{ redirect_uri?: string }>(
+      endpoints.plugin.guestAuthorize,
+      { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(params) },
+      'Could not connect as a guest. Please try again.',
+    )
+
+    if (res.ok && typeof res.data.redirect_uri === 'string') {
+      return { ok: true, redirectUri: res.data.redirect_uri }
+    }
+    return { ok: false, error: res.ok ? 'The server returned an unexpected response.' : res.error }
+  }
+
   async function listTokens(): Promise<PluginToken[]> {
     const res = await apiRequest<PluginToken[]>(endpoints.account.tokens)
     return res.ok && Array.isArray(res.data) ? res.data : []
@@ -42,5 +62,5 @@ export function usePluginLink() {
     return res.ok
   }
 
-  return { authorize, listTokens, revokeToken }
+  return { authorize, connectGuest, listTokens, revokeToken }
 }

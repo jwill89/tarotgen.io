@@ -25,6 +25,7 @@ public sealed class ReadingPanel
 
     private readonly TarotApiClient api;
     private readonly CardTextureCache textures;
+    private readonly ShareRelay shareRelay;
 
     private Reading? reading;
     private string codeBuffer = "";
@@ -36,10 +37,14 @@ public sealed class ReadingPanel
     private bool lightboxShowReversed;
     private bool openLightboxRequest;
 
-    public ReadingPanel(TarotApiClient api, CardTextureCache textures)
+    private volatile bool sharing;
+    private string? shareStatus;
+
+    public ReadingPanel(TarotApiClient api, CardTextureCache textures, ShareRelay shareRelay)
     {
         this.api = api;
         this.textures = textures;
+        this.shareRelay = shareRelay;
     }
 
     public bool HasReading => this.reading != null;
@@ -153,6 +158,27 @@ public sealed class ReadingPanel
                 if (ImGui.Button("Lock reading"))
                     StartFinalize(r.ReadingId);
             }
+        }
+
+        if (this.shareRelay.CanShare)
+        {
+            ImGui.SameLine();
+            using (ImRaii.Disabled(this.sharing))
+            {
+                if (ImGui.Button("Share…"))
+                {
+                    this.shareStatus = null;
+                    ImGui.OpenPopup("##sharePicker");
+                }
+            }
+        }
+
+        DrawSharePicker(r);
+
+        if (!string.IsNullOrEmpty(this.shareStatus))
+        {
+            ImGui.Spacing();
+            ImGui.TextDisabled(this.shareStatus);
         }
 
         if (info?.Spread != null && !string.IsNullOrWhiteSpace(info.Spread.Description))
@@ -466,6 +492,61 @@ public sealed class ReadingPanel
             {
                 this.loading = false;
             }
+        });
+    }
+
+    // ── Share picker ──────────────────────────────────────────────────────────
+
+    private void DrawSharePicker(Reading r)
+    {
+        using var popup = ImRaii.Popup("##sharePicker");
+        if (!popup)
+            return;
+
+        if (this.shareRelay.Self() is not { } me)
+        {
+            ImGui.TextDisabled("Log in to a character to share readings.");
+            return;
+        }
+
+        ImGui.TextDisabled("Send this reading to:");
+        ImGui.Separator();
+
+        bool any = false;
+
+        if (this.shareRelay.TargetRecipient() is { } target)
+        {
+            any = true;
+            if (ImGui.Selectable($"{target.Name} ({target.World})  — current target"))
+            {
+                StartShare(r.ReadingId, target, me);
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        foreach (var member in this.shareRelay.PartyRecipients())
+        {
+            any = true;
+            if (ImGui.Selectable($"{member.Name} ({member.World})"))
+            {
+                StartShare(r.ReadingId, member, me);
+                ImGui.CloseCurrentPopup();
+            }
+        }
+
+        if (!any)
+            ImGui.TextDisabled("No party members or player target found.\nTarget a player or join a party, then try again.");
+    }
+
+    private void StartShare(string readingId, ShareRelay.Recipient to, ShareRelay.Recipient self)
+    {
+        this.sharing = true;
+        this.shareStatus = $"Sending to {to.Name}…";
+        _ = Task.Run(async () =>
+        {
+            var result = await this.shareRelay.SendAsync(readingId, to, self).ConfigureAwait(false);
+            this.shareStatus = result;
+            this.sharing = false;
         });
     }
 

@@ -43,6 +43,12 @@ use OpenApi\Attributes as OA;
     scheme: 'bearer',
     description: 'Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).'
 )]
+#[OA\SecurityScheme(
+    securityScheme: 'clientToken',
+    type: 'http',
+    scheme: 'bearer',
+    description: 'Relay routing token held by every plugin install, guest or linked (Authorization: Bearer …).'
+)]
 #[OA\Tag(name: 'Config', description: 'Public runtime configuration.')]
 #[OA\Tag(name: 'Decks', description: 'Tarot decks: public browsing and user submissions.')]
 #[OA\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
