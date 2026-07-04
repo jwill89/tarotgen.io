@@ -73,6 +73,9 @@ export const endpoints = {
   /** `POST /api/contacts` — public contact-form submission. */
   contacts: '/contacts',
 
+  /** `POST /api/card-reports` — public report of a card scan needing a re-scan. */
+  cardReports: '/card-reports',
+
   changelog: {
     list: '/changelog',
     byId: (id: string | number) => `/changelog/${id}`,
@@ -220,6 +223,11 @@ export const endpoints = {
       /** `GET` — pass `?show_read=1` to include read messages. */
       list: (showRead: boolean) => `/contacts?show_read=${showRead ? '1' : '0'}`,
       byId: (id: string | number) => `/contacts/${id}`,
+    },
+    cardReports: {
+      /** `GET` — pass `?show_resolved=1` to include resolved reports. */
+      list: (showResolved: boolean) => `/card-reports?show_resolved=${showResolved ? '1' : '0'}`,
+      byId: (id: string | number) => `/card-reports/${id}`,
     },
   },
 } as const

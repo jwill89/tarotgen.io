@@ -2016,6 +2016,104 @@
                 ]
             }
         },
+        "/admin/card-reports": {
+            "get": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "List reported card scans (open first; pass ?show_resolved=1 for all)",
+                "operationId": "47c6f9a250e71454f6aa7b427865ff1e",
+                "parameters": [
+                    {
+                        "name": "show_resolved",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of card reports",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CardReport"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/card-reports/{report_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "Mark a card report resolved / reopened",
+                "operationId": "037d49bac3021d8eae5c8d48a210bb17",
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "resolved": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/admin/readings": {
             "get": {
                 "tags": [
@@ -2375,6 +2473,78 @@
                         "sessionCookie": []
                     }
                 ]
+            }
+        },
+        "/card-reports": {
+            "post": {
+                "tags": [
+                    "Cards"
+                ],
+                "summary": "Report a card scan as needing a re-scan (rate-limited)",
+                "operationId": "7121e0ef3d6914631c4b1b46a5d6a143",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "deck_id",
+                                    "card_id"
+                                ],
+                                "properties": {
+                                    "deck_id": {
+                                        "type": "integer"
+                                    },
+                                    "card_id": {
+                                        "type": "integer"
+                                    },
+                                    "card_name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Report recorded",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "200": {
+                        "description": "Already reported this card recently (counter not bumped)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "status": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Missing/invalid deck or card id"
+                    },
+                    "429": {
+                        "description": "Too many reports from this IP"
+                    }
+                }
             }
         },
         "/changelog": {
@@ -4484,6 +4654,45 @@
     },
     "components": {
         "schemas": {
+            "CardReport": {
+                "description": "A report that a card scan needs re-scanning.",
+                "properties": {
+                    "report_id": {
+                        "type": "integer"
+                    },
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_name": {
+                        "description": "Resolved deck name (from the decks table).",
+                        "type": "string"
+                    },
+                    "card_id": {
+                        "type": "integer"
+                    },
+                    "card_name": {
+                        "type": "string"
+                    },
+                    "report_count": {
+                        "description": "How many times this card has been reported.",
+                        "type": "integer"
+                    },
+                    "resolved_at": {
+                        "description": "When an admin marked it handled; null = open.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "first_reported_at": {
+                        "type": "string"
+                    },
+                    "last_reported_at": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
             "ChangelogEntry": {
                 "description": "A changelog entry.",
                 "properties": {
@@ -5051,6 +5260,10 @@
             "description": "Generating, viewing, and modifying readings."
         },
         {
+            "name": "Cards",
+            "description": "Card-level actions (e.g. reporting a scan issue)."
+        },
+        {
             "name": "Contact",
             "description": "Public contact-form submissions."
         },
@@ -5105,6 +5318,10 @@
         {
             "name": "Admin · Contacts",
             "description": "Submitted contact messages."
+        },
+        {
+            "name": "Admin · Card Reports",
+            "description": "Reported card scans needing a re-scan."
         }
     ]
 }

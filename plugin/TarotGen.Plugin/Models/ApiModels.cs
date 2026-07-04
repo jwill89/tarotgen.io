@@ -168,6 +168,12 @@ public sealed class ShareAck
     public string? Status { get; set; }
 }
 
+/// <summary>Ack body from POST /api/card-reports ("reported" | "already_reported").</summary>
+public sealed class CardReportAck
+{
+    public string? Status { get; set; }
+}
+
 /// <summary>Request body for POST /api/plugin/share.</summary>
 public sealed class ShareRequest
 {

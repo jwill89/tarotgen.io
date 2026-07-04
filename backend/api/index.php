@@ -8,6 +8,7 @@ use Slim\Routing\RouteCollectorProxy;
 use DI\ContainerBuilder;
 use Routes\Internal\{AccountController,
     AdminController,
+    CardReportController,
     ChangelogController,
     ConfigController,
     ContactController,
@@ -217,6 +218,11 @@ $app->group('/contacts', function (RouteCollectorProxy $group) {
     $group->post('[/]', ContactController::class . ':submit');
 });
 
+// ── Card scan-error reports (public submission from the card lightbox) ────────
+$app->group('/card-reports', function (RouteCollectorProxy $group) {
+    $group->post('[/]', CardReportController::class . ':report');
+});
+
 // ── Changelog (public read) ──────────────────────────────────────────────────
 $app->group('/changelog', function (RouteCollectorProxy $group) {
     $group->get('[/{entry_id}[/]]', ChangelogController::class . ':getChangelog');
@@ -318,6 +324,10 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     // Contacts (submitted via public contact form)
     $group->get('/contacts[/]', AdminController::class . ':getContacts');
     $group->patch('/contacts/{contact_id}[/]', AdminController::class . ':updateContact');
+
+    // Card scan-error reports (submitted from the card lightbox)
+    $group->get('/card-reports[/]', AdminController::class . ':getCardReports');
+    $group->patch('/card-reports/{report_id}[/]', AdminController::class . ':updateCardReport');
 })->add(AdminAuth::class);
 
 // Run the App

@@ -169,6 +169,17 @@ CREATE TABLE plugin_auth_codes (
         used_at        TEXT    DEFAULT NULL
     );
 
+CREATE TABLE card_reports (
+        report_id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        deck_id           INTEGER NOT NULL REFERENCES "decks"(deck_id) ON DELETE CASCADE,
+        card_id           INTEGER NOT NULL,
+        card_name         TEXT    NOT NULL DEFAULT '',
+        report_count      INTEGER NOT NULL DEFAULT 1,
+        resolved_at       TEXT    DEFAULT NULL,
+        first_reported_at TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_reported_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
 CREATE TABLE plugin_clients (
         client_id      INTEGER PRIMARY KEY AUTOINCREMENT,
         token_hash     TEXT    NOT NULL,
@@ -241,6 +252,8 @@ CREATE UNIQUE INDEX idx_plugin_tokens_hash ON plugin_tokens (token_hash);
 CREATE INDEX idx_plugin_tokens_user ON plugin_tokens (user_id);
 
 CREATE UNIQUE INDEX idx_plugin_auth_codes_hash ON plugin_auth_codes (code_hash);
+
+CREATE UNIQUE INDEX idx_card_reports_card ON card_reports (deck_id, card_id);
 
 CREATE UNIQUE INDEX idx_plugin_clients_hash ON plugin_clients (token_hash);
 

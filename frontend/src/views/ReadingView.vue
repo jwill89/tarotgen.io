@@ -876,6 +876,7 @@ watch(
     :cards="readingCards"
     :card-back-url="cardBackUrl"
     :initial-index="lightboxIndex"
+    :deck-id="readingInfo?.deck_id ?? 0"
     @close="lightboxIndex = null"
   />
 

@@ -253,6 +253,12 @@ const router = createRouter({
       component: () => import('@/views/admin/ContactsView.vue'),
       meta: { title: 'Admin Contacts', admin: true, noindex: true },
     },
+    {
+      path: '/admin/card-reports',
+      name: 'admin-card-reports',
+      component: () => import('@/views/admin/ErroredCardsView.vue'),
+      meta: { title: 'Errored Cards', admin: true, noindex: true },
+    },
     { path: '/:pathMatch(.*)*', redirect: '/' },
   ],
 })

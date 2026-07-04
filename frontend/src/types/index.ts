@@ -218,3 +218,16 @@ export interface Contact {
   is_read: number
   submitted_at: string
 }
+
+/** A reported card scan needing a re-scan (admin panel). */
+export interface CardReport {
+  report_id: number
+  deck_id: number
+  deck_name: string
+  card_id: number
+  card_name: string
+  report_count: number
+  resolved_at: string | null
+  first_reported_at: string
+  last_reported_at: string
+}

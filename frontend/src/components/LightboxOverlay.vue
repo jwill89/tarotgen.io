@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { useToasts } from '@/composables/useToasts'
+import { endpoints } from '@/api/endpoints'
 import type { ReadingCard } from '@/types'
 
 const props = defineProps<{
   cards: ReadingCard[]
   cardBackUrl: string
   initialIndex: number
+  deckId: number
 }>()
+
+const { success: toastSuccess, error: toastError } = useToasts()
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -44,6 +49,51 @@ const isReversed = computed(() => {
 })
 
 const showReversed = computed(() => isReversed.value && !flipped.value)
+
+/* ── Report a card scan issue ──────────────────────────── */
+const reportedCards = ref<Set<number>>(new Set())
+const reportingCard = ref(false)
+
+const currentCard = computed(() =>
+  index.value >= 0 ? (props.cards[index.value] as ReadingCard | undefined) : undefined,
+)
+const alreadyReported = computed(() =>
+  currentCard.value ? reportedCards.value.has(currentCard.value.card_id) : false,
+)
+
+async function reportCard() {
+  const card = currentCard.value
+  if (!card || reportingCard.value || reportedCards.value.has(card.card_id)) return
+
+  reportingCard.value = true
+  try {
+    const res = await fetch('/api' + endpoints.cardReports, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        deck_id: props.deckId,
+        card_id: card.card_id,
+        card_name: card.card_name,
+      }),
+    })
+
+    if (res.status === 429) {
+      toastError('You have reported too many cards recently. Please try again later.')
+      return
+    }
+    if (!res.ok) {
+      toastError('Could not submit your report. Please try again.')
+      return
+    }
+
+    reportedCards.value = new Set(reportedCards.value).add(card.card_id)
+    toastSuccess('Thanks! This card has been reported for re-scanning.')
+  } catch {
+    toastError('Could not submit your report. Please try again.')
+  } finally {
+    reportingCard.value = false
+  }
+}
 
 const isZoomed = computed(() => zoom.value > MIN_ZOOM + 0.001)
 
@@ -379,6 +429,25 @@ onUnmounted(() => {
             ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate']"
           /></span>
           <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
+        </button>
+
+        <button
+          v-if="index > -1"
+          class="button is-small is-rounded lightbox-report-btn"
+          :class="{ 'is-success': alreadyReported }"
+          :disabled="reportingCard || alreadyReported"
+          :title="alreadyReported ? 'Reported' : 'Report a scan artefact or issue with this card'"
+          @click="reportCard"
+        >
+          <span class="icon is-small"
+            ><FontAwesomeIcon
+              :icon="
+                alreadyReported
+                  ? byPrefixAndName.fas['circle-check']
+                  : byPrefixAndName.fas['triangle-exclamation']
+              "
+          /></span>
+          <span>{{ alreadyReported ? 'Reported' : 'Report scan issue' }}</span>
         </button>
       </div>
 

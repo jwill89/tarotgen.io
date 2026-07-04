@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -36,6 +37,12 @@ public sealed class ReadingPanel
     private LightboxCard? lightbox;
     private bool lightboxShowReversed;
     private bool openLightboxRequest;
+
+    // Card scan-error reporting (from the lightbox). Keyed by (deckId, cardId);
+    // ConcurrentDictionary so the background report task and Draw don't race.
+    private readonly ConcurrentDictionary<(int, int), byte> reportedCards = new();
+    private volatile bool reportingCard;
+    private string? reportCardStatus;
 
     private volatile bool sharing;
     private string? shareStatus;
@@ -361,6 +368,7 @@ public sealed class ReadingPanel
     {
         this.lightbox = new LightboxCard(deckId, card.CardId, card.CardName, card.Reversed, positionTitle);
         this.lightboxShowReversed = card.Reversed;
+        this.reportCardStatus = null;
         this.openLightboxRequest = true;
     }
 
@@ -417,6 +425,17 @@ public sealed class ReadingPanel
 
         if (ImGui.Button("Close"))
             ImGui.CloseCurrentPopup();
+
+        ImGui.SameLine();
+        bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
+        using (ImRaii.Disabled(this.reportingCard || reported))
+        {
+            if (ImGui.Button(reported ? "Reported" : "Report scan issue"))
+                StartReportCard(lb.DeckId, lb.CardId, lb.Name);
+        }
+
+        if (!string.IsNullOrEmpty(this.reportCardStatus))
+            ImGui.TextDisabled(this.reportCardStatus);
     }
 
     // ── Async actions ─────────────────────────────────────────────────────────
@@ -536,6 +555,36 @@ public sealed class ReadingPanel
 
         if (!any)
             ImGui.TextDisabled("No party members or player target found.\nTarget a player or join a party, then try again.");
+    }
+
+    private void StartReportCard(int deckId, int cardId, string cardName)
+    {
+        this.reportingCard = true;
+        this.reportCardStatus = "Reporting…";
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var status = await this.api.ReportCardAsync(deckId, cardId, cardName, this.api.Token)
+                    .ConfigureAwait(false);
+                this.reportedCards[(deckId, cardId)] = 0;
+                this.reportCardStatus = status == "already_reported"
+                    ? "You've already reported this card recently. Thanks!"
+                    : "Thanks! This card has been reported for re-scanning.";
+            }
+            catch (TarotApiException ex)
+            {
+                this.reportCardStatus = ex.Message;
+            }
+            catch (Exception)
+            {
+                this.reportCardStatus = "Couldn't send the report. Please try again.";
+            }
+            finally
+            {
+                this.reportingCard = false;
+            }
+        });
     }
 
     private void StartShare(string readingId, ShareRelay.Recipient to, ShareRelay.Recipient self)
