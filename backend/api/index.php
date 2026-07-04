@@ -15,9 +15,11 @@ use Routes\Internal\{AccountController,
     DeckSystemController,
     GoogleAuthController,
     PasskeyController,
+    PluginAuthController,
     ReadingController,
     SpreadController,
     UserController};
+use Routes\Middleware\AccountAuth;
 use Routes\Middleware\AdminAuth;
 use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
@@ -154,9 +156,17 @@ $app->group('/readings', function (RouteCollectorProxy $group) {
     $group->get('/{reading_id}[/]', ReadingController::class . ':getReading');
 });
 
-// ── Account (signed-in user self-service: readings, spreads, settings, deletion)
+// ── Account reads a linked plugin may also reach (browser session OR a plugin
+// Bearer token). Least-privilege: only these read endpoints accept a token.
 $app->group('/account', function (RouteCollectorProxy $group) {
     $group->get('/readings[/]', AccountController::class . ':myReadings');
+    $group->get('/favorites[/]', AccountController::class . ':myFavorites');
+    $group->get('/favorite-decks[/]', AccountController::class . ':myFavoriteDecks');
+})->add(AccountAuth::class);
+
+// ── Account self-service (browser session only: mutations, settings, deletion,
+// and managing which plugins are linked). A plugin token is NOT accepted here.
+$app->group('/account', function (RouteCollectorProxy $group) {
     $group->patch('/readings/{reading_id}[/]', AccountController::class . ':updateReadingMeta');
     $group->delete('/readings/{reading_id}[/]', AccountController::class . ':deleteReading');
     $group->get('/spreads[/]', AccountController::class . ':mySpreads');
@@ -164,16 +174,24 @@ $app->group('/account', function (RouteCollectorProxy $group) {
     $group->put('/spreads/{user_spread_id}[/]', AccountController::class . ':updateSpread');
     $group->delete('/spreads/{user_spread_id}[/]', AccountController::class . ':deleteSpread');
     $group->post('/spreads/{user_spread_id}/submit[/]', AccountController::class . ':submitSpreadAsPublic');
-    $group->get('/favorites[/]', AccountController::class . ':myFavorites');
     $group->post('/favorites[/]', AccountController::class . ':addFavorite');
     $group->delete('/favorites/{spread_type}/{spread_id}[/]', AccountController::class . ':removeFavorite');
-    $group->get('/favorite-decks[/]', AccountController::class . ':myFavoriteDecks');
     $group->post('/favorite-decks[/]', AccountController::class . ':addFavoriteDeck');
     $group->delete('/favorite-decks/{deck_id}[/]', AccountController::class . ':removeFavoriteDeck');
     $group->post('/change-password[/]', AccountController::class . ':changePassword');
     $group->patch('[/]', AccountController::class . ':updateProfile');
     $group->delete('[/]', AccountController::class . ':deleteAccount');
+    // Connected Apps: list / revoke linked plugin tokens.
+    $group->get('/tokens[/]', PluginAuthController::class . ':listTokens');
+    $group->delete('/tokens/{id}[/]', PluginAuthController::class . ':revokeToken');
 })->add(UserAuth::class);
+
+// ── Plugin account linking (OAuth-style, PKCE public client). `authorize` is the
+// browser consent step (session); `token` is the plugin's public code→token swap.
+$app->group('/plugin', function (RouteCollectorProxy $group) {
+    $group->post('/token[/]', PluginAuthController::class . ':token');
+    $group->post('/authorize[/]', PluginAuthController::class . ':authorize')->add(UserAuth::class);
+});
 
 // ── Spreads (public read + public submission) ────────────────────────────────
 $app->group('/spreads', function (RouteCollectorProxy $group) {

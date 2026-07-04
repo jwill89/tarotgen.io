@@ -67,7 +67,7 @@
 #>
 [CmdletBinding()]
 param(
-    [ValidateSet('frontend', 'backend', 'both')]
+    [ValidateSet('frontend', 'backend', 'both', 'plugin')]
     [string]$Target = 'frontend',
 
     # Connection settings are intentionally NOT hardcoded here (this file is in
@@ -351,11 +351,82 @@ Restore on the host with:
     Write-Host "     Server-side db/, .env, and assets/ were not touched." -ForegroundColor DarkGray
 }
 
+# ══ Plugin (Dalamud custom repo) ══════════════════════════════════════════════
+# Publishes the FFXIV plugin to <WebRoot>/plugin as a self-hosted "custom repo":
+# latest.zip (the built plugin), icon.png, and repo.json (the pluginmaster users
+# add under Dalamud's /xlsettings). Independent of the site's dist/ and backend.
+function Deploy-Plugin {
+    $pluginProj = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\TarotGen.Plugin.csproj'
+    if (-not (Test-Path $pluginProj)) { Fail "Plugin project not found: $pluginProj" }
+
+    Write-Step "Building plugin (Release)..."
+    & dotnet build $pluginProj -c Release --nologo | Out-Host
+    if ($LASTEXITCODE -ne 0) { Fail "Plugin build failed (exit $LASTEXITCODE). Live repo untouched." }
+
+    $outDir = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\bin\Release\TarotGen.Plugin'
+    $zip = Join-Path $outDir 'latest.zip'
+    $manifestPath = Join-Path $outDir 'TarotGen.Plugin.json'
+    $iconPath = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\images\icon.png'
+    foreach ($f in @($zip, $manifestPath, $iconPath)) {
+        if (-not (Test-Path $f)) { Fail "Expected plugin artifact missing: $f" }
+    }
+
+    # Build the repo manifest (pluginmaster): the packaged manifest + download links.
+    $base = 'https://tarotgen.io/plugin'
+    $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
+    $m | Add-Member -NotePropertyName DownloadLinkInstall -NotePropertyValue "$base/latest.zip" -Force
+    $m | Add-Member -NotePropertyName DownloadLinkUpdate  -NotePropertyValue "$base/latest.zip" -Force
+    $m | Add-Member -NotePropertyName DownloadLinkTesting -NotePropertyValue "$base/latest.zip" -Force
+    $m | Add-Member -NotePropertyName IconUrl -NotePropertyValue "$base/icon.png" -Force
+
+    Write-Step "Staging plugin repo files..."
+    $stageRoot = Join-Path $env:TEMP 'tarot-plugin-deploy'
+    $stage = Join-Path $stageRoot 'plugin'
+    Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+    (ConvertTo-Json @($m) -Depth 12) | Set-Content -Path (Join-Path $stage 'repo.json') -Encoding UTF8
+    Copy-Item $zip -Destination (Join-Path $stage 'latest.zip')
+    Copy-Item $iconPath -Destination (Join-Path $stage 'icon.png')
+    Write-Ok ("Staged v{0}: repo.json, latest.zip, icon.png" -f $m.AssemblyVersion)
+
+    # 1 connection: prepare staging dir.
+    Write-Step "Preparing remote staging dir..."
+    if (-not (Invoke-RemoteWithRetry "test -d '$WebRoot' && rm -rf '$WebRoot/.plugin.new' && mkdir -p '$WebRoot/.plugin.new'")) {
+        Fail "Could not connect, or $WebRoot is not writable."
+    }
+
+    # 1 connection: upload as a single stream.
+    Write-Step "Uploading plugin files (single stream)..."
+    $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'plugin' -RemoteDest "$WebRoot/.plugin.new" -Label 'Uploading plugin' -FileCount 3
+    if (-not $r.Ok) {
+        Write-Host "    Upload failed - possibly the SSH rate limit. Waiting 35s, then retrying once..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 35
+        $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'plugin' -RemoteDest "$WebRoot/.plugin.new" -Label 'Uploading plugin' -FileCount 3
+    }
+    if (-not $r.Ok) { Fail "Plugin upload failed. Live repo untouched.`n$($r.Err)" }
+    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
+
+    # 1 connection: swap into place.
+    Write-Step "Swapping into place..."
+    $swap = @"
+set -e
+cd '$WebRoot'
+rm -rf plugin
+mv .plugin.new/plugin plugin
+rm -rf .plugin.new
+"@
+    if (-not (Invoke-RemoteWithRetry $swap)) { Fail "Plugin swap failed." }
+
+    Write-Host "`n[OK] Plugin published to ${remoteTarget}:$WebRoot/plugin" -ForegroundColor Green
+    Write-Host "     Custom repo URL to share with testers: $base/repo.json" -ForegroundColor DarkGray
+}
+
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 Write-Host "Deploy target: $Target -> $remoteTarget : $WebRoot" -ForegroundColor Yellow
 switch ($Target) {
     'frontend' { Deploy-Frontend }
     'backend' { Deploy-Backend }
+    'plugin' { Deploy-Plugin }
     'both' {
         Deploy-Frontend
         Write-Step "Pausing 35s between targets to stay under the SSH connection rate limit..."

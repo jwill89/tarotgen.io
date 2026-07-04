@@ -143,6 +143,19 @@ export const endpoints = {
     favoriteDecks: '/account/favorite-decks',
     /** `DELETE` — remove a favorite deck (id now in the URL). */
     favoriteDeckById: (deckId: string | number) => `/account/favorite-decks/${deckId}`,
+
+    /** `GET` list linked plugin tokens (Connected Apps). */
+    tokens: '/account/tokens',
+    /** `DELETE /api/account/tokens/{id}` — revoke a linked plugin token. */
+    tokenById: (id: string | number) => `/account/tokens/${id}`,
+  },
+
+  /** Dalamud plugin account linking (OAuth-style, PKCE). */
+  plugin: {
+    /** `POST` — browser consent approval → PKCE authorization code (session). */
+    authorize: '/plugin/authorize',
+    /** `POST` — plugin exchanges code + verifier for a Bearer token (public). */
+    token: '/plugin/token',
   },
 
   // -----------------------------------------------------------------------

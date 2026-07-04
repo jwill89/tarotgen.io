@@ -37,6 +37,12 @@ use OpenApi\Attributes as OA;
     name: 'PHPSESSID',
     description: 'Session cookie issued on sign-in. Sent automatically by the browser.'
 )]
+#[OA\SecurityScheme(
+    securityScheme: 'pluginToken',
+    type: 'http',
+    scheme: 'bearer',
+    description: 'Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).'
+)]
 #[OA\Tag(name: 'Config', description: 'Public runtime configuration.')]
 #[OA\Tag(name: 'Decks', description: 'Tarot decks: public browsing and user submissions.')]
 #[OA\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
@@ -47,6 +53,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Authentication', description: 'Registration, sign-in/out, and session.')]
 #[OA\Tag(name: 'Passkeys', description: 'WebAuthn passkey registration and login.')]
 #[OA\Tag(name: 'Account', description: "The signed-in user's self-service area.")]
+#[OA\Tag(name: 'Plugin', description: 'Dalamud plugin account linking (OAuth PKCE) and token management.')]
 #[OA\Tag(name: 'Admin · Dashboard', description: 'Admin session check and usage stats.')]
 #[OA\Tag(name: 'Admin · Decks', description: 'Deck moderation and special cards.')]
 #[OA\Tag(name: 'Admin · Deck Systems', description: 'Deck-system moderation.')]

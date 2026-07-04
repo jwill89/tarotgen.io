@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ServerRequestInterface;
+use Tarot\Utility\ClientIp;
 use Tarot\Utility\Session;
 
 /**
@@ -31,12 +32,13 @@ abstract class AbstractController
     }
 
     /**
-     * Extract the client IP address from the request.
+     * The real client IP for this request. Resolved through Cloudflare
+     * (CF-Connecting-IP, trusted only from Cloudflare edge ranges) so that
+     * IP rate-limiting keys on the visitor, not the CDN edge. See {@see ClientIp}.
      */
     protected function clientIp(ServerRequestInterface $request): string
     {
-        $server = $request->getServerParams();
-        return (string)($server['REMOTE_ADDR'] ?? 'unknown');
+        return ClientIp::resolve($request);
     }
 
     /**

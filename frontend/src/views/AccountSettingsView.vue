@@ -7,7 +7,9 @@ import { useUser } from '@/composables/useUser'
 import { usePasskeys } from '@/composables/usePasskeys'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
+import { usePluginLink } from '@/composables/usePluginLink'
 import { endpoints } from '@/api/endpoints'
+import type { PluginToken } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
@@ -134,6 +136,8 @@ onMounted(() => {
   if (passkeySupported()) {
     void listPasskeys()
   }
+
+  void loadPluginTokens()
 })
 
 function linkGoogle() {
@@ -229,6 +233,38 @@ async function handleTogglePasswordLogin() {
     }
   } finally {
     passkeyTogglingPw.value = false
+  }
+}
+
+// ── Connected apps (Dalamud plugin links) ───────────────────────
+const { listTokens, revokeToken } = usePluginLink()
+const pluginTokens = ref<PluginToken[]>([])
+const pluginTokensLoading = ref(false)
+
+async function loadPluginTokens() {
+  pluginTokensLoading.value = true
+  try {
+    pluginTokens.value = await listTokens()
+  } finally {
+    pluginTokensLoading.value = false
+  }
+}
+
+async function revokePluginToken(token: PluginToken) {
+  const ok = await confirm({
+    title: 'Revoke plugin access',
+    message: `Revoke "${token.label}"? The linked plugin will need to link again to reconnect.`,
+    confirmLabel: 'Revoke',
+    danger: true,
+  })
+  if (!ok) return
+
+  const done = await revokeToken(token.id)
+  if (done) {
+    toasts.success('Plugin access revoked.')
+    await loadPluginTokens()
+  } else {
+    toasts.error('Could not revoke access. Please try again.')
   }
 }
 </script>
@@ -455,6 +491,43 @@ async function handleTogglePasswordLogin() {
                 }}</span>
               </button>
             </div>
+          </div>
+
+          <!-- Connected Apps (Dalamud plugin) -->
+          <div class="box">
+            <h2 class="title is-5">Connected Apps</h2>
+            <p class="mb-3">
+              Apps linked to your account, like the TarotGen FFXIV plugin. Revoke access any time; a
+              revoked plugin must link again to reconnect.
+            </p>
+            <div v-if="pluginTokens.length > 0" class="mb-2">
+              <div v-for="t in pluginTokens" :key="t.id" class="passkey-item">
+                <div class="passkey-info">
+                  <span class="passkey-name">{{ t.label }}</span>
+                  <span class="is-size-7 has-text-grey ml-2">
+                    Linked {{ new Date(t.created_at).toLocaleDateString() }}
+                    <template v-if="t.last_used_at">
+                      · Last used {{ new Date(t.last_used_at).toLocaleDateString() }}</template
+                    >
+                    <template v-if="t.revoked_at"> · Revoked</template>
+                  </span>
+                </div>
+                <div class="passkey-actions">
+                  <button
+                    v-if="!t.revoked_at"
+                    class="button is-small is-danger is-light"
+                    title="Revoke"
+                    @click="revokePluginToken(t)"
+                  >
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
+                    /></span>
+                    <span>Revoke</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p v-else-if="!pluginTokensLoading" class="has-text-grey">No linked apps.</p>
           </div>
 
           <!-- Danger zone -->

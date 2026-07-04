@@ -38,6 +38,9 @@
                 "security": [
                     {
                         "sessionCookie": []
+                    },
+                    {
+                        "pluginToken": []
                     }
                 ]
             }
@@ -3283,6 +3286,194 @@
                 ]
             }
         },
+        "/plugin/authorize": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Approve a plugin link and mint a PKCE authorization code (browser, session-authed)",
+                "operationId": "301fe6924d359eff76b20d5ba0753ac7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code_challenge",
+                                    "redirect_uri"
+                                ],
+                                "properties": {
+                                    "code_challenge": {
+                                        "type": "string"
+                                    },
+                                    "code_challenge_method": {
+                                        "type": "string",
+                                        "default": "S256"
+                                    },
+                                    "redirect_uri": {
+                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback",
+                                        "type": "string"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Loopback redirect target carrying the authorization code",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "redirect_uri": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid challenge or non-loopback redirect_uri"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/plugin/token": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Exchange a PKCE authorization code for a plugin Bearer token",
+                "operationId": "9cee09bafbc85842806ed3b5d8696f77",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "code",
+                                    "code_verifier"
+                                ],
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "code_verifier": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The issued token (returned once)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "token": {
+                                            "type": "string"
+                                        },
+                                        "token_type": {
+                                            "type": "string"
+                                        },
+                                        "scope": {
+                                            "type": "string"
+                                        },
+                                        "display_name": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid or expired authorization code"
+                    }
+                }
+            }
+        },
+        "/account/tokens": {
+            "get": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "The signed-in user's linked plugin tokens (Connected Apps)",
+                "operationId": "d450210a2d907e5c68ab062d90422d58",
+                "responses": {
+                    "200": {
+                        "description": "Array of linked tokens (never includes the token value)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/PluginToken"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/tokens/{id}": {
+            "delete": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Revoke a linked plugin token (forces the plugin to re-link)",
+                "operationId": "c7e190b264e9c6ecaa242c88ec6bd95f",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Revoked"
+                    },
+                    "404": {
+                        "description": "Token not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/readings/{reading_id}": {
             "get": {
                 "tags": [
@@ -3313,6 +3504,9 @@
                     },
                     "404": {
                         "description": "InvalidReadingID"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -3368,6 +3562,9 @@
                     },
                     "404": {
                         "description": "InvalidReadingID"
+                    },
+                    "429": {
+                        "description": "Too many password attempts"
                     }
                 }
             }
@@ -3403,6 +3600,9 @@
                     },
                     "400": {
                         "description": "Invalid draw spec"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -4227,6 +4427,45 @@
                 },
                 "type": "object"
             },
+            "PluginToken": {
+                "description": "A linked-plugin personal access token (no secret value exposed).",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "user_id": {
+                        "type": "integer"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "scope": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "revoked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "Reading": {
                 "description": "A saved tarot reading.",
                 "properties": {
@@ -4427,6 +4666,11 @@
                 "description": "Session cookie issued on sign-in. Sent automatically by the browser.",
                 "name": "PHPSESSID",
                 "in": "cookie"
+            },
+            "pluginToken": {
+                "type": "http",
+                "description": "Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).",
+                "scheme": "bearer"
             }
         }
     },
@@ -4470,6 +4714,10 @@
         {
             "name": "Account",
             "description": "The signed-in user's self-service area."
+        },
+        {
+            "name": "Plugin",
+            "description": "Dalamud plugin account linking (OAuth PKCE) and token management."
         },
         {
             "name": "Admin · Dashboard",

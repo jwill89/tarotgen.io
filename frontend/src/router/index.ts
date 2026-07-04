@@ -164,6 +164,16 @@ const router = createRouter({
       meta: { title: 'Reset Password', noindex: true },
     },
     {
+      // Browser consent step for the Dalamud plugin's account link (opened by the
+      // plugin with PKCE query params). NOT userOnly: the view revalidates the
+      // session itself and shows an inline "log in to continue" prompt when
+      // needed, so an already-signed-in user is never bounced to /login.
+      path: '/authorize',
+      name: 'authorize-plugin',
+      component: () => import('@/views/AuthorizePluginView.vue'),
+      meta: { title: 'Authorize Plugin', noindex: true },
+    },
+    {
       path: '/account',
       name: 'dashboard',
       component: () => import('@/views/DashboardView.vue'),

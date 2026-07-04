@@ -146,6 +146,29 @@ CREATE TABLE user_tokens (
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
     );
 
+CREATE TABLE plugin_tokens (
+        id           INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id      INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        token_hash   TEXT    NOT NULL,
+        label        TEXT    NOT NULL DEFAULT 'TarotGen plugin',
+        scope        TEXT    NOT NULL DEFAULT 'account',
+        created_at   TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        last_used_at TEXT    DEFAULT NULL,
+        expires_at   TEXT    DEFAULT NULL,
+        revoked_at   TEXT    DEFAULT NULL
+    );
+
+CREATE TABLE plugin_auth_codes (
+        id             INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id        INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        code_hash      TEXT    NOT NULL,
+        code_challenge TEXT    NOT NULL,
+        scope          TEXT    NOT NULL DEFAULT 'account',
+        created_at     TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        expires_at     TEXT    NOT NULL,
+        used_at        TEXT    DEFAULT NULL
+    );
+
 CREATE TABLE users (
         user_id        INTEGER PRIMARY KEY AUTOINCREMENT,
         email          TEXT    NOT NULL COLLATE NOCASE,
@@ -180,6 +203,12 @@ CREATE INDEX idx_user_spreads_user ON user_spreads (user_id);
 CREATE UNIQUE INDEX idx_user_tokens_hash ON user_tokens (token_hash);
 
 CREATE INDEX idx_user_tokens_user ON user_tokens (user_id, type);
+
+CREATE UNIQUE INDEX idx_plugin_tokens_hash ON plugin_tokens (token_hash);
+
+CREATE INDEX idx_plugin_tokens_user ON plugin_tokens (user_id);
+
+CREATE UNIQUE INDEX idx_plugin_auth_codes_hash ON plugin_auth_codes (code_hash);
 
 CREATE UNIQUE INDEX idx_users_display_name ON users (display_name COLLATE NOCASE);
 
