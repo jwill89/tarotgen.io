@@ -34,6 +34,9 @@ public sealed class MainWindow : Window, IDisposable
 
     private bool onboardingShown;
 
+    private static readonly string PluginVersion =
+        typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
+
     private IReadOnlyList<Spread> spreads = Array.Empty<Spread>();
     private List<DeckGroup> deckGroups = new();
     private bool catalogRequested;
@@ -522,6 +525,10 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawSettingsTab()
     {
+        // Give every control on this tab a crisp 1px frame border so buttons (and
+        // the combos/inputs) clearly read as interactive rather than flat panels.
+        using var frameBorder = ImRaii.PushStyle(ImGuiStyleVar.FrameBorderSize, 1f);
+
         // ── Defaults ────────────────────────────────────────────────────────
         bool defaultsOpen = ImGui.CollapsingHeader("Defaults", ImGuiTreeNodeFlags.DefaultOpen);
         ImGui.SameLine();
@@ -676,7 +683,11 @@ public sealed class MainWindow : Window, IDisposable
                 this.linkService.Cancel();
         }
 
-        if (!string.IsNullOrEmpty(this.linkService.Status))
+        // Only show the transient link status (progress / errors). Its terminal
+        // success messages ("Linked as X", "Connected as guest") duplicate the
+        // labels above, so suppress the status once we're settled into a
+        // connected state.
+        if (!string.IsNullOrEmpty(this.linkService.Status) && (this.linkService.IsBusy || !this.api.IsConnected))
         {
             ImGui.Spacing();
             ImGui.TextWrapped(this.linkService.Status);
@@ -779,26 +790,31 @@ public sealed class MainWindow : Window, IDisposable
     private void DrawLinksSection()
     {
         Section("Links");
-        float scale = ImGuiHelpers.GlobalScale;
 
+        // Tarot API → the site. A small button, sized to match the MathDad button.
+        ImGui.TextDisabled("Tarot API");
+        ImGui.SameLine();
         using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.20f, 0.47f, 0.58f, 1f)))
-        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.26f, 0.57f, 0.68f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.30f, 0.62f, 0.74f, 1f)))
         using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.16f, 0.40f, 0.50f, 1f)))
         {
-            if (ImGui.Button("Open TarotGen.io in your browser", new Vector2(-1, 38 * scale)))
+            if (ImGui.Button("TarotGen.io"))
                 Util.OpenLink(this.api.SiteBase);
         }
 
-        ImGui.Spacing();
+        // Designed by → the author.
         ImGui.TextDisabled("Designed by");
         ImGui.SameLine();
         using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.72f, 0.18f, 0.20f, 1f)))
-        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.84f, 0.24f, 0.26f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.86f, 0.26f, 0.28f, 1f)))
         using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.60f, 0.14f, 0.16f, 1f)))
         {
             if (ImGui.Button("MathDad"))
                 Util.OpenLink("https://mathdad.me");
         }
+
+        ImGui.Spacing();
+        ImGui.TextDisabled($"TarotGen plugin  v{PluginVersion}");
     }
 
     // ── Loading + actions ─────────────────────────────────────────────────────

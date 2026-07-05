@@ -14,7 +14,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>TarotGen.Plugin</AssemblyName>
     <RootNamespace>TarotGen.Plugin</RootNamespace>
-    <Version>0.4.1</Version>
+    <Version>0.4.2</Version>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
