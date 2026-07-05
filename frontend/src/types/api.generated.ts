@@ -4557,10 +4557,17 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": {
-                    character_name?: string | null;
-                    world?: string | null;
                     /** @enum {string} */
-                    accept_tier?: "nobody" | "friends" | "party_or_friends" | "anyone";
+                    accept_tier?: "nobody" | "party" | "friends" | "party_or_friends" | "anyone";
+                    /** @description Full desired identity set (synced): each {character_name, world}. [] unpublishes all. */
+                    characters?: {
+                        character_name?: string;
+                        world?: string;
+                    }[];
+                    /** @description Legacy single-identity form */
+                    character_name?: string | null;
+                    /** @description Legacy single-identity form */
+                    world?: string | null;
                 };
             };
         };

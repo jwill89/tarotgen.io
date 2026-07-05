@@ -33,9 +33,25 @@ readonly class PluginClientRepository
         return $this->data->findById($clientId);
     }
 
-    public function setIdentity(int $clientId, ?string $identityHash): void
+    public function addIdentity(int $clientId, string $identityHash): void
     {
-        $this->data->setIdentity($clientId, $identityHash);
+        $this->data->addIdentity($clientId, $identityHash);
+    }
+
+    public function removeIdentity(int $clientId, string $identityHash): void
+    {
+        $this->data->removeIdentity($clientId, $identityHash);
+    }
+
+    /** @param list<string> $identityHashes */
+    public function syncIdentities(int $clientId, array $identityHashes): void
+    {
+        $this->data->syncIdentities($clientId, $identityHashes);
+    }
+
+    public function identityCount(int $clientId): int
+    {
+        return $this->data->identityCount($clientId);
     }
 
     public function setAcceptTier(int $clientId, string $tier): void

@@ -31,10 +31,18 @@ class ShareService
     /** Fan-out ceiling: a sender may reach at most this many distinct recipients per hour. */
     private const int MAX_DISTINCT_RECIPIENTS_PER_HOUR = 15;
 
+    /**
+     * Upper bound on identities one install may publish. A FFXIV service account
+     * caps at 40 characters, so a legitimate user never hits this; the limit only
+     * stops a client from squatting on / bloating the identity table with a huge
+     * self-published roster (excess entries beyond the cap are ignored).
+     */
+    private const int MAX_IDENTITIES = 40;
+
     private const string SHARE_TYPE = 'reading_share';
 
     /** Consent tiers. Only `nobody` is hard-enforced server-side; the rest are client filters. */
-    private const array ACCEPT_TIERS = ['nobody', 'friends', 'party_or_friends', 'anyone'];
+    private const array ACCEPT_TIERS = ['nobody', 'party', 'friends', 'party_or_friends', 'anyone'];
 
     /**
      * Fallback key for the identity HMAC when PLUGIN_IDENTITY_SALT is unset. With
@@ -81,25 +89,35 @@ class ShareService
     }
 
     /**
-     * Publish/refresh this install's recipient identity and consent tier. Passing
-     * a blank character or world clears the identity (removes it from addressing).
+     * Publish/refresh this install's consent tier and its set of recipient
+     * identities. One install can address several characters, so `$identities` is
+     * the FULL desired set: it is synced (missing added, extras removed). Pass
+     * `null` to leave the identity set untouched, or `[]` to unpublish everything.
+     * Only the keyed hash of each Name@World is stored — never the plaintext.
      * Returns the client's own updated view.
+     *
+     * @param list<array{character_name:string,world:string}>|null $identities
      */
-    public function register(int $clientId, ?string $characterName, ?string $world, ?string $acceptTier): ?PluginClient
+    public function register(int $clientId, ?string $acceptTier, ?array $identities): ?PluginClient
     {
-        $character = $this->clean($characterName, 48);
-        $homeWorld = $this->clean($world, 48);
-
-        // Addressing needs both halves; anything less clears the identity. Only the
-        // keyed hash of Name@World is ever stored — never the plaintext.
-        if ($character === '' || $homeWorld === '') {
-            $this->clients->setIdentity($clientId, null);
-        } else {
-            $this->clients->setIdentity($clientId, $this->identityHash($character, $homeWorld));
-        }
-
         if ($acceptTier !== null && in_array($acceptTier, self::ACCEPT_TIERS, true)) {
             $this->clients->setAcceptTier($clientId, $acceptTier);
+        }
+
+        if ($identities !== null) {
+            $hashes = [];
+            foreach ($identities as $id) {
+                $character = $this->clean($id['character_name'], 48);
+                $homeWorld = $this->clean($id['world'], 48);
+                if ($character !== '' && $homeWorld !== '') {
+                    $hashes[$this->identityHash($character, $homeWorld)] = true;
+                }
+
+                if (count($hashes) >= self::MAX_IDENTITIES) {
+                    break;
+                }
+            }
+            $this->clients->syncIdentities($clientId, array_keys($hashes));
         }
 
         $this->clients->touchLastSeen($clientId);

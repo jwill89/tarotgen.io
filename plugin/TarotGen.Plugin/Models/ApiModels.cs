@@ -153,13 +153,20 @@ public sealed class ClientView
     public string? LastSeen { get; set; }
 }
 
+/// <summary>One Character@World identity in a register sync.</summary>
+public sealed class CharacterIdentity
+{
+    public string CharacterName { get; set; } = "";
+    public string World { get; set; } = "";
+}
+
 /// <summary>Request body for POST /api/plugin/clients/register.</summary>
 public sealed class RegisterClientRequest
 {
-    /// <summary>Null clears the published identity (removes you from addressing).</summary>
-    public string? CharacterName { get; set; }
-    public string? World { get; set; }
     public string? AcceptTier { get; set; }
+
+    /// <summary>The FULL desired identity set (synced server-side). Empty = unpublish all.</summary>
+    public List<CharacterIdentity> Characters { get; set; } = new();
 }
 
 /// <summary>Minimal ack body from POST /api/plugin/share and /clients/block.</summary>

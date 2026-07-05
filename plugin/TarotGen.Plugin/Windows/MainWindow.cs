@@ -28,8 +28,11 @@ public sealed class MainWindow : Window, IDisposable
     private readonly ReadingPanel readingPanel;
     private readonly LinkService linkService;
     private readonly ShareRelay shareRelay;
+    private readonly GameSocial social;
     private readonly Configuration config;
     private readonly IDalamudPluginInterface pluginInterface;
+
+    private bool onboardingShown;
 
     private IReadOnlyList<Spread> spreads = Array.Empty<Spread>();
     private List<DeckGroup> deckGroups = new();
@@ -39,7 +42,8 @@ public sealed class MainWindow : Window, IDisposable
 
     private Deck? selectedDeck;
     private Spread? selectedSpread; // null = free draw
-    private int freeDrawCount;
+    private int freeDrawCount;        // New Reading session working value
+    private int defaultFreeDrawCount; // Settings default (persisted independently)
 
     private string newReadingTitle = string.Empty;
     private bool hideUser;
@@ -62,6 +66,7 @@ public sealed class MainWindow : Window, IDisposable
         ReadingPanel readingPanel,
         LinkService linkService,
         ShareRelay shareRelay,
+        GameSocial social,
         Configuration config,
         IDalamudPluginInterface pluginInterface)
         : base("TarotGen###TarotGenMain")
@@ -70,9 +75,11 @@ public sealed class MainWindow : Window, IDisposable
         this.readingPanel = readingPanel;
         this.linkService = linkService;
         this.shareRelay = shareRelay;
+        this.social = social;
         this.config = config;
         this.pluginInterface = pluginInterface;
         this.freeDrawCount = Math.Max(1, config.FreeDrawCount);
+        this.defaultFreeDrawCount = Math.Max(1, config.FreeDrawCount);
         this.Size = new Vector2(680, 780);
         this.SizeCondition = ImGuiCond.FirstUseEver;
         this.SizeConstraints = new WindowSizeConstraints
@@ -102,38 +109,136 @@ public sealed class MainWindow : Window, IDisposable
         if (!this.catalogRequested)
             StartCatalogLoad();
 
-        using var tabs = ImRaii.TabBar("##tarotgen-tabs");
-        if (!tabs)
+        // First-run onboarding — shown once, ever. The popup id must match the
+        // PopupModal below exactly (### makes only the trailing id part hash).
+        if (!this.config.OnboardingComplete && !this.onboardingShown)
+        {
+            this.onboardingShown = true;
+            ImGui.OpenPopup("Welcome to TarotGen###onboarding");
+        }
+
+        DrawUnlinkedBanner();
+
+        using (var tabs = ImRaii.TabBar("##tarotgen-tabs"))
+        {
+            if (tabs)
+            {
+                var readingFlags = this.switchToReadingTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                this.switchToReadingTab = false;
+                using (var t = ImRaii.TabItem("Reading", readingFlags))
+                {
+                    if (t)
+                        this.readingPanel.Draw();
+                }
+
+                using (var t = ImRaii.TabItem("New Reading"))
+                {
+                    if (t)
+                        DrawNewReadingTab();
+                }
+
+                // My Readings requires an actual linked TarotGen account (not a guest).
+                if (this.api.IsLinked)
+                {
+                    using var t = ImRaii.TabItem("My Readings");
+                    if (t)
+                        DrawMyReadingsTab();
+                }
+
+                var settingsFlags = this.switchToSettingsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                this.switchToSettingsTab = false;
+                using (var t = ImRaii.TabItem("Settings", settingsFlags))
+                {
+                    if (t)
+                        DrawSettingsTab();
+                }
+            }
+        }
+
+        DrawOnboarding();
+    }
+
+    /// <summary>A dismissible banner nudging the user to link the character they're on.</summary>
+    private void DrawUnlinkedBanner()
+    {
+        if (!this.api.IsConnected || !this.config.IncomingSharesEnabled)
+            return;
+        if (this.social.Current() is not { } cur)
+            return;
+        if (this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
             return;
 
-        var readingFlags = this.switchToReadingTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-        this.switchToReadingTab = false;
-        using (var t = ImRaii.TabItem("Reading", readingFlags))
+        ImGui.TextColored(new Vector4(1f, 0.82f, 0.4f, 1f), $"\"{cur.Name}\" isn't linked for shared readings.");
+        ImGui.SameLine();
+        if (ImGui.SmallButton("Link this character"))
+            LinkCharacter(cur);
+        ImGui.SameLine();
+        Ui.HelpMarker("People can only send you readings on characters you've linked. Manage links in Settings → Sharing.");
+        ImGui.Separator();
+    }
+
+    private void DrawOnboarding()
+    {
+        var vp = ImGui.GetMainViewport();
+        float scale = ImGuiHelpers.GlobalScale;
+        ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+        ImGui.SetNextWindowSize(new Vector2(440 * scale, 0), ImGuiCond.Appearing);
+
+        using var popup = ImRaii.PopupModal("Welcome to TarotGen###onboarding", ImGuiWindowFlags.AlwaysAutoResize);
+        if (!popup)
+            return;
+
+        ImGui.PushTextWrapPos(420 * scale);
+        ImGui.TextWrapped("Draw and view TarotGen.io tarot readings without leaving the game.");
+        ImGui.Spacing();
+        ImGui.TextColored(SectionColor, "How it works");
+        ImGui.BulletText("New Reading: pick a deck + spread (or a free draw) and draw.");
+        ImGui.BulletText("Reading: view the cards, click one for full-res, copy the share code.");
+        ImGui.BulletText("Share a reading's code in chat, or push it straight to a party member.");
+        ImGui.Spacing();
+        ImGui.TextColored(SectionColor, "Optional: connect your account");
+        ImGui.TextWrapped(
+            "Link your TarotGen.io account to lock readings, see \"My Readings\", and unlock more. "
+            + "Or continue as a guest — sharing works either way.");
+        ImGui.PopTextWrapPos();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+
+        using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.46f, 0.33f, 0.66f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.56f, 0.43f, 0.76f, 1f)))
         {
-            if (t)
-                this.readingPanel.Draw();
+            if (ImGui.Button("Connect to TarotGen.io"))
+            {
+                this.linkService.StartLink();
+                CompleteOnboarding();
+            }
         }
 
-        using (var t = ImRaii.TabItem("New Reading"))
-        {
-            if (t)
-                DrawNewReadingTab();
-        }
+        ImGui.SameLine();
+        if (ImGui.Button("Maybe later"))
+            CompleteOnboarding();
+    }
 
-        if (this.api.IsLinked)
-        {
-            using var t = ImRaii.TabItem("My Readings");
-            if (t)
-                DrawMyReadingsTab();
-        }
+    private void CompleteOnboarding()
+    {
+        this.config.OnboardingComplete = true;
+        this.config.Save(this.pluginInterface);
+        ImGui.CloseCurrentPopup();
+    }
 
-        var settingsFlags = this.switchToSettingsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
-        this.switchToSettingsTab = false;
-        using (var t = ImRaii.TabItem("Settings", settingsFlags))
+    private void LinkCharacter(GameSocial.CurrentChar cur)
+    {
+        if (this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
+            return;
+        this.config.LinkedCharacters.Add(new LinkedCharacter
         {
-            if (t)
-                DrawSettingsTab();
-        }
+            ContentId = cur.ContentId,
+            Name = cur.Name,
+            World = cur.World,
+        });
+        this.config.Save(this.pluginInterface);
+        this.shareRelay.InvalidateRegistration();
     }
 
     // ── New Reading tab ───────────────────────────────────────────────────────
@@ -178,7 +283,7 @@ public sealed class MainWindow : Window, IDisposable
         if (this.api.IsLinked)
             DrawOwnerOptions();
         else
-            ImGui.TextDisabled("Link your account (Account tab) to set a title, hide your name, or add a password.");
+            ImGui.TextDisabled("Link your account (Settings tab) to set a title, hide your name, or add a password.");
 
         ImGui.Spacing();
         DrawGenerateButton();
@@ -238,10 +343,10 @@ public sealed class MainWindow : Window, IDisposable
         }
     }
 
+    // New Reading picks are session-only; the persisted defaults live on the Settings tab.
     private void SelectDeck(Deck deck)
     {
         this.selectedDeck = deck;
-        this.config.DefaultDeckId = deck.DeckId;
         this.config.UseAdditionalCards = false;
         this.config.Save(this.pluginInterface);
     }
@@ -249,8 +354,6 @@ public sealed class MainWindow : Window, IDisposable
     private void SelectSpread(Spread? spread)
     {
         this.selectedSpread = spread;
-        this.config.DefaultSpreadId = spread?.SpreadId;
-        this.config.Save(this.pluginInterface);
     }
 
     private void DrawSpreadCombo()
@@ -279,16 +382,6 @@ public sealed class MainWindow : Window, IDisposable
             this.freeDrawCount = max;
         ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
         ImGui.SliderInt("Number of cards", ref this.freeDrawCount, 1, max);
-        SaveFreeDrawCountOnEdit();
-    }
-
-    private void SaveFreeDrawCountOnEdit()
-    {
-        if (ImGui.IsItemDeactivatedAfterEdit())
-        {
-            this.config.FreeDrawCount = this.freeDrawCount;
-            this.config.Save(this.pluginInterface);
-        }
     }
 
     private void DrawSpreadDetailsColumns(Spread spread)
@@ -350,7 +443,7 @@ public sealed class MainWindow : Window, IDisposable
     {
         if (!this.api.IsLinked)
         {
-            ImGui.TextWrapped("Link your TarotGen account (Account tab) to see the readings saved to your account.");
+            ImGui.TextWrapped("Link your TarotGen account (Settings tab) to see the readings saved to your account.");
             return;
         }
 
@@ -429,27 +522,112 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawSettingsTab()
     {
-        Section("Defaults");
+        // ── Defaults ────────────────────────────────────────────────────────
+        bool defaultsOpen = ImGui.CollapsingHeader("Defaults", ImGuiTreeNodeFlags.DefaultOpen);
+        ImGui.SameLine();
+        Ui.HelpMarker(
+            "The deck, spread, and card count a New Reading starts on. Your picks on the "
+            + "New Reading tab are temporary and never overwrite these.");
+        if (defaultsOpen)
+            DrawDefaultsSection();
+
+        // ── Connection ──────────────────────────────────────────────────────
+        if (ImGui.CollapsingHeader("Connection", ImGuiTreeNodeFlags.DefaultOpen))
+            DrawConnectionSection();
+
+        // ── Sharing (only once a client token exists) ───────────────────────
+        if (this.api.IsConnected && ImGui.CollapsingHeader("Sharing", ImGuiTreeNodeFlags.DefaultOpen))
+            DrawSharingSettings();
+
+        // ── Links (never collapsed, per request) ────────────────────────────
+        DrawLinksSection();
+    }
+
+    private void DrawDefaultsSection()
+    {
         if (this.catalogLoading)
         {
             ImGui.TextDisabled("Loading decks and spreads…");
-        }
-        else if (this.catalogError != null)
-        {
-            ImGui.TextColored(ErrorColor, this.catalogError);
-        }
-        else
-        {
-            ImGui.TextDisabled("Default deck");
-            DrawDeckCombo();
-            ImGui.TextDisabled("Default spread");
-            DrawSpreadCombo();
-            ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
-            ImGui.SliderInt("Default cards on free draw", ref this.freeDrawCount, 1, Math.Max(1, MaxCardsForDeck()));
-            SaveFreeDrawCountOnEdit();
+            return;
         }
 
-        Section("Connection");
+        if (this.catalogError != null)
+        {
+            ImGui.TextColored(ErrorColor, this.catalogError);
+            return;
+        }
+
+        ImGui.TextDisabled("Default deck");
+        DrawDefaultDeckCombo();
+        ImGui.TextDisabled("Default spread");
+        DrawDefaultSpreadCombo();
+        ImGui.SetNextItemWidth(200 * ImGuiHelpers.GlobalScale);
+        ImGui.SliderInt("Default cards on free draw", ref this.defaultFreeDrawCount, 1, 78);
+        if (ImGui.IsItemDeactivatedAfterEdit())
+        {
+            this.config.FreeDrawCount = this.defaultFreeDrawCount;
+            this.config.Save(this.pluginInterface);
+        }
+    }
+
+    private void DrawDefaultDeckCombo()
+    {
+        var current = this.deckGroups.SelectMany(g => g.Decks).FirstOrDefault(d => d.DeckId == this.config.DefaultDeckId);
+        ImGui.SetNextItemWidth(-1);
+        using var combo = ImRaii.Combo("##defaultdeck", current?.Name ?? "Select a deck…");
+        if (!combo)
+            return;
+
+        bool first = true;
+        foreach (var group in this.deckGroups)
+        {
+            if (!first)
+                ImGui.Separator();
+            first = false;
+
+            ImGui.TextDisabled(group.Header);
+            foreach (var d in group.Decks)
+            {
+                var extra = d.AdditionalCards > 0 ? $"  (+{d.AdditionalCards})" : string.Empty;
+                var artist = string.IsNullOrWhiteSpace(d.Artist) ? string.Empty : $"   ·  {d.Artist}";
+                if (ImGui.Selectable($"{d.Name}{artist}{extra}##ddeck{d.DeckId}", d.DeckId == this.config.DefaultDeckId))
+                {
+                    this.config.DefaultDeckId = d.DeckId;
+                    this.config.Save(this.pluginInterface);
+                }
+            }
+        }
+    }
+
+    private void DrawDefaultSpreadCombo()
+    {
+        var current = this.config.DefaultSpreadId is { } sid
+            ? this.spreads.FirstOrDefault(s => s.SpreadId == sid)
+            : null;
+        ImGui.SetNextItemWidth(-1);
+        using var combo = ImRaii.Combo("##defaultspread", current?.Name ?? "Free draw");
+        if (!combo)
+            return;
+
+        if (ImGui.Selectable("Free draw", this.config.DefaultSpreadId == null))
+        {
+            this.config.DefaultSpreadId = null;
+            this.config.Save(this.pluginInterface);
+        }
+
+        foreach (var s in this.spreads)
+        {
+            var cards = s.CardCount == 1 ? "1 card" : $"{s.CardCount} cards";
+            if (ImGui.Selectable($"{s.Name}   ({cards})##dspread{s.SpreadId}", s.SpreadId == this.config.DefaultSpreadId))
+            {
+                this.config.DefaultSpreadId = s.SpreadId;
+                this.config.Save(this.pluginInterface);
+            }
+        }
+    }
+
+    private void DrawConnectionSection()
+    {
         if (this.api.IsConnected)
         {
             if (this.api.IsLinked)
@@ -503,45 +681,45 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.Spacing();
             ImGui.TextWrapped(this.linkService.Status);
         }
-
-        if (this.api.IsConnected)
-            DrawSharingSettings();
-
-        Section("TarotGen.io");
-        float scale = ImGuiHelpers.GlobalScale;
-        using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.20f, 0.47f, 0.58f, 1f)))
-        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.26f, 0.57f, 0.68f, 1f)))
-        using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.16f, 0.40f, 0.50f, 1f)))
-        {
-            if (ImGui.Button("Open TarotGen.io in your browser", new Vector2(-1, 38 * scale)))
-                Util.OpenLink(this.api.SiteBase);
-        }
     }
 
     private void DrawSharingSettings()
     {
-        Section("Sharing");
-
         bool incoming = this.config.IncomingSharesEnabled;
         if (ImGui.Checkbox("Receive shared readings", ref incoming))
         {
             this.config.IncomingSharesEnabled = incoming;
             this.config.Save(this.pluginInterface);
+            this.shareRelay.InvalidateRegistration();
         }
         ImGui.TextDisabled("A popup appears in-game when someone shares a reading with you.");
 
-        if (this.config.IncomingSharesEnabled)
+        if (!this.config.IncomingSharesEnabled)
+            return;
+
+        ImGui.Spacing();
+        ImGui.TextDisabled("Accept shares from:");
+        DrawTierRadio("Party members", "party");
+        ImGui.SameLine();
+        DrawTierRadio("Friends", "friends");
+        DrawTierRadio("Party or friends", "party_or_friends");
+        ImGui.SameLine();
+        DrawTierRadio("Anyone", "anyone");
+
+        // The game populates the friend list lazily; warn if we can't read it yet.
+        if ((this.config.AcceptTier is "friends" or "party_or_friends") && !this.social.FriendsListLoaded)
         {
-            ImGui.Spacing();
-            ImGui.TextDisabled("Accept shares from:");
-            DrawTierRadio("Party members", "party_or_friends");
-            ImGui.SameLine();
-            DrawTierRadio("Anyone", "anyone");
-            ImGui.Spacing();
-            ImGui.TextWrapped(
-                "While this is on, your character name and home world are shared with the relay so "
-                + "others can send you readings. Turn it off to stop receiving and hide your name.");
+            ImGui.TextColored(
+                new Vector4(1f, 0.82f, 0.4f, 1f),
+                "Open your in-game Friend List once so the plugin can read who's on it.");
         }
+
+        ImGui.Spacing();
+        ImGui.TextWrapped(
+            "While this is on, the character name and home world of each linked character are shared "
+            + "with the relay so others can send you readings. Turn it off to stop receiving.");
+
+        DrawLinkedCharacters();
     }
 
     private void DrawTierRadio(string label, string tier)
@@ -550,6 +728,76 @@ public sealed class MainWindow : Window, IDisposable
         {
             this.config.AcceptTier = tier;
             this.config.Save(this.pluginInterface);
+        }
+    }
+
+    private void DrawLinkedCharacters()
+    {
+        ImGui.Spacing();
+        ImGui.TextDisabled("Linked characters");
+        ImGui.SameLine();
+        Ui.HelpMarker(
+            "Only characters listed here can receive readings people send you. One TarotGen "
+            + "connection can cover all of your characters — link each one from that character.");
+
+        if (this.config.LinkedCharacters.Count == 0)
+            ImGui.TextDisabled("   No characters linked yet.");
+
+        ulong? removeId = null;
+        foreach (var c in this.config.LinkedCharacters)
+        {
+            ImGui.Bullet();
+            ImGui.SameLine();
+            ImGui.TextUnformatted(c.Display);
+            ImGui.SameLine();
+            if (ImGui.SmallButton($"Remove##lc{c.ContentId}"))
+                removeId = c.ContentId;
+        }
+
+        if (removeId is { } id)
+        {
+            this.config.LinkedCharacters.RemoveAll(c => c.ContentId == id);
+            this.config.Save(this.pluginInterface);
+            this.shareRelay.InvalidateRegistration();
+        }
+
+        if (this.social.Current() is { } cur)
+        {
+            if (!this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
+            {
+                ImGui.Spacing();
+                if (ImGui.Button($"Link this character  ({cur.Name} @ {cur.World})"))
+                    LinkCharacter(cur);
+            }
+        }
+        else
+        {
+            ImGui.TextDisabled("Log in to a character to link it.");
+        }
+    }
+
+    private void DrawLinksSection()
+    {
+        Section("Links");
+        float scale = ImGuiHelpers.GlobalScale;
+
+        using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.20f, 0.47f, 0.58f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.26f, 0.57f, 0.68f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.16f, 0.40f, 0.50f, 1f)))
+        {
+            if (ImGui.Button("Open TarotGen.io in your browser", new Vector2(-1, 38 * scale)))
+                Util.OpenLink(this.api.SiteBase);
+        }
+
+        ImGui.Spacing();
+        ImGui.TextDisabled("Designed by");
+        ImGui.SameLine();
+        using (ImRaii.PushColor(ImGuiCol.Button, new Vector4(0.72f, 0.18f, 0.20f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.84f, 0.24f, 0.26f, 1f)))
+        using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.60f, 0.14f, 0.16f, 1f)))
+        {
+            if (ImGui.Button("MathDad"))
+                Util.OpenLink("https://mathdad.me");
         }
     }
 
@@ -651,14 +899,8 @@ public sealed class MainWindow : Window, IDisposable
                 var reading = await this.api.GenerateAsync(request, this.api.Token).ConfigureAwait(false);
                 if (reading != null)
                 {
-                    // The plugin can't draw more cards, so lock an owned reading right away.
-                    if (reading.IsOwner && !reading.IsFinal)
-                    {
-                        var locked = await this.api.FinalizeReadingAsync(reading.ReadingId, this.api.Token).ConfigureAwait(false);
-                        if (locked != null)
-                            reading = locked;
-                    }
-
+                    // Leave the reading unlocked — the user can share its code as-is,
+                    // or lock it manually from the Reading tab if they own it.
                     this.readingPanel.SetReading(reading);
                     this.switchToReadingTab = true;
                     this.myReadingsRequested = false; // refresh the list next view

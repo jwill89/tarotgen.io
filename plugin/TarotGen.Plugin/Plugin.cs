@@ -29,6 +29,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TarotApiClient api;
     private readonly LinkService linkService;
     private readonly CardTextureCache textures;
+    private readonly GameSocial social;
     private readonly ShareRelay shareRelay;
 
     private readonly WindowSystem windowSystem = new("TarotGen");
@@ -44,6 +45,8 @@ public sealed class Plugin : IDalamudPlugin
         IPlayerState playerState,
         IPartyList partyList,
         ITargetManager targetManager,
+        IDataManager dataManager,
+        INotificationManager notificationManager,
         IPluginLog log)
     {
         this.pluginInterface = pluginInterface;
@@ -63,17 +66,19 @@ public sealed class Plugin : IDalamudPlugin
         var cacheDir = Path.Combine(pluginInterface.GetPluginConfigDirectory(), "cards");
         this.textures = new CardTextureCache(this.http, textureProvider, log, cacheDir);
 
+        this.social = new GameSocial(playerState, partyList, targetManager, dataManager);
+
         // The share relay's popup opens a shared reading via the main window; blocking
         // a sender routes through the relay. Both fields are set below before any click.
         this.sharePrompt = new SharePrompt(
             onView: id => this.mainWindow!.ShowReading(id),
             onBlock: clientId => this.shareRelay!.Block(clientId));
         this.shareRelay = new ShareRelay(
-            this.api, this.config, framework, playerState, partyList, targetManager, log, this.sharePrompt.Enqueue);
+            this.api, this.config, framework, this.social, notificationManager, log, this.sharePrompt.Enqueue);
 
-        this.readingPanel = new ReadingPanel(this.api, this.textures, this.shareRelay);
+        this.readingPanel = new ReadingPanel(this.api, this.textures, this.shareRelay, this.social);
         this.mainWindow = new MainWindow(
-            this.api, this.readingPanel, this.linkService, this.shareRelay, this.config, this.pluginInterface);
+            this.api, this.readingPanel, this.linkService, this.shareRelay, this.social, this.config, this.pluginInterface);
 
         this.windowSystem.AddWindow(this.mainWindow);
         this.windowSystem.AddWindow(this.sharePrompt);

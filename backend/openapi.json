@@ -3718,25 +3718,43 @@
                         "application/json": {
                             "schema": {
                                 "properties": {
+                                    "accept_tier": {
+                                        "type": "string",
+                                        "enum": [
+                                            "nobody",
+                                            "party",
+                                            "friends",
+                                            "party_or_friends",
+                                            "anyone"
+                                        ]
+                                    },
+                                    "characters": {
+                                        "description": "Full desired identity set (synced): each {character_name, world}. [] unpublishes all.",
+                                        "type": "array",
+                                        "items": {
+                                            "properties": {
+                                                "character_name": {
+                                                    "type": "string"
+                                                },
+                                                "world": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
                                     "character_name": {
+                                        "description": "Legacy single-identity form",
                                         "type": [
                                             "string",
                                             "null"
                                         ]
                                     },
                                     "world": {
+                                        "description": "Legacy single-identity form",
                                         "type": [
                                             "string",
                                             "null"
-                                        ]
-                                    },
-                                    "accept_tier": {
-                                        "type": "string",
-                                        "enum": [
-                                            "nobody",
-                                            "friends",
-                                            "party_or_friends",
-                                            "anyone"
                                         ]
                                     }
                                 },
