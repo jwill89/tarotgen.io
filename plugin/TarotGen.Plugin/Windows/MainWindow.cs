@@ -899,8 +899,15 @@ public sealed class MainWindow : Window, IDisposable
                 var reading = await this.api.GenerateAsync(request, this.api.Token).ConfigureAwait(false);
                 if (reading != null)
                 {
-                    // Leave the reading unlocked — the user can share its code as-is,
-                    // or lock it manually from the Reading tab if they own it.
+                    // The plugin can't draw more cards, so lock an owned reading right
+                    // away — plugin-generated readings are always final.
+                    if (reading.IsOwner && !reading.IsFinal)
+                    {
+                        var locked = await this.api.FinalizeReadingAsync(reading.ReadingId, this.api.Token).ConfigureAwait(false);
+                        if (locked != null)
+                            reading = locked;
+                    }
+
                     this.readingPanel.SetReading(reading);
                     this.switchToReadingTab = true;
                     this.myReadingsRequested = false; // refresh the list next view

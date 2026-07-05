@@ -179,22 +179,8 @@ public sealed class ReadingPanel
             }
         }
 
-        // Locking is optional now (plugin readings are no longer force-locked).
-        if (this.api.IsLinked && r.IsOwner && !r.IsFinal)
-        {
-            ImGui.SameLine();
-            using (ImRaii.Disabled(this.loading))
-            {
-                if (ImGui.Button("Lock"))
-                    StartFinalize(r.ReadingId);
-            }
-        }
-        else if (r.IsFinal)
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled("· locked");
-        }
-
+        // No lock control here: plugin-generated readings are always auto-locked on
+        // creation, so there is nothing to lock and no state worth surfacing.
         DrawSharePicker(r);
 
         if (!string.IsNullOrEmpty(this.shareStatus))
@@ -518,29 +504,6 @@ public sealed class ReadingPanel
             {
                 this.reading = await this.api.UnlockReadingAsync(readingId, password, this.api.Token).ConfigureAwait(false);
                 this.passwordBuffer = "";
-            }
-            catch (Exception ex)
-            {
-                this.error = ex.Message;
-            }
-            finally
-            {
-                this.loading = false;
-            }
-        });
-    }
-
-    private void StartFinalize(string readingId)
-    {
-        this.loading = true;
-        this.error = null;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var result = await this.api.FinalizeReadingAsync(readingId, this.api.Token).ConfigureAwait(false);
-                if (result != null)
-                    this.reading = result;
             }
             catch (Exception ex)
             {
