@@ -18,8 +18,6 @@ namespace TarotGen.Plugin.Windows;
 /// </summary>
 public sealed class SharePrompt : Window
 {
-    private static readonly Vector4 AccentColor = new(0.46f, 0.33f, 0.66f, 1f);
-    private static readonly Vector4 AccentHover = new(0.54f, 0.40f, 0.74f, 1f);
 
     private readonly ConcurrentQueue<ShareMessage> pending = new();
     private readonly HashSet<int> seenIds = new();
@@ -69,19 +67,15 @@ public sealed class SharePrompt : Window
 
         ImGui.Spacing();
 
-        using (ImRaii.PushColor(ImGuiCol.Button, AccentColor))
-        using (ImRaii.PushColor(ImGuiCol.ButtonHovered, AccentHover))
+        if (Ui.PrimaryButton("View reading", new Vector2(150 * scale, 30 * scale)))
         {
-            if (ImGui.Button("View reading", new Vector2(150 * scale, 30 * scale)))
-            {
-                this.onView(msg.Payload);
-                Advance();
-                return;
-            }
+            this.onView(msg.Payload);
+            Advance();
+            return;
         }
 
         ImGui.SameLine();
-        if (ImGui.Button("Dismiss", new Vector2(90 * scale, 30 * scale)))
+        if (Ui.Button("Dismiss", new Vector2(90 * scale, 30 * scale)))
         {
             Advance();
             return;
@@ -90,7 +84,7 @@ public sealed class SharePrompt : Window
         ImGui.Spacing();
         ImGui.TextDisabled("Not interested in shares from this person?");
         ImGui.SameLine();
-        if (ImGui.SmallButton("Block sender"))
+        if (Ui.Button("Block sender"))
         {
             if (msg.SenderClientId > 0)
                 this.onBlock(msg.SenderClientId);

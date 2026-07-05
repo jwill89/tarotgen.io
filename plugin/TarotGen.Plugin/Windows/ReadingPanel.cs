@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
@@ -92,7 +93,7 @@ public sealed class ReadingPanel
         ImGui.SameLine();
         using (ImRaii.Disabled(this.loading || string.IsNullOrWhiteSpace(this.codeBuffer)))
         {
-            if (ImGui.Button("Open"))
+            if (Ui.Button("Open"))
                 StartLoad(this.codeBuffer);
         }
 
@@ -130,7 +131,7 @@ public sealed class ReadingPanel
         ImGui.SameLine();
         using (ImRaii.Disabled(this.loading || string.IsNullOrEmpty(this.passwordBuffer)))
         {
-            if (ImGui.Button("Unlock"))
+            if (Ui.Button("Unlock"))
                 StartUnlock(this.reading!.ReadingId, this.passwordBuffer);
         }
     }
@@ -151,19 +152,22 @@ public sealed class ReadingPanel
 
         // The share code is what people paste into a /tell or party chat.
         ImGui.Spacing();
-        ImGui.TextUnformatted("Share code:");
+        ImGui.AlignTextToFramePadding();
+        Ui.Label("Share code:");
         ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
         ImGui.TextColored(AccentColor, r.ReadingId);
         ImGui.SameLine();
-        if (ImGui.SmallButton("Copy code"))
+        if (Ui.IconButton("copycode", FontAwesomeIcon.Copy, "Copy code"))
             ImGui.SetClipboardText(r.ReadingId);
         ImGui.SameLine();
-        if (ImGui.SmallButton("Copy link"))
+        if (Ui.IconButton("copylink", FontAwesomeIcon.Link, "Copy link"))
             ImGui.SetClipboardText(url);
         ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
         Ui.HelpMarker("Paste the code into a /tell or party chat — anyone can open it with /tarot <code> or on the website.");
 
-        if (ImGui.Button("Open in browser"))
+        if (Ui.Button("Open in browser"))
             Util.OpenLink(url);
 
         if (this.shareRelay.CanShare)
@@ -171,7 +175,7 @@ public sealed class ReadingPanel
             ImGui.SameLine();
             using (ImRaii.Disabled(this.sharing))
             {
-                if (ImGui.Button("Share to a player…"))
+                if (Ui.Button("Share to a player…"))
                 {
                     this.shareStatus = null;
                     ImGui.OpenPopup("##sharePicker");
@@ -224,9 +228,7 @@ public sealed class ReadingPanel
         if (!table)
         {
             DrawSpreadCanvas(info, positions, cards);
-            ImGui.Spacing();
-            ImGui.TextColored(AccentColor, "Card Details");
-            ImGui.Separator();
+            Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
             DrawDetails(positions, cards);
             return;
         }
@@ -239,8 +241,7 @@ public sealed class ReadingPanel
         DrawSpreadCanvas(info, positions, cards);
 
         ImGui.TableNextColumn();
-        ImGui.TextColored(AccentColor, "Card Details");
-        ImGui.Separator();
+        Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
         DrawDetails(positions, cards);
     }
 
@@ -443,19 +444,19 @@ public sealed class ReadingPanel
 
         if (lb.Reversed)
         {
-            if (ImGui.Button(this.lightboxShowReversed ? "Flip upright" : "Show reversed"))
+            if (Ui.Button(this.lightboxShowReversed ? "Flip upright" : "Show reversed"))
                 this.lightboxShowReversed = !this.lightboxShowReversed;
             ImGui.SameLine();
         }
 
-        if (ImGui.Button("Close"))
+        if (Ui.Button("Close"))
             ImGui.CloseCurrentPopup();
 
         ImGui.SameLine();
         bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
         using (ImRaii.Disabled(this.reportingCard || reported))
         {
-            if (ImGui.Button(reported ? "Reported" : "Report scan issue"))
+            if (Ui.Button(reported ? "Reported" : "Report scan issue"))
                 StartReportCard(lb.DeckId, lb.CardId, lb.Name);
         }
 
