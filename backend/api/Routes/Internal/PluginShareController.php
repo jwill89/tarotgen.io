@@ -36,13 +36,22 @@ class PluginShareController extends AbstractController
         requestBody: new OA\RequestBody(
             required: false,
             content: new OA\JsonContent(properties: [
-                new OA\Property(property: 'character_name', type: 'string', nullable: true),
-                new OA\Property(property: 'world', type: 'string', nullable: true),
                 new OA\Property(
                     property: 'accept_tier',
                     type: 'string',
-                    enum: ['nobody', 'friends', 'party_or_friends', 'anyone']
+                    enum: ['nobody', 'party', 'friends', 'party_or_friends', 'anyone']
                 ),
+                new OA\Property(
+                    property: 'characters',
+                    type: 'array',
+                    description: 'Full desired identity set (synced): each {character_name, world}. [] unpublishes all.',
+                    items: new OA\Items(properties: [
+                        new OA\Property(property: 'character_name', type: 'string'),
+                        new OA\Property(property: 'world', type: 'string'),
+                    ])
+                ),
+                new OA\Property(property: 'character_name', type: 'string', nullable: true, description: 'Legacy single-identity form'),
+                new OA\Property(property: 'world', type: 'string', nullable: true, description: 'Legacy single-identity form'),
             ])
         ),
         responses: [
@@ -61,15 +70,48 @@ class PluginShareController extends AbstractController
             return $response->withJson(['error' => 'Invalid or missing client token'], 401);
         }
 
-        $body   = $this->parsedBody($request);
+        $body       = $this->parsedBody($request);
+        $identities = $this->identitiesFromBody($body);
+
         $client = $this->shares->register(
             $clientId,
-            isset($body['character_name']) ? (string)$body['character_name'] : null,
-            isset($body['world']) ? (string)$body['world'] : null,
             isset($body['accept_tier']) ? (string)$body['accept_tier'] : null,
+            $identities,
         );
 
         return $response->withJson($client);
+    }
+
+    /**
+     * Normalise the register body into a desired identity set, or null to leave it
+     * untouched. Prefers the `characters` array; falls back to the legacy single
+     * `character_name`/`world` pair.
+     *
+     * @param array<string,mixed> $body
+     * @return list<array{character_name:string,world:string}>|null
+     */
+    private function identitiesFromBody(array $body): ?array
+    {
+        if (isset($body['characters']) && is_array($body['characters'])) {
+            $out = [];
+            foreach ($body['characters'] as $c) {
+                if (is_array($c)) {
+                    $out[] = [
+                        'character_name' => (string)($c['character_name'] ?? ''),
+                        'world'          => (string)($c['world'] ?? ''),
+                    ];
+                }
+            }
+            return $out;
+        }
+
+        $name  = isset($body['character_name']) ? trim((string)$body['character_name']) : '';
+        $world = isset($body['world']) ? trim((string)$body['world']) : '';
+        if ($name !== '' && $world !== '') {
+            return [['character_name' => $name, 'world' => $world]];
+        }
+
+        return null;
     }
 
     #[OA\Get(

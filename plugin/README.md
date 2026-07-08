@@ -18,7 +18,7 @@ channel (`-Target plugin`).
 - **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. Anonymous.
 - **View a reading** by its share code / URL, including password-protected readings (guest enters the password).
 - **Optional account** — link a TarotGen account to lock/finalize a reading, sort deck/spread pickers by your favorites, and track generated readings ("My Readings"). Guests never have to link.
-- **Send a reading** to another plugin user as a **chatless push** — they get a passive in-game *"‹You› wants to share a Tarot reading"* prompt with **View**/**Dismiss**/**Block** (no chat, no clipboard). Recipients choose a consent tier (party members / anyone / off).
+- **Send a reading** to another plugin user as a **chatless push** — they get a passive in-game *"‹You› wants to share a Tarot reading"* prompt with **View**/**Dismiss**/**Block** (no chat, no clipboard). Recipients choose a consent tier (party members / friends / party or friends / anyone) or turn receiving off; party covers cross-world and Party-Finder parties, and one install can link several characters.
 - **Report a card scan issue** from the card lightbox, so scans with artefacts can be flagged for re-scanning.
 
 **Out of scope** (lives on the website): admin, account/profile management, changelog viewing, PNG

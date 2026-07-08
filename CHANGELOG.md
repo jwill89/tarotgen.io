@@ -11,6 +11,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > [`frontend/package.json`](frontend/package.json) and is shown on the admin
 > dashboard.
 
+**Releases & tags (going forward).** Each version now corresponds to a Git tag and
+GitHub Release named `v<version>` (e.g. `v4.1.0`), created **automatically** by the
+CI `release` job (`.github/workflows/ci.yml` → `.github/scripts/release.sh`): on a
+push to `main`, after the full gate passes, if the current version
+(`frontend/package.json`) has no release yet it is tagged and released, with the
+release body taken from that version's section below. So bump the version and
+update its section here in the same commit — no manual tagging.
+
 ## [Unreleased]
 
 Nothing yet.
@@ -284,8 +292,8 @@ Bot/abuse protection for the sign-in flow.
   database structure can be rebuilt from scratch, and retired the AGENTS.md
   "known gaps" backlog by resolving its remaining items.
 - Moved deploy connection settings (host, SSH key path, web root) out of
-  `scripts/deploy.ps1` into a gitignored `scripts/deploy.local.ps1` (template:
-  `deploy.local.ps1.example`) so no infrastructure details live in source
+  `scripts/deploy.ps1` into a gitignored `scripts/deploy.config.ps1` (template:
+  `deploy.config.example.ps1`) so no infrastructure details live in source
   control.
 - Added project governance docs: this `CHANGELOG.md`, a `CONTRIBUTING.md`
   guide, and a proprietary `LICENSE`.

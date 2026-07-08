@@ -14,8 +14,8 @@
 /frontend/.npmrc
 
 # Local deploy settings (server IP, SSH key path, web root) — never commit.
-# Copy scripts/deploy.local.ps1.example to create it.
-/scripts/deploy.local.ps1
+# Copy scripts/deploy.config.example.ps1 to create it.
+/scripts/deploy.config.ps1
 
 # Editor / agent — repo-level
 /.idea/

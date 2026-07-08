@@ -15,8 +15,9 @@ use Tarot\Service\ShareService;
 
 /**
  * Exercises the chatless-share relay engine against an in-memory SQLite DB:
- * client-token issuance/resolution, identity registration + consent, addressed
- * delivery with the consent/block/throttle guards, and once-only inbox drain.
+ * client-token issuance/resolution, multi-character identity registration +
+ * consent, addressed delivery with the consent/block/throttle guards, and
+ * once-only inbox drain.
  */
 #[CoversClass(ShareService::class)]
 #[CoversClass(PluginClientData::class)]
@@ -41,6 +42,16 @@ final class ShareServiceTest extends TestCase
                 last_seen      TEXT    DEFAULT NULL,
                 created_at     TEXT    NOT NULL,
                 revoked_at     TEXT    DEFAULT NULL
+            )"
+        );
+        $this->pdo->exec(
+            "CREATE TABLE plugin_client_identities (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                client_id     INTEGER NOT NULL,
+                identity_hash TEXT    NOT NULL,
+                last_seen     TEXT    DEFAULT NULL,
+                created_at    TEXT    NOT NULL,
+                UNIQUE (client_id, identity_hash)
             )"
         );
         $this->pdo->exec(
@@ -73,6 +84,12 @@ final class ShareServiceTest extends TestCase
         );
     }
 
+    /** @return list<array{character_name:string,world:string}> */
+    private static function ident(string $character, string $world): array
+    {
+        return [['character_name' => $character, 'world' => $world]];
+    }
+
     public function testIssueGuestClientMintsResolvableToken(): void
     {
         $client = $this->service->issueClient(null);
@@ -95,7 +112,7 @@ final class ShareServiceTest extends TestCase
         $recipient = $this->service->issueClient(null);
         $sender    = $this->service->issueClient(null);
 
-        $view = $this->service->register($recipient['client_id'], 'Y\'shtola Rhul', 'Zurvan', 'anyone');
+        $view = $this->service->register($recipient['client_id'], 'anyone', self::ident('Y\'shtola Rhul', 'Zurvan'));
         $this->assertNotNull($view);
         $this->assertSame('anyone', $view->accept_tier);
 
@@ -104,36 +121,83 @@ final class ShareServiceTest extends TestCase
         $this->assertCount(1, $this->service->drainInbox($recipient['client_id']));
     }
 
+    public function testMultipleCharactersAreEachAddressable(): void
+    {
+        $recipient = $this->service->issueClient(null);
+        $sender    = $this->service->issueClient(null);
+
+        // One install links two characters — both deliver to the same inbox.
+        $this->service->register($recipient['client_id'], 'anyone', [
+            ['character_name' => 'Alt One', 'world' => 'Zurvan'],
+            ['character_name' => 'Alt Two', 'world' => 'Twintania'],
+        ]);
+
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Alt One', 'Zurvan', 'A');
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Alt Two', 'Twintania', 'B');
+        $this->assertCount(2, $this->service->drainInbox($recipient['client_id']));
+    }
+
+    public function testSyncRemovesUnlistedIdentity(): void
+    {
+        $recipient = $this->service->issueClient(null);
+        $sender    = $this->service->issueClient(null);
+
+        $this->service->register($recipient['client_id'], 'anyone', [
+            ['character_name' => 'Keep', 'world' => 'Zurvan'],
+            ['character_name' => 'Drop', 'world' => 'Zurvan'],
+        ]);
+        // Re-sync with only one character: the other is unpublished.
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Keep', 'Zurvan'));
+
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Drop', 'Zurvan', 'X');
+        $this->assertCount(0, $this->service->drainInbox($recipient['client_id']));
+
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Keep', 'Zurvan', 'Y');
+        $this->assertCount(1, $this->service->drainInbox($recipient['client_id']));
+    }
+
     public function testIdentityMatchIsCaseAndSpaceInsensitive(): void
     {
         $recipient = $this->service->issueClient(null);
         $sender    = $this->service->issueClient(null);
-        $this->service->register($recipient['client_id'], 'Alisaie Leveilleur', 'Zurvan', 'anyone');
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Alisaie Leveilleur', 'Zurvan'));
 
         // A sender's differently-cased/spaced target still resolves to the same hash.
         $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', '  alisaie leveilleur ', 'ZURVAN', 'X');
         $this->assertCount(1, $this->service->drainInbox($recipient['client_id']));
     }
 
-    public function testRegisterWithBlankIdentityClearsAddressing(): void
+    public function testEmptyIdentityListClearsAddressing(): void
     {
         $recipient = $this->service->issueClient(null);
         $sender    = $this->service->issueClient(null);
-        $this->service->register($recipient['client_id'], 'Somebody', 'Zurvan', 'anyone');
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Somebody', 'Zurvan'));
 
-        $view = $this->service->register($recipient['client_id'], '', '', null);
-        $this->assertNotNull($view);
+        // An empty list unpublishes everything.
+        $this->service->register($recipient['client_id'], null, []);
 
-        // With the identity cleared, a share to the old name is silently dropped.
         $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Somebody', 'Zurvan', 'X');
         $this->assertCount(0, $this->service->drainInbox($recipient['client_id']));
+    }
+
+    public function testNullIdentitiesLeavesSetUntouched(): void
+    {
+        $recipient = $this->service->issueClient(null);
+        $sender    = $this->service->issueClient(null);
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Stay', 'Zurvan'));
+
+        // Registering with null identities (e.g. just a tier change) keeps the set.
+        $this->service->register($recipient['client_id'], 'party', null);
+
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Stay', 'Zurvan', 'X');
+        $this->assertCount(1, $this->service->drainInbox($recipient['client_id']));
     }
 
     public function testInvalidAcceptTierIsIgnored(): void
     {
         $client = $this->service->issueClient(null);
 
-        $view = $this->service->register($client['client_id'], 'A', 'B', 'everyone-lol');
+        $view = $this->service->register($client['client_id'], 'everyone-lol', self::ident('A', 'B'));
 
         $this->assertNotNull($view);
         $this->assertSame('party_or_friends', $view->accept_tier);
@@ -143,7 +207,7 @@ final class ShareServiceTest extends TestCase
     {
         $sender    = $this->service->issueClient(null);
         $recipient = $this->service->issueClient(null);
-        $this->service->register($recipient['client_id'], 'Tataru', 'Zurvan', 'anyone');
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Tataru', 'Zurvan'));
 
         $status = $this->service->send(
             $sender['client_id'],
@@ -192,7 +256,7 @@ final class ShareServiceTest extends TestCase
     public function testSendToSelfIsNotDelivered(): void
     {
         $client = $this->service->issueClient(null);
-        $this->service->register($client['client_id'], 'Estinien', 'Zurvan', 'anyone');
+        $this->service->register($client['client_id'], 'anyone', self::ident('Estinien', 'Zurvan'));
 
         $this->assertSame(
             'sent',
@@ -205,7 +269,7 @@ final class ShareServiceTest extends TestCase
     {
         $sender    = $this->service->issueClient(null);
         $recipient = $this->service->issueClient(null);
-        $this->service->register($recipient['client_id'], 'Urianger', 'Zurvan', 'nobody');
+        $this->service->register($recipient['client_id'], 'nobody', self::ident('Urianger', 'Zurvan'));
 
         $this->assertSame(
             'sent',
@@ -218,7 +282,7 @@ final class ShareServiceTest extends TestCase
     {
         $sender    = $this->service->issueClient(null);
         $recipient = $this->service->issueClient(null);
-        $this->service->register($recipient['client_id'], 'Thancred', 'Zurvan', 'anyone');
+        $this->service->register($recipient['client_id'], 'anyone', self::ident('Thancred', 'Zurvan'));
         $this->service->block($recipient['client_id'], $sender['client_id']);
 
         // Uniform 'sent', but nothing is delivered — a block can't be probed.
@@ -241,7 +305,7 @@ final class ShareServiceTest extends TestCase
         // 15 distinct recipients are delivered; the 16th is silently dropped.
         for ($i = 1; $i <= 15; $i++) {
             $recipient = $this->service->issueClient(null);
-            $this->service->register($recipient['client_id'], "Char{$i}", 'Zurvan', 'anyone');
+            $this->service->register($recipient['client_id'], 'anyone', self::ident("Char{$i}", 'Zurvan'));
             $this->assertSame(
                 'sent',
                 $this->service->send($sender['client_id'], 'S', 'Sender', 'Zurvan', "Char{$i}", 'Zurvan', 'X')
@@ -250,7 +314,7 @@ final class ShareServiceTest extends TestCase
         }
 
         $extra = $this->service->issueClient(null);
-        $this->service->register($extra['client_id'], 'Char16', 'Zurvan', 'anyone');
+        $this->service->register($extra['client_id'], 'anyone', self::ident('Char16', 'Zurvan'));
         $this->assertSame(
             'sent',
             $this->service->send($sender['client_id'], 'S', 'Sender', 'Zurvan', 'Char16', 'Zurvan', 'X')
@@ -274,5 +338,52 @@ final class ShareServiceTest extends TestCase
         ]);
 
         $this->assertCount(0, $this->service->drainInbox($recipient['client_id']));
+    }
+
+    public function testIdentityCountIsCappedPerClient(): void
+    {
+        $recipient = $this->service->issueClient(null);
+        $sender    = $this->service->issueClient(null);
+
+        // Ask to publish 41 identities; only the first 40 (the cap) are kept — a
+        // guard against a client squatting on / bloating the identity table.
+        $idents = [];
+        for ($i = 1; $i <= 41; $i++) {
+            $idents[] = ['character_name' => "Char{$i}", 'world' => 'Zurvan'];
+        }
+        $this->service->register($recipient['client_id'], 'anyone', $idents);
+
+        $count = (int)$this->pdo->query('SELECT COUNT(*) FROM plugin_client_identities')->fetchColumn();
+        $this->assertSame(40, $count);
+
+        // A character within the cap is addressable; the 41st was dropped.
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Char1', 'Zurvan', 'A');
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Char41', 'Zurvan', 'B');
+        $this->assertCount(1, $this->service->drainInbox($recipient['client_id']));
+    }
+
+    public function testRoutingPrefersTheMostRecentlyPresentClient(): void
+    {
+        $sender   = $this->service->issueClient(null);
+        $installA = $this->service->issueClient(null);
+        $installB = $this->service->issueClient(null);
+
+        // Both installs publish the SAME character (e.g. a reinstall/relink left the
+        // old client row active, since a client is never revoked).
+        $this->service->register($installA['client_id'], 'anyone', self::ident('Shared', 'Zurvan'));
+        $this->service->register($installB['client_id'], 'anyone', self::ident('Shared', 'Zurvan'));
+
+        // Make install A the one that has polled most recently (freshest presence),
+        // even though it has the LOWER client_id (so client_id DESC would pick B).
+        $this->pdo->prepare('UPDATE plugin_clients SET last_seen = :ts WHERE client_id = :id')
+            ->execute([':ts' => date('Y-m-d H:i:s', time()), ':id' => $installA['client_id']]);
+        $this->pdo->prepare('UPDATE plugin_clients SET last_seen = :ts WHERE client_id = :id')
+            ->execute([':ts' => date('Y-m-d H:i:s', time() - 120), ':id' => $installB['client_id']]);
+
+        $this->service->send($sender['client_id'], 'S', 'S', 'Zurvan', 'Shared', 'Zurvan', 'X');
+
+        // The online install (A) receives it; the stale one (B) does not.
+        $this->assertCount(1, $this->service->drainInbox($installA['client_id']));
+        $this->assertCount(0, $this->service->drainInbox($installB['client_id']));
     }
 }

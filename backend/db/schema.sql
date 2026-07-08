@@ -191,6 +191,14 @@ CREATE TABLE plugin_clients (
         revoked_at     TEXT    DEFAULT NULL
     );
 
+CREATE TABLE plugin_client_identities (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        client_id     INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
+        identity_hash TEXT    NOT NULL,
+        last_seen     TEXT    DEFAULT NULL,
+        created_at    TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
+    );
+
 CREATE TABLE plugin_messages (
         id                  INTEGER PRIMARY KEY AUTOINCREMENT,
         recipient_client_id INTEGER NOT NULL REFERENCES plugin_clients(client_id) ON DELETE CASCADE,
@@ -258,6 +266,10 @@ CREATE UNIQUE INDEX idx_card_reports_card ON card_reports (deck_id, card_id);
 CREATE UNIQUE INDEX idx_plugin_clients_hash ON plugin_clients (token_hash);
 
 CREATE INDEX idx_plugin_clients_identity ON plugin_clients (identity_hash);
+
+CREATE UNIQUE INDEX idx_client_identities_pair ON plugin_client_identities (client_id, identity_hash);
+
+CREATE INDEX idx_client_identities_hash ON plugin_client_identities (identity_hash);
 
 CREATE INDEX idx_plugin_clients_user ON plugin_clients (user_id);
 

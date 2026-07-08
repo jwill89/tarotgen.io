@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Threading.Tasks;
 using Dalamud.Bindings.ImGui;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using Dalamud.Utility;
@@ -27,6 +28,7 @@ public sealed class ReadingPanel
     private readonly TarotApiClient api;
     private readonly CardTextureCache textures;
     private readonly ShareRelay shareRelay;
+    private readonly GameSocial social;
 
     private Reading? reading;
     private string codeBuffer = "";
@@ -47,11 +49,12 @@ public sealed class ReadingPanel
     private volatile bool sharing;
     private string? shareStatus;
 
-    public ReadingPanel(TarotApiClient api, CardTextureCache textures, ShareRelay shareRelay)
+    public ReadingPanel(TarotApiClient api, CardTextureCache textures, ShareRelay shareRelay, GameSocial social)
     {
         this.api = api;
         this.textures = textures;
         this.shareRelay = shareRelay;
+        this.social = social;
     }
 
     public bool HasReading => this.reading != null;
@@ -90,7 +93,7 @@ public sealed class ReadingPanel
         ImGui.SameLine();
         using (ImRaii.Disabled(this.loading || string.IsNullOrWhiteSpace(this.codeBuffer)))
         {
-            if (ImGui.Button("Open"))
+            if (Ui.Button("Open"))
                 StartLoad(this.codeBuffer);
         }
 
@@ -128,7 +131,7 @@ public sealed class ReadingPanel
         ImGui.SameLine();
         using (ImRaii.Disabled(this.loading || string.IsNullOrEmpty(this.passwordBuffer)))
         {
-            if (ImGui.Button("Unlock"))
+            if (Ui.Button("Unlock"))
                 StartUnlock(this.reading!.ReadingId, this.passwordBuffer);
         }
     }
@@ -146,33 +149,33 @@ public sealed class ReadingPanel
         ImGui.TextDisabled(meta);
 
         var url = $"{this.api.SiteBase}/reading/{r.ReadingId}";
-        if (ImGui.Button("Copy link"))
+
+        // The share code is what people paste into a /tell or party chat.
+        ImGui.Spacing();
+        ImGui.AlignTextToFramePadding();
+        Ui.Label("Share code:");
+        ImGui.SameLine();
+        ImGui.AlignTextToFramePadding();
+        ImGui.TextColored(AccentColor, r.ReadingId);
+        ImGui.SameLine();
+        if (Ui.IconButton("copycode", FontAwesomeIcon.Copy, "Copy code"))
+            ImGui.SetClipboardText(r.ReadingId);
+        ImGui.SameLine();
+        if (Ui.IconButton("copylink", FontAwesomeIcon.Link, "Copy link"))
             ImGui.SetClipboardText(url);
         ImGui.SameLine();
-        if (ImGui.Button("Open in browser"))
-            Util.OpenLink(url);
+        ImGui.AlignTextToFramePadding();
+        Ui.HelpMarker("Paste the code into a /tell or party chat — anyone can open it with /tarot <code> or on the website.");
 
-        if (r.IsFinal)
-        {
-            ImGui.SameLine();
-            ImGui.TextDisabled("· locked");
-        }
-        else if (this.api.IsLinked && r.IsOwner)
-        {
-            ImGui.SameLine();
-            using (ImRaii.Disabled(this.loading))
-            {
-                if (ImGui.Button("Lock reading"))
-                    StartFinalize(r.ReadingId);
-            }
-        }
+        if (Ui.Button("Open in browser"))
+            Util.OpenLink(url);
 
         if (this.shareRelay.CanShare)
         {
             ImGui.SameLine();
             using (ImRaii.Disabled(this.sharing))
             {
-                if (ImGui.Button("Share…"))
+                if (Ui.Button("Share to a player…"))
                 {
                     this.shareStatus = null;
                     ImGui.OpenPopup("##sharePicker");
@@ -180,6 +183,8 @@ public sealed class ReadingPanel
             }
         }
 
+        // No lock control here: plugin-generated readings are always auto-locked on
+        // creation, so there is nothing to lock and no state worth surfacing.
         DrawSharePicker(r);
 
         if (!string.IsNullOrEmpty(this.shareStatus))
@@ -216,12 +221,38 @@ public sealed class ReadingPanel
         var positions = info.Spread!.Positions.OrderBy(p => p.Order).ToList();
         var cards = info.Draw;
 
+        // Two columns: the positioned canvas on the left, the per-position card
+        // meanings on the right — mirroring the website and the New Reading preview.
+        using var table = ImRaii.Table("##readingspread", 2,
+            ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.Resizable);
+        if (!table)
+        {
+            DrawSpreadCanvas(info, positions, cards);
+            Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
+            DrawDetails(positions, cards);
+            return;
+        }
+
+        ImGui.TableSetupColumn("Spread", ImGuiTableColumnFlags.WidthStretch, 0.58f);
+        ImGui.TableSetupColumn("Details", ImGuiTableColumnFlags.WidthStretch, 0.42f);
+        ImGui.TableNextRow();
+
+        ImGui.TableNextColumn();
+        DrawSpreadCanvas(info, positions, cards);
+
+        ImGui.TableNextColumn();
+        Ui.Section(FontAwesomeIcon.ListUl, "Card Details");
+        DrawDetails(positions, cards);
+    }
+
+    private void DrawSpreadCanvas(ReadingInfo info, List<SpreadPosition> positions, IReadOnlyList<DrawCard> cards)
+    {
         var fit = SpreadLayout.ComputeFit(positions);
         var sizePct = SpreadLayout.CardSizePct(fit);
 
         float scale = ImGuiHelpers.GlobalScale;
         float avail = ImGui.GetContentRegionAvail().X;
-        float canvas = Math.Clamp(avail, 200f, 460f * scale);
+        float canvas = Math.Clamp(avail, 180f, 460f * scale);
 
         var origin = ImGui.GetCursorScreenPos();
         ImGui.InvisibleButton("##spreadcanvas", new Vector2(canvas, canvas));
@@ -273,11 +304,6 @@ public sealed class ReadingPanel
                 }
             }
         }
-
-        ImGui.Spacing();
-        ImGui.TextUnformatted("Card Details");
-        ImGui.Separator();
-        DrawDetails(positions, cards);
     }
 
     private void DrawDetails(IReadOnlyList<SpreadPosition> positions, IReadOnlyList<DrawCard> cards)
@@ -418,19 +444,19 @@ public sealed class ReadingPanel
 
         if (lb.Reversed)
         {
-            if (ImGui.Button(this.lightboxShowReversed ? "Flip upright" : "Show reversed"))
+            if (Ui.Button(this.lightboxShowReversed ? "Flip upright" : "Show reversed"))
                 this.lightboxShowReversed = !this.lightboxShowReversed;
             ImGui.SameLine();
         }
 
-        if (ImGui.Button("Close"))
+        if (Ui.Button("Close"))
             ImGui.CloseCurrentPopup();
 
         ImGui.SameLine();
         bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
         using (ImRaii.Disabled(this.reportingCard || reported))
         {
-            if (ImGui.Button(reported ? "Reported" : "Report scan issue"))
+            if (Ui.Button(reported ? "Reported" : "Report scan issue"))
                 StartReportCard(lb.DeckId, lb.CardId, lb.Name);
         }
 
@@ -491,29 +517,6 @@ public sealed class ReadingPanel
         });
     }
 
-    private void StartFinalize(string readingId)
-    {
-        this.loading = true;
-        this.error = null;
-        _ = Task.Run(async () =>
-        {
-            try
-            {
-                var result = await this.api.FinalizeReadingAsync(readingId, this.api.Token).ConfigureAwait(false);
-                if (result != null)
-                    this.reading = result;
-            }
-            catch (Exception ex)
-            {
-                this.error = ex.Message;
-            }
-            finally
-            {
-                this.loading = false;
-            }
-        });
-    }
-
     // ── Share picker ──────────────────────────────────────────────────────────
 
     private void DrawSharePicker(Reading r)
@@ -522,7 +525,7 @@ public sealed class ReadingPanel
         if (!popup)
             return;
 
-        if (this.shareRelay.Self() is not { } me)
+        if (this.social.Self() is not { } me)
         {
             ImGui.TextDisabled("Log in to a character to share readings.");
             return;
@@ -533,7 +536,7 @@ public sealed class ReadingPanel
 
         bool any = false;
 
-        if (this.shareRelay.TargetRecipient() is { } target)
+        if (this.social.Target() is { } target)
         {
             any = true;
             if (ImGui.Selectable($"{target.Name} ({target.World})  — current target"))
@@ -543,7 +546,7 @@ public sealed class ReadingPanel
             }
         }
 
-        foreach (var member in this.shareRelay.PartyRecipients())
+        foreach (var member in this.social.AllPartyMembers())
         {
             any = true;
             if (ImGui.Selectable($"{member.Name} ({member.World})"))
@@ -587,7 +590,7 @@ public sealed class ReadingPanel
         });
     }
 
-    private void StartShare(string readingId, ShareRelay.Recipient to, ShareRelay.Recipient self)
+    private void StartShare(string readingId, GameSocial.Recipient to, GameSocial.Recipient self)
     {
         this.sharing = true;
         this.shareStatus = $"Sending to {to.Name}…";
