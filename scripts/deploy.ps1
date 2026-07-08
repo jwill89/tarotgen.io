@@ -73,7 +73,7 @@ param(
     # Connection settings are intentionally NOT hardcoded here (this file is in
     # source control). They are resolved below from, in priority order: an
     # explicit -param, an environment variable, or the gitignored
-    # scripts/deploy.local.ps1. See scripts/deploy.local.ps1.example.
+    # scripts/deploy.config.ps1. See scripts/deploy.config.example.ps1.
     [string]$VpsHost,
 
     [string]$VpsUser,
@@ -144,21 +144,21 @@ function Invoke-Upload([string]$WorkingDir, [string]$LocalItem, [string]$RemoteD
 }
 
 # ── Resolve connection settings (param > env var > gitignored local config) ───
-# scripts/deploy.local.ps1 (gitignored) may set $DeployVpsHost / $DeployVpsUser /
-# $DeployKeyPath / $DeployWebRoot. Copy scripts/deploy.local.ps1.example to set
+# scripts/deploy.config.ps1 (gitignored) may set $DeployVpsHost / $DeployVpsUser /
+# $DeployKeyPath / $DeployWebRoot. Copy scripts/deploy.config.example.ps1 to set
 # yours. Keeping the host, key path, and web root out of the tracked script means
 # no infrastructure details live in git history.
-$localConfig = Join-Path $PSScriptRoot 'deploy.local.ps1'
+$localConfig = Join-Path $PSScriptRoot 'deploy.config.ps1'
 if (Test-Path $localConfig) { . $localConfig }
 
-if (-not $VpsHost) { $VpsHost = if ($env:TAROT_DEPLOY_HOST) { $env:TAROT_DEPLOY_HOST } else { $DeployVpsHost } }
-if (-not $VpsUser) { $VpsUser = if ($env:TAROT_DEPLOY_USER) { $env:TAROT_DEPLOY_USER } elseif ($DeployVpsUser) { $DeployVpsUser } else { 'root' } }
-if (-not $KeyPath) { $KeyPath = if ($env:TAROT_DEPLOY_KEY) { $env:TAROT_DEPLOY_KEY } else { $DeployKeyPath } }
-if (-not $WebRoot) { $WebRoot = if ($env:TAROT_DEPLOY_WEBROOT) { $env:TAROT_DEPLOY_WEBROOT } else { $DeployWebRoot } }
+if (-not $VpsHost) { $VpsHost = if ($env:DEPLOY_VPS_HOST) { $env:DEPLOY_VPS_HOST } else { $DeployVpsHost } }
+if (-not $VpsUser) { $VpsUser = if ($env:DEPLOY_VPS_USER) { $env:DEPLOY_VPS_USER } elseif ($DeployVpsUser) { $DeployVpsUser } else { 'root' } }
+if (-not $KeyPath) { $KeyPath = if ($env:DEPLOY_KEY_PATH) { $env:DEPLOY_KEY_PATH } else { $DeployKeyPath } }
+if (-not $WebRoot) { $WebRoot = if ($env:DEPLOY_WEB_ROOT) { $env:DEPLOY_WEB_ROOT } else { $DeployWebRoot } }
 
-if (-not $VpsHost) { Fail "No deploy host configured. Pass -VpsHost, set `$env:TAROT_DEPLOY_HOST, or create scripts/deploy.local.ps1 (copy scripts/deploy.local.ps1.example)." }
-if (-not $KeyPath) { Fail "No SSH key path configured. Pass -KeyPath, set `$env:TAROT_DEPLOY_KEY, or set `$DeployKeyPath in scripts/deploy.local.ps1." }
-if (-not $WebRoot) { Fail "No web root configured. Pass -WebRoot, set `$env:TAROT_DEPLOY_WEBROOT, or set `$DeployWebRoot in scripts/deploy.local.ps1." }
+if (-not $VpsHost) { Fail "No deploy host configured. Pass -VpsHost, set `$env:DEPLOY_VPS_HOST, or create scripts/deploy.config.ps1 (copy scripts/deploy.config.example.ps1)." }
+if (-not $KeyPath) { Fail "No SSH key path configured. Pass -KeyPath, set `$env:DEPLOY_KEY_PATH, or set `$DeployKeyPath in scripts/deploy.config.ps1." }
+if (-not $WebRoot) { Fail "No web root configured. Pass -WebRoot, set `$env:DEPLOY_WEB_ROOT, or set `$DeployWebRoot in scripts/deploy.config.ps1." }
 
 # ── Resolve paths & tools ─────────────────────────────────────────────────────
 $RepoRoot = Split-Path $PSScriptRoot -Parent
