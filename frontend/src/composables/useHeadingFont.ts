@@ -21,8 +21,16 @@ export interface HeadingFont {
   stack: string
 }
 
-/** Available heading fonts. `cinzel` is the default (loaded via Google Fonts). */
+/**
+ * Available heading fonts. `luminary` is the default (self-hosted); the first
+ * entry is what `resolveFont` falls back to when nothing is saved.
+ */
 export const HEADING_FONTS: readonly HeadingFont[] = [
+  {
+    id: 'luminary',
+    label: 'Luminary Serif',
+    stack: '"Luminary Serif", Georgia, "Times New Roman", serif',
+  },
   { id: 'cinzel', label: 'Cinzel', stack: '"Cinzel", Georgia, "Times New Roman", serif' },
   { id: 'against', label: 'Against', stack: '"Against", Georgia, "Times New Roman", serif' },
   {
@@ -37,7 +45,7 @@ export const HEADING_FONTS: readonly HeadingFont[] = [
   },
 ] as const
 
-const DEFAULT_FONT_ID = 'cinzel'
+const DEFAULT_FONT_ID = 'luminary'
 
 function resolveFont(id: string | null): HeadingFont {
   return HEADING_FONTS.find((f) => f.id === id) ?? HEADING_FONTS[0]

@@ -101,6 +101,19 @@ const router = createRouter({
       },
     },
     {
+      // Public landing page: how to install and use the FFXIV (Dalamud) plugin.
+      // Path is deliberately NOT /plugin — that URL is the backend-served custom
+      // Dalamud repo directory (repo.json / latest.zip / icon.png).
+      path: '/ffxiv-plugin',
+      name: 'ffxiv-plugin',
+      component: () => import('@/views/PluginView.vue'),
+      meta: {
+        title: 'FFXIV Plugin',
+        description:
+          'Draw and view TarotGen.io tarot readings inside Final Fantasy XIV. Install the free Dalamud plugin and get started in three steps.',
+      },
+    },
+    {
       path: '/contact',
       name: 'contact',
       component: () => import('@/views/ContactView.vue'),

@@ -43,7 +43,7 @@
   /* Heading/display font. Overridden at runtime by the font switcher
        (useHeadingFont) which rewrites this variable on <html>. Every heading
        style reads it so a single token drives them all. */
-  --myst-heading-font: 'Cinzel', Georgia, 'Times New Roman', serif;
+  --myst-heading-font: 'Luminary Serif', Georgia, 'Times New Roman', serif;
 
   /* ── Bulma intent palette → mystical ───────────────────── */
   /* Action semantics (used consistently across the app):

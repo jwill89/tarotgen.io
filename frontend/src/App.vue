@@ -108,6 +108,14 @@ async function doUserLogout() {
             <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>
             <span>Submit a Deck</span>
           </router-link>
+          <router-link
+            class="navbar-item"
+            :to="{ name: 'ffxiv-plugin' }"
+            @click="burgerOpen = false"
+          >
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gamepad']" /></span>
+            <span>FFXIV Plugin</span>
+          </router-link>
         </div>
         <div class="navbar-end">
           <div class="navbar-item">

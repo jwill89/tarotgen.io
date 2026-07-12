@@ -105,6 +105,18 @@ function viewReading() {
         </div>
 
         <div class="column is-3-desktop is-6-tablet is-12-mobile">
+          <router-link :to="{ name: 'ffxiv-plugin' }" class="box home-action has-text-centered">
+            <span class="icon is-large has-text-link">
+              <FontAwesomeIcon :icon="byPrefixAndName.fad['gamepad']" size="2x" />
+            </span>
+            <p class="title is-5 mt-3">FFXIV Plugin</p>
+            <p class="subtitle is-6">
+              Draw and view readings in-game. Install the free Dalamud plugin.
+            </p>
+          </router-link>
+        </div>
+
+        <div class="column is-3-desktop is-6-tablet is-12-mobile">
           <div class="box home-action home-action--static has-text-centered">
             <span class="icon is-large has-text-info">
               <FontAwesomeIcon :icon="byPrefixAndName.fad['crystal-ball']" size="2x" />
