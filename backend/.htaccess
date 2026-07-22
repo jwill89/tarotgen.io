@@ -30,5 +30,16 @@ RewriteRule ^(.*)$ dist/$1 [L]
 # injected server-side (the SPA still hydrates as normal for visitors).
 RewriteRule ^reading/[A-Za-z0-9]+/?$ og.php [L]
 
+# Dalamud custom repo (/plugin/*): a missing file here MUST 404, never fall
+# through to the SPA shell below. Existing files were already served by the -f
+# rule above, so anything under /plugin/ reaching this point is genuinely
+# missing. Returning 200-HTML instead would make Dalamud download the app shell
+# in place of the plugin zip ("Download failed") — and because these URLs end in
+# .zip/.png, Cloudflare CACHES that 200-HTML for hours (max-age=14400), breaking
+# installs for everyone routed through that edge. A 404 is not long-cached and
+# self-heals once the deploy's file swap completes.
+RewriteCond %{REQUEST_URI} ^/plugin/
+RewriteRule ^ - [R=404,L]
+
 # SPA fallback — serve the built app
 RewriteRule ^ dist/index.html [L]

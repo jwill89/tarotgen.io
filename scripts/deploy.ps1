@@ -420,14 +420,20 @@ function Deploy-Plugin {
     if (-not $r.Ok) { Fail "Plugin upload failed. Live repo untouched.`n$($r.Err)" }
     Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
 
-    # 1 connection: swap into place.
+    # 1 connection: swap into place. Move the live dir ASIDE first and delete it
+    # only AFTER the new one is in place, so the window where plugin/ is absent
+    # shrinks from "duration of an rm -rf" to the instant between two renames.
+    # (During any absence, a request for latest.zip 404s via .htaccess rather
+    # than returning the SPA shell — see backend/.htaccess — so Cloudflare can't
+    # cache a broken 200-HTML under the .zip URL.)
     Write-Step "Swapping into place..."
     $swap = @"
 set -e
 cd '$WebRoot'
-rm -rf plugin
+rm -rf plugin.old
+[ -d plugin ] && mv plugin plugin.old
 mv .plugin.new/plugin plugin
-rm -rf .plugin.new
+rm -rf .plugin.new plugin.old
 "@
     if (-not (Invoke-RemoteWithRetry $swap)) { Fail "Plugin swap failed." }
 
