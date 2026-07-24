@@ -3,11 +3,24 @@
 .app-wrapper {
   display: flex;
   flex-direction: column;
-  /* Bulma adds `has-navbar-fixed-top` to <body>, which pads the body by the
-       navbar height (3.25rem) to clear the fixed navbar. Subtract that here so
-       wrapper + body-padding == one viewport, instead of overflowing by the
-       navbar height and forcing a needless scroll. */
-  min-height: calc(100vh - 3.25rem);
+  /* The bespoke fixed nav (.site-nav) is 64px tall; the body gets 64px top
+       padding (below) to clear it. Subtract that here so wrapper + body-padding
+       == one viewport instead of overflowing and forcing a needless scroll. */
+  min-height: calc(100vh - 64px);
+}
+
+/* The reskin nav is 64px; override Bulma's has-navbar-fixed-top padding (3.25rem)
+   so page content clears the fixed nav exactly. */
+body.has-navbar-fixed-top {
+  padding-top: 64px;
+}
+
+/* Reka's modal scroll-lock adds an inline padding-right to body to compensate
+   for the scrollbar it hides. With scrollbar-gutter: stable the gutter never
+   collapses, so that compensation is redundant and would itself shift the page —
+   cancel it so modals (all Dialogs + the AlertDialog) open with zero layout shift. */
+body {
+  padding-right: 0 !important;
 }
 
 .app-wrapper > section {
@@ -21,21 +34,6 @@
 }
 
 /* ── Navbar ───────────────────────────────────────────────── */
-/* Non-interactive "Admin" section heading inside the user dropdown. */
-.navbar-item.admin-menu-label {
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-size: 0.7rem;
-  font-weight: 700;
-  color: var(--myst-text-muted);
-  pointer-events: none;
-  padding-bottom: 0.25rem;
-}
-
-.navbar-item.admin-menu-label .icon {
-  color: var(--myst-gold);
-}
-
 .navbar-item.is-active {
   background-color: rgba(255, 255, 255, 0.1);
   font-weight: 600;
@@ -44,33 +42,6 @@
 /* ── Card Images ─────────────────────────────────────────── */
 .reversed {
   transform: scale(-1, -1);
-}
-
-.card-image {
-  max-width: 300px;
-}
-
-.card-image a {
-  display: block;
-  overflow: hidden;
-  border-radius: 16px;
-}
-
-.card-image img {
-  border-radius: 16px;
-  object-fit: cover;
-  transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
-}
-
-.card-image a:hover img {
-  transform: scale(1.03);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
-}
-
-.card-image .reversed:hover {
-  transform: scale(-1.03, -1.03);
 }
 
 .card-back {
@@ -232,21 +203,25 @@
   justify-content: center;
 }
 
-/* ── Lightbox Overlay ────────────────────────────────────── */
+/* ── Lightbox (Reka Dialog: DialogOverlay = .lightbox-overlay, which NESTS
+      DialogContent = .lightbox-content) ─────────────────────── */
 .lightbox-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 10000;
+  inset: 0;
+  /* Above .myst-modal (10501) so a lightbox opened from inside a dialog wins,
+     and below .toast-viewport (11000) so report-a-scan toasts stay visible. */
+  z-index: 10600;
   background-color: rgba(0, 0, 0, 0.9);
   display: flex;
   /* Scrollable container: when the image (plus caption/controls) is taller
        than the viewport it can be scrolled. Using margin:auto on the child to
        center — rather than align-items:center — keeps tall content fully
-       reachable (flexbox centering would clip the top and block scrolling). */
+       reachable (flexbox centering would clip the top and block scrolling).
+       DialogContent is nested INSIDE this element so that centring survives
+       while the backdrop stays genuinely "outside" the content, which is what
+       Reka reads to dismiss. */
   overflow-y: auto;
+  overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -255,6 +230,13 @@
   max-width: 90vw;
   text-align: center;
   padding: 4rem 0;
+}
+
+/* Reka's FocusScope stamps tabindex="-1" on DialogContent and refocuses it when
+   a focused child (e.g. a nav arrow hidden by zooming) unmounts — never ring it. */
+.lightbox-content:focus,
+.lightbox-content:focus-visible {
+  outline: none;
 }
 
 .lightbox-viewport {
@@ -375,7 +357,7 @@
   color: white;
   font-size: 36px;
   cursor: pointer;
-  z-index: 10001;
+  z-index: 2;
   line-height: 1;
   opacity: 0.7;
   transition: opacity 0.2s;
@@ -396,7 +378,7 @@
   color: white;
   font-size: 28px;
   cursor: pointer;
-  z-index: 10001;
+  z-index: 2;
   width: 48px;
   height: 48px;
   display: flex;
@@ -420,6 +402,16 @@
 
 .lightbox-next {
   right: 12px;
+}
+
+/* These controls now sit inside Reka's focus trap (and one of them takes the
+   mount-autofocus), so they need a visible focus ring — they had none before. */
+.lightbox-close:focus-visible,
+.lightbox-nav:focus-visible,
+.lightbox-zoom-btn:focus-visible {
+  outline: 2px solid var(--myst-gold);
+  outline-offset: 2px;
+  opacity: 1;
 }
 
 /* ── Spread Description Box ──────────────────────────────── */
@@ -458,8 +450,8 @@
 
 .spread-description .content table th,
 .spread-details-body table th {
-  background-color: var(--myst-violet);
-  color: #ffffff;
+  background-color: var(--myst-surface-3);
+  color: var(--myst-text-strong);
   border-color: rgba(255, 255, 255, 0.18);
 }
 
@@ -526,7 +518,7 @@
   max-width: 760px;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
-  background-color: #1f2330;
+  background-color: var(--myst-bg-2);
   border-radius: 16px;
   overflow: hidden;
 }
@@ -543,7 +535,7 @@
   aspect-ratio: 1 / 1;
   overflow: hidden;
   border-radius: 16px;
-  background-color: #1f2330;
+  background-color: var(--myst-surface);
   touch-action: none;
 }
 
@@ -642,8 +634,9 @@
   height: 22px;
   padding: 0 6px;
   border-radius: 11px;
-  background-color: var(--myst-violet);
-  color: #fff;
+  background-color: var(--myst-surface);
+  color: var(--myst-gold-bright);
+  border: 1px solid var(--myst-hair-gold);
   font-size: 0.72rem;
   font-weight: 700;
   display: flex;
@@ -698,8 +691,9 @@
   height: 26px;
   padding: 0 8px;
   border-radius: 13px;
-  background-color: var(--myst-violet);
-  color: #ffffff;
+  background-color: var(--myst-surface);
+  color: var(--myst-gold-bright);
+  border: 1px solid var(--myst-hair-gold);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -737,7 +731,7 @@
   width: 48px;
   height: 72px;
   border-radius: 8px;
-  border: 2px solid var(--myst-violet);
+  border: 2px solid var(--myst-border-strong);
   background-color: var(--myst-surface-3);
   color: var(--myst-gold);
   font-weight: 700;
@@ -753,14 +747,14 @@
 }
 
 .spread-card--editor {
-  background-color: var(--myst-violet);
-  border: 2px solid #fff;
+  background-color: var(--myst-surface-3);
+  border: 2px solid var(--myst-hair-gold);
   border-radius: 10px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--myst-gold-bright);
   font-weight: 700;
   font-size: 1.1rem;
 }
@@ -803,10 +797,6 @@
     padding: 1.5rem 1rem;
   }
 
-  .card-image {
-    max-width: 260px;
-  }
-
   .card-back {
     max-width: 160px;
     max-height: 240px;
@@ -843,31 +833,25 @@
   }
 }
 
-/* ── Toggle Switch ───────────────────────────────────────── */
+/* ── Toggle Switch (Reka Switch: SwitchRoot=.toggle-track, SwitchThumb=.toggle-thumb) ── */
 .toggle-switch {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
-  cursor: pointer;
   user-select: none;
-}
-
-/* Hide the native checkbox but keep it accessible/focusable. */
-.toggle-switch input {
-  position: absolute;
-  opacity: 0;
-  width: 0;
-  height: 0;
 }
 
 .toggle-track {
   position: relative;
   display: inline-block;
+  flex: none;
   width: 3.25rem;
   height: 1.75rem;
+  padding: 0;
   background-color: var(--myst-surface-3);
   border: 1px solid #4a4f63;
   border-radius: 999px;
+  cursor: pointer;
   transition:
     background-color 0.2s ease,
     border-color 0.2s ease;
@@ -879,7 +863,7 @@
   left: 0.1875rem;
   width: 1.3rem;
   height: 1.3rem;
-  background-color: #c7ccda;
+  background-color: var(--myst-silver);
   border-radius: 50%;
   transform: translateY(-50%);
   transition:
@@ -887,28 +871,28 @@
     background-color 0.2s ease;
 }
 
-.toggle-switch input:checked + .toggle-track {
+.toggle-track[data-state='checked'] {
   background-color: var(--myst-gold);
   border-color: var(--myst-gold);
 }
 
-.toggle-switch input:checked + .toggle-track .toggle-thumb {
+.toggle-track[data-state='checked'] .toggle-thumb {
   transform: translate(1.5rem, -50%);
   background-color: var(--myst-surface-2);
 }
 
-.toggle-switch input:focus-visible + .toggle-track {
+.toggle-track:focus-visible {
   outline: 3px solid var(--myst-gold);
   outline-offset: 2px;
 }
 
 .toggle-state {
-  min-width: 1.6rem;
   font-weight: 600;
-  color: #c7ccda;
+  color: var(--myst-silver);
+  cursor: pointer;
 }
 
-.toggle-switch input:checked ~ .toggle-state {
+.toggle-state.is-on {
   color: var(--myst-gold);
 }
 
@@ -925,29 +909,45 @@
   background-color: #f5f5f5;
 }
 
-.notification.is-warning:not(.is-light) .toggle-switch input:checked + .toggle-track {
+.notification.is-warning:not(.is-light) .toggle-track[data-state='checked'] {
   background-color: #23262f;
   border-color: #23262f;
 }
 
-.notification.is-warning:not(.is-light) .toggle-switch input:checked + .toggle-track .toggle-thumb {
+.notification.is-warning:not(.is-light) .toggle-track[data-state='checked'] .toggle-thumb {
   background-color: var(--myst-gold);
 }
 
 .notification.is-warning:not(.is-light) .toggle-state,
-.notification.is-warning:not(.is-light) .toggle-switch input:checked ~ .toggle-state {
+.notification.is-warning:not(.is-light) .toggle-state.is-on {
   color: #23262f;
 }
 
-.notification.is-warning:not(.is-light) .toggle-switch input:focus-visible + .toggle-track {
+.notification.is-warning:not(.is-light) .toggle-track:focus-visible {
   outline-color: #23262f;
 }
 
-/* ── Home Action Cards ───────────────────────────────────── */
-.home-actions {
-  margin-top: 1.5rem;
+/* Compact variant — sized to sit inline with small toolbar buttons. */
+.toggle-switch.is-compact {
+  gap: 0.35rem;
+}
+.toggle-switch.is-compact .toggle-track {
+  width: 2rem;
+  height: 1.1rem;
+}
+.toggle-switch.is-compact .toggle-thumb {
+  width: 0.85rem;
+  height: 0.85rem;
+  left: 0.15rem;
+}
+.toggle-switch.is-compact .toggle-track[data-state='checked'] .toggle-thumb {
+  transform: translate(0.85rem, -50%);
+}
+.toggle-switch.is-compact .toggle-state {
+  font-size: 0.8rem;
 }
 
+/* ── Home Action Cards ───────────────────────────────────── */
 .home-action {
   height: 100%;
   display: block;
@@ -972,7 +972,7 @@
 
 .changelog-entry {
   background-color: var(--myst-surface-2);
-  border-left: 4px solid var(--myst-violet);
+  border-left: 4px solid var(--myst-gold);
   border-radius: 10px;
   padding: 1.25rem 1.5rem;
   margin-bottom: 1.25rem;
@@ -1019,11 +1019,17 @@ body {
    opaque body background is a block-level box that paints AFTER negative
    z-index elements, which would hide the z-index:-1 starfield below. */
 html {
-  background-color: #0e0b1c;
+  background-color: var(--myst-bg);
+  /* Reserve the scrollbar gutter permanently so opening a modal — which locks
+     body scroll and hides the scrollbar — never collapses the gutter and shifts
+     the centered layout (and the fixed nav) sideways. */
+  scrollbar-gutter: stable;
+  /* Neutral graphite glow (no violet), with one faint warm gold pool low on the
+     page so the canvas has depth without a colour cast. */
   background-image:
-    radial-gradient(1200px 600px at 12% -10%, rgba(123, 79, 214, 0.28), transparent 60%),
-    radial-gradient(1000px 700px at 112% 8%, rgba(79, 70, 229, 0.2), transparent 55%),
-    radial-gradient(900px 800px at 50% 120%, rgba(233, 196, 106, 0.07), transparent 60%);
+    radial-gradient(1200px 620px at 15% -10%, rgba(255, 255, 255, 0.05), transparent 60%),
+    radial-gradient(1000px 700px at 110% 6%, rgba(255, 255, 255, 0.035), transparent 55%),
+    radial-gradient(900px 820px at 50% 120%, rgba(201, 162, 75, 0.06), transparent 60%);
   background-attachment: fixed;
 }
 
@@ -1037,16 +1043,14 @@ body {
 .spread-detail-list-title,
 .changelog-title {
   font-family: var(--myst-heading-font);
-  font-variant-caps: small-caps;
   letter-spacing: 0.01em;
 }
 
 /* Navbar: translucent, blurred, with a gold hairline and gold brand. */
 .navbar.is-fixed-top {
-  background-color: rgba(14, 11, 28, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-bottom: 1px solid rgba(233, 196, 106, 0.18);
+  /* Solid chrome (no transparency/blur) so the navbar reads as distinct. */
+  background-color: var(--myst-chrome);
+  border-bottom: 1px solid var(--myst-hair-gold);
 }
 
 .navbar-brand .navbar-item.has-text-weight-bold {
@@ -1070,51 +1074,31 @@ body {
   margin-left: 0;
 }
 
-/* Admin dropdown: render it as a seamless extension of the navbar — same dark
-   translucent backdrop + blur — and force the items/hover/divider into the same
-   family. (Bulma's default item-hover fill is scheme-derived and, with our
-   low-saturation violet scheme, renders as a clashing grey.) */
-.navbar-dropdown {
-  background-color: rgba(14, 11, 28, 0.92);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-color: rgba(233, 196, 106, 0.18);
-}
-
-/* Bulma styles dropdown items with `.navbar-dropdown .navbar-item:not(.is-active,
-   .is-selected)` — the :not() gives it (0,3,0) specificity, so our overrides must
-   match it (a plain `.navbar-dropdown .navbar-item` at (0,2,0) loses, which is why
-   the items kept Bulma's opaque grey). Items are transparent so the dropdown's own
-   dark backdrop shows through uniformly. */
-.navbar .navbar-dropdown .navbar-item:not(.is-active, .is-selected) {
-  background-color: transparent;
-  color: #e7e2f5;
-}
-
-.navbar .navbar-dropdown .navbar-item:hover:not(.is-active, .is-selected),
-.navbar .navbar-dropdown .navbar-item:focus:not(.is-active, .is-selected),
-.navbar .navbar-dropdown .navbar-item:focus-within:not(.is-active, .is-selected) {
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.navbar-divider {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 /* Solid panels (kept opaque so text never sits over the starfield). */
 .box {
   background-color: var(--myst-panel);
   border: 1px solid var(--myst-border);
 }
 
+/* ── Settings / content panel (frames forms so they don't float on the page) ── */
+.settings-panel {
+  background: linear-gradient(180deg, var(--myst-surface-2), var(--myst-surface));
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 16px;
+  padding: 1.75rem 1.75rem 1.5rem;
+}
+@media screen and (max-width: 600px) {
+  .settings-panel {
+    padding: 1.25rem 1.1rem;
+  }
+}
+
 /* Footer: same solid backdrop as the navbar, with a gold hairline. Compact
    padding (Bulma's default is very tall) so it isn't chunky. */
 .footer {
-  background-color: rgba(14, 11, 28, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(233, 196, 106, 0.18);
+  /* Solid chrome to match the navbar. */
+  background-color: var(--myst-chrome);
+  border-top: 1px solid var(--myst-hair-gold);
   padding: 1.25rem 1.5rem;
 }
 
@@ -1122,30 +1106,210 @@ body {
   margin-bottom: 0.5rem;
 }
 
-.footer-admin {
-  font-size: 0.8rem;
-  opacity: 0.7;
+/* ── Admin / data tables ─────────────────────────────────── */
+/* Elevated, restrained treatment shared by every admin table: quiet uppercase
+   headers under a thin gold rule, hairline row separators instead of heavy zebra
+   striping, comfortable density, and a calm hover. */
+.table {
+  background-color: transparent;
+  color: var(--myst-text);
 }
 
-/* Warm gold glow when hovering reading-grid card art. */
-.card-image a:hover img {
-  box-shadow: 0 6px 24px rgba(233, 196, 106, 0.25);
+.table thead th {
+  padding: 0 0.85rem 0.7rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--myst-text-dim);
+  border-bottom: 1px solid var(--myst-hair-gold);
+  vertical-align: middle;
+  white-space: nowrap;
 }
 
-/* Deepen the spread canvas to match the violet backdrop. */
-.spread-canvas {
-  background-color: #160f2b;
+.table td {
+  padding: 0.7rem 0.85rem;
+  border-top: 1px solid var(--myst-border);
+  border-bottom: none;
+  vertical-align: middle;
+  color: var(--myst-text);
 }
 
-/* ── Admin Tables ────────────────────────────────────────── */
+.table tbody tr:first-child td {
+  border-top: none;
+}
+
+/* Neutralise Bulma's zebra striping — the hairline separators carry the rows. */
+.table.is-striped tbody tr:not(.is-selected):nth-child(even) {
+  background-color: transparent;
+}
+
+.table.is-hoverable tbody tr:hover {
+  background-color: rgba(255, 255, 255, 0.03);
+}
+
 /* The actions column is always last; pin it to the right edge. */
 .table th:last-child,
 .table td:last-child {
   text-align: right;
 }
 
-.table td:last-child .buttons {
+.table td:last-child .buttons,
+.table td:last-child .row-actions {
   justify-content: flex-end;
+}
+
+/* ── Quiet row-action icon buttons (IconButton.vue) ──────────
+   Calm at rest — a muted glyph, no fill; the intent colour and a soft tint only
+   emerge on hover/focus, so a row of actions reads as one restrained cluster
+   instead of a saturated rainbow. Labels are carried by the wrapping Tooltip. */
+.row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.myst-iconbtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--myst-text-dim);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.myst-iconbtn .icon {
+  font-size: 0.95rem;
+}
+
+.myst-iconbtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--myst-text);
+}
+
+.myst-iconbtn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+
+.myst-iconbtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.myst-iconbtn.is-primary:hover {
+  background: var(--myst-aqua-soft);
+  color: var(--myst-aqua);
+}
+
+.myst-iconbtn.is-info:hover {
+  background: rgba(74, 159, 209, 0.12);
+  color: var(--myst-info);
+}
+
+.myst-iconbtn.is-success:hover {
+  background: rgba(68, 168, 120, 0.12);
+  color: var(--myst-success);
+}
+
+.myst-iconbtn.is-warning:hover {
+  background: rgba(221, 161, 58, 0.12);
+  color: var(--myst-warning);
+}
+
+.myst-iconbtn.is-danger:hover {
+  background: rgba(217, 90, 114, 0.12);
+  color: var(--myst-danger);
+}
+
+.myst-iconbtn.is-gold:hover {
+  background: rgba(201, 162, 75, 0.12);
+  color: var(--myst-gold-bright);
+}
+
+/* In-place spinner while an action is running. */
+.myst-iconbtn.is-loading {
+  color: transparent;
+  pointer-events: none;
+}
+
+.myst-iconbtn.is-loading::after {
+  content: '';
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--myst-text-dim);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: myst-spin 0.7s linear infinite;
+}
+
+@keyframes myst-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Data-table chips + status pills ─────────────────────────
+   Neutral chip for system/type labels and a dot+label status pill — replaces the
+   stacks of saturated is-*-light tags so a row reads calm, with colour reserved
+   for the one status that matters. */
+.data-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.15rem 0.55rem;
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--myst-gold-bright);
+  background: rgba(201, 162, 75, 0.1);
+  white-space: nowrap;
+}
+
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--myst-text-muted);
+  white-space: nowrap;
+}
+
+.status-tag::before {
+  content: '';
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--myst-text-dim);
+}
+
+.status-tag.is-on::before {
+  background: var(--myst-success);
+}
+
+.status-tag.is-off::before {
+  background: var(--myst-text-dim);
+}
+
+.status-tag.is-warn::before {
+  background: var(--myst-warning);
+}
+
+.status-tag.is-danger::before {
+  background: var(--myst-danger);
 }
 
 /* ── OR Divider ──────────────────────────────────────────── */
@@ -1155,7 +1319,7 @@ body {
   align-items: center;
   text-align: center;
   margin: 1rem 0;
-  color: var(--myst-text-muted, #999);
+  color: var(--myst-text-muted);
   font-size: 0.85rem;
   gap: 0.75rem;
 }
@@ -1164,7 +1328,7 @@ body {
 .is-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid var(--myst-border, #444);
+  border-bottom: 1px solid var(--myst-border);
 }
 
 /* ── Callout Box ─────────────────────────────────────────── */
@@ -1173,7 +1337,7 @@ body {
 .myst-callout {
   background: var(--myst-surface-2);
   border: 1px solid var(--myst-border-strong);
-  border-left: 4px solid var(--myst-violet);
+  border-left: 4px solid var(--myst-gold);
   border-radius: var(--bulma-radius);
   padding: 1.25rem 1.5rem;
 }
@@ -1208,16 +1372,784 @@ body {
   border-right: 1px solid var(--myst-border-strong);
 }
 
-.myst-segmented__btn:hover:not(.is-active) {
+.myst-segmented__btn:hover:not(.is-active):not([data-state='on']) {
   background: var(--myst-surface);
   color: var(--myst-text);
 }
 
-.myst-segmented__btn.is-active {
-  background: var(--myst-violet);
-  color: #fff;
+.myst-segmented__btn.is-active,
+.myst-segmented__btn[data-state='on'] {
+  background: var(--myst-aqua);
+  color: var(--myst-on-aqua);
 }
 
-.myst-segmented__btn.is-active .icon {
+.myst-segmented__btn.is-active .icon,
+.myst-segmented__btn[data-state='on'] .icon {
+  color: var(--myst-on-aqua);
+}
+
+/* ── Reka Select (portaled to <body>, so styled globally) ─────────────────── */
+.myst-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 2.5em;
+  padding: 0.45rem 0.75rem;
+  background: var(--myst-surface-2);
+  border: 1px solid var(--myst-border-strong);
+  border-radius: var(--bulma-radius);
+  color: var(--myst-text);
+  font-size: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.myst-select:hover {
+  border-color: var(--myst-hair-gold);
+}
+.myst-select:focus-visible {
+  outline: none;
+  border-color: var(--myst-hair-gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+}
+.myst-select[data-placeholder] {
+  color: var(--myst-text-dim);
+}
+.myst-select[data-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+.myst-select__icon {
+  flex: none;
+  color: var(--myst-text-muted);
+  font-size: 0.8rem;
+}
+.myst-select__content {
+  z-index: 60;
+  min-width: var(--reka-select-trigger-width);
+  max-height: var(--reka-select-content-available-height);
+  background: var(--myst-chrome);
+  border: 1px solid var(--myst-border-strong);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+}
+.myst-select__viewport {
+  padding: 0.35rem;
+}
+.myst-select__item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  color: var(--myst-text);
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+}
+.myst-select__item[data-highlighted] {
+  background: var(--myst-surface-3);
   color: var(--myst-gold-bright);
+}
+.myst-select__item[data-state='checked'] {
+  color: var(--myst-gold-bright);
+}
+.myst-select__item[data-disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.myst-select__check {
+  margin-left: auto;
+  color: var(--myst-gold);
+  font-size: 0.8rem;
+}
+
+/* ── Reka Tooltip (portaled to <body>, so styled globally) ────────────────── */
+.myst-tooltip {
+  /* Above .myst-modal (10501) and the lightbox overlay (10600) — tooltips are
+     triggered from inside both (e.g. the lightbox "Report scan issue" button). */
+  z-index: 10700;
+  max-width: 18rem;
+  padding: 0.4rem 0.6rem;
+  background: var(--myst-surface-3);
+  border: 1px solid var(--myst-border-strong);
+  border-radius: 8px;
+  color: var(--myst-text);
+  font-size: 0.8rem;
+  line-height: 1.35;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  user-select: none;
+}
+.myst-tooltip__arrow {
+  fill: var(--myst-surface-3);
+}
+
+/* ── Reka DropdownMenu (portaled to <body>, so styled globally) ───────────── */
+.myst-menu {
+  min-width: 236px;
+  background: var(--myst-chrome);
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
+  z-index: 60;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  transform-origin: var(--reka-dropdown-menu-content-transform-origin);
+}
+.myst-menu[data-state='open'] {
+  animation: myst-menu-in 0.16s ease;
+}
+@keyframes myst-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.myst-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  color: var(--myst-text-muted);
+  font-size: 14px;
+  cursor: pointer;
+  text-decoration: none;
+  outline: none;
+  transition:
+    background 0.18s ease,
+    color 0.18s ease;
+}
+.myst-menu-item .mi-icon {
+  color: var(--myst-gold);
+  width: 1.15em;
+  display: inline-flex;
+  justify-content: center;
+}
+.myst-menu-item[data-highlighted],
+.myst-menu-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--myst-text);
+}
+.myst-menu-item--danger,
+.myst-menu-item--danger .mi-icon {
+  color: var(--myst-danger);
+}
+.myst-menu-item--danger[data-highlighted],
+.myst-menu-item--danger:hover {
+  background: rgba(217, 90, 114, 0.12);
+  color: var(--myst-danger);
+}
+.myst-menu-sep {
+  height: 1px;
+  background: var(--myst-border);
+  margin: 6px 4px;
+}
+.myst-menu-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 11px 4px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--myst-text-soft);
+  font-weight: 700;
+}
+.myst-menu-label .mi-icon {
+  color: var(--myst-gold);
+}
+
+/* ── Reka Dialog (portaled to <body>, so styled globally) ─────────────────── */
+.myst-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: rgba(6, 6, 10, 0.66);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.myst-dialog-overlay[data-state='open'] {
+  animation: myst-fade-in 0.2s ease;
+}
+.myst-dialog {
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(440px, calc(100vw - 32px));
+  background: var(--myst-chrome);
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 16px;
+  padding: 26px 26px 24px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+.myst-dialog[data-state='open'] {
+  animation: myst-dialog-in 0.2s ease;
+}
+@keyframes myst-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes myst-dialog-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -46%) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+.myst-dialog-title {
+  font-family: var(--myst-heading-font);
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  font-size: 1.5rem;
+  color: var(--myst-text);
+  margin: 0 0 6px;
+}
+.myst-dialog-desc {
+  color: var(--myst-text-muted);
+  font-size: 0.92rem;
+  margin: 0 0 18px;
+}
+.myst-dialog-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--myst-text-soft);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.05rem;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+.myst-dialog-close:hover {
+  color: var(--myst-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+.myst-dialog-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+
+/* reading-code dialog form */
+.code-dialog-form {
+  display: flex;
+  /* Stretch so the submit button matches the input's height exactly. Keep the
+     input free of vertical margins — a stray margin inflates the flex line and
+     the stretched button then overhangs the input. */
+  align-items: stretch;
+  gap: 10px;
+}
+.code-dialog-form .code-dialog-input {
+  flex: 1;
+  min-width: 0;
+  background: var(--myst-surface);
+  border: 1px solid var(--myst-border-strong);
+  color: var(--myst-text);
+  border-radius: 10px;
+  font-size: 1rem;
+  padding: 12px 14px;
+}
+.code-dialog-form .code-dialog-input::placeholder {
+  color: var(--myst-text-soft);
+}
+.code-dialog-form .code-dialog-input:focus {
+  outline: none;
+  border-color: var(--myst-hair-gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+}
+.btn-view {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  background: var(--myst-aqua);
+  color: var(--myst-on-aqua);
+  border: 1px solid transparent;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+  font-size: 0.98rem;
+  font-weight: 600;
+  border-radius: 10px;
+  padding: 0 18px;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+.btn-view:hover {
+  background: var(--myst-aqua-bright);
+  transform: translateY(-1px);
+}
+.btn-view:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(67, 179, 167, 0.4);
+}
+
+/* ── BaseModal on Reka Dialog (portaled; header/body/footer layout) ───────── */
+.myst-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10500;
+  background: rgba(6, 6, 10, 0.72);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+.myst-modal-overlay[data-state='open'] {
+  animation: myst-fade-in 0.2s ease;
+}
+.myst-modal {
+  position: fixed;
+  z-index: 10501;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: calc(100vw - 3rem); /* capped by the inline max-width (maxWidth prop) */
+  max-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
+  background: var(--myst-surface);
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 16px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  overflow: hidden;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+.myst-modal[data-state='open'] {
+  animation: myst-dialog-in 0.2s ease;
+}
+.myst-modal-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid var(--myst-border);
+}
+.myst-modal-title {
+  font-family: var(--myst-heading-font);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--myst-gold);
+  margin: 0;
+}
+.myst-modal-close {
+  flex: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--myst-text-muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.myst-modal-close:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: var(--myst-text);
+}
+.myst-modal-close:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+.myst-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1.25rem;
+  color: var(--myst-text);
+  line-height: 1.5;
+}
+.myst-modal-foot {
+  flex: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--myst-border);
+}
+
+/* ── Reka Collapsible height animation (spread details / reading notes) ───── */
+.collapsible-anim {
+  overflow: hidden;
+}
+.collapsible-anim[data-state='open'] {
+  animation: collapsible-down 0.24s ease;
+}
+.collapsible-anim[data-state='closed'] {
+  animation: collapsible-up 0.2s ease;
+}
+@keyframes collapsible-down {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--reka-collapsible-content-height);
+  }
+}
+@keyframes collapsible-up {
+  from {
+    height: var(--reka-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .collapsible-anim[data-state='open'],
+  .collapsible-anim[data-state='closed'] {
+    animation: none;
+  }
+}
+
+/* ── Reka Toast (stack, swipe-to-dismiss) ─────────────────────────────────── */
+.toast-viewport {
+  position: fixed;
+  top: 4.9rem; /* clear the 64px fixed nav */
+  right: 1rem;
+  z-index: 11000;
+  /* Reka's modal scroll-lock sets body { pointer-events: none }, which would
+     otherwise make toasts raised from inside a dialog/lightbox un-dismissable. */
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: min(24rem, calc(100vw - 2rem));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  outline: none;
+}
+.toast-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  color: var(--myst-text);
+  background: var(--myst-surface);
+  border: 1px solid var(--myst-border-strong);
+  border-left-width: 4px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}
+.toast-item--success {
+  border-left-color: var(--myst-success);
+}
+.toast-item--error {
+  border-left-color: var(--myst-danger);
+}
+.toast-item--warning {
+  border-left-color: var(--myst-warning);
+}
+.toast-item--info {
+  border-left-color: var(--myst-info);
+}
+.toast-icon {
+  flex: none;
+  margin-top: 0.1rem;
+}
+.toast-item--success .toast-icon {
+  color: var(--myst-success);
+}
+.toast-item--error .toast-icon {
+  color: var(--myst-danger);
+}
+.toast-item--warning .toast-icon {
+  color: var(--myst-warning);
+}
+.toast-item--info .toast-icon {
+  color: var(--myst-info);
+}
+.toast-message {
+  flex: 1 1 auto;
+  line-height: 1.35;
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+.toast-close {
+  flex: none;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.6;
+  padding: 0 0.15rem;
+  font-size: 1rem;
+  line-height: 1;
+  transition: opacity 0.15s ease;
+}
+.toast-close:hover {
+  opacity: 1;
+}
+
+/* enter / leave + swipe (Reka sets data-state / data-swipe) */
+.toast-item[data-state='open'] {
+  animation: toast-in 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.toast-item[data-state='closed'] {
+  animation: toast-out 0.15s ease-in;
+}
+.toast-item[data-swipe='move'] {
+  transform: translateX(var(--reka-toast-swipe-move-x));
+}
+.toast-item[data-swipe='cancel'] {
+  transform: translateX(0);
+  transition: transform 0.2s ease;
+}
+.toast-item[data-swipe='end'] {
+  animation: toast-swipe-out 0.2s ease-out;
+}
+@keyframes toast-in {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+@keyframes toast-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+@keyframes toast-swipe-out {
+  from {
+    transform: translateX(var(--reka-toast-swipe-end-x));
+  }
+  to {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-item[data-state='open'],
+  .toast-item[data-state='closed'],
+  .toast-item[data-swipe='end'] {
+    animation: none;
+  }
+}
+
+/* ── Reka Combobox (deck / spread pickers; content portaled to body) ──────── */
+.myst-combobox {
+  position: relative;
+  display: block;
+}
+.myst-combobox__anchor {
+  position: relative;
+  display: block;
+}
+.myst-combobox__anchor .input {
+  padding-right: 2.4em; /* room for the chevron trigger */
+}
+.myst-combobox__trigger {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.4em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--myst-text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+.myst-combobox__trigger:hover {
+  color: var(--myst-text);
+}
+.myst-combobox__trigger[data-state='open'] {
+  transform: rotate(180deg);
+}
+.myst-combobox__content {
+  z-index: 60;
+  width: var(--reka-combobox-trigger-width);
+  background: var(--myst-surface);
+  border: 1px solid var(--myst-border-strong);
+  border-radius: var(--bulma-radius);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+.myst-combobox__content[data-state='open'] {
+  animation: myst-menu-in 0.16s ease;
+}
+.myst-combobox__viewport {
+  max-height: 300px;
+  overflow-y: auto;
+  padding: 4px;
+}
+.myst-combobox__group {
+  padding: 0.45em 0.6em 0.25em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--myst-text-muted);
+}
+.myst-combobox__group-wrap:not(:first-child) .myst-combobox__group {
+  border-top: 1px solid var(--myst-border);
+  margin-top: 4px;
+}
+.myst-combobox__item {
+  display: flex;
+  align-items: center;
+  gap: 0.15em;
+  padding: 0.5em 0.6em;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--myst-text);
+  outline: none;
+  user-select: none;
+}
+.myst-combobox__item[data-highlighted] {
+  background: var(--myst-surface-3);
+}
+.myst-combobox__item[data-state='checked'] {
+  font-weight: 600;
+}
+.myst-combobox__item-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.myst-combobox__item-artist {
+  font-size: 0.75rem;
+  color: var(--myst-text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.myst-combobox__card-count {
+  font-size: 0.75rem;
+  color: var(--myst-text-dim);
+  white-space: nowrap;
+}
+.myst-combobox__extra {
+  font-size: 0.7rem;
+  background: var(--myst-surface-3);
+  color: var(--myst-text-muted);
+  padding: 0.1em 0.4em;
+  border-radius: 3px;
+  white-space: nowrap;
+}
+.myst-combobox__star {
+  flex-shrink: 0;
+  cursor: pointer;
+  opacity: 0.45;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+  font-size: 0.85rem;
+  padding: 0.1em 0.3em;
+  color: var(--myst-text-muted);
+}
+.myst-combobox__star:hover,
+.myst-combobox__star.is-active {
+  opacity: 1;
+  color: var(--myst-gold);
+}
+.myst-combobox__empty {
+  padding: 0.75em;
+  color: var(--myst-text-muted);
+  text-align: center;
+  font-style: italic;
+}
+.myst-combobox__item--none {
+  border-bottom: 1px solid var(--myst-border);
+  border-radius: 0;
+  margin-bottom: 4px;
+  font-style: italic;
+  color: var(--myst-text-muted);
+}
+.myst-combobox__clear {
+  position: absolute;
+  top: 0;
+  right: 2.4em;
+  height: 100%;
+  width: 2em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--myst-text-muted);
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: color 0.2s ease;
+}
+.myst-combobox__clear:hover {
+  color: var(--myst-text);
+}
+.myst-combobox__anchor.has-clear .input {
+  padding-right: 4.2em;
 }

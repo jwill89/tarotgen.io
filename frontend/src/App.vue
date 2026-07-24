@@ -4,6 +4,24 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { useDecks } from '@/composables/useDecks'
+import {
+  DropdownMenuRoot,
+  DropdownMenuTrigger,
+  DropdownMenuPortal,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+  DialogRoot,
+  DialogTrigger,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+  DialogClose,
+  TooltipProvider,
+} from 'reka-ui'
 import ToastContainer from '@/components/ToastContainer.vue'
 import StarField from '@/components/StarField.vue'
 import ConfirmDialog from '@/components/ConfirmDialog.vue'
@@ -15,20 +33,59 @@ const { fetchDecks } = useDecks()
 
 const burgerOpen = ref(false)
 const searchReadingId = ref('')
+const codeDialogOpen = ref(false)
 const currentYear = computed(() => new Date().getFullYear())
 
-// Reference the brand logo as a runtime URL rather than a static `src="..."`,
-// which @vitejs/plugin-vue would compile into an asset module import. Since
-// /assets is proxied to the PHP host (vite.config.ts) — same as deck images —
-// that import would return raw image bytes instead of a JS module and break the
-// app's module graph. A bound string is left as-is and fetched at runtime.
+// See the note in the previous revision: /assets is proxied to the PHP host, so
+// the brand logo is referenced as a runtime URL string, not a bundled import.
 const brandLogo = '/assets/favicon.png'
 
+// Primary nav links (also used by the mobile menu).
+const navLinks = [
+  { label: 'Home', to: { name: 'home' } },
+  { label: 'New Draw', to: { name: 'new-reading' } },
+  { label: 'Recreate Draw', to: { name: 'custom-reading' } },
+  { label: 'Create a Spread', to: { name: 'submit-spread' } },
+  { label: 'FFXIV Plugin', to: { name: 'ffxiv-plugin' } },
+]
+
+// Account dropdown items (shared by the Reka menu + the mobile menu).
+const accountItems = [
+  { label: 'Dashboard', icon: 'gauge-high', to: { name: 'dashboard' } },
+  { label: 'My Readings', icon: 'scroll', to: { name: 'account-readings' } },
+  { label: 'My Spreads', icon: 'table-cells', to: { name: 'account-spreads' } },
+  { label: 'Account Settings', icon: 'gear', to: { name: 'account-settings' } },
+]
+
+const adminItems = [
+  { label: 'Dashboard', icon: 'gauge-high', to: { name: 'admin-dashboard' } },
+  { label: 'Decks', icon: 'cards-blank', to: { name: 'admin-decks' } },
+  { label: 'Special Cards', icon: 'sparkles', to: { name: 'admin-special-cards' } },
+  { label: 'Spreads', icon: 'table-cells', to: { name: 'admin-spreads' } },
+  { label: 'Readings', icon: 'scroll', to: { name: 'admin-readings' } },
+  { label: 'Users', icon: 'users', to: { name: 'admin-users' } },
+  { label: 'Contacts', icon: 'envelope', to: { name: 'admin-contacts' } },
+  { label: 'Errored Cards', icon: 'triangle-exclamation', to: { name: 'admin-card-reports' } },
+  { label: 'Changelog', icon: 'newspaper', to: { name: 'admin-changelog' } },
+]
+
 void fetchDecks()
+
+function closeMenu() {
+  burgerOpen.value = false
+}
+
+// Open the reading-code dialog (from either the desktop nav control or the
+// mobile menu; the dialog itself is controlled via codeDialogOpen).
+function openCodeDialog() {
+  burgerOpen.value = false
+  codeDialogOpen.value = true
+}
 
 function viewReading() {
   const rid = searchReadingId.value.trim()
   burgerOpen.value = false
+  codeDialogOpen.value = false
   if (rid) {
     searchReadingId.value = ''
     void router.push({ name: 'reading', params: { id: rid } })
@@ -45,303 +102,552 @@ async function doUserLogout() {
 </script>
 
 <template>
-  <div class="app-wrapper">
-    <StarField />
-    <nav class="navbar is-fixed-top" role="navigation" aria-label="main navigation">
-      <div class="navbar-brand">
-        <span class="navbar-item has-text-weight-bold is-size-5 is-hidden-touch">
-          <img :src="brandLogo" alt="" class="brand-logo" />
-          TarotGen.io
-        </span>
-        <a
-          class="navbar-burger"
-          role="button"
-          aria-label="menu"
-          :aria-expanded="burgerOpen ? 'true' : 'false'"
-          :class="{ 'is-active': burgerOpen }"
-          @click="burgerOpen = !burgerOpen"
-        >
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-          <span aria-hidden="true"></span>
-        </a>
-      </div>
-      <div class="navbar-menu" :class="{ 'is-active': burgerOpen }">
-        <div class="navbar-start">
-          <router-link class="navbar-item" :to="{ name: 'home' }" @click="burgerOpen = false">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
-            <span>Home</span>
+  <TooltipProvider :delay-duration="300">
+    <div class="app-wrapper">
+      <StarField />
+
+      <nav class="site-nav" aria-label="main navigation">
+        <div class="nav-inner">
+          <router-link class="brand" :to="{ name: 'home' }" aria-label="TarotGen.io home">
+            <span class="glyph"><img :src="brandLogo" alt="" class="brand-logo" /></span>
+            <span class="word">Tarot<span class="gen">Gen</span><span class="tld">.io</span></span>
           </router-link>
-          <router-link
-            class="navbar-item"
-            :to="{ name: 'new-reading' }"
-            @click="burgerOpen = false"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
-            <span>New Draw</span>
-          </router-link>
-          <router-link
-            class="navbar-item"
-            :to="{ name: 'custom-reading' }"
-            @click="burgerOpen = false"
-          >
-            <span class="icon"
-              ><FontAwesomeIcon :icon="byPrefixAndName.fas['hand-holding-magic']"
-            /></span>
-            <span>Recreate Draw</span>
-          </router-link>
-          <router-link
-            class="navbar-item"
-            :to="{ name: 'submit-spread' }"
-            @click="burgerOpen = false"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['grid-2-plus']" /></span>
-            <span>Create a Spread</span>
-          </router-link>
-          <router-link
-            v-if="isLoggedIn"
-            class="navbar-item"
-            :to="{ name: 'submit-deck' }"
-            @click="burgerOpen = false"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span>
-            <span>Submit a Deck</span>
-          </router-link>
-          <router-link
-            class="navbar-item"
-            :to="{ name: 'ffxiv-plugin' }"
-            @click="burgerOpen = false"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gamepad']" /></span>
-            <span>FFXIV Plugin</span>
-          </router-link>
+
+          <div class="nav-links">
+            <template v-for="(l, i) in navLinks" :key="l.label">
+              <router-link :to="l.to" exact-active-class="active" @click="closeMenu">{{
+                l.label
+              }}</router-link>
+              <span v-if="i < navLinks.length - 1" class="nav-sep" aria-hidden="true">·</span>
+            </template>
+          </div>
+
+          <div class="nav-right">
+            <DialogRoot v-model:open="codeDialogOpen">
+              <DialogTrigger class="btn btn-quiet nav-code-btn">
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+                /></span>
+                <span class="nav-code-label">View a Reading</span>
+              </DialogTrigger>
+              <DialogPortal>
+                <DialogOverlay class="myst-dialog-overlay" />
+                <DialogContent class="myst-dialog">
+                  <DialogTitle class="myst-dialog-title">View a Reading</DialogTitle>
+                  <DialogDescription class="myst-dialog-desc">
+                    Enter the code you were given to open that reading.
+                  </DialogDescription>
+                  <form class="code-dialog-form" @submit.prevent="viewReading">
+                    <input
+                      v-model="searchReadingId"
+                      class="code-dialog-input"
+                      type="text"
+                      placeholder="Reading Code"
+                      aria-label="Reading Code"
+                    />
+                    <button class="btn-view" type="submit">
+                      View
+                      <span class="icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-right']"
+                      /></span>
+                    </button>
+                  </form>
+                  <DialogClose class="myst-dialog-close" aria-label="Close">
+                    <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
+                  </DialogClose>
+                </DialogContent>
+              </DialogPortal>
+            </DialogRoot>
+
+            <router-link v-if="!isLoggedIn" class="btn btn-login" :to="{ name: 'login' }">
+              Log In
+            </router-link>
+
+            <DropdownMenuRoot v-else :modal="false">
+              <DropdownMenuTrigger class="btn account-trigger">
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']"
+                /></span>
+                <span class="acct-name">{{ currentUser?.display_name }}</span>
+                <span class="chev"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']"
+                /></span>
+              </DropdownMenuTrigger>
+              <DropdownMenuPortal>
+                <DropdownMenuContent class="myst-menu" align="end" :side-offset="8">
+                  <DropdownMenuItem v-for="item in accountItems" :key="item.label" as-child>
+                    <router-link class="myst-menu-item" :to="item.to">
+                      <span class="mi-icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas[item.icon]"
+                      /></span>
+                      <span>{{ item.label }}</span>
+                    </router-link>
+                  </DropdownMenuItem>
+
+                  <template v-if="currentUser?.is_admin">
+                    <DropdownMenuSeparator class="myst-menu-sep" />
+                    <DropdownMenuLabel class="myst-menu-label">
+                      <span class="mi-icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
+                      /></span>
+                      <span>Admin</span>
+                    </DropdownMenuLabel>
+                    <DropdownMenuItem
+                      v-for="item in adminItems"
+                      :key="'admin-' + item.label"
+                      as-child
+                    >
+                      <router-link class="myst-menu-item" :to="item.to">
+                        <span class="mi-icon"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas[item.icon]"
+                        /></span>
+                        <span>{{ item.label }}</span>
+                      </router-link>
+                    </DropdownMenuItem>
+                  </template>
+
+                  <DropdownMenuSeparator class="myst-menu-sep" />
+                  <DropdownMenuItem class="myst-menu-item" @select="doUserLogout">
+                    <span class="mi-icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']"
+                    /></span>
+                    <span>Log Out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenuPortal>
+            </DropdownMenuRoot>
+
+            <button
+              class="hamburger"
+              :class="{ 'is-open': burgerOpen }"
+              type="button"
+              aria-label="Toggle navigation menu"
+              :aria-expanded="burgerOpen ? 'true' : 'false'"
+              @click="burgerOpen = !burgerOpen"
+            >
+              <span></span><span></span><span></span>
+            </button>
+          </div>
         </div>
-        <div class="navbar-end">
-          <div class="navbar-item">
-            <div class="field has-addons">
-              <p class="control is-expanded">
-                <input
-                  v-model="searchReadingId"
-                  class="input"
-                  type="text"
-                  placeholder="Reading Code"
-                  aria-label="Reading Code"
-                  @keyup.enter="viewReading"
-                />
-              </p>
-              <p class="control">
-                <button class="button is-link" @click="viewReading">
-                  <span class="icon is-hidden-mobile"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-                  /></span>
-                  <span>View</span>
-                </button>
-              </p>
-            </div>
-          </div>
 
-          <!-- Account: log in when signed out; menu when signed in -->
-          <div v-if="!isLoggedIn" class="navbar-item">
-            <div class="buttons">
-              <router-link
-                class="button is-primary"
-                :to="{ name: 'login' }"
-                @click="burgerOpen = false"
-              >
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-to-bracket']"
-                /></span>
-                <span>Log In</span>
-              </router-link>
-            </div>
-          </div>
-          <div v-else class="navbar-item has-dropdown is-hoverable">
-            <a class="navbar-link">
+        <div class="mobile-menu" :class="{ 'is-open': burgerOpen }">
+          <div class="mobile-menu-inner">
+            <router-link
+              v-for="l in navLinks"
+              :key="'m-' + l.label"
+              :to="l.to"
+              exact-active-class="active"
+              @click="closeMenu"
+            >
+              {{ l.label }}
+            </router-link>
+
+            <button class="btn btn-quiet mm-code-btn" type="button" @click="openCodeDialog">
               <span class="icon"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
               /></span>
-              <span>{{ currentUser?.display_name }}</span>
-            </a>
-            <div class="navbar-dropdown is-right">
-              <router-link
-                class="navbar-item"
-                :to="{ name: 'dashboard' }"
-                @click="burgerOpen = false"
-              >
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['gauge-high']"
-                /></span>
-                <span>Dashboard</span>
-              </router-link>
-              <router-link
-                class="navbar-item"
-                :to="{ name: 'account-readings' }"
-                @click="burgerOpen = false"
-              >
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['scroll']" /></span>
-                <span>My Readings</span>
-              </router-link>
-              <router-link
-                class="navbar-item"
-                :to="{ name: 'account-spreads' }"
-                @click="burgerOpen = false"
-              >
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']"
-                /></span>
-                <span>My Spreads</span>
-              </router-link>
-              <router-link
-                class="navbar-item"
-                :to="{ name: 'account-settings' }"
-                @click="burgerOpen = false"
-              >
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['gear']" /></span>
-                <span>Account Settings</span>
-              </router-link>
+              <span>View a Reading</span>
+            </button>
 
-              <!-- Admin section (only for is_admin accounts) -->
+            <template v-if="!isLoggedIn">
+              <router-link
+                class="btn btn-login mm-login"
+                :to="{ name: 'login' }"
+                @click="closeMenu"
+              >
+                Log In
+              </router-link>
+            </template>
+            <template v-else>
+              <div class="mm-divider" aria-hidden="true"></div>
+              <router-link
+                v-for="item in accountItems"
+                :key="'m-' + item.label"
+                :to="item.to"
+                @click="closeMenu"
+              >
+                {{ item.label }}
+              </router-link>
               <template v-if="currentUser?.is_admin">
-                <hr class="navbar-divider" />
-                <div class="navbar-item admin-menu-label">
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
-                  /></span>
-                  <span>Admin</span>
-                </div>
                 <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-dashboard' }"
-                  @click="burgerOpen = false"
+                  v-for="item in adminItems"
+                  :key="'m-admin-' + item.label"
+                  :to="item.to"
+                  @click="closeMenu"
                 >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['gauge-high']"
-                  /></span>
-                  <span>Dashboard</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-decks' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']"
-                  /></span>
-                  <span>Decks</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-special-cards' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['sparkles']"
-                  /></span>
-                  <span>Special Cards</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-spreads' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']"
-                  /></span>
-                  <span>Spreads</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-readings' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['scroll']"
-                  /></span>
-                  <span>Readings</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-users' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['users']" /></span>
-                  <span>Users</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-contacts' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']"
-                  /></span>
-                  <span>Contacts</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-card-reports' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['triangle-exclamation']"
-                  /></span>
-                  <span>Errored Cards</span>
-                </router-link>
-                <router-link
-                  class="navbar-item"
-                  :to="{ name: 'admin-changelog' }"
-                  @click="burgerOpen = false"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['newspaper']"
-                  /></span>
-                  <span>Changelog</span>
+                  Admin · {{ item.label }}
                 </router-link>
               </template>
-
-              <hr class="navbar-divider" />
-              <a class="navbar-item" @click="doUserLogout">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']"
-                /></span>
-                <span>Log Out</span>
+              <a
+                class="mm-logout"
+                role="button"
+                tabindex="0"
+                @click="doUserLogout"
+                @keyup.enter="doUserLogout"
+              >
+                Log Out
               </a>
-            </div>
+            </template>
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
 
-    <router-view />
+      <router-view />
 
-    <ConfirmDialog />
-    <ToastContainer />
-    <CookieBanner />
+      <ConfirmDialog />
+      <ToastContainer />
+      <CookieBanner />
 
-    <footer class="footer mt-auto">
-      <div class="content has-text-centered">
-        <p>
-          Copyright &copy; {{ currentYear }}. Coded by
-          <a href="https://www.mathdad.me"><strong>MathDad</strong></a
-          >.<br />
-          This site is a tool for readers and those learning, it is not mean to replace the need a
-          reader. Please use responsibly!<br />
-          <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
-          <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
-          <router-link :to="{ name: 'changelog' }"> Changelog</router-link> |
-          <router-link :to="{ name: 'contact' }">Contact Us</router-link>
-        </p>
-      </div>
-    </footer>
-  </div>
+      <footer class="footer mt-auto">
+        <div class="content has-text-centered">
+          <p>
+            Copyright &copy; {{ currentYear }}. Coded by
+            <a href="https://www.mathdad.me"><strong>MathDad</strong></a
+            >.<br />
+            This site is a tool for readers and those learning, it is not mean to replace the need a
+            reader. Please use responsibly!<br />
+            <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
+            <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
+            <router-link :to="{ name: 'changelog' }"> Changelog</router-link> |
+            <router-link :to="{ name: 'contact' }">Contact Us</router-link>
+          </p>
+        </div>
+      </footer>
+    </div>
+  </TooltipProvider>
 </template>
 
 <style scoped>
+/* Local aliases → global mystical tokens (keeps the nav CSS readable). */
+.site-nav,
+.mobile-menu {
+  --gold: var(--myst-gold);
+  --gold-bright: var(--myst-gold-bright);
+  --aqua: var(--myst-aqua);
+  --aqua-glow: var(--myst-aqua-glow);
+  --text: var(--myst-text);
+  --text-muted: var(--myst-text-muted);
+  --text-soft: var(--myst-text-soft);
+  --chrome: var(--myst-chrome);
+  --surface: var(--myst-surface);
+  --hair: var(--myst-border);
+  --hair-gold: var(--myst-hair-gold);
+  --font-display: var(--myst-heading-font);
+  --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* ============ NAV (solid chrome) ============ */
+.site-nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background: var(--chrome);
+  border-bottom: 1px solid var(--hair-gold);
+}
+.nav-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  height: 64px;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  text-decoration: none;
+}
+.brand .glyph {
+  display: inline-flex;
+  align-items: center;
+}
 .brand-logo {
   height: 1.6rem;
   width: auto;
-  margin-right: 0.4rem;
-  vertical-align: middle;
+  display: block;
+}
+.word {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 19px;
+  letter-spacing: 0.05em;
+  color: var(--text);
+}
+.word .gen {
+  color: var(--gold);
+}
+.word .tld {
+  font-size: 0.7em;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 8px;
+}
+.nav-links a {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 7px 11px;
+  border-radius: 9px;
+  position: relative;
+  text-decoration: none;
+  transition:
+    color 0.25s ease,
+    background 0.25s ease;
+}
+/* resting affordance: a persistent low-opacity underline under every nav item */
+.nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 11px;
+  right: 11px;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  transition:
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.nav-links a:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.05);
+}
+.nav-links a:hover::after {
+  background: rgba(255, 255, 255, 0.4);
+}
+.nav-links a.active {
+  color: var(--aqua);
+}
+.nav-links a.active::after {
+  background: var(--aqua);
+  box-shadow: 0 0 10px var(--aqua-glow);
+}
+.nav-sep {
+  color: var(--text-soft);
+  font-size: 13px;
+  user-select: none;
+}
+.nav-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.code-dialog-input {
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  color: var(--text);
+  border-radius: 9px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  padding: 8px 12px;
+  min-width: 0;
+  transition:
+    border-color 0.25s ease,
+    box-shadow 0.25s ease,
+    background 0.25s ease;
+}
+.code-dialog-input::placeholder {
+  color: var(--text-soft);
+}
+.code-dialog-input:focus {
+  outline: none;
+  border-color: var(--hair-gold);
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+}
+.nav-code-label {
+  white-space: nowrap;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  cursor: pointer;
+  border-radius: 9px;
+  padding: 8px 15px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--hair-gold);
+  text-decoration: none;
+  transition:
+    border-color 0.25s ease,
+    color 0.25s ease,
+    background 0.25s ease,
+    box-shadow 0.25s ease;
+}
+.btn:hover {
+  border-color: var(--gold);
+  color: var(--gold-bright);
+  background: rgba(201, 162, 75, 0.06);
+}
+.btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.2);
+}
+.btn-quiet {
+  border-color: var(--hair);
+  color: var(--text-muted);
+}
+.btn-quiet:hover {
+  border-color: var(--hair-gold);
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+.account-trigger .acct-name {
+  max-width: 12ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-trigger .chev {
+  font-size: 0.7em;
+  transition: transform 0.25s ease;
+}
+.account-trigger[data-state='open'] .chev {
+  transform: rotate(180deg);
+}
+
+/* hamburger */
+.hamburger {
+  display: none;
+  width: 42px;
+  height: 40px;
+  border: 1px solid var(--hair-gold);
+  border-radius: 9px;
+  cursor: pointer;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: transparent;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease;
+}
+.hamburger span {
+  display: block;
+  width: 18px;
+  height: 1.6px;
+  background: var(--gold);
+  border-radius: 2px;
+  transition:
+    transform 0.3s ease,
+    opacity 0.25s ease;
+}
+.hamburger:hover {
+  border-color: var(--gold);
+  background: rgba(201, 162, 75, 0.06);
+}
+.hamburger:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+.hamburger.is-open span:nth-child(1) {
+  transform: translateY(6.6px) rotate(45deg);
+}
+.hamburger.is-open span:nth-child(2) {
+  opacity: 0;
+}
+.hamburger.is-open span:nth-child(3) {
+  transform: translateY(-6.6px) rotate(-45deg);
+}
+
+/* mobile menu (solid chrome) */
+.mobile-menu {
+  overflow: hidden;
+  max-height: 0;
+  border-top: 1px solid transparent;
+  background: var(--chrome);
+  transition:
+    max-height 0.38s ease,
+    border-color 0.38s ease;
+}
+.mobile-menu.is-open {
+  max-height: 620px;
+  border-top-color: var(--hair);
+  overflow-y: auto;
+}
+.mobile-menu-inner {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 12px 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.mobile-menu a {
+  color: var(--text-muted);
+  font-size: 15px;
+  padding: 11px 6px;
+  border-radius: 8px;
+  text-decoration: none;
+  transition:
+    color 0.2s ease,
+    background 0.2s ease;
+}
+.mobile-menu a:hover {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.03);
+}
+.mobile-menu a.active {
+  color: var(--aqua);
+}
+.mm-code-btn {
+  margin-top: 10px;
+  justify-content: center;
+}
+.mm-login {
+  margin-top: 10px;
+  justify-content: center;
+}
+.mm-divider {
+  height: 1px;
+  background: var(--hair);
+  margin: 10px 0 6px;
+}
+.mm-logout {
+  color: var(--gold-bright) !important;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+/* Show the burger + hide the inline links/code on narrow screens. */
+@media (max-width: 860px) {
+  .nav-links,
+  .nav-code-btn,
+  .btn-login {
+    display: none;
+  }
+  .account-trigger {
+    display: none;
+  }
+  .hamburger {
+    display: flex;
+  }
+}
+
+@media (max-width: 400px) {
+  .nav-inner,
+  .mobile-menu-inner {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .word {
+    font-size: 17px;
+  }
 }
 </style>

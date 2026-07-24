@@ -40,26 +40,22 @@ describe('useToasts', () => {
     expect(toasts.value.find((t) => t.id === id)).toBeUndefined()
   })
 
-  it('auto-dismisses after the configured duration', () => {
-    vi.useFakeTimers()
-    try {
-      const id = success('bye', { duration: 1000 })
-      expect(toasts.value.find((t) => t.id === id)).toBeDefined()
-      vi.advanceTimersByTime(1001)
-      expect(toasts.value.find((t) => t.id === id)).toBeUndefined()
-    } finally {
-      vi.useRealTimers()
-    }
+  // The composable is now a pure queue — Reka's <ToastRoot> owns the auto-dismiss
+  // timer (see ToastContainer, which wires Reka's close event back to dismiss()).
+  // So the composable's contract is to resolve and store the duration, not to run
+  // the timer itself.
+  it('records the given auto-dismiss duration on the toast', () => {
+    const id = success('bye', { duration: 1000 })
+    expect(toasts.value.find((t) => t.id === id)).toMatchObject({ duration: 1000 })
   })
 
-  it('does not auto-dismiss when duration is 0', () => {
-    vi.useFakeTimers()
-    try {
-      const id = error('stays', { duration: 0 })
-      vi.advanceTimersByTime(60000)
-      expect(toasts.value.find((t) => t.id === id)).toBeDefined()
-    } finally {
-      vi.useRealTimers()
-    }
+  it('applies the per-type default duration when none is given', () => {
+    const id = warning('careful')
+    expect(toasts.value.find((t) => t.id === id)).toMatchObject({ duration: 6000 })
+  })
+
+  it('stores duration 0 to mean persist', () => {
+    const id = error('stays', { duration: 0 })
+    expect(toasts.value.find((t) => t.id === id)).toMatchObject({ duration: 0 })
   })
 })

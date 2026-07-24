@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref } from 'vue'
 import { useUser } from '@/composables/useUser'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
 
 const props = withDefaults(defineProps<{ notes?: boolean }>(), { notes: false })
 
@@ -43,7 +44,7 @@ defineExpose({ collect, reset })
 
 <template>
   <div v-if="isLoggedIn" class="box reading-owner-options">
-    <p class="label">
+    <p class="title is-5 mb-3 reading-owner-heading">
       Reading Options
       <span class="has-text-grey is-size-7 has-text-weight-normal">(you're signed in)</span>
     </p>
@@ -64,11 +65,7 @@ defineExpose({ collect, reset })
     </div>
 
     <div class="field">
-      <label class="toggle-switch">
-        <input v-model="hideUser" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">Hide my display name on this reading</span>
-      </label>
+      <ToggleSwitch v-model="hideUser">Hide my display name on this reading</ToggleSwitch>
     </div>
 
     <div class="field">
@@ -85,11 +82,7 @@ defineExpose({ collect, reset })
         placeholder="Require a password to view"
       />
       <p class="help">If set, anyone but you must enter this password to view the reading.</p>
-      <label v-if="password" class="toggle-switch mt-2">
-        <input v-model="showPassword" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">Show password</span>
-      </label>
+      <ToggleSwitch v-if="password" v-model="showPassword" class="mt-2">Show password</ToggleSwitch>
     </div>
 
     <div v-if="notes" class="field">

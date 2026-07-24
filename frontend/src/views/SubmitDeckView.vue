@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, onMounted } from 'vue'
+import PageHeader from '@/components/PageHeader.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
+import { ref, computed, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
 import { endpoints } from '@/api/endpoints'
@@ -18,6 +20,13 @@ const deckSystems = ref<DeckSystem[]>([])
 const submitting = ref(false)
 const submitted = ref(false)
 const errorMsg = ref('')
+
+const deckSystemOptions = computed(() =>
+  deckSystems.value.map((sys) => ({
+    value: sys.deck_system_id,
+    label: `${sys.name} — ${sys.total_cards} cards`,
+  })),
+)
 
 async function fetchDeckSystems() {
   try {
@@ -80,128 +89,142 @@ async function submitDeck() {
 
 <template>
   <section class="section">
-    <div class="container" style="max-width: 600px">
-      <h1 class="title is-3">Submit a Deck</h1>
-      <p class="subtitle is-5">Suggest a tarot deck to be added to TarotGen.io.</p>
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8-desktop is-10-tablet">
+          <PageHeader
+            title="Submit a Deck"
+            subtitle="Suggest a tarot deck to be added to TarotGen.io."
+          />
 
-      <template v-if="!isLoggedIn">
-        <div class="notification is-warning">
-          <p>
-            You must be
-            <router-link :to="{ name: 'login', query: { redirect: '/submit-deck' } }"
-              >logged in</router-link
-            >
-            to submit a deck.
-          </p>
-        </div>
-      </template>
+          <template v-if="!isLoggedIn">
+            <div class="myst-callout">
+              <p>
+                You must be
+                <router-link :to="{ name: 'login', query: { redirect: '/submit-deck' } }"
+                  >logged in</router-link
+                >
+                to submit a deck.
+              </p>
+            </div>
+          </template>
 
-      <template v-else-if="submitted">
-        <div class="notification is-success">
-          <p>
-            <strong>Thank you!</strong> Your deck submission has been received and will be reviewed
-            by an admin.
-          </p>
-        </div>
-        <router-link :to="{ name: 'home' }" class="button is-link">
-          <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
-          <span>Back to Home</span>
-        </router-link>
-      </template>
+          <template v-else-if="submitted">
+            <div class="notification is-success">
+              <p>
+                <strong>Thank you!</strong> Your deck submission has been received and will be
+                reviewed by an admin.
+              </p>
+            </div>
+            <router-link :to="{ name: 'home' }" class="button is-link">
+              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['house']" /></span>
+              <span>Back to Home</span>
+            </router-link>
+          </template>
 
-      <template v-else>
-        <div class="notification is-info is-light">
-          <p>
-            Submitted decks will be reviewed by an admin before they appear on the site. Please
-            include the deck name, artist, and the card system it uses.
-          </p>
-        </div>
+          <template v-else>
+            <div class="settings-panel">
+              <div class="myst-callout">
+                <p>
+                  Submitted decks will be reviewed by an admin before they appear on the site.
+                  Please include the deck name, artist, and the card system it uses.
+                </p>
+              </div>
 
-        <div v-if="errorMsg" class="notification is-danger is-light">
-          {{ errorMsg }}
-        </div>
+              <div v-if="errorMsg" class="notification is-danger is-light">
+                {{ errorMsg }}
+              </div>
 
-        <div class="field">
-          <label class="label">Deck Name <span class="has-text-danger">*</span></label>
-          <div class="control">
-            <input v-model="name" class="input" type="text" placeholder="e.g. Rider-Waite-Smith" />
-          </div>
-        </div>
+              <div class="field">
+                <label class="label">Deck Name <span class="has-text-danger">*</span></label>
+                <div class="control">
+                  <input
+                    v-model="name"
+                    class="input"
+                    type="text"
+                    placeholder="e.g. Rider-Waite-Smith"
+                  />
+                </div>
+              </div>
 
-        <div class="field">
-          <label class="label">Artist <span class="has-text-danger">*</span></label>
-          <div class="control">
-            <input
-              v-model="artist"
-              class="input"
-              type="text"
-              placeholder="e.g. Pamela Colman Smith"
-            />
-          </div>
-        </div>
+              <div class="field">
+                <label class="label">Artist <span class="has-text-danger">*</span></label>
+                <div class="control">
+                  <input
+                    v-model="artist"
+                    class="input"
+                    type="text"
+                    placeholder="e.g. Pamela Colman Smith"
+                  />
+                </div>
+              </div>
 
-        <div class="field">
-          <label class="label">Deck System <span class="has-text-danger">*</span></label>
-          <div class="select is-fullwidth">
-            <select v-model.number="deckSystemId">
-              <option
-                v-for="sys in deckSystems"
-                :key="sys.deck_system_id"
-                :value="sys.deck_system_id"
-              >
-                {{ sys.name }} — {{ sys.total_cards }} cards
-              </option>
-            </select>
-          </div>
-          <p class="help">
-            The card system this deck uses. Don't see yours?
-            <router-link :to="{ name: 'submit-deck-system' }">Submit a new deck system</router-link
-            >.
-          </p>
-        </div>
+              <div class="field">
+                <label class="label">Deck System <span class="has-text-danger">*</span></label>
+                <BaseSelect
+                  v-model="deckSystemId"
+                  :options="deckSystemOptions"
+                  aria-label="Deck System"
+                />
+                <p class="help">
+                  The card system this deck uses. Don't see yours?
+                  <router-link :to="{ name: 'submit-deck-system' }"
+                    >Submit a new deck system</router-link
+                  >.
+                </p>
+              </div>
 
-        <div class="field">
-          <label class="label"
-            >Additional Cards
-            <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></label
-          >
-          <div class="control">
-            <input
-              v-model.number="additionalCards"
-              class="input"
-              type="number"
-              min="0"
-              placeholder="0"
-            />
-          </div>
-          <p class="help">
-            Extra cards beyond the deck system's standard count (e.g. bonus cards).
-          </p>
-        </div>
+              <div class="field">
+                <label class="label"
+                  >Additional Cards
+                  <span class="has-text-grey is-size-7 has-text-weight-normal"
+                    >(optional)</span
+                  ></label
+                >
+                <div class="control">
+                  <input
+                    v-model.number="additionalCards"
+                    class="input"
+                    type="number"
+                    min="0"
+                    placeholder="0"
+                  />
+                </div>
+                <p class="help">
+                  Extra cards beyond the deck system's standard count (e.g. bonus cards).
+                </p>
+              </div>
 
-        <div class="field">
-          <label class="label"
-            >Purchase URL
-            <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></label
-          >
-          <div class="control">
-            <input v-model="purchaseUrl" class="input" type="url" placeholder="https://..." />
-          </div>
-          <p class="help">A link where this deck can be purchased, if known.</p>
-        </div>
+              <div class="field">
+                <label class="label"
+                  >Purchase URL
+                  <span class="has-text-grey is-size-7 has-text-weight-normal"
+                    >(optional)</span
+                  ></label
+                >
+                <div class="control">
+                  <input v-model="purchaseUrl" class="input" type="url" placeholder="https://..." />
+                </div>
+                <p class="help">A link where this deck can be purchased, if known.</p>
+              </div>
 
-        <div class="field">
-          <button
-            class="button is-primary"
-            :class="{ 'is-loading': submitting }"
-            :disabled="submitting"
-            @click="submitDeck"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']" /></span>
-            <span>Submit Deck</span>
-          </button>
+              <div class="field">
+                <button
+                  class="button is-primary"
+                  :class="{ 'is-loading': submitting }"
+                  :disabled="submitting"
+                  @click="submitDeck"
+                >
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"
+                  /></span>
+                  <span>Submit Deck</span>
+                </button>
+              </div>
+            </div>
+          </template>
         </div>
-      </template>
+      </div>
     </div>
   </section>
 </template>

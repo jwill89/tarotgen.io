@@ -14,12 +14,16 @@ export function useSpreads() {
   const { isLoggedIn } = useUser()
 
   async function fetchSpreads(): Promise<void> {
-    const data = await apiFetch<Spread[]>(endpoints.spreads.list)
+    // Fire the public list, personal spreads, and favorites concurrently. The
+    // favorites/user-spreads calls don't depend on the public list (favorites are
+    // reconciled by id in spreadOptions), so awaiting the public list first only
+    // added a serial round trip to every spread-selector page load.
+    const [data] = await Promise.all([
+      apiFetch<Spread[]>(endpoints.spreads.list),
+      isLoggedIn.value ? fetchUserSpreads() : Promise.resolve(),
+      isLoggedIn.value ? fetchFavorites() : Promise.resolve(),
+    ])
     if (data) spreads.value = data
-    // Also fetch user spreads and favorites if logged in.
-    if (isLoggedIn.value) {
-      await Promise.all([fetchUserSpreads(), fetchFavorites()])
-    }
   }
 
   /** Combined list of public + personal spreads for the spread selector. */

@@ -3,6 +3,7 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
+import PageHeader from '@/components/PageHeader.vue'
 
 const route = useRoute()
 const { activate } = useUser()
@@ -33,10 +34,13 @@ onMounted(async () => {
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
-        <div class="column is-5-desktop is-7-tablet has-text-centered">
-          <h1 class="title is-3">Account Activation</h1>
+        <div class="column is-5-desktop is-7-tablet">
+          <PageHeader
+            title="Account Activation"
+            subtitle="Confirming your account so you can sign in."
+          />
 
-          <div class="box">
+          <div class="settings-panel has-text-centered">
             <template v-if="state === 'working'">
               <span class="icon is-large has-text-grey-light">
                 <FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin size="2x" />

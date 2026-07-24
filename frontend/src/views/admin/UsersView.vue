@@ -7,6 +7,9 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import IconButton from '@/components/IconButton.vue'
+import Tooltip from '@/components/Tooltip.vue'
 import { formatDateTime } from '@/utils/datetime'
 import type { User } from '@/types'
 
@@ -117,159 +120,151 @@ onMounted(fetchUsers)
 <template>
   <section class="section">
     <div class="container">
-      <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-        <span>Back to Dashboard</span>
-      </router-link>
+      <div class="columns is-centered">
+        <div class="column is-11-desktop is-12-tablet">
+          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
+            <span>Back to Dashboard</span>
+          </router-link>
 
-      <div class="level">
-        <div class="level-left">
-          <div>
-            <h1 class="title is-3">Manage Users</h1>
-            <p class="subtitle is-5">Activate, resend activation emails, or remove accounts.</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="field">
-        <div class="control has-icons-left">
-          <input
-            v-model="search"
-            class="input"
-            type="text"
-            placeholder="Search by email, name, or ID..."
+          <PageHeader
+            title="Manage Users"
+            subtitle="Activate, resend activation emails, or remove accounts."
           />
-          <span class="icon is-small is-left"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-          /></span>
+
+          <div class="field">
+            <div class="control has-icons-left">
+              <input
+                v-model="search"
+                class="input"
+                type="text"
+                placeholder="Search by email, name, or ID..."
+              />
+              <span class="icon is-small is-left"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+              /></span>
+            </div>
+          </div>
+
+          <div class="settings-panel">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable is-striped">
+                <thead>
+                  <tr>
+                    <SortableTh
+                      label="ID"
+                      sort-key="user_id"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Email"
+                      sort-key="email"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Display Name"
+                      sort-key="display_name"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Status"
+                      sort-key="is_active"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Registered"
+                      sort-key="registered_at"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Last Login"
+                      sort-key="last_login_at"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="user in visibleUsers" :key="user.user_id">
+                    <td>{{ user.user_id }}</td>
+                    <td>{{ user.email }}</td>
+                    <td>
+                      {{ user.display_name }}
+                      <Tooltip v-if="user.is_admin" text="Admin">
+                        <span class="icon has-text-link ml-1"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']"
+                        /></span>
+                      </Tooltip>
+                      <Tooltip v-if="user.google_linked" text="Google linked">
+                        <span class="icon has-text-info ml-1"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fab['google']"
+                        /></span>
+                      </Tooltip>
+                      <Tooltip v-if="user.has_passkeys" text="Has passkey(s)">
+                        <span class="icon has-text-success ml-1"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
+                        /></span>
+                      </Tooltip>
+                    </td>
+                    <td>
+                      <span v-if="user.is_active" class="status-tag is-on">Active</span>
+                      <span v-else class="status-tag is-warn">Pending</span>
+                    </td>
+                    <td>{{ formatDateTime(user.registered_at) }}</td>
+                    <td>{{ user.last_login_at ? formatDateTime(user.last_login_at) : '—' }}</td>
+                    <td>
+                      <div class="row-actions">
+                        <IconButton
+                          v-if="!user.is_active"
+                          :icon="byPrefixAndName.fas['circle-check']"
+                          label="Activate"
+                          intent="success"
+                          :loading="busyId === user.user_id"
+                          @click="activate(user)"
+                        />
+                        <IconButton
+                          v-if="!user.is_active"
+                          :icon="byPrefixAndName.fas['paper-plane']"
+                          label="Resend Email"
+                          intent="gold"
+                          :loading="busyId === user.user_id"
+                          @click="resend(user)"
+                        />
+                        <IconButton
+                          :icon="byPrefixAndName.fas['user-shield']"
+                          :label="user.is_admin ? 'Revoke Admin' : 'Make Admin'"
+                          :intent="user.is_admin ? 'warning' : 'default'"
+                          :disabled="busyId === user.user_id"
+                          @click="toggleAdmin(user)"
+                        />
+                        <IconButton
+                          :icon="byPrefixAndName.fas['trash']"
+                          label="Delete"
+                          intent="danger"
+                          @click="remove(user)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p v-if="users.length === 0" class="has-text-grey">No accounts yet.</p>
         </div>
       </div>
-
-      <div class="table-container">
-        <table class="table is-fullwidth is-hoverable is-striped">
-          <thead>
-            <tr>
-              <SortableTh
-                label="ID"
-                sort-key="user_id"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Email"
-                sort-key="email"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Display Name"
-                sort-key="display_name"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Status"
-                sort-key="is_active"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Registered"
-                sort-key="registered_at"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Last Login"
-                sort-key="last_login_at"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="user in visibleUsers" :key="user.user_id">
-              <td>{{ user.user_id }}</td>
-              <td>{{ user.email }}</td>
-              <td>
-                {{ user.display_name }}
-                <span v-if="user.is_admin" class="icon has-text-link ml-1" title="Admin"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']"
-                /></span>
-                <span
-                  v-if="user.google_linked"
-                  class="icon has-text-info ml-1"
-                  title="Google linked"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fab['google']"
-                /></span>
-                <span
-                  v-if="user.has_passkeys"
-                  class="icon has-text-success ml-1"
-                  title="Has passkey(s)"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
-                /></span>
-              </td>
-              <td>
-                <span v-if="user.is_active" class="tag is-success is-light">Active</span>
-                <span v-else class="tag is-warning is-light">Pending</span>
-              </td>
-              <td>{{ formatDateTime(user.registered_at) }}</td>
-              <td>{{ user.last_login_at ? formatDateTime(user.last_login_at) : '—' }}</td>
-              <td>
-                <div class="buttons are-small">
-                  <button
-                    v-if="!user.is_active"
-                    class="button is-success"
-                    :class="{ 'is-loading': busyId === user.user_id }"
-                    @click="activate(user)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-check']"
-                    /></span>
-                    <span>Activate</span>
-                  </button>
-                  <button
-                    v-if="!user.is_active"
-                    class="button is-link"
-                    :class="{ 'is-loading': busyId === user.user_id }"
-                    @click="resend(user)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"
-                    /></span>
-                    <span>Resend Email</span>
-                  </button>
-                  <button
-                    class="button"
-                    :class="user.is_admin ? 'is-warning' : 'is-info'"
-                    :disabled="busyId === user.user_id"
-                    @click="toggleAdmin(user)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']"
-                    /></span>
-                    <span>{{ user.is_admin ? 'Revoke Admin' : 'Make Admin' }}</span>
-                  </button>
-                  <button class="button is-danger" @click="remove(user)">
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                    /></span>
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-if="users.length === 0" class="has-text-grey">No accounts yet.</p>
     </div>
   </section>
 </template>

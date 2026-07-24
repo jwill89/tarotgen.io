@@ -6,6 +6,8 @@ import { endpoints } from '@/api/endpoints'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import IconButton from '@/components/IconButton.vue'
 import { formatDateTime } from '@/utils/datetime'
 import { renderMarkdown } from '@/utils/markdown'
 import type { Contact } from '@/types'
@@ -64,128 +66,124 @@ onMounted(fetchContacts)
 <template>
   <section class="section">
     <div class="container">
-      <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-        <span>Back to Dashboard</span>
-      </router-link>
+      <div class="columns is-centered">
+        <div class="column is-11-desktop is-12-tablet">
+          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
+            <span>Back to Dashboard</span>
+          </router-link>
 
-      <div class="level">
-        <div class="level-left">
-          <div>
-            <h1 class="title is-3">Contact Submissions</h1>
-            <p class="subtitle is-5">Review messages submitted through the contact form.</p>
+          <PageHeader
+            title="Contact Submissions"
+            subtitle="Review messages submitted through the contact form."
+          >
+            <button class="button" :class="showRead ? 'is-link' : ''" @click="toggleShowRead">
+              <span class="icon"
+                ><FontAwesomeIcon
+                  :icon="showRead ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']"
+              /></span>
+              <span>{{ showRead ? 'Showing Read' : 'Show Read' }}</span>
+            </button>
+          </PageHeader>
+
+          <div class="field">
+            <div class="control has-icons-left">
+              <input
+                v-model="search"
+                class="input"
+                type="text"
+                placeholder="Search by name, email, or message..."
+              />
+              <span class="icon is-small is-left"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+              /></span>
+            </div>
           </div>
-        </div>
-        <div class="level-right">
-          <button class="button" :class="showRead ? 'is-link' : ''" @click="toggleShowRead">
-            <span class="icon"
-              ><FontAwesomeIcon
-                :icon="showRead ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']"
-            /></span>
-            <span>{{ showRead ? 'Showing Read' : 'Show Read' }}</span>
-          </button>
-        </div>
-      </div>
 
-      <div class="field">
-        <div class="control has-icons-left">
-          <input
-            v-model="search"
-            class="input"
-            type="text"
-            placeholder="Search by name, email, or message..."
-          />
-          <span class="icon is-small is-left"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-          /></span>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table class="table is-fullwidth is-hoverable is-striped">
-          <thead>
-            <tr>
-              <SortableTh
-                label="ID"
-                sort-key="contact_id"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Date"
-                sort-key="submitted_at"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Name"
-                sort-key="name"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Email"
-                sort-key="email"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="contact in visibleContacts"
-              :key="contact.contact_id"
-              :class="{ 'has-text-grey': contact.is_read }"
-            >
-              <td>{{ contact.contact_id }}</td>
-              <td>{{ formatDateTime(contact.submitted_at) }}</td>
-              <td>{{ contact.name }}</td>
-              <td>
-                <a :href="'mailto:' + contact.email">{{ contact.email }}</a>
-              </td>
-              <td>
-                <div class="buttons are-small">
-                  <button class="button is-info is-small" @click="viewingContact = contact">
-                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
-                    <span>View</span>
-                  </button>
-                  <button
-                    class="button is-small"
-                    :class="contact.is_read ? 'is-warning' : 'is-success'"
-                    :disabled="busyId === contact.contact_id"
-                    @click="toggleRead(contact)"
+          <div class="settings-panel">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable is-striped">
+                <thead>
+                  <tr>
+                    <SortableTh
+                      label="ID"
+                      sort-key="contact_id"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Date"
+                      sort-key="submitted_at"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Name"
+                      sort-key="name"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Email"
+                      sort-key="email"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="contact in visibleContacts"
+                    :key="contact.contact_id"
+                    :class="{ 'has-text-grey': contact.is_read }"
                   >
-                    <span class="icon">
-                      <FontAwesomeIcon
-                        :icon="
-                          contact.is_read
-                            ? byPrefixAndName.fas['envelope']
-                            : byPrefixAndName.fas['envelope-open']
-                        "
-                      />
-                    </span>
-                    <span>{{ contact.is_read ? 'Mark Unread' : 'Mark Read' }}</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+                    <td>{{ contact.contact_id }}</td>
+                    <td>{{ formatDateTime(contact.submitted_at) }}</td>
+                    <td>{{ contact.name }}</td>
+                    <td>
+                      <a :href="'mailto:' + contact.email">{{ contact.email }}</a>
+                    </td>
+                    <td>
+                      <div class="row-actions">
+                        <IconButton
+                          :icon="byPrefixAndName.fas['eye']"
+                          label="View"
+                          @click="viewingContact = contact"
+                        />
+                        <IconButton
+                          :icon="
+                            contact.is_read
+                              ? byPrefixAndName.fas['envelope']
+                              : byPrefixAndName.fas['envelope-open']
+                          "
+                          :label="contact.is_read ? 'Mark Unread' : 'Mark Read'"
+                          :intent="contact.is_read ? 'warning' : 'success'"
+                          :disabled="busyId === contact.contact_id"
+                          @click="toggleRead(contact)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <p v-if="contacts.length === 0" class="has-text-grey">
+            No contact submissions{{ showRead ? '' : ' (unread)' }}.
+          </p>
+        </div>
       </div>
-      <p v-if="contacts.length === 0" class="has-text-grey">
-        No contact submissions{{ showRead ? '' : ' (unread)' }}.
-      </p>
     </div>
   </section>
 
   <BaseModal :active="modalActive" title="Message" max-width="40rem" @close="viewingContact = null">
+    <!-- User-submitted message; sanitized by renderMarkdown() (marked + DOMPurify) -->
+    <!-- eslint-disable-next-line vue/no-v-html -->
     <div class="content" v-html="modalHtml"></div>
   </BaseModal>
 </template>
-
-<style scoped></style>

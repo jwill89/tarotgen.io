@@ -34,7 +34,7 @@ scripts/    deploy.ps1 (repo-level orchestration)
 
 | Path | What |
 |------|------|
-| `frontend/src/` | Vue 3 (`<script setup>` + TS), Vue Router, Bulma, TipTap. Views, components, composables, utils, types. Specs in `src/__tests__/`. |
+| `frontend/src/` | Vue 3 (`<script setup>` + TS), Vue Router, Bulma (layout/utilities), Reka UI (headless interactive primitives), TipTap. Views, components, composables, utils, types. Specs in `src/__tests__/`. |
 | `frontend/index.html` | SPA entry HTML (Vite). |
 | `frontend/public/` | PWA assets (manifest, service worker, icons), `robots.txt`, `sitemap.xml`, self-hosted fonts. |
 | `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. Endpoints are documented via swagger-php attributes → `backend/openapi.json` (`composer docs`), served at `/api/docs`. |
@@ -51,7 +51,7 @@ scripts/    deploy.ps1 (repo-level orchestration)
 ## Quickstart (local dev)
 
 Requires Node 20.19+ (or 22.12+, as Vite 8 needs), PHP 8.5+, Composer, and a
-gitignored `frontend/.npmrc` with the FontAwesome Pro kit token (see `AGENTS.md`
+gitignored `frontend/.npmrc` with the FontAwesome Pro registry token (see `AGENTS.md`
 §6). Copy `backend/.env.example` → `backend/.env`. Run the app as **two
 processes, one per folder**:
 

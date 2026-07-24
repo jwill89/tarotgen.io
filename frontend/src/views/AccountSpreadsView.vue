@@ -8,6 +8,8 @@ import { formatDateTime } from '@/utils/datetime'
 import type { UserSpread, Spread, SpreadPosition } from '@/types'
 import BaseModal from '@/components/BaseModal.vue'
 import SpreadEditor from '@/components/admin/SpreadEditor.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import Tooltip from '@/components/Tooltip.vue'
 
 const { userSpreads, fetchUserSpreads, updateUserSpread, deleteUserSpread, submitAsPublic } =
   useUserSpreads()
@@ -98,7 +100,7 @@ async function handleSubmitPublic(spread: UserSpread) {
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
-        <div class="column is-10-desktop">
+        <div class="column is-10-desktop is-11-tablet">
           <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
             <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
             <span>Back to Dashboard</span>
@@ -107,8 +109,7 @@ async function handleSubmitPublic(spread: UserSpread) {
           <div class="level">
             <div class="level-left">
               <div>
-                <h1 class="title is-3 is-size-4-mobile">My Spreads</h1>
-                <p class="subtitle is-5 is-size-6-mobile">Manage your personal tarot spreads.</p>
+                <PageHeader title="My Spreads" subtitle="Manage your personal tarot spreads." />
               </div>
             </div>
             <div class="level-right">
@@ -125,7 +126,7 @@ async function handleSubmitPublic(spread: UserSpread) {
             /></span>
           </div>
 
-          <div v-else-if="userSpreads.length === 0" class="notification is-info is-light">
+          <div v-else-if="userSpreads.length === 0" class="myst-callout">
             <p>You haven't created any personal spreads yet.</p>
             <p class="mt-2">
               <router-link :to="{ name: 'submit-spread' }">Create your first spread</router-link>
@@ -133,71 +134,79 @@ async function handleSubmitPublic(spread: UserSpread) {
             </p>
           </div>
 
-          <div v-else class="table-container">
-            <table class="table is-fullwidth is-hoverable">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Cards</th>
-                  <th>Created</th>
-                  <th>Updated</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="spread in userSpreads" :key="spread.user_spread_id">
-                  <td>
-                    <strong>{{ spread.name }}</strong>
-                    <p
-                      v-if="spread.description"
-                      class="is-size-7 has-text-grey mt-1"
-                      style="
-                        max-width: 20rem;
-                        overflow: hidden;
-                        text-overflow: ellipsis;
-                        white-space: nowrap;
-                      "
-                    >
-                      {{ spread.description }}
-                    </p>
-                  </td>
-                  <td>{{ spread.card_count }}</td>
-                  <td class="is-size-7">{{ formatDateTime(spread.created_at) }}</td>
-                  <td class="is-size-7">{{ formatDateTime(spread.updated_at) }}</td>
-                  <td class="has-text-right">
-                    <div class="buttons are-small is-justify-content-flex-end">
-                      <button
-                        class="button is-info is-outlined"
-                        title="Edit"
-                        @click="openEdit(spread)"
+          <div v-else class="settings-panel">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Cards</th>
+                    <th>Created</th>
+                    <th>Updated</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="spread in userSpreads" :key="spread.user_spread_id">
+                    <td>
+                      <strong>{{ spread.name }}</strong>
+                      <p
+                        v-if="spread.description"
+                        class="is-size-7 has-text-grey mt-1"
+                        style="
+                          max-width: 20rem;
+                          overflow: hidden;
+                          text-overflow: ellipsis;
+                          white-space: nowrap;
+                        "
                       >
-                        <span class="icon"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
-                        /></span>
-                      </button>
-                      <button
-                        class="button is-link is-outlined"
-                        title="Submit as public spread"
-                        @click="handleSubmitPublic(spread)"
-                      >
-                        <span class="icon"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"
-                        /></span>
-                      </button>
-                      <button
-                        class="button is-danger is-outlined"
-                        title="Delete"
-                        @click="handleDelete(spread)"
-                      >
-                        <span class="icon"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                        /></span>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                        {{ spread.description }}
+                      </p>
+                    </td>
+                    <td>{{ spread.card_count }}</td>
+                    <td class="is-size-7">{{ formatDateTime(spread.created_at) }}</td>
+                    <td class="is-size-7">{{ formatDateTime(spread.updated_at) }}</td>
+                    <td class="has-text-right">
+                      <div class="buttons are-small is-justify-content-flex-end">
+                        <Tooltip text="Edit">
+                          <button
+                            class="button is-info is-outlined"
+                            aria-label="Edit"
+                            @click="openEdit(spread)"
+                          >
+                            <span class="icon"
+                              ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
+                            /></span>
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Submit as public spread">
+                          <button
+                            class="button is-link is-outlined"
+                            aria-label="Submit as public spread"
+                            @click="handleSubmitPublic(spread)"
+                          >
+                            <span class="icon"
+                              ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"
+                            /></span>
+                          </button>
+                        </Tooltip>
+                        <Tooltip text="Delete">
+                          <button
+                            class="button is-danger is-outlined"
+                            aria-label="Delete"
+                            @click="handleDelete(spread)"
+                          >
+                            <span class="icon"
+                              ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
+                            /></span>
+                          </button>
+                        </Tooltip>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </div>

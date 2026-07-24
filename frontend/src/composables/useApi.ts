@@ -1,7 +1,7 @@
 import { useUser } from './useUser'
 import { useToasts } from './useToasts'
 import { useRouter } from 'vue-router'
-import { apiRequest } from './apiClient'
+import { apiRequest, type ApiResult } from './apiClient'
 
 // Re-export the framework-free client so existing imports from '@/composables/useApi'
 // keep working (apiFetch, apiRequest, readApiError, types, …).
@@ -19,11 +19,11 @@ export function useAdminApi() {
   const { error: toastError, success: toastSuccess } = useToasts()
   const router = useRouter()
 
-  async function request<T>(
+  async function requestResult<T>(
     path: string,
     options: RequestInit = {},
     successMessage?: string,
-  ): Promise<T | null> {
+  ): Promise<ApiResult<T>> {
     const res = await apiRequest<T>('/admin' + path, { headers: JSON_HEADERS, ...options })
 
     if (!res.ok) {
@@ -31,16 +31,25 @@ export function useAdminApi() {
         // Session expired or admin was revoked — drop to the login screen.
         currentUser.value = null
         void router.push({ name: 'login' })
-        return null
+      } else {
+        // Surface the server's message (or the transport error) so admins see
+        // why an action failed; log the body/status for post-mortem.
+        toastError(res.error, { detail: { status: res.status, body: res.data } })
       }
-      // Surface the server's message (or the transport error) so admins see
-      // why an action failed; log the body/status for post-mortem.
-      toastError(res.error, { detail: { status: res.status, body: res.data } })
-      return null
+      return res
     }
 
     if (successMessage) toastSuccess(successMessage)
-    return res.data
+    return res
+  }
+
+  async function request<T>(
+    path: string,
+    options: RequestInit = {},
+    successMessage?: string,
+  ): Promise<T | null> {
+    const res = await requestResult<T>(path, options, successMessage)
+    return res.ok ? res.data : null
   }
 
   function get<T>(path: string) {
@@ -59,8 +68,14 @@ export function useAdminApi() {
     return request<T>(path, { method: 'PATCH', body: JSON.stringify(data) }, successMessage)
   }
 
-  function del<T>(path: string, successMessage?: string) {
-    return request<T>(path, { method: 'DELETE' }, successMessage)
+  // A successful DELETE may answer 204 No Content (no body) or 200 with a small
+  // JSON summary (e.g. { deleted: N }). Return the body when there is one,
+  // otherwise `true`, so callers can reliably gate a refresh on the result — a
+  // 204 is a success, not the falsy `null` that a failure returns.
+  async function del<T = unknown>(path: string, successMessage?: string): Promise<T | null> {
+    const res = await requestResult<T>(path, { method: 'DELETE' }, successMessage)
+    if (!res.ok) return null
+    return (res.data ?? true) as T
   }
 
   return { get, post, put, patch, del }

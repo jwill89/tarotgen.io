@@ -10,11 +10,14 @@
  *
  * The trade-off: when you use a NEW icon in a template, add its import below and
  * include it in `index(...)` — otherwise the lookup is `undefined` and it won't
- * render. (We intentionally do NOT import the kit's own `byPrefixAndName`, which
- * pulls in the entire icon set and would balloon the bundle by tens of MB.)
+ * render.
  *
- * Icons come from the private kit package (@awesome.me/kit-91d12dd2d3), so there
- * are no CDN requests and no kit pageview/impression metering.
+ * Icons come from the per-style packages (@fortawesome/pro-{solid,regular,duotone}-svg-icons
+ * + free @fortawesome/free-brands-svg-icons), NOT the monolithic @awesome.me kit.
+ * The kit tarball is ~760 MB (every family + format + metadata), so re-pulling it
+ * on each cold CI install blew the Font Awesome bandwidth quota; these per-style
+ * packages carry only JS path data and install a fraction of that. Still
+ * self-hosted — no CDN requests, no pageview/impression metering.
  */
 import { config } from '@fortawesome/fontawesome-svg-core'
 import type { IconDefinition, IconPrefix } from '@fortawesome/fontawesome-svg-core'
@@ -122,7 +125,7 @@ import {
   faUsers,
   faWandMagicSparkles,
   faXmark,
-} from '@awesome.me/kit-91d12dd2d3/icons/classic/solid'
+} from '@fortawesome/pro-solid-svg-icons'
 
 // ── Duotone solid (fad) ─────────────────────────────────────────────────────
 import {
@@ -145,13 +148,13 @@ import {
   faSparkles as fadSparkles,
   faTableCells as fadTableCells,
   faUsers as fadUsers,
-} from '@awesome.me/kit-91d12dd2d3/icons/duotone/solid'
+} from '@fortawesome/pro-duotone-svg-icons'
 
 // ── Regular (far) ───────────────────────────────────────────────────────────
-import { faStar as farStar } from '@awesome.me/kit-91d12dd2d3/icons/classic/regular'
+import { faStar as farStar } from '@fortawesome/pro-regular-svg-icons'
 
 // ── Brands (fab) ────────────────────────────────────────────────────────────
-import { faGoogle } from '@awesome.me/kit-91d12dd2d3/icons/classic/brands'
+import { faGoogle } from '@fortawesome/free-brands-svg-icons'
 
 // The core would otherwise inject its CSS at runtime; we import it statically
 // above so it's part of the bundle (no FOUC, no duplicate injection).

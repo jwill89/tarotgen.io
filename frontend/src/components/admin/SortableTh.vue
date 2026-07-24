@@ -35,7 +35,7 @@ const emit = defineEmits<{ sort: [string] }>()
 }
 
 .sortable-th:hover {
-  color: var(--myst-gold, #e9c46a);
+  color: var(--myst-gold);
 }
 
 .sort-icon {

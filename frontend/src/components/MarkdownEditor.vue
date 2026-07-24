@@ -7,6 +7,7 @@ import Link from '@tiptap/extension-link'
 import Placeholder from '@tiptap/extension-placeholder'
 import TurndownService from 'turndown'
 import { marked } from 'marked'
+import Tooltip from '@/components/Tooltip.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -88,96 +89,118 @@ function setLink() {
   <div v-if="editor" class="wysiwyg-editor box">
     <div class="wysiwyg-toolbar">
       <div class="buttons has-addons are-small mb-0">
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Bold"
-          :class="{ 'is-active': editor.isActive('bold') }"
-          @click="editor.chain().focus().toggleBold().run()"
-        >
-          <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['bold']" /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Italic"
-          :class="{ 'is-active': editor.isActive('italic') }"
-          @click="editor.chain().focus().toggleItalic().run()"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['italic']"
-          /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Heading"
-          :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
-          @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['heading']"
-          /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Quote"
-          :class="{ 'is-active': editor.isActive('blockquote') }"
-          @click="editor.chain().focus().toggleBlockquote().run()"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['quote-left']"
-          /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Bulleted list"
-          :class="{ 'is-active': editor.isActive('bulletList') }"
-          @click="editor.chain().focus().toggleBulletList().run()"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ul']"
-          /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Numbered list"
-          :class="{ 'is-active': editor.isActive('orderedList') }"
-          @click="editor.chain().focus().toggleOrderedList().run()"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ol']"
-          /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Inline code"
-          :class="{ 'is-active': editor.isActive('code') }"
-          @click="editor.chain().focus().toggleCode().run()"
-        >
-          <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['code']" /></span>
-        </button>
-        <button
-          type="button"
-          class="button is-small"
-          tabindex="-1"
-          title="Link"
-          :class="{ 'is-active': editor.isActive('link') }"
-          @click="setLink"
-        >
-          <span class="icon is-small"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span>
-        </button>
+        <Tooltip text="Bold">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Bold"
+            :class="{ 'is-active': editor.isActive('bold') }"
+            @click="editor.chain().focus().toggleBold().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['bold']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Italic">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Italic"
+            :class="{ 'is-active': editor.isActive('italic') }"
+            @click="editor.chain().focus().toggleItalic().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['italic']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Heading">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Heading"
+            :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }"
+            @click="editor.chain().focus().toggleHeading({ level: 2 }).run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['heading']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Quote">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Quote"
+            :class="{ 'is-active': editor.isActive('blockquote') }"
+            @click="editor.chain().focus().toggleBlockquote().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['quote-left']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Bulleted list">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Bulleted list"
+            :class="{ 'is-active': editor.isActive('bulletList') }"
+            @click="editor.chain().focus().toggleBulletList().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ul']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Numbered list">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Numbered list"
+            :class="{ 'is-active': editor.isActive('orderedList') }"
+            @click="editor.chain().focus().toggleOrderedList().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['list-ol']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Inline code">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Inline code"
+            :class="{ 'is-active': editor.isActive('code') }"
+            @click="editor.chain().focus().toggleCode().run()"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['code']"
+            /></span>
+          </button>
+        </Tooltip>
+        <Tooltip text="Link">
+          <button
+            type="button"
+            class="button is-small"
+            tabindex="-1"
+            aria-label="Link"
+            :class="{ 'is-active': editor.isActive('link') }"
+            @click="setLink"
+          >
+            <span class="icon is-small"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['link']"
+            /></span>
+          </button>
+        </Tooltip>
       </div>
     </div>
 
@@ -189,7 +212,7 @@ function setLink() {
 .wysiwyg-editor {
   padding: 0;
   overflow: hidden;
-  border: 1px solid var(--myst-border-strong, rgba(255, 255, 255, 0.18));
+  border: 1px solid var(--myst-border-strong);
 }
 
 .wysiwyg-toolbar {
@@ -198,12 +221,12 @@ function setLink() {
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.5rem;
-  background: var(--myst-surface-3, rgba(255, 255, 255, 0.05));
-  border-bottom: 1px solid var(--myst-border, rgba(255, 255, 255, 0.12));
+  background: var(--myst-surface-3);
+  border-bottom: 1px solid var(--myst-border);
 }
 
 .wysiwyg-toolbar .button.is-active {
-  background-color: var(--bulma-link, hsl(229, 53%, 53%));
+  background-color: var(--bulma-link);
   border-color: transparent;
   color: #fff;
 }
@@ -245,7 +268,7 @@ function setLink() {
 }
 
 .wysiwyg-content :deep(.tiptap blockquote) {
-  border-left: 3px solid var(--myst-border-strong, rgba(255, 255, 255, 0.25));
+  border-left: 3px solid var(--myst-border-strong);
   padding-left: 1em;
   margin-left: 0;
   margin-bottom: 0.75em;
@@ -260,7 +283,7 @@ function setLink() {
 }
 
 .wysiwyg-content :deep(.tiptap a) {
-  color: var(--bulma-link, hsl(229, 53%, 53%));
+  color: var(--bulma-link);
   text-decoration: underline;
 }
 
@@ -268,7 +291,7 @@ function setLink() {
 .wysiwyg-content :deep(.tiptap p.is-editor-empty:first-child::before) {
   content: attr(data-placeholder);
   float: left;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--myst-text-dim);
   pointer-events: none;
   height: 0;
 }

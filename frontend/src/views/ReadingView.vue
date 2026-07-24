@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
+import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui'
 import { ref, reactive, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDecks } from '@/composables/useDecks'
@@ -18,6 +19,10 @@ import type { Reading, ReadingInfo, ReadingCard, SpreadPosition } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import LightboxOverlay from '@/components/LightboxOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import NumberField from '@/components/NumberField.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import Tooltip from '@/components/Tooltip.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -430,364 +435,359 @@ watch(
 <template>
   <section v-if="reading && readingInfo" class="section">
     <div class="container">
-      <h1 class="title is-3 is-size-4-mobile">
-        {{ displayTitle }}
-        <span v-if="isFinal" class="tag is-dark is-medium ml-2 reading-final-tag">
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
-          /></span>
-          <span>Final</span>
-        </span>
-      </h1>
-
-      <!-- Cards drawn into a spread that still need a position on the canvas. -->
-      <div
-        v-if="isOwner && !isFinal && unplacedNewCount > 0"
-        class="notification is-warning is-light"
-      >
-        <p>
-          You have {{ unplacedNewCount }} newly drawn card{{ unplacedNewCount === 1 ? '' : 's' }}
-          waiting to be placed on your spread.
-          <router-link
-            :to="{ name: 'free-draw-placement', params: { id: reading.reading_id } }"
-            class="ml-1"
-          >
-            Arrange them now </router-link
-          >.
-        </p>
-      </div>
-
-      <div class="columns reading-top">
-        <div class="column is-7">
-          <dl class="reading-meta box">
-            <div class="meta-row">
-              <dt>
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['hashtag']" /></span
-                >Reading ID
-              </dt>
-              <dd>
-                <code>{{ reading.reading_id }}</code>
-              </dd>
-            </div>
-            <div class="meta-row">
-              <dt>
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span
-                >Reading URL
-              </dt>
-              <dd class="meta-url">
-                <span class="reading-url-text">{{ readingUrl }}</span>
-                <button
-                  class="button is-small is-link"
-                  title="Copy Reading URL"
-                  @click="copyReadingUrl"
-                >
-                  <span class="icon is-small"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']"
-                  /></span>
-                  <span>Copy</span>
-                </button>
-              </dd>
-            </div>
-            <div class="meta-row">
-              <dt>
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['calendar-day']" /></span
-                >Date
-              </dt>
-              <dd>{{ formatDateTime(reading.reading_time) }}</dd>
-            </div>
-            <div class="meta-row">
-              <dt>
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span
-                >Spread
-              </dt>
-              <dd>{{ displaySpreadName }}</dd>
-            </div>
-            <div class="meta-row">
-              <dt>
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span
-                >Reader
-              </dt>
-              <dd>{{ readerName }}</dd>
-            </div>
-            <div v-if="readingDeck" class="meta-row">
-              <dt>
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span
-                >Deck
-              </dt>
-              <dd>
-                {{ readingDeck.name }}
-                <span v-if="readingDeck.artist" class="meta-sub"
-                  >· art by {{ readingDeck.artist }}</span
-                >
-                <span v-if="readingDeck.system_short_name" class="tag is-info is-light ml-2">{{
-                  readingDeck.system_short_name
-                }}</span>
-              </dd>
-            </div>
-            <div v-if="readingDeck && readingDeck.purchase_url" class="meta-row">
-              <dt>
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['cart-shopping']" /></span
-                >Purchase
-              </dt>
-              <dd>
-                <a :href="readingDeck.purchase_url" target="_blank" rel="noopener noreferrer"
-                  >Buy this deck</a
-                >
-              </dd>
-            </div>
-          </dl>
-
-          <!-- Free draw: actions sit under the reading details. -->
-          <div v-if="!spread" class="buttons mt-3">
-            <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
-              <span class="icon"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
-              /></span>
-              <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
-            </button>
-            <button
-              class="button is-link"
-              :class="{ 'is-loading': exporting }"
-              @click="showExportModal = true"
-            >
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
-              <span>Save as Image</span>
-            </button>
-            <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
-              <span class="icon">
-                <FontAwesomeLayers>
-                  <FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" />
-                  <FontAwesomeIcon
-                    :icon="byPrefixAndName.fas['circle-plus']"
-                    transform="shrink-6 down-6 right-7"
-                  />
-                </FontAwesomeLayers>
-              </span>
-              <span>Draw More Cards</span>
-            </button>
-            <button
-              v-if="isOwner && !isFinal"
-              class="button is-light"
-              title="Permanently lock this reading"
-              @click="markFinal"
-            >
-              <span class="icon"
+      <div class="columns is-centered">
+        <div class="column is-10-desktop is-11-tablet">
+          <PageHeader :title="displayTitle">
+            <span v-if="isFinal" class="tag is-dark is-medium reading-final-tag">
+              <span class="icon is-small"
                 ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
               /></span>
-              <span>Mark as Final</span>
-            </button>
-          </div>
-        </div>
+              <span>Final</span>
+            </span>
+          </PageHeader>
 
-        <!-- Spread description sits beside the details to use the space. -->
-        <div v-if="spread && spread.description" class="column is-5">
-          <div class="spread-details">
-            <button
-              class="spread-details-header"
-              :aria-expanded="showSpreadDetails ? 'true' : 'false'"
-              @click="showSpreadDetails = !showSpreadDetails"
-            >
-              <span class="icon">
-                <FontAwesomeIcon
-                  :icon="
-                    showSpreadDetails
-                      ? byPrefixAndName.fas['chevron-down']
-                      : byPrefixAndName.fas['chevron-right']
-                  "
-                />
-              </span>
-              <span>Spread Details: {{ spread.name }}</span>
-            </button>
-            <div
-              v-show="showSpreadDetails"
-              class="spread-details-body content"
-              v-html="spreadDescriptionHtml"
-            ></div>
+          <!-- Cards drawn into a spread that still need a position on the canvas. -->
+          <div v-if="isOwner && !isFinal && unplacedNewCount > 0" class="myst-callout">
+            <p>
+              You have {{ unplacedNewCount }} newly drawn card{{
+                unplacedNewCount === 1 ? '' : 's'
+              }}
+              waiting to be placed on your spread.
+              <router-link
+                :to="{ name: 'free-draw-placement', params: { id: reading.reading_id } }"
+                class="ml-1"
+              >
+                Arrange them now </router-link
+              >.
+            </p>
           </div>
-        </div>
-      </div>
 
-      <!-- Free draw: cards use the full width; no per-card details list. -->
-      <div v-if="!spread" class="reading-grid" :style="cardAspectStyle(readingDeck)">
-        <div
-          v-for="item in detailItems"
-          :key="'g-' + item.drawIndex"
-          class="reading-grid-card"
-          :class="{
-            'is-flipped': flipped.has(item.drawIndex),
-            'is-active': activeIndex === item.drawIndex,
-          }"
-          @mouseenter="setActive(item.drawIndex)"
-          @mouseleave="clearActive"
-          @focusin="setActive(item.drawIndex)"
-        >
-          <div
-            class="spread-flip"
-            role="button"
-            tabindex="0"
-            @click="onSpreadCardClick(item.drawIndex)"
-            @keydown.enter.prevent="onSpreadCardClick(item.drawIndex)"
-            @keydown.space.prevent="onSpreadCardClick(item.drawIndex)"
-          >
-            <div class="spread-face spread-face--back">
-              <img :src="cardBackThumbUrl" alt="Card Back" />
-              <span class="spread-order-badge">{{ item.order }}</span>
+          <div class="columns reading-top">
+            <div class="column is-7">
+              <dl class="reading-meta settings-panel">
+                <div class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['hashtag']" /></span
+                    >Reading ID
+                  </dt>
+                  <dd>
+                    <code>{{ reading.reading_id }}</code>
+                  </dd>
+                </div>
+                <div class="meta-row">
+                  <dt>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span
+                    >Reading URL
+                  </dt>
+                  <dd class="meta-url">
+                    <span class="reading-url-text">{{ readingUrl }}</span>
+                    <Tooltip text="Copy Reading URL">
+                      <button class="button is-small is-link" @click="copyReadingUrl">
+                        <span class="icon is-small"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']"
+                        /></span>
+                        <span>Copy</span>
+                      </button>
+                    </Tooltip>
+                  </dd>
+                </div>
+                <div class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['calendar-day']" /></span
+                    >Date
+                  </dt>
+                  <dd>{{ formatDateTime(reading.reading_time) }}</dd>
+                </div>
+                <div class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" /></span
+                    >Spread
+                  </dt>
+                  <dd>{{ displaySpreadName }}</dd>
+                </div>
+                <div class="meta-row">
+                  <dt>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['user']" /></span
+                    >Reader
+                  </dt>
+                  <dd>{{ readerName }}</dd>
+                </div>
+                <div v-if="readingDeck" class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['cards-blank']" /></span
+                    >Deck
+                  </dt>
+                  <dd>
+                    {{ readingDeck.name }}
+                    <span v-if="readingDeck.artist" class="meta-sub"
+                      >· art by {{ readingDeck.artist }}</span
+                    >
+                    <span v-if="readingDeck.system_short_name" class="data-chip ml-2">{{
+                      readingDeck.system_short_name
+                    }}</span>
+                  </dd>
+                </div>
+                <div v-if="readingDeck && readingDeck.purchase_url" class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['cart-shopping']" /></span
+                    >Purchase
+                  </dt>
+                  <dd>
+                    <a :href="readingDeck.purchase_url" target="_blank" rel="noopener noreferrer"
+                      >Buy this deck</a
+                    >
+                  </dd>
+                </div>
+              </dl>
+
+              <!-- Free draw: actions sit under the reading details. -->
+              <div v-if="!spread" class="buttons mt-3">
+                <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
+                  /></span>
+                  <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
+                </button>
+                <button
+                  class="button is-link"
+                  :class="{ 'is-loading': exporting }"
+                  @click="showExportModal = true"
+                >
+                  <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
+                  <span>Save as Image</span>
+                </button>
+                <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
+                  <span class="icon">
+                    <FontAwesomeLayers>
+                      <FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" />
+                      <FontAwesomeIcon
+                        :icon="byPrefixAndName.fas['circle-plus']"
+                        transform="shrink-6 down-6 right-7"
+                      />
+                    </FontAwesomeLayers>
+                  </span>
+                  <span>Draw More Cards</span>
+                </button>
+                <Tooltip v-if="isOwner && !isFinal" text="Permanently lock this reading">
+                  <button class="button is-light" @click="markFinal">
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
+                    /></span>
+                    <span>Mark as Final</span>
+                  </button>
+                </Tooltip>
+              </div>
             </div>
-            <div class="spread-face spread-face--reveal">
-              <img
-                :src="item.card.thumbUrl"
-                :class="{ reversed: item.card.reversed }"
-                :alt="item.card.card_name"
-                loading="lazy"
-              />
+
+            <!-- Spread description sits beside the details to use the space. -->
+            <div v-if="spread && spread.description" class="column is-5">
+              <CollapsibleRoot v-model:open="showSpreadDetails" class="spread-details">
+                <CollapsibleTrigger class="spread-details-header">
+                  <span class="icon">
+                    <FontAwesomeIcon
+                      :icon="
+                        showSpreadDetails
+                          ? byPrefixAndName.fas['chevron-down']
+                          : byPrefixAndName.fas['chevron-right']
+                      "
+                    />
+                  </span>
+                  <span>Spread Details: {{ spread.name }}</span>
+                </CollapsibleTrigger>
+                <CollapsibleContent class="collapsible-anim">
+                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div class="spread-details-body content" v-html="spreadDescriptionHtml"></div>
+                </CollapsibleContent>
+              </CollapsibleRoot>
             </div>
           </div>
-          <p class="reading-grid-caption">
-            <template v-if="flipped.has(item.drawIndex)">
-              {{ item.card.card_name
-              }}<span v-if="item.card.reversed" class="has-text-warning"> (Reversed)</span>
-            </template>
-            <span v-else class="has-text-grey is-italic">Card {{ item.order }}</span>
-          </p>
-        </div>
-      </div>
 
-      <!-- Spread: the canvas and card details sit side by side. -->
-      <div v-else class="columns reading-main">
-        <div class="column is-7-desktop">
-          <div class="spread-canvas reading-canvas" :style="cardAspectStyle(readingDeck)">
+          <!-- Free draw: cards use the full width; no per-card details list. -->
+          <div v-if="!spread" class="reading-grid" :style="cardAspectStyle(readingDeck)">
             <div
-              v-for="sc in spreadCards"
-              :key="sc.drawIndex"
-              class="spread-card"
+              v-for="item in detailItems"
+              :key="'g-' + item.drawIndex"
+              class="reading-grid-card"
               :class="{
-                'is-flipped': flipped.has(sc.drawIndex),
-                'is-active': activeIndex === sc.drawIndex,
+                'is-flipped': flipped.has(item.drawIndex),
+                'is-active': activeIndex === item.drawIndex,
               }"
-              :style="cardStyle(sc.position)"
-              @mouseenter="setActive(sc.drawIndex)"
+              @mouseenter="setActive(item.drawIndex)"
               @mouseleave="clearActive"
-              @focusin="setActive(sc.drawIndex)"
+              @focusin="setActive(item.drawIndex)"
             >
               <div
                 class="spread-flip"
                 role="button"
                 tabindex="0"
-                @click="onSpreadCardClick(sc.drawIndex)"
-                @keydown.enter.prevent="onSpreadCardClick(sc.drawIndex)"
-                @keydown.space.prevent="onSpreadCardClick(sc.drawIndex)"
+                @click="onSpreadCardClick(item.drawIndex)"
+                @keydown.enter.prevent="onSpreadCardClick(item.drawIndex)"
+                @keydown.space.prevent="onSpreadCardClick(item.drawIndex)"
               >
                 <div class="spread-face spread-face--back">
                   <img :src="cardBackThumbUrl" alt="Card Back" />
-                  <span class="spread-order-badge">{{ sc.position.order }}</span>
+                  <span class="spread-order-badge">{{ item.order }}</span>
                 </div>
                 <div class="spread-face spread-face--reveal">
                   <img
-                    :src="sc.card.thumbUrl"
-                    :class="{ reversed: sc.card.reversed }"
-                    :alt="sc.card.card_name"
+                    :src="item.card.thumbUrl"
+                    :class="{ reversed: item.card.reversed }"
+                    :alt="item.card.card_name"
                     loading="lazy"
                   />
-                  <span class="spread-order-badge spread-order-badge--reveal">{{
-                    sc.position.order
-                  }}</span>
+                </div>
+              </div>
+              <p class="reading-grid-caption">
+                <template v-if="flipped.has(item.drawIndex)">
+                  {{ item.card.card_name
+                  }}<span v-if="item.card.reversed" class="has-text-warning"> (Reversed)</span>
+                </template>
+                <span v-else class="has-text-grey is-italic">Card {{ item.order }}</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Spread: the canvas and card details sit side by side. -->
+          <div v-else class="columns reading-main">
+            <div class="column is-7-desktop">
+              <div class="spread-canvas reading-canvas" :style="cardAspectStyle(readingDeck)">
+                <div
+                  v-for="sc in spreadCards"
+                  :key="sc.drawIndex"
+                  class="spread-card"
+                  :class="{
+                    'is-flipped': flipped.has(sc.drawIndex),
+                    'is-active': activeIndex === sc.drawIndex,
+                  }"
+                  :style="cardStyle(sc.position)"
+                  @mouseenter="setActive(sc.drawIndex)"
+                  @mouseleave="clearActive"
+                  @focusin="setActive(sc.drawIndex)"
+                >
+                  <div
+                    class="spread-flip"
+                    role="button"
+                    tabindex="0"
+                    @click="onSpreadCardClick(sc.drawIndex)"
+                    @keydown.enter.prevent="onSpreadCardClick(sc.drawIndex)"
+                    @keydown.space.prevent="onSpreadCardClick(sc.drawIndex)"
+                  >
+                    <div class="spread-face spread-face--back">
+                      <img :src="cardBackThumbUrl" alt="Card Back" />
+                      <span class="spread-order-badge">{{ sc.position.order }}</span>
+                    </div>
+                    <div class="spread-face spread-face--reveal">
+                      <img
+                        :src="sc.card.thumbUrl"
+                        :class="{ reversed: sc.card.reversed }"
+                        :alt="sc.card.card_name"
+                        loading="lazy"
+                      />
+                      <span class="spread-order-badge spread-order-badge--reveal">{{
+                        sc.position.order
+                      }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="column is-5-desktop">
+              <!-- Card details + actions -->
+              <div class="reading-details">
+                <h2 class="spread-detail-list-title">Card Details</h2>
+                <p class="has-text-grey is-size-7 mb-3">
+                  Tap each card to reveal it. Tap a revealed card again to enlarge it.
+                </p>
+
+                <div class="reading-detail-grid">
+                  <div
+                    v-for="item in detailItems"
+                    :key="'row-' + item.drawIndex"
+                    class="spread-detail-row"
+                    :class="{
+                      'is-active': activeIndex === item.drawIndex,
+                      'is-revealed': flipped.has(item.drawIndex),
+                    }"
+                    @mouseenter="setActive(item.drawIndex)"
+                    @mouseleave="clearActive"
+                    @click="onSpreadCardClick(item.drawIndex)"
+                  >
+                    <span class="spread-detail-order">{{ item.order }}</span>
+                    <span class="spread-detail-text">
+                      <strong v-if="item.title">{{ item.title }}</strong>
+                      <template v-if="flipped.has(item.drawIndex)">
+                        <span>{{ item.card.card_name }}</span>
+                        <span v-if="item.card.reversed" class="has-text-warning">(Reversed)</span>
+                      </template>
+                      <span v-else class="has-text-grey is-italic">Not yet revealed</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div class="buttons mt-4">
+                  <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
+                    /></span>
+                    <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
+                  </button>
+                  <button
+                    class="button is-link"
+                    :class="{ 'is-loading': exporting }"
+                    @click="showExportModal = true"
+                  >
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['image']"
+                    /></span>
+                    <span>Save as Image</span>
+                  </button>
+                  <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']"
+                    /></span>
+                    <span>Draw More Cards</span>
+                  </button>
+                  <Tooltip v-if="isOwner && !isFinal" text="Permanently lock this reading">
+                    <button class="button is-light" @click="markFinal">
+                      <span class="icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
+                      /></span>
+                      <span>Mark as Final</span>
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
           </div>
+
+          <!-- Reading Notes: full-width detailed interpretation, below the cards. -->
+          <CollapsibleRoot v-if="readingNotes" v-model:open="showNotes" class="reading-notes mt-5">
+            <CollapsibleTrigger class="spread-details-header">
+              <span class="icon">
+                <FontAwesomeIcon
+                  :icon="
+                    showNotes
+                      ? byPrefixAndName.fas['chevron-down']
+                      : byPrefixAndName.fas['chevron-right']
+                  "
+                />
+              </span>
+              <span>Reading Notes</span>
+            </CollapsibleTrigger>
+            <CollapsibleContent class="collapsible-anim">
+              <!-- User-authored notes; sanitized by renderMarkdown() (marked + DOMPurify) -->
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <div class="spread-details-body content" v-html="readingNotesHtml"></div>
+            </CollapsibleContent>
+          </CollapsibleRoot>
         </div>
-
-        <div class="column is-5-desktop">
-          <!-- Card details + actions -->
-          <div class="reading-details">
-            <h2 class="spread-detail-list-title">Card Details</h2>
-            <p class="has-text-grey is-size-7 mb-3">
-              Tap each card to reveal it. Tap a revealed card again to enlarge it.
-            </p>
-
-            <div class="reading-detail-grid">
-              <div
-                v-for="item in detailItems"
-                :key="'row-' + item.drawIndex"
-                class="spread-detail-row"
-                :class="{
-                  'is-active': activeIndex === item.drawIndex,
-                  'is-revealed': flipped.has(item.drawIndex),
-                }"
-                @mouseenter="setActive(item.drawIndex)"
-                @mouseleave="clearActive"
-                @click="onSpreadCardClick(item.drawIndex)"
-              >
-                <span class="spread-detail-order">{{ item.order }}</span>
-                <span class="spread-detail-text">
-                  <strong v-if="item.title">{{ item.title }}</strong>
-                  <template v-if="flipped.has(item.drawIndex)">
-                    <span>{{ item.card.card_name }}</span>
-                    <span v-if="item.card.reversed" class="has-text-warning">(Reversed)</span>
-                  </template>
-                  <span v-else class="has-text-grey is-italic">Not yet revealed</span>
-                </span>
-              </div>
-            </div>
-
-            <div class="buttons mt-4">
-              <button class="button is-primary" :disabled="flippingAll" @click="flipAll">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['arrows-rotate']"
-                /></span>
-                <span>{{ allFlipped ? 'Flip All Back' : 'Flip All' }}</span>
-              </button>
-              <button
-                class="button is-link"
-                :class="{ 'is-loading': exporting }"
-                @click="showExportModal = true"
-              >
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
-                <span>Save as Image</span>
-              </button>
-              <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-                <span>Draw More Cards</span>
-              </button>
-              <button
-                v-if="isOwner && !isFinal"
-                class="button is-light"
-                title="Permanently lock this reading"
-                @click="markFinal"
-              >
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
-                /></span>
-                <span>Mark as Final</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Reading Notes: full-width detailed interpretation, below the cards. -->
-      <div v-if="readingNotes" class="reading-notes mt-5">
-        <button
-          class="spread-details-header"
-          :aria-expanded="showNotes ? 'true' : 'false'"
-          @click="showNotes = !showNotes"
-        >
-          <span class="icon">
-            <FontAwesomeIcon
-              :icon="
-                showNotes
-                  ? byPrefixAndName.fas['chevron-down']
-                  : byPrefixAndName.fas['chevron-right']
-              "
-            />
-          </span>
-          <span>Reading Notes</span>
-        </button>
-        <div v-show="showNotes" class="spread-details-body content" v-html="readingNotesHtml"></div>
       </div>
     </div>
   </section>
@@ -797,10 +797,11 @@ watch(
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-5-desktop is-7-tablet">
-          <h1 class="title is-3 is-size-4-mobile has-text-centered">
-            {{ readingName || 'Protected Reading' }}
-          </h1>
-          <div class="box has-text-centered">
+          <PageHeader
+            :title="readingName || 'Protected Reading'"
+            subtitle="This reading is password-protected."
+          />
+          <div class="settings-panel has-text-centered">
             <span class="icon is-large has-text-warning">
               <FontAwesomeLayers class="fa-2x">
                 <FontAwesomeIcon :icon="byPrefixAndName.fad['scroll']" />
@@ -810,9 +811,7 @@ watch(
                 />
               </FontAwesomeLayers>
             </span>
-            <p class="mt-3 mb-4">
-              This reading is password-protected. Enter the password to view it.
-            </p>
+            <p class="mt-3 mb-4">Enter the password below to view it.</p>
             <form @submit.prevent="unlock">
               <div class="field">
                 <div class="control has-icons-left">
@@ -859,9 +858,7 @@ watch(
       </p>
       <div class="buttons is-centered mt-4">
         <router-link class="button is-primary" :to="{ name: 'new-reading' }">
-          <span class="icon"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']"
-          /></span>
+          <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
           <span>Start a New Draw</span>
         </router-link>
         <router-link class="button" :to="{ name: 'home' }">Back to Home</router-link>
@@ -888,13 +885,13 @@ watch(
   >
     <p class="mb-4">Choose an image size:</p>
     <div class="export-options">
-      <button class="button is-medium export-option" @click="exportAt(1)">
+      <button class="button export-option" @click="exportAt(1)">
         <span class="export-option-main">
           <strong>Standard</strong>
           <span class="export-option-sub">Best for quick sharing · ~1600px wide</span>
         </span>
       </button>
-      <button class="button is-medium is-primary export-option" @click="exportAt(2)">
+      <button class="button is-primary export-option" @click="exportAt(2)">
         <span class="export-option-main">
           <strong>High resolution</strong>
           <span class="export-option-sub">Larger, sharper cards · ~3200px wide</span>
@@ -918,19 +915,7 @@ watch(
 
     <div class="field">
       <label class="label">Number of Cards</label>
-      <div class="control has-icons-left">
-        <input
-          v-model.number="drawForm.count"
-          class="input"
-          type="number"
-          min="1"
-          :max="maxDrawMore"
-          autocomplete="off"
-        />
-        <span class="icon is-small is-left"
-          ><FontAwesomeIcon :icon="byPrefixAndName.fas['diamond']"
-        /></span>
-      </div>
+      <NumberField v-model="drawForm.count" :min="1" :max="maxDrawMore" />
       <p class="help">
         {{ maxDrawMore }} card{{ maxDrawMore === 1 ? '' : 's' }} left in this deck.
       </p>
@@ -938,22 +923,18 @@ watch(
 
     <div class="field">
       <label class="label">Reversed Cards</label>
-      <label class="toggle-switch">
-        <input v-model="drawForm.useReversals" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">{{ drawForm.useReversals ? 'On' : 'Off' }}</span>
-      </label>
+      <ToggleSwitch v-model="drawForm.useReversals">{{
+        drawForm.useReversals ? 'On' : 'Off'
+      }}</ToggleSwitch>
     </div>
 
     <div v-if="deckExtraCards > 0" class="field">
       <label class="label"
         >Include {{ deckExtraCards }} Extra Card{{ deckExtraCards === 1 ? '' : 's' }}</label
       >
-      <label class="toggle-switch">
-        <input v-model="drawForm.useAdditionalCards" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">{{ drawForm.useAdditionalCards ? 'On' : 'Off' }}</span>
-      </label>
+      <ToggleSwitch v-model="drawForm.useAdditionalCards">{{
+        drawForm.useAdditionalCards ? 'On' : 'Off'
+      }}</ToggleSwitch>
     </div>
 
     <template #footer>
@@ -964,9 +945,7 @@ watch(
         :disabled="drawing || maxDrawMore < 1 || drawForm.count < 1"
         @click="submitDrawMore"
       >
-        <span class="icon"
-          ><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']"
-        /></span>
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
         <span>Draw</span>
       </button>
     </template>

@@ -3,11 +3,19 @@ import { apiFetch } from './useApi'
 import { endpoints } from '@/api/endpoints'
 
 const favoriteDecks: Ref<number[]> = ref([])
+// Dedupe concurrent callers into a single in-flight request (see useFavoriteSpreads).
+let inFlight: Promise<void> | null = null
 
 export function useFavoriteDecks() {
-  async function fetchFavoriteDecks(): Promise<void> {
-    const data = await apiFetch<number[]>(endpoints.account.favoriteDecks)
-    if (data) favoriteDecks.value = data
+  function fetchFavoriteDecks(): Promise<void> {
+    if (inFlight) return inFlight
+    inFlight = (async () => {
+      const data = await apiFetch<number[]>(endpoints.account.favoriteDecks)
+      if (data) favoriteDecks.value = data
+    })().finally(() => {
+      inFlight = null
+    })
+    return inFlight
   }
 
   function isFavorite(deckId: number): boolean {

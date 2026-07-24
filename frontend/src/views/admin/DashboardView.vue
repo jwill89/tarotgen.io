@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { APP_VERSION } from '@/constants'
+import PageHeader from '@/components/PageHeader.vue'
+import Tooltip from '@/components/Tooltip.vue'
 import type { UsageStats } from '@/types'
 
 const api = useAdminApi()
@@ -20,6 +23,98 @@ const counts = ref({
 })
 const stats = ref<UsageStats | null>(null)
 const loading = ref(true)
+
+interface NavItem {
+  to: string
+  label: string
+  icon: IconDefinition
+  count: number | null
+  /** Render the count as the highlighted pop badge (e.g. unread contacts). */
+  badge?: boolean
+}
+interface NavGroup {
+  label: string
+  icon: IconDefinition
+  items: NavItem[]
+}
+
+// The dashboard's section launcher: a grouped side-menu whose item counts stay
+// live off `counts`. (Errored Cards has no server-side count, so it shows none.)
+const navGroups = computed<NavGroup[]>(() => [
+  {
+    label: 'Catalog',
+    icon: byPrefixAndName.fad['grid-2-plus'],
+    items: [
+      {
+        to: 'admin-decks',
+        label: 'Decks',
+        icon: byPrefixAndName.fad['cards-blank'],
+        count: counts.value.decks,
+      },
+      {
+        to: 'admin-deck-systems',
+        label: 'Deck Systems',
+        icon: byPrefixAndName.fad['layer-group'],
+        count: counts.value.deckSystems,
+      },
+      {
+        to: 'admin-special-cards',
+        label: 'Special Cards',
+        icon: byPrefixAndName.fad['sparkles'],
+        count: counts.value.specialCards,
+      },
+      {
+        to: 'admin-spreads',
+        label: 'Spreads',
+        icon: byPrefixAndName.fad['table-cells'],
+        count: counts.value.spreads,
+      },
+    ],
+  },
+  {
+    label: 'Activity',
+    icon: byPrefixAndName.fas['gauge-high'],
+    items: [
+      {
+        to: 'admin-readings',
+        label: 'Readings',
+        icon: byPrefixAndName.fad['scroll'],
+        count: counts.value.readings,
+      },
+      {
+        to: 'admin-users',
+        label: 'Users',
+        icon: byPrefixAndName.fad['users'],
+        count: counts.value.users,
+      },
+      {
+        to: 'admin-contacts',
+        label: 'Contacts',
+        icon: byPrefixAndName.fad['envelope'],
+        count: counts.value.unreadContacts,
+        badge: true,
+      },
+      {
+        to: 'admin-card-reports',
+        label: 'Errored Cards',
+        icon: byPrefixAndName.fad['circle-exclamation'],
+        count: null,
+      },
+    ],
+  },
+  {
+    label: 'Site',
+    icon: byPrefixAndName.fad['gear'],
+    items: [
+      {
+        to: 'admin-changelog',
+        label: 'Changelog',
+        icon: byPrefixAndName.fad['newspaper'],
+        count: counts.value.changelog,
+      },
+    ],
+  },
+])
 
 // Largest bar values, used to scale the simple CSS bar charts.
 const maxDeck = computed(() => Math.max(1, ...(stats.value?.topDecks ?? []).map((d) => d.count)))
@@ -48,223 +143,159 @@ onMounted(async () => {
 <template>
   <section class="section">
     <div class="container">
-      <h1 class="title is-3">
-        Admin Dashboard
-        <span class="tag is-primary is-light ml-2 app-version" title="Application version"
-          >v{{ APP_VERSION }}</span
-        >
-      </h1>
-      <p class="subtitle is-5">Manage your tarot data.</p>
+      <div class="columns is-centered">
+        <div class="column is-11-desktop is-12-tablet">
+          <PageHeader title="Admin Dashboard" subtitle="Manage your tarot data.">
+            <Tooltip text="Application version">
+              <span class="tag app-version">v{{ APP_VERSION }}</span>
+            </Tooltip>
+          </PageHeader>
 
-      <div class="columns is-multiline">
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-decks' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-info">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['cards-blank']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Decks</p>
-            <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.decks + ' records' }}</p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link
-            :to="{ name: 'admin-deck-systems' }"
-            class="box home-action has-text-centered"
-          >
-            <span class="icon is-large has-text-link">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['layer-group']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Deck Systems</p>
-            <p class="subtitle is-6">
-              {{ loading ? 'Loading…' : counts.deckSystems + ' systems' }}
-            </p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link
-            :to="{ name: 'admin-special-cards' }"
-            class="box home-action has-text-centered"
-          >
-            <span class="icon is-large has-text-warning">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['sparkles']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Special Cards</p>
-            <p class="subtitle is-6">
-              {{ loading ? 'Loading…' : counts.specialCards + ' records' }}
-            </p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-spreads' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-link">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['table-cells']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Spreads</p>
-            <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.spreads + ' records' }}</p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-readings' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-grey-light">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['scroll']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Readings</p>
-            <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.readings + ' records' }}</p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-users' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-primary">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['users']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Users</p>
-            <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.users + ' accounts' }}</p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-contacts' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-success">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['envelope']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Contacts</p>
-            <p class="subtitle is-6">
-              {{ loading ? 'Loading…' : counts.unreadContacts + ' unread' }}
-            </p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link
-            :to="{ name: 'admin-card-reports' }"
-            class="box home-action has-text-centered"
-          >
-            <span class="icon is-large has-text-warning">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['circle-exclamation']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Errored Cards</p>
-            <p class="subtitle is-6">Reported scans</p>
-          </router-link>
-        </div>
-        <div class="column is-3">
-          <router-link :to="{ name: 'admin-changelog' }" class="box home-action has-text-centered">
-            <span class="icon is-large has-text-danger">
-              <FontAwesomeIcon :icon="byPrefixAndName.fad['newspaper']" size="2x" />
-            </span>
-            <p class="title is-4 mt-3">Changelog</p>
-            <p class="subtitle is-6">{{ loading ? 'Loading…' : counts.changelog + ' records' }}</p>
-          </router-link>
+          <div class="admin-console">
+            <!-- Section launcher -->
+            <nav class="admin-nav" aria-label="Admin sections">
+              <template v-for="group in navGroups" :key="group.label">
+                <p class="admin-nav-group">
+                  <span class="icon"><FontAwesomeIcon :icon="group.icon" /></span>{{ group.label }}
+                </p>
+                <router-link
+                  v-for="item in group.items"
+                  :key="item.to"
+                  :to="{ name: item.to }"
+                  class="admin-nav-item"
+                >
+                  <span class="nav-icon"><FontAwesomeIcon :icon="item.icon" /></span>
+                  <span class="nav-label">{{ item.label }}</span>
+                  <span v-if="item.badge && item.count" class="nav-badge">{{ item.count }}</span>
+                  <span v-else-if="item.count !== null" class="nav-count">{{
+                    loading ? '·' : item.count.toLocaleString()
+                  }}</span>
+                </router-link>
+              </template>
+            </nav>
+
+            <!-- Insights -->
+            <div class="admin-insights">
+              <p v-if="loading" class="has-text-grey">
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin
+                /></span>
+                <span>Loading insights…</span>
+              </p>
+
+              <template v-if="stats">
+                <h2 class="insights-title">Reading Insights</h2>
+
+                <div class="columns is-multiline">
+                  <div class="column is-4">
+                    <div class="settings-panel stat-box">
+                      <p class="stat-value">{{ stats.totals.readings.toLocaleString() }}</p>
+                      <p class="stat-label">Total readings</p>
+                    </div>
+                  </div>
+                  <div class="column is-4">
+                    <div class="settings-panel stat-box">
+                      <p class="stat-value">{{ stats.totals.last7.toLocaleString() }}</p>
+                      <p class="stat-label">Last 7 days</p>
+                    </div>
+                  </div>
+                  <div class="column is-4">
+                    <div class="settings-panel stat-box">
+                      <p class="stat-value">{{ stats.totals.last30.toLocaleString() }}</p>
+                      <p class="stat-label">Last 30 days</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="columns">
+                  <!-- Readings per day -->
+                  <div class="column is-7">
+                    <div class="settings-panel">
+                      <h3 class="title is-6">Readings per day (last 14)</h3>
+                      <div v-if="stats.daily.length" class="daily-chart">
+                        <div
+                          v-for="d in stats.daily"
+                          :key="d.date"
+                          class="daily-col"
+                          :title="d.date + ': ' + d.count"
+                        >
+                          <div
+                            class="daily-bar"
+                            :style="{ height: Math.round((d.count / maxDaily) * 100) + '%' }"
+                          ></div>
+                          <span class="daily-axis">{{ dayLabel(d.date) }}</span>
+                        </div>
+                      </div>
+                      <p v-else class="has-text-grey">No readings yet.</p>
+                    </div>
+                  </div>
+
+                  <!-- Reading types -->
+                  <div class="column is-5">
+                    <div class="settings-panel">
+                      <h3 class="title is-6">Reading types</h3>
+                      <div class="type-row">
+                        <span>Free draw</span
+                        ><strong>{{ stats.byType.freeDraw.toLocaleString() }}</strong>
+                      </div>
+                      <div class="type-row">
+                        <span>Spread</span
+                        ><strong>{{ stats.byType.spread.toLocaleString() }}</strong>
+                      </div>
+                      <div class="type-row">
+                        <span>Custom</span
+                        ><strong>{{ stats.byType.custom.toLocaleString() }}</strong>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="columns">
+                  <!-- Top decks -->
+                  <div class="column is-6">
+                    <div class="settings-panel">
+                      <h3 class="title is-6">Most-used decks</h3>
+                      <div v-for="d in stats.topDecks" :key="d.deck_id" class="rank-row">
+                        <span class="rank-name">{{ d.name }}</span>
+                        <span class="rank-track"
+                          ><span
+                            class="rank-fill"
+                            :style="{ width: Math.round((d.count / maxDeck) * 100) + '%' }"
+                          ></span
+                        ></span>
+                        <span class="rank-count">{{ d.count }}</span>
+                      </div>
+                      <p v-if="stats.topDecks.length === 0" class="has-text-grey">No data yet.</p>
+                    </div>
+                  </div>
+
+                  <!-- Top spreads -->
+                  <div class="column is-6">
+                    <div class="settings-panel">
+                      <h3 class="title is-6">Most-used spreads</h3>
+                      <div v-for="s in stats.topSpreads" :key="s.name" class="rank-row">
+                        <span class="rank-name">{{ s.name }}</span>
+                        <span class="rank-track"
+                          ><span
+                            class="rank-fill"
+                            :style="{ width: Math.round((s.count / maxSpread) * 100) + '%' }"
+                          ></span
+                        ></span>
+                        <span class="rank-count">{{ s.count }}</span>
+                      </div>
+                      <p v-if="stats.topSpreads.length === 0" class="has-text-grey">
+                        No spread readings yet.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </template>
+
+              <p v-else-if="!loading" class="has-text-grey">No insights available yet.</p>
+            </div>
+          </div>
         </div>
       </div>
-
-      <!-- Usage insights -->
-      <p v-if="loading" class="has-text-grey mt-5">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
-        <span>Loading insights…</span>
-      </p>
-
-      <template v-if="stats">
-        <h2 class="title is-4 mt-6">Reading Insights</h2>
-
-        <div class="columns is-multiline">
-          <div class="column is-4">
-            <div class="box stat-box">
-              <p class="stat-value">{{ stats.totals.readings.toLocaleString() }}</p>
-              <p class="stat-label">Total readings</p>
-            </div>
-          </div>
-          <div class="column is-4">
-            <div class="box stat-box">
-              <p class="stat-value">{{ stats.totals.last7.toLocaleString() }}</p>
-              <p class="stat-label">Last 7 days</p>
-            </div>
-          </div>
-          <div class="column is-4">
-            <div class="box stat-box">
-              <p class="stat-value">{{ stats.totals.last30.toLocaleString() }}</p>
-              <p class="stat-label">Last 30 days</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="columns">
-          <!-- Readings per day -->
-          <div class="column is-7">
-            <div class="box">
-              <h3 class="title is-6">Readings per day (last 14)</h3>
-              <div v-if="stats.daily.length" class="daily-chart">
-                <div
-                  v-for="d in stats.daily"
-                  :key="d.date"
-                  class="daily-col"
-                  :title="d.date + ': ' + d.count"
-                >
-                  <div
-                    class="daily-bar"
-                    :style="{ height: Math.round((d.count / maxDaily) * 100) + '%' }"
-                  ></div>
-                  <span class="daily-axis">{{ dayLabel(d.date) }}</span>
-                </div>
-              </div>
-              <p v-else class="has-text-grey">No readings yet.</p>
-            </div>
-          </div>
-
-          <!-- Reading types -->
-          <div class="column is-5">
-            <div class="box">
-              <h3 class="title is-6">Reading types</h3>
-              <div class="type-row">
-                <span>Free draw</span><strong>{{ stats.byType.freeDraw.toLocaleString() }}</strong>
-              </div>
-              <div class="type-row">
-                <span>Spread</span><strong>{{ stats.byType.spread.toLocaleString() }}</strong>
-              </div>
-              <div class="type-row">
-                <span>Custom</span><strong>{{ stats.byType.custom.toLocaleString() }}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="columns">
-          <!-- Top decks -->
-          <div class="column is-6">
-            <div class="box">
-              <h3 class="title is-6">Most-used decks</h3>
-              <div v-for="d in stats.topDecks" :key="d.deck_id" class="rank-row">
-                <span class="rank-name">{{ d.name }}</span>
-                <span class="rank-track"
-                  ><span
-                    class="rank-fill"
-                    :style="{ width: Math.round((d.count / maxDeck) * 100) + '%' }"
-                  ></span
-                ></span>
-                <span class="rank-count">{{ d.count }}</span>
-              </div>
-              <p v-if="stats.topDecks.length === 0" class="has-text-grey">No data yet.</p>
-            </div>
-          </div>
-
-          <!-- Top spreads -->
-          <div class="column is-6">
-            <div class="box">
-              <h3 class="title is-6">Most-used spreads</h3>
-              <div v-for="s in stats.topSpreads" :key="s.name" class="rank-row">
-                <span class="rank-name">{{ s.name }}</span>
-                <span class="rank-track"
-                  ><span
-                    class="rank-fill"
-                    :style="{ width: Math.round((s.count / maxSpread) * 100) + '%' }"
-                  ></span
-                ></span>
-                <span class="rank-count">{{ s.count }}</span>
-              </div>
-              <p v-if="stats.topSpreads.length === 0" class="has-text-grey">
-                No spread readings yet.
-              </p>
-            </div>
-          </div>
-        </div>
-      </template>
     </div>
   </section>
 </template>
@@ -276,9 +307,121 @@ onMounted(async () => {
   font-weight: 600;
 }
 
+/* ── Console layout: side-menu launcher + insights ─────────── */
+.admin-console {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.admin-nav {
+  flex: 0 0 240px;
+  position: sticky;
+  top: 5rem;
+  padding: 0.5rem;
+  background: linear-gradient(180deg, var(--myst-surface-2), var(--myst-surface));
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 14px;
+}
+
+.admin-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.85rem 0.7rem 0.4rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--myst-text-dim);
+}
+.admin-nav-group .icon {
+  color: var(--myst-gold);
+  font-size: 0.8rem;
+}
+.admin-nav-group:first-child {
+  padding-top: 0.35rem;
+}
+
+.admin-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  color: var(--myst-text-muted);
+  font-size: 0.9rem;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+.admin-nav-item .nav-icon {
+  flex: none;
+  width: 1.25em;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--myst-gold);
+}
+.admin-nav-item .nav-label {
+  flex: 1 1 auto;
+}
+.admin-nav-item .nav-count {
+  flex: none;
+  color: var(--myst-text-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.85rem;
+}
+.admin-nav-item .nav-badge {
+  flex: none;
+  background: var(--myst-aqua);
+  color: var(--myst-on-aqua);
+  font-weight: 600;
+  padding: 0.05rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+.admin-nav-item:hover {
+  background: rgba(201, 162, 75, 0.1);
+  color: var(--myst-text-strong);
+}
+.admin-nav-item:hover .nav-label {
+  color: var(--myst-text-strong);
+}
+.admin-nav-item:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+}
+
+.admin-insights {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.insights-title {
+  font-family: var(--myst-heading-font);
+  letter-spacing: 0.02em;
+  color: var(--myst-text);
+  font-size: 1.35rem;
+  margin-bottom: 1rem;
+}
+
+/* Stack the console on narrow screens. */
+@media screen and (max-width: 768px) {
+  .admin-console {
+    flex-direction: column;
+  }
+  .admin-nav {
+    position: static;
+    flex-basis: auto;
+    width: 100%;
+  }
+}
+
+/* ── Insight panels ────────────────────────────────────────── */
 .stat-box {
   text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--myst-border-strong);
 }
 
 .stat-value {
@@ -317,7 +460,7 @@ onMounted(async () => {
   width: 100%;
   min-height: 2px;
   border-radius: 4px 4px 0 0;
-  background: linear-gradient(to top, #6d4ed6, #b794f6);
+  background: linear-gradient(to top, var(--myst-aqua-deep), var(--myst-aqua));
 }
 
 .daily-axis {
@@ -343,7 +486,7 @@ onMounted(async () => {
 .rank-track {
   flex: 1 1 auto;
   height: 0.6rem;
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--myst-surface-3);
   border-radius: 999px;
   overflow: hidden;
 }
@@ -352,7 +495,7 @@ onMounted(async () => {
   display: block;
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(to right, #6d4ed6, #b794f6);
+  background: linear-gradient(to right, var(--myst-aqua-deep), var(--myst-aqua));
 }
 
 .rank-count {
@@ -367,7 +510,7 @@ onMounted(async () => {
   display: flex;
   justify-content: space-between;
   padding: 0.4rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--myst-border);
 }
 
 .type-row:last-child {

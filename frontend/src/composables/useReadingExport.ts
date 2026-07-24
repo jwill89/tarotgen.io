@@ -45,11 +45,14 @@ const HEADER_H = 190
 const FOOTER_H = 80
 const RADIUS = 18
 
-const BG_TOP = '#1a1330'
-const BG_BOTTOM = '#0e0b1c'
-const GOLD = '#e9c46a'
-const TEXT = '#efeafe'
-const MUTED = 'rgba(239, 234, 254, 0.6)'
+const BG_TOP = '#101016'
+const BG_BOTTOM = '#0b0b0f'
+const GOLD = '#c9a24b'
+const GOLD_LINE = 'rgba(201, 162, 75, 0.35)' // hairline tint of GOLD (was old-gold #e9c46a)
+const PANEL = '#1c1c25' // opaque panel behind text — matches --myst-surface-2
+const CARD_PLACEHOLDER = '#24242f' // empty card slot — matches --myst-surface-3
+const TEXT = '#ecebf2'
+const MUTED = 'rgba(236, 235, 242, 0.6)'
 
 function loadImage(url: string): Promise<HTMLImageElement | null> {
   return new Promise((resolve) => {
@@ -127,12 +130,12 @@ function drawCard(
     drawImageCover(ctx, img, -w / 2, -h / 2, w, h)
     ctx.restore()
   } else {
-    ctx.fillStyle = '#2a2342'
+    ctx.fillStyle = CARD_PLACEHOLDER
     ctx.fill()
   }
   ctx.shadowColor = 'transparent'
   ctx.lineWidth = 3
-  ctx.strokeStyle = 'rgba(233, 196, 106, 0.35)'
+  ctx.strokeStyle = GOLD_LINE
   roundRect(ctx, -w / 2, -h / 2, w, h, RADIUS)
   ctx.stroke()
   ctx.restore()
@@ -151,11 +154,11 @@ function drawPanel(
 ): void {
   ctx.save()
   roundRect(ctx, x, y, w, h, 16)
-  ctx.fillStyle = '#160f2b'
+  ctx.fillStyle = PANEL
   ctx.fill()
   if (border) {
     ctx.lineWidth = 1.5
-    ctx.strokeStyle = 'rgba(233, 196, 106, 0.18)'
+    ctx.strokeStyle = 'rgba(201, 162, 75, 0.18)'
     ctx.stroke()
   }
   ctx.restore()
@@ -257,7 +260,7 @@ function renderSpread(
   badges.forEach((b) => {
     ctx.beginPath()
     ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2)
-    ctx.fillStyle = 'rgba(20, 14, 40, 0.88)'
+    ctx.fillStyle = 'rgba(16, 16, 22, 0.88)'
     ctx.fill()
     ctx.lineWidth = 2
     ctx.strokeStyle = GOLD

@@ -3,7 +3,6 @@ import App from './App.vue'
 import router from './router'
 import { markAuthChecked } from './router'
 import { useUser } from './composables/useUser'
-import { initHeadingFont } from './composables/useHeadingFont'
 import { FontAwesomeIcon, FontAwesomeLayers } from '@fortawesome/vue-fontawesome'
 
 import 'bulma/css/bulma.min.css'
@@ -28,10 +27,6 @@ app.config.errorHandler = (err, _instance, info) => {
 // per-file import (icons are passed via :icon="byPrefixAndName.xxx['name']").
 app.component('FontAwesomeIcon', FontAwesomeIcon)
 app.component('FontAwesomeLayers', FontAwesomeLayers)
-
-// Apply the saved heading font before mount so the chosen display font paints
-// on the first frame instead of flashing the default and swapping.
-initHeadingFont()
 
 // Register the service worker (production only) to enable "Add to Home Screen".
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {

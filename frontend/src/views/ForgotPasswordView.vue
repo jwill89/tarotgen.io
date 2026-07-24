@@ -2,6 +2,7 @@
 import { byPrefixAndName } from '@/fontawesome'
 import { ref } from 'vue'
 import { useUser } from '@/composables/useUser'
+import PageHeader from '@/components/PageHeader.vue'
 
 const { requestPasswordReset } = useUser()
 
@@ -30,10 +31,12 @@ async function submit() {
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-4-desktop is-6-tablet">
-          <h1 class="title is-3 has-text-centered">Reset Password</h1>
+          <PageHeader
+            title="Reset Password"
+            subtitle="Enter your email and we'll send you a link to reset your password."
+          />
 
-          <div v-if="!done" class="box">
-            <p class="mb-4">Enter your email and we'll send you a link to reset your password.</p>
+          <div v-if="!done" class="settings-panel">
             <form @submit.prevent="submit">
               <div class="field">
                 <label class="label" for="fp-email">Email</label>
@@ -74,7 +77,7 @@ async function submit() {
             </form>
           </div>
 
-          <div v-else class="box">
+          <div v-else>
             <div class="notification is-success is-light">
               <span class="icon"
                 ><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope-circle-check']"
@@ -82,7 +85,7 @@ async function submit() {
               {{ message }}
             </div>
 
-            <div v-if="resetLink" class="notification is-warning is-light">
+            <div v-if="resetLink" class="myst-callout">
               <p class="mb-2">
                 <strong>Dev shortcut:</strong> email isn't configured here, so reset directly:
               </p>

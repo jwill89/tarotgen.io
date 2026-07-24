@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, onMounted, useTemplateRef, nextTick } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
@@ -8,7 +8,18 @@ import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import IconButton from '@/components/IconButton.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
 import { formatDateTime } from '@/utils/datetime'
+import {
+  PaginationRoot,
+  PaginationList,
+  PaginationListItem,
+  PaginationPrev,
+  PaginationNext,
+  PaginationEllipsis,
+} from 'reka-ui'
 
 interface AdminReading {
   reading_id: string
@@ -29,7 +40,6 @@ const loading = ref(true)
 const page = ref(1)
 const perPage = ref(50)
 const perPageOptions = [25, 50, 100, 200]
-const topPaginationRef = useTemplateRef<HTMLElement>('topPaginationRef')
 
 const {
   search,
@@ -56,21 +66,16 @@ const totalPages = computed(() => Math.max(1, Math.ceil(totalFiltered.value / pe
 // Clamp page when filtering reduces the total
 const safePage = computed(() => Math.min(page.value, totalPages.value))
 
+// Reka's Pagination doesn't re-clamp an out-of-range page when a filter or
+// per-page change shrinks the total, so keep the bound page in range ourselves
+// (otherwise the controls desync from the displayed page).
+watch(totalPages, (tp) => {
+  if (page.value > tp) page.value = tp
+})
+
 const pagedReadings = computed(() => {
   const start = (safePage.value - 1) * perPage.value
   return sortedReadings.value.slice(start, start + Number(perPage.value))
-})
-
-/** Pages to show in the window around the current page (excludes first/last). */
-const paginationWindow = computed(() => {
-  const pages: number[] = []
-  const current = safePage.value
-  const start = Math.max(2, current - 1)
-  const end = Math.min(totalPages.value - 1, Number(current) + 1)
-  for (let p = start; p <= end; p++) {
-    pages.push(p)
-  }
-  return pages
 })
 
 // Clean readings modal
@@ -78,6 +83,8 @@ const cleanModalActive = ref(false)
 const cleanDays = ref(30)
 const cleanBusy = ref(false)
 const cleanOptions = [7, 14, 30, 60, 90, 180, 365]
+const perPageSelectOptions = perPageOptions.map((n) => ({ value: n, label: String(n) }))
+const cleanDaySelectOptions = cleanOptions.map((d) => ({ value: d, label: `${d} days` }))
 
 async function fetchReadings() {
   loading.value = true
@@ -90,17 +97,8 @@ async function fetchReadings() {
   loading.value = false
 }
 
-function goToPage(p: number) {
-  if (p < 1 || p > totalPages.value) return
-  page.value = p
-}
-
-function goToPageFromBottom(p: number) {
-  if (p < 1 || p > totalPages.value) return
-  page.value = p
-  nextTick(() => {
-    topPaginationRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  })
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
 function viewReading(reading: AdminReading) {
@@ -145,251 +143,198 @@ onMounted(fetchReadings)
 <template>
   <section class="section">
     <div class="container">
-      <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-        <span>Back to Dashboard</span>
-      </router-link>
+      <div class="columns is-centered">
+        <div class="column is-11-desktop is-12-tablet">
+          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
+            <span>Back to Dashboard</span>
+          </router-link>
 
-      <div class="level">
-        <div class="level-left">
-          <div>
-            <h1 class="title is-3">Manage Readings</h1>
-            <p class="subtitle is-5">Browse and manage all saved readings.</p>
-          </div>
-        </div>
-        <div class="level-right">
-          <button class="button is-danger" @click="cleanModalActive = true">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
-            <span>Clean Readings</span>
-          </button>
-        </div>
-      </div>
+          <PageHeader title="Manage Readings" subtitle="Browse and manage all saved readings.">
+            <button class="button is-danger" @click="cleanModalActive = true">
+              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
+              <span>Clean Readings</span>
+            </button>
+          </PageHeader>
 
-      <div class="field">
-        <div class="control has-icons-left">
-          <input
-            v-model="search"
-            class="input"
-            type="text"
-            placeholder="Search by reading ID, deck, spread, or user..."
-          />
-          <span class="icon is-small is-left"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-          /></span>
-        </div>
-      </div>
-
-      <p v-if="loading" class="has-text-grey">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
-        <span>Loading readings…</span>
-      </p>
-
-      <template v-else>
-        <div class="level mb-4">
-          <div class="level-left">
-            <div class="level-item">
-              <div class="field has-addons">
-                <p class="control">
-                  <span class="button is-static">Per page</span>
-                </p>
-                <p class="control">
-                  <span class="select">
-                    <select v-model.number="perPage">
-                      <option v-for="n in perPageOptions" :key="n" :value="n">{{ n }}</option>
-                    </select>
-                  </span>
-                </p>
-              </div>
+          <div class="field">
+            <div class="control has-icons-left">
+              <input
+                v-model="search"
+                class="input"
+                type="text"
+                placeholder="Search by reading ID, deck, spread, or user..."
+              />
+              <span class="icon is-small is-left"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+              /></span>
             </div>
           </div>
-        </div>
 
-        <nav
-          v-if="totalPages > 1"
-          ref="topPaginationRef"
-          class="pagination is-centered mb-4"
-          role="navigation"
-        >
-          <button
-            class="pagination-previous"
-            :disabled="safePage <= 1"
-            @click="goToPage(safePage - 1)"
-          >
-            Previous
-          </button>
-          <button
-            class="pagination-next"
-            :disabled="safePage >= totalPages"
-            @click="goToPage(safePage + 1)"
-          >
-            Next
-          </button>
-          <ul class="pagination-list">
-            <li>
-              <button
-                class="pagination-link"
-                :class="{ 'is-current': safePage === 1 }"
-                @click="goToPage(1)"
-              >
-                1
-              </button>
-            </li>
-            <li v-if="safePage > 3"><span class="pagination-ellipsis">&hellip;</span></li>
-            <template v-for="p in paginationWindow" :key="'top-' + p">
-              <li>
-                <button
-                  class="pagination-link"
-                  :class="{ 'is-current': p === safePage }"
-                  @click="goToPage(p)"
-                >
-                  {{ p }}
-                </button>
-              </li>
-            </template>
-            <li v-if="safePage < totalPages - 2">
-              <span class="pagination-ellipsis">&hellip;</span>
-            </li>
-            <li v-if="totalPages > 1">
-              <button
-                class="pagination-link"
-                :class="{ 'is-current': safePage === totalPages }"
-                @click="goToPage(totalPages)"
-              >
-                {{ totalPages }}
-              </button>
-            </li>
-          </ul>
-        </nav>
+          <p v-if="loading" class="has-text-grey">
+            <span class="icon"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin
+            /></span>
+            <span>Loading readings…</span>
+          </p>
 
-        <div class="table-container">
-          <table class="table is-fullwidth is-hoverable is-striped">
-            <thead>
-              <tr>
-                <SortableTh
-                  label="Date"
-                  sort-key="reading_time"
-                  :active-key="sortKey"
-                  :dir="sortDir"
-                  @sort="toggleSort"
-                />
-                <SortableTh
-                  label="Reading ID"
-                  sort-key="reading_id"
-                  :active-key="sortKey"
-                  :dir="sortDir"
-                  @sort="toggleSort"
-                />
-                <SortableTh
-                  label="User"
-                  sort-key="display_name"
-                  :active-key="sortKey"
-                  :dir="sortDir"
-                  @sort="toggleSort"
-                />
-                <SortableTh
-                  label="Spread"
-                  sort-key="spread_name"
-                  :active-key="sortKey"
-                  :dir="sortDir"
-                  @sort="toggleSort"
-                />
-                <SortableTh
-                  label="Deck"
-                  sort-key="deck_name"
-                  :active-key="sortKey"
-                  :dir="sortDir"
-                  @sort="toggleSort"
-                />
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="reading in pagedReadings" :key="reading.reading_id">
-                <td>{{ formatDateTime(reading.reading_time) }}</td>
-                <td>
-                  <code>{{ reading.reading_id }}</code>
-                </td>
-                <td>{{ reading.display_name }}</td>
-                <td>{{ reading.spread_name || '—' }}</td>
-                <td>{{ reading.deck_name }}</td>
-                <td>
-                  <div class="buttons are-small">
-                    <button class="button is-info is-small" @click="viewReading(reading)">
-                      <span class="icon"
-                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']"
-                      /></span>
-                      <span>View</span>
-                    </button>
-                    <button class="button is-danger is-small" @click="deleteReading(reading)">
-                      <span class="icon"
-                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                      /></span>
-                      <span>Delete</span>
-                    </button>
+          <template v-else>
+            <div class="level mb-4">
+              <div class="level-left">
+                <div class="level-item">
+                  <div class="field has-addons">
+                    <p class="control">
+                      <span class="button is-static">Per page</span>
+                    </p>
+                    <p class="control">
+                      <BaseSelect
+                        v-model="perPage"
+                        :options="perPageSelectOptions"
+                        aria-label="Per page"
+                      />
+                    </p>
                   </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            </div>
+
+            <PaginationRoot
+              v-if="totalPages > 1"
+              v-model:page="page"
+              :total="totalFiltered"
+              :items-per-page="perPage"
+              :sibling-count="1"
+              show-edges
+              :default-page="1"
+              class="mb-4"
+            >
+              <PaginationList v-slot="{ items }" class="pagination-list-reka">
+                <PaginationPrev class="button is-small">‹</PaginationPrev>
+                <template v-for="(item, i) in items" :key="i">
+                  <PaginationListItem
+                    v-if="item.type === 'page'"
+                    :value="item.value"
+                    class="button is-small"
+                  >
+                    {{ item.value }}
+                  </PaginationListItem>
+                  <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
+                    >&hellip;</PaginationEllipsis
+                  >
+                </template>
+                <PaginationNext class="button is-small">›</PaginationNext>
+              </PaginationList>
+            </PaginationRoot>
+
+            <div class="settings-panel">
+              <div class="table-container">
+                <table class="table is-fullwidth is-hoverable is-striped">
+                  <thead>
+                    <tr>
+                      <SortableTh
+                        label="Date"
+                        sort-key="reading_time"
+                        :active-key="sortKey"
+                        :dir="sortDir"
+                        @sort="toggleSort"
+                      />
+                      <SortableTh
+                        label="Reading ID"
+                        sort-key="reading_id"
+                        :active-key="sortKey"
+                        :dir="sortDir"
+                        @sort="toggleSort"
+                      />
+                      <SortableTh
+                        label="User"
+                        sort-key="display_name"
+                        :active-key="sortKey"
+                        :dir="sortDir"
+                        @sort="toggleSort"
+                      />
+                      <SortableTh
+                        label="Spread"
+                        sort-key="spread_name"
+                        :active-key="sortKey"
+                        :dir="sortDir"
+                        @sort="toggleSort"
+                      />
+                      <SortableTh
+                        label="Deck"
+                        sort-key="deck_name"
+                        :active-key="sortKey"
+                        :dir="sortDir"
+                        @sort="toggleSort"
+                      />
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="reading in pagedReadings" :key="reading.reading_id">
+                      <td>{{ formatDateTime(reading.reading_time) }}</td>
+                      <td>
+                        <code>{{ reading.reading_id }}</code>
+                      </td>
+                      <td>{{ reading.display_name }}</td>
+                      <td>{{ reading.spread_name || '—' }}</td>
+                      <td>{{ reading.deck_name }}</td>
+                      <td>
+                        <div class="row-actions">
+                          <IconButton
+                            :icon="byPrefixAndName.fas['eye']"
+                            label="View"
+                            @click="viewReading(reading)"
+                          />
+                          <IconButton
+                            :icon="byPrefixAndName.fas['trash']"
+                            label="Delete"
+                            intent="danger"
+                            @click="deleteReading(reading)"
+                          />
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <PaginationRoot
+              v-if="totalPages > 1"
+              v-model:page="page"
+              :total="totalFiltered"
+              :items-per-page="perPage"
+              :sibling-count="1"
+              show-edges
+              :default-page="1"
+              class="mt-4"
+              @update:page="scrollToTop"
+            >
+              <PaginationList v-slot="{ items }" class="pagination-list-reka">
+                <PaginationPrev class="button is-small">‹</PaginationPrev>
+                <template v-for="(item, i) in items" :key="i">
+                  <PaginationListItem
+                    v-if="item.type === 'page'"
+                    :value="item.value"
+                    class="button is-small"
+                  >
+                    {{ item.value }}
+                  </PaginationListItem>
+                  <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
+                    >&hellip;</PaginationEllipsis
+                  >
+                </template>
+                <PaginationNext class="button is-small">›</PaginationNext>
+              </PaginationList>
+            </PaginationRoot>
+
+            <p class="has-text-grey mt-3">
+              Showing {{ pagedReadings.length }} of {{ totalFiltered.toLocaleString() }} readings
+              (page {{ safePage }} of {{ totalPages }}).
+            </p>
+          </template>
         </div>
-
-        <nav v-if="totalPages > 1" class="pagination is-centered mt-4" role="navigation">
-          <button
-            class="pagination-previous"
-            :disabled="safePage <= 1"
-            @click="goToPageFromBottom(safePage - 1)"
-          >
-            Previous
-          </button>
-          <button
-            class="pagination-next"
-            :disabled="safePage >= totalPages"
-            @click="goToPageFromBottom(safePage + 1)"
-          >
-            Next
-          </button>
-          <ul class="pagination-list">
-            <li>
-              <button
-                class="pagination-link"
-                :class="{ 'is-current': safePage === 1 }"
-                @click="goToPageFromBottom(1)"
-              >
-                1
-              </button>
-            </li>
-            <li v-if="safePage > 3"><span class="pagination-ellipsis">&hellip;</span></li>
-            <template v-for="p in paginationWindow" :key="'bot-' + p">
-              <li>
-                <button
-                  class="pagination-link"
-                  :class="{ 'is-current': p === safePage }"
-                  @click="goToPageFromBottom(p)"
-                >
-                  {{ p }}
-                </button>
-              </li>
-            </template>
-            <li v-if="safePage < totalPages - 2">
-              <span class="pagination-ellipsis">&hellip;</span>
-            </li>
-            <li v-if="totalPages > 1">
-              <button
-                class="pagination-link"
-                :class="{ 'is-current': safePage === totalPages }"
-                @click="goToPageFromBottom(totalPages)"
-              >
-                {{ totalPages }}
-              </button>
-            </li>
-          </ul>
-        </nav>
-
-        <p class="has-text-grey mt-3">
-          Showing {{ pagedReadings.length }} of {{ totalFiltered.toLocaleString() }} readings (page
-          {{ safePage }} of {{ totalPages }}).
-        </p>
-      </template>
+      </div>
     </div>
   </section>
 
@@ -406,11 +351,7 @@ onMounted(fetchReadings)
     <div class="field">
       <label class="label">Older than</label>
       <div class="control">
-        <div class="select is-fullwidth">
-          <select v-model.number="cleanDays">
-            <option v-for="d in cleanOptions" :key="d" :value="d">{{ d }} days</option>
-          </select>
-        </div>
+        <BaseSelect v-model="cleanDays" :options="cleanDaySelectOptions" aria-label="Older than" />
       </div>
     </div>
     <template #footer>
@@ -427,3 +368,19 @@ onMounted(fetchReadings)
     </template>
   </BaseModal>
 </template>
+
+<style scoped>
+.pagination-list-reka {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.pagination-list-reka [data-selected] {
+  background: var(--myst-aqua-deep);
+  color: #fff;
+  border-color: var(--myst-aqua-deep);
+}
+</style>

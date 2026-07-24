@@ -6,7 +6,9 @@ import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { formatDateTime } from '@/utils/datetime'
 import BaseModal from '@/components/BaseModal.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import type { AccountReading, DrawCard } from '@/types'
 
 const { listReadings, updateReading, deleteReading } = useAccount()
@@ -121,80 +123,92 @@ onMounted(load)
 <template>
   <section class="section">
     <div class="container">
-      <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-        <span>Back to Dashboard</span>
-      </router-link>
+      <div class="columns is-centered">
+        <div class="column is-10-desktop is-11-tablet">
+          <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
+            <span>Back to Dashboard</span>
+          </router-link>
 
-      <h1 class="title is-3">My Readings</h1>
-      <p class="subtitle is-5">
-        View your readings and manage their title, visibility, and password.
-      </p>
+          <PageHeader
+            title="My Readings"
+            subtitle="View your readings and manage their title, visibility, and password."
+          />
 
-      <p v-if="loading" class="has-text-grey">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
-        <span>Loading your readings…</span>
-      </p>
+          <p v-if="loading" class="has-text-grey">
+            <span class="icon"
+              ><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin
+            /></span>
+            <span>Loading your readings…</span>
+          </p>
 
-      <p v-else-if="readings.length === 0" class="has-text-grey">
-        You haven't saved any readings yet. New draws and recreations you make while signed in
-        appear here.
-      </p>
+          <p v-else-if="readings.length === 0" class="has-text-grey">
+            You haven't saved any readings yet. New draws and recreations you make while signed in
+            appear here.
+          </p>
 
-      <div v-else class="table-container">
-        <table class="table is-fullwidth is-hoverable is-striped">
-          <thead>
-            <tr>
-              <th>Reading</th>
-              <th>Date</th>
-              <th>Visibility</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="r in readings" :key="r.reading_id">
-              <td>{{ summarize(r) }}</td>
-              <td>{{ formatDateTime(r.reading_time) }}</td>
-              <td>
-                <span v-if="r.password_protected" class="tag is-warning is-light mr-1">
-                  <span class="icon is-small"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
-                  /></span>
-                  <span>Password</span>
-                </span>
-                <span v-if="r.hide_user" class="tag is-info is-light">Name hidden</span>
-                <span v-if="!r.password_protected && !r.hide_user" class="has-text-grey"
-                  >Public</span
-                >
-              </td>
-              <td>
-                <div class="buttons are-small">
-                  <router-link
-                    class="button is-info"
-                    :to="{ name: 'reading', params: { id: r.reading_id } }"
-                  >
-                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span>
-                    <span>View</span>
-                  </router-link>
-                  <button class="button" @click="openEdit(r)">
-                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
-                    <span>Edit</span>
-                  </button>
-                  <button
-                    class="button is-danger"
-                    :class="{ 'is-loading': deletingId === r.reading_id }"
-                    @click="removeReading(r)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                    /></span>
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+          <div v-else class="settings-panel">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable is-striped">
+                <thead>
+                  <tr>
+                    <th>Reading</th>
+                    <th>Date</th>
+                    <th>Visibility</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="r in readings" :key="r.reading_id">
+                    <td>{{ summarize(r) }}</td>
+                    <td>{{ formatDateTime(r.reading_time) }}</td>
+                    <td>
+                      <span v-if="r.password_protected" class="tag is-warning is-light mr-1">
+                        <span class="icon is-small"
+                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock-keyhole']"
+                        /></span>
+                        <span>Password</span>
+                      </span>
+                      <span v-if="r.hide_user" class="tag is-info is-light">Name hidden</span>
+                      <span v-if="!r.password_protected && !r.hide_user" class="has-text-grey"
+                        >Public</span
+                      >
+                    </td>
+                    <td>
+                      <div class="buttons are-small">
+                        <router-link
+                          class="button is-info"
+                          :to="{ name: 'reading', params: { id: r.reading_id } }"
+                        >
+                          <span class="icon"
+                            ><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']"
+                          /></span>
+                          <span>View</span>
+                        </router-link>
+                        <button class="button" @click="openEdit(r)">
+                          <span class="icon"
+                            ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
+                          /></span>
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          class="button is-danger"
+                          :class="{ 'is-loading': deletingId === r.reading_id }"
+                          @click="removeReading(r)"
+                        >
+                          <span class="icon"
+                            ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
+                          /></span>
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -225,19 +239,11 @@ onMounted(load)
     </div>
 
     <div class="field">
-      <label class="toggle-switch">
-        <input v-model="form.hide_user" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">Hide my display name on this reading</span>
-      </label>
+      <ToggleSwitch v-model="form.hide_user">Hide my display name on this reading</ToggleSwitch>
     </div>
 
     <div v-if="form.has_password" class="field">
-      <label class="toggle-switch">
-        <input v-model="form.remove_password" type="checkbox" />
-        <span class="toggle-track"><span class="toggle-thumb"></span></span>
-        <span class="toggle-state">Remove the current password</span>
-      </label>
+      <ToggleSwitch v-model="form.remove_password">Remove the current password</ToggleSwitch>
     </div>
 
     <div v-if="!form.remove_password" class="field">
