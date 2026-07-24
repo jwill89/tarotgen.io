@@ -8,6 +8,8 @@ import { usePasskeys } from '@/composables/usePasskeys'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { usePluginLink } from '@/composables/usePluginLink'
+import PageHeader from '@/components/PageHeader.vue'
+import Tooltip from '@/components/Tooltip.vue'
 import { endpoints } from '@/api/endpoints'
 import type { PluginToken } from '@/types'
 
@@ -273,16 +275,19 @@ async function revokePluginToken(token: PluginToken) {
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
-        <div class="column is-6-desktop is-8-tablet">
+        <div class="column is-8-desktop is-10-tablet">
           <router-link :to="{ name: 'dashboard' }" class="button is-small is-ghost mb-4">
             <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
             <span>Back to Dashboard</span>
           </router-link>
 
-          <h1 class="title is-3">Account Settings</h1>
+          <PageHeader
+            title="Account Settings"
+            subtitle="Manage your display name, password, sign-in methods, and connected apps."
+          />
 
           <!-- Display name -->
-          <div class="box">
+          <div class="settings-panel mb-5">
             <h2 class="title is-5">Display Name</h2>
             <form @submit.prevent="saveName">
               <div class="field">
@@ -310,7 +315,7 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Password -->
-          <div class="box">
+          <div class="settings-panel mb-5">
             <h2 class="title is-5">Change Password</h2>
             <form @submit.prevent="savePassword">
               <div class="field">
@@ -356,7 +361,7 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Google Account -->
-          <div class="box">
+          <div class="settings-panel mb-5">
             <h2 class="title is-5">Google Account</h2>
             <div v-if="googleError" class="notification is-danger is-light">{{ googleError }}</div>
             <template v-if="currentUser?.google_linked">
@@ -385,7 +390,7 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Passkeys -->
-          <div v-if="passkeySupported()" class="box">
+          <div v-if="passkeySupported()" class="settings-panel mb-5">
             <h2 class="title is-5">Passkeys</h2>
             <p class="mb-3">
               Passkeys let you sign in with biometrics (fingerprint, face) or your device's screen
@@ -412,22 +417,28 @@ async function revokePluginToken(token: PluginToken) {
                   </span>
                 </div>
                 <div class="passkey-actions">
-                  <button
-                    class="button is-small"
-                    title="Rename"
-                    @click="editPasskeyName(pk.passkey_id, pk.name)"
-                  >
-                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']" /></span>
-                  </button>
-                  <button
-                    class="button is-small is-danger is-light"
-                    title="Remove"
-                    @click="removePasskey(pk.passkey_id, pk.name)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                    /></span>
-                  </button>
+                  <Tooltip text="Rename">
+                    <button
+                      class="button is-small"
+                      aria-label="Rename"
+                      @click="editPasskeyName(pk.passkey_id, pk.name)"
+                    >
+                      <span class="icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
+                      /></span>
+                    </button>
+                  </Tooltip>
+                  <Tooltip text="Remove">
+                    <button
+                      class="button is-small is-danger is-light"
+                      aria-label="Remove"
+                      @click="removePasskey(pk.passkey_id, pk.name)"
+                    >
+                      <span class="icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
+                      /></span>
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -494,7 +505,7 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Connected Apps (Dalamud plugin) -->
-          <div class="box">
+          <div class="settings-panel mb-5">
             <h2 class="title is-5">Connected Apps</h2>
             <p class="mb-3">
               Apps linked to your account, like the TarotGen FFXIV plugin. Revoke access any time; a
@@ -513,17 +524,17 @@ async function revokePluginToken(token: PluginToken) {
                   </span>
                 </div>
                 <div class="passkey-actions">
-                  <button
-                    v-if="!t.revoked_at"
-                    class="button is-small is-danger is-light"
-                    title="Revoke"
-                    @click="revokePluginToken(t)"
-                  >
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                    /></span>
-                    <span>Revoke</span>
-                  </button>
+                  <Tooltip v-if="!t.revoked_at" text="Revoke">
+                    <button
+                      class="button is-small is-danger is-light"
+                      @click="revokePluginToken(t)"
+                    >
+                      <span class="icon"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
+                      /></span>
+                      <span>Revoke</span>
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             </div>
@@ -531,7 +542,7 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Danger zone -->
-          <div class="box danger-zone">
+          <div class="settings-panel danger-zone">
             <h2 class="title is-5 has-text-danger">Delete Account</h2>
             <p class="mb-3">
               Permanently delete your account and <strong>all of your readings</strong>. This cannot
@@ -566,14 +577,14 @@ async function revokePluginToken(token: PluginToken) {
 
 <style scoped>
 .danger-zone {
-  border: 1px solid var(--myst-danger, #e5556e);
+  border: 1px solid var(--myst-danger);
 }
 .passkey-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0.5rem 0;
-  border-bottom: 1px solid hsl(0, 0%, 90%);
+  border-bottom: 1px solid var(--myst-border);
 }
 .passkey-item:last-child {
   border-bottom: none;

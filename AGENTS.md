@@ -16,8 +16,9 @@ manage decks, deck systems, spreads, users, and more.
 
 It is a **single-page app (SPA) frontend + REST API backend**:
 
-- **Frontend:** Vue 3 (`<script setup>` + TypeScript), Vue Router, Bulma CSS,
-  TipTap (markdown editor), built with Vite.
+- **Frontend:** Vue 3 (`<script setup>` + TypeScript), Vue Router, Bulma CSS
+  (layout/utilities), Reka UI (headless interactive primitives), TipTap
+  (markdown editor), built with Vite.
 - **Backend:** PHP 8.5+ (Composer platform pinned to `8.5.6`),
   Slim 4 framework with PHP-DI (autowiring) container, a layered architecture
   over a SQLite database.
@@ -29,9 +30,9 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 
 | Area        | Tooling |
 |-------------|---------|
-| Frontend    | Vue `^3.5`, vue-router `^4.5`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0` |
+| Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
-| Icons       | FontAwesome **Pro v7**, self-hosted via the private kit (`@awesome.me/kit-91d12dd2d3`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
+| Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
 | FE testing  | Vitest `^4` with `happy-dom` |
 | FE linting  | ESLint `^10` (flat config) + `eslint-plugin-vue` + `@vue/eslint-config-typescript` |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
@@ -58,7 +59,7 @@ flattens both into the live server's single flat web root.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
 │   ├── eslint.config.js    # ESLint flat config (Vue 3 + TS).
 │   ├── tsconfig*.json       # TS project config.
-│   ├── .npmrc              # FontAwesome Pro kit token (gitignored).
+│   ├── .npmrc              # FontAwesome Pro registry token (gitignored).
 │   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/.
 │   └── src/                # Frontend source (alias `@` -> src).
 │       ├── main.ts         #   App bootstrap (mounts after session revalidation).
@@ -210,18 +211,24 @@ meta tags injected (and is careful not to leak password-protected readings).
 - **Constants/storage:** keys live in `src/constants.ts` under the `tarot.`
   namespace — don't hardcode storage keys.
 - **Icons:** FontAwesome is self-hosted and registered in `src/fontawesome.ts`.
-  Only the icons actually used are imported/added to the `library`, then
-  `dom.watch()` converts `<i class="fa-...">` tags to SVG (and watches for ones
-  Vue renders later). **Footgun:** if you use a new `fa-*` class in a template
-  without adding its import here, it silently won't render — always register it.
-  Icons come from the private kit, so there are no CDN requests.
+  Only the icons actually used are imported (tree-shakeable) and collected into a
+  `byPrefixAndName` lookup; templates render them with the `<FontAwesomeIcon>`
+  component, e.g. `:icon="byPrefixAndName.fas['house']"`. **Footgun:** if you use a
+  new icon in a template without adding its import + `index(...)` entry here, the
+  lookup is `undefined` and it won't render — always register it. Icons come from
+  the per-style Pro packages, so there are no CDN requests.
 - **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in
-  `src/assets/tokens.css`. Theme is dark (`data-theme="dark"` on `<html>`).
-- **Heading fonts:** headings read the `--myst-heading-font` CSS var; the
-  `useHeadingFont` composable swaps it and persists the choice. `FontSwitcher.vue`
-  is a temporary audition tool and is **currently disabled** (commented out in
-  `App.vue`); `initHeadingFont()` in `main.ts` still applies any saved choice.
-  Candidate faces live in `public/fonts/` + `src/assets/fonts.css`.
+  `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own
+  variables). Theme is dark (`data-theme="dark"` on `<html>`).
+- **Interactive UI (Reka UI):** dialogs, menus, popovers, tooltips, comboboxes,
+  selects, switches, segmented controls, number fields, disclosures, pagination,
+  and toasts are Reka UI headless primitives wrapped in shared components
+  (`BaseModal`, `ConfirmDialog`, `DeckComboBox`/`SpreadComboBox`,
+  `SegmentedControl`, `ToggleSwitch`, `Tooltip`, …) — prefer these over
+  hand-rolling a Bulma/native widget so behavior + accessibility stay consistent.
+- **Heading font:** headings read the `--myst-heading-font` CSS var, set once in
+  `tokens.css` to the self-hosted **Crucial** (`src/assets/fonts.css`,
+  `public/fonts/`). (The old multi-font audition switcher was retired.)
 
 ---
 
@@ -232,7 +239,7 @@ Run from the project root. Shell is **PowerShell** on Windows; chain with `;`.
 ### Frontend (npm) — run from `frontend/`
 ```powershell
 cd frontend
-npm install            # install deps (requires frontend/.npmrc with the FA Pro kit token — see below)
+npm install            # install deps (requires frontend/.npmrc with the FA Pro registry token — see below)
 npm run dev            # Vite dev server :5173 (proxies /api and /assets to localhost:80)
 npm run build          # production build to frontend/dist/
 npm run preview        # preview the production build
@@ -246,8 +253,8 @@ npm run gen:types      # regenerate src/types/api.generated.ts from backend/open
 
 > **`frontend/.npmrc` is required to `npm install`.** The icon packages come from a
 > private FontAwesome registry, so install needs a local `frontend/.npmrc` (gitignored)
-> holding the kit auth token. Without it, `@awesome.me/kit-*` and
-> `@fortawesome/*` won't resolve.
+> holding the registry auth token. Without it, the `@fortawesome/*` packages
+> won't resolve.
 
 ### Backend (composer / php) — run from `backend/`
 ```powershell
@@ -351,8 +358,8 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 
 - Copy `.env.example` to `.env` and fill in values. Loaded by `Tarot\Config\Env`
   in `api/index.php`.
-- Separately, a gitignored **`.npmrc`** at the repo root must hold the FontAwesome
-  Pro kit auth token for `npm install` to resolve the icon packages (see §6).
+- Separately, a gitignored **`.npmrc`** at `frontend/` must hold the FontAwesome
+  Pro registry auth token for `npm install` to resolve the icon packages (see §6).
 - Key vars: `APP_ENV` (`development`/`production`), `APP_ORIGIN` (CORS),
   `APP_URL` (links in emails), `SMTP_*` / `MAIL_*` (transactional email),
   `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` (optional OAuth).
@@ -395,7 +402,7 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 | Add reusable frontend logic         | `src/composables/use*.ts` |
 | Change shared API types             | `src/types/index.ts` |
 | Use a new icon                      | register it in `src/fontawesome.ts` (import + `library.add`) |
-| Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `useHeadingFont.ts` |
+| Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `--myst-heading-font` in `src/assets/tokens.css` |
 | Change a DB schema                  | new `db/migrate_*.php` script |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
 | Adjust auth/session/CSRF            | `api/index.php` + `api/Routes/Middleware/*` |

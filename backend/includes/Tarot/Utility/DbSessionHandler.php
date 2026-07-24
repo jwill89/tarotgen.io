@@ -27,6 +27,16 @@ use Throwable;
  */
 final readonly class DbSessionHandler implements SessionHandlerInterface, SessionUpdateTimestampHandlerInterface
 {
+    /**
+     * Slide an idle session's stored expiry at most once every WRITE_THROTTLE
+     * seconds instead of on every request. The sliding window (lifetime) is
+     * hours-to-days, so letting the stored expiry drift by a few minutes never
+     * risks a premature logout — but it lets updateTimestamp() skip the UPDATE on
+     * the vast majority of requests (a read, not a write), so authenticated calls
+     * no longer serialize on SQLite's single writer.
+     */
+    private const int WRITE_THROTTLE = 300;
+
     public function __construct(private PDO $db)
     {
     }
@@ -139,8 +149,22 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
     public function updateTimestamp(string $id, string $data): bool
     {
         try {
+            $key    = $this->key($id);
+            $newExp = time() + $this->lifetime();
+
+            // Only slide the expiry when it has drifted by more than WRITE_THROTTLE
+            // seconds. Reading the current expiry is a WAL-concurrent read; on most
+            // requests the session still has almost its full lifetime left, so we
+            // return here and skip the write entirely — no writer-lock contention.
+            $sel = $this->db->prepare('SELECT expires FROM sessions WHERE id = :id');
+            $sel->execute([':id' => $key]);
+            $current = $sel->fetchColumn();
+            if ($current !== false && ($newExp - (int)$current) < self::WRITE_THROTTLE) {
+                return true;
+            }
+
             $this->db->prepare('UPDATE sessions SET expires = :exp WHERE id = :id')
-                ->execute([':exp' => time() + $this->lifetime(), ':id' => $this->key($id)]);
+                ->execute([':exp' => $newExp, ':id' => $key]);
             return true;
         } catch (Throwable $e) {
             error_log('DbSessionHandler::updateTimestamp failed: ' . $e->getMessage());

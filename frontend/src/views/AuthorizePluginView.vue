@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { usePluginLink } from '@/composables/usePluginLink'
+import PageHeader from '@/components/PageHeader.vue'
 
 // The plugin opens this page with the PKCE + loopback query params.
 const route = useRoute()
@@ -78,9 +79,12 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
 <template>
   <section class="section">
     <div class="container" style="max-width: 40rem">
-      <h1 class="title">Connect the TarotGen Plugin</h1>
+      <PageHeader
+        title="Connect the TarotGen Plugin"
+        subtitle="Authorize the TarotGen FFXIV plugin to connect to your account, or continue as a guest."
+      />
 
-      <div v-if="!paramsValid" class="notification is-warning">
+      <div v-if="!paramsValid" class="myst-callout">
         This connection link is missing or has invalid parameters. Please start it from the plugin's
         settings in-game.
       </div>
@@ -91,7 +95,7 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
         <p><strong>Connected.</strong> You can close this tab and return to the game.</p>
       </div>
 
-      <div v-else class="box">
+      <div v-else class="settings-panel">
         <p class="mb-4">
           Choose how the <strong>TarotGen FFXIV plugin</strong> connects to TarotGen.io:
         </p>

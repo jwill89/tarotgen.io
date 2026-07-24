@@ -6,6 +6,8 @@ export interface Toast {
   id: number
   type: ToastType
   message: string
+  /** Resolved auto-dismiss duration in ms (0 = persist). Reka Toast owns the timer. */
+  duration: number
 }
 
 export interface ToastOptions {
@@ -41,12 +43,10 @@ function push(type: ToastType, message: string, options: ToastOptions = {}): num
   else if (type === 'warning') console.warn('[toast] ' + message, options.detail ?? '')
 
   const id = nextId++
-  toasts.value = [...toasts.value, { id, type, message }]
-
+  // Reka's <ToastRoot> owns the auto-dismiss timer (with pause-on-hover), so we
+  // just resolve the duration here and hand it to the rendered toast.
   const duration = options.duration ?? DEFAULT_DURATION[type]
-  if (duration > 0) {
-    setTimeout(() => dismiss(id), duration)
-  }
+  toasts.value = [...toasts.value, { id, type, message, duration }]
 
   return id
 }

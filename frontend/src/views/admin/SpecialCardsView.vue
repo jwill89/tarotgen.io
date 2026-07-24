@@ -6,6 +6,10 @@ import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import BaseModal from '@/components/BaseModal.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import IconButton from '@/components/IconButton.vue'
+import NumberField from '@/components/NumberField.vue'
+import BaseSelect from '@/components/BaseSelect.vue'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import type { SpecialCard, Deck } from '@/types'
 
@@ -33,6 +37,22 @@ const deckFiltered = computed(() =>
     ? specialCards.value
     : specialCards.value.filter((c) => c.deck_id === filterDeckId.value),
 )
+
+// Plain deck options for the modal's deck picker.
+const deckOptions = computed(() => decks.value.map((d) => ({ value: d.deck_id, label: d.name })))
+
+// Filter picker (Reka Select via BaseSelect): 0 is the "All Decks" sentinel, so
+// filterDeckId stays number | null and the fetch/filter null-checks are unchanged.
+const filterDeckOptions = computed(() => [
+  { value: 0, label: 'All Decks' },
+  ...decks.value.map((d) => ({ value: d.deck_id, label: d.name })),
+])
+const filterDeckModel = computed<number>({
+  get: () => filterDeckId.value ?? 0,
+  set: (v) => {
+    filterDeckId.value = v === 0 ? null : v
+  },
+})
 
 const {
   search,
@@ -132,120 +152,115 @@ onMounted(fetchData)
 <template>
   <section class="section">
     <div class="container">
-      <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-        <span>Back to Dashboard</span>
-      </router-link>
+      <div class="columns is-centered">
+        <div class="column is-11-desktop is-12-tablet">
+          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
+            <span>Back to Dashboard</span>
+          </router-link>
 
-      <div class="level">
-        <div class="level-left">
-          <div>
-            <h1 class="title is-3">Manage Special Cards</h1>
-            <p class="subtitle is-5">Manage extra cards specific to certain decks.</p>
-          </div>
-        </div>
-        <div class="level-right">
-          <button class="button is-primary" @click="openAdd">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-            <span>Add Special Card</span>
-          </button>
-        </div>
-      </div>
+          <PageHeader
+            title="Manage Special Cards"
+            subtitle="Manage extra cards specific to certain decks."
+          >
+            <button class="button is-primary" @click="openAdd">
+              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
+              <span>Add Special Card</span>
+            </button>
+          </PageHeader>
 
-      <div class="columns">
-        <div class="column is-4">
-          <div class="field">
-            <label class="label">Filter by Deck</label>
-            <div class="control is-expanded">
-              <div class="select is-fullwidth">
-                <select v-model="filterDeckId">
-                  <option :value="null">All Decks</option>
-                  <option v-for="deck in decks" :key="deck.deck_id" :value="deck.deck_id">
-                    {{ deck.name }}
-                  </option>
-                </select>
+          <div class="columns">
+            <div class="column is-4">
+              <div class="field">
+                <label class="label">Filter by Deck</label>
+                <BaseSelect
+                  v-model="filterDeckModel"
+                  :options="filterDeckOptions"
+                  aria-label="Filter by deck"
+                />
+              </div>
+            </div>
+            <div class="column is-8">
+              <div class="field">
+                <label class="label">Search</label>
+                <div class="control has-icons-left">
+                  <input
+                    v-model="search"
+                    class="input"
+                    type="text"
+                    placeholder="Search by name, card ID, or deck..."
+                  />
+                  <span class="icon is-small is-left"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
+                  /></span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        <div class="column is-8">
-          <div class="field">
-            <label class="label">Search</label>
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search by name, card ID, or deck..."
-              />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
+
+          <div class="settings-panel">
+            <div class="table-container">
+              <table class="table is-fullwidth is-hoverable is-striped">
+                <thead>
+                  <tr>
+                    <SortableTh
+                      label="Deck"
+                      sort-key="deck"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <th>System</th>
+                    <SortableTh
+                      label="Card ID"
+                      sort-key="card_id"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <SortableTh
+                      label="Name"
+                      sort-key="name"
+                      :active-key="sortKey"
+                      :dir="sortDir"
+                      @sort="toggleSort"
+                    />
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="card in visibleCards" :key="card.deck_id + '-' + card.card_id">
+                    <td>{{ deckLookup[card.deck_id]?.name ?? card.deck_id }}</td>
+                    <td>
+                      <span class="data-chip">{{
+                        deckLookup[card.deck_id]?.system_short_name ?? '—'
+                      }}</span>
+                    </td>
+                    <td>{{ card.card_id }}</td>
+                    <td>{{ card.name }}</td>
+                    <td>
+                      <div class="row-actions">
+                        <IconButton
+                          :icon="byPrefixAndName.fas['pen-to-square']"
+                          label="Edit"
+                          @click="openEdit(card)"
+                        />
+                        <IconButton
+                          :icon="byPrefixAndName.fas['trash']"
+                          label="Delete"
+                          intent="danger"
+                          @click="deleteCard(card)"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </div>
           </div>
+          <p v-if="visibleCards.length === 0" class="has-text-grey">No special cards found.</p>
         </div>
       </div>
-
-      <div class="table-container">
-        <table class="table is-fullwidth is-hoverable is-striped">
-          <thead>
-            <tr>
-              <SortableTh
-                label="Deck"
-                sort-key="deck"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <th>System</th>
-              <SortableTh
-                label="Card ID"
-                sort-key="card_id"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <SortableTh
-                label="Name"
-                sort-key="name"
-                :active-key="sortKey"
-                :dir="sortDir"
-                @sort="toggleSort"
-              />
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="card in visibleCards" :key="card.deck_id + '-' + card.card_id">
-              <td>{{ deckLookup[card.deck_id]?.name ?? card.deck_id }}</td>
-              <td>
-                <span class="tag is-info is-light">{{
-                  deckLookup[card.deck_id]?.system_short_name ?? '—'
-                }}</span>
-              </td>
-              <td>{{ card.card_id }}</td>
-              <td>{{ card.name }}</td>
-              <td>
-                <div class="buttons are-small">
-                  <button class="button is-info" @click="openEdit(card)">
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen-to-square']"
-                    /></span>
-                    <span>Edit</span>
-                  </button>
-                  <button class="button is-danger" @click="deleteCard(card)">
-                    <span class="icon"
-                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']"
-                    /></span>
-                    <span>Delete</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p v-if="visibleCards.length === 0" class="has-text-grey">No special cards found.</p>
     </div>
   </section>
 
@@ -259,25 +274,17 @@ onMounted(fetchData)
     <template v-if="editing">
       <div class="field">
         <label class="label">Deck</label>
-        <div class="control">
-          <div class="select is-fullwidth">
-            <select v-model.number="editing.deck_id" :disabled="!isNew">
-              <option v-for="deck in decks" :key="deck.deck_id" :value="deck.deck_id">
-                {{ deck.name }}
-              </option>
-            </select>
-          </div>
-        </div>
+        <BaseSelect
+          v-model="editing.deck_id"
+          :options="deckOptions"
+          :disabled="!isNew"
+          placeholder="Select a deck…"
+          aria-label="Deck"
+        />
       </div>
       <div class="field">
         <label class="label">Card ID</label>
-        <input
-          v-model.number="editing.card_id"
-          class="input"
-          type="number"
-          :disabled="!isNew"
-          min="1"
-        />
+        <NumberField v-model="editing.card_id" :min="1" :disabled="!isNew" />
       </div>
       <div class="field">
         <label class="label">Name</label>

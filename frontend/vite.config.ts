@@ -14,6 +14,11 @@ function withAssetVersion(url: string, relPath: string): string {
     // Seconds (not ms) to match og.php's filemtime() token for the same file.
     return `${url}?v=${Math.floor(statSync(resolve(__dirname, relPath)).mtimeMs / 1000)}`
   } catch {
+    // Warn loudly rather than failing silently: without the token, crawlers keep
+    // serving whatever banner they cached first.
+    console.warn(
+      `[cachebust-og-image] could not stat "${relPath}" — shipping ${url} with no version token`,
+    )
     return url
   }
 }
@@ -30,7 +35,11 @@ export default defineConfig({
           'https://tarotgen.io/assets/share_banner.png',
           withAssetVersion(
             'https://tarotgen.io/assets/share_banner.png',
-            'assets/share_banner.png',
+            // The banner is served from the BACKEND web root at /assets/ (the
+            // deploy flattens backend/ + frontend/dist/ into one root), so it is
+            // NOT under frontend/. Statting the wrong path silently shipped the
+            // URL unversioned.
+            '../backend/assets/share_banner.png',
           ),
         )
       },

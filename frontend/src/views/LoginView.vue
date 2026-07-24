@@ -7,6 +7,8 @@ import { usePasskeys } from '@/composables/usePasskeys'
 import { useToasts } from '@/composables/useToasts'
 import { endpoints } from '@/api/endpoints'
 import TurnstileWidget from '@/components/TurnstileWidget.vue'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -85,8 +87,8 @@ async function handlePasskeyLogin() {
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-4-desktop is-6-tablet">
-          <h1 class="title is-3 has-text-centered">Log In</h1>
-          <div class="box">
+          <PageHeader title="Log In" subtitle="Sign in to your account to continue." />
+          <div class="settings-panel">
             <form @submit.prevent="submit">
               <div class="field">
                 <label class="label" for="login-email">Email</label>
@@ -125,11 +127,7 @@ async function handlePasskeyLogin() {
               </div>
 
               <div class="field">
-                <label class="toggle-switch">
-                  <input v-model="rememberMe" type="checkbox" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span>Remember me</span>
-                </label>
+                <ToggleSwitch v-model="rememberMe">Remember me</ToggleSwitch>
               </div>
 
               <TurnstileWidget

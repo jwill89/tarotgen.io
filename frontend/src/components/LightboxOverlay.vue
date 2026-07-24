@@ -1,6 +1,16 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import {
+  DialogRoot,
+  DialogPortal,
+  DialogOverlay,
+  DialogContent,
+  DialogTitle,
+  DialogClose,
+  VisuallyHidden,
+} from 'reka-ui'
+import Tooltip from '@/components/Tooltip.vue'
 import { useToasts } from '@/composables/useToasts'
 import { endpoints } from '@/api/endpoints'
 import type { ReadingCard } from '@/types'
@@ -189,14 +199,11 @@ let dragStartX = 0
 let dragStartY = 0
 let panStartX = 0
 let panStartY = 0
-let panMoved = false
-let suppressClose = false
 
 function onMouseDown(e: MouseEvent) {
   if (!isZoomed.value) return
   e.preventDefault()
   isPanning.value = true
-  panMoved = false
   dragStartX = e.clientX
   dragStartY = e.clientY
   panStartX = panX.value
@@ -206,7 +213,6 @@ function onMouseDown(e: MouseEvent) {
 }
 
 function onMouseMove(e: MouseEvent) {
-  panMoved = true
   panX.value = panStartX + (e.clientX - dragStartX)
   panY.value = panStartY + (e.clientY - dragStartY)
   clampPan()
@@ -214,19 +220,8 @@ function onMouseMove(e: MouseEvent) {
 
 function onMouseUp() {
   isPanning.value = false
-  // A drag that releases over the backdrop fires a synthetic click on the
-  // overlay; swallow it so panning never closes the lightbox.
-  if (panMoved) suppressClose = true
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
-}
-
-function onOverlayClick() {
-  if (suppressClose) {
-    suppressClose = false
-    return
-  }
-  emit('close')
 }
 
 /* ── Touch: swipe-nav, drag-pan, pinch-zoom, double-tap ─── */
@@ -326,145 +321,191 @@ function next() {
 
 watch(index, () => resetZoom())
 
+// Escape is Reka's (DismissableLayer is layer-stack aware, so the topmost layer
+// wins); everything below is lightbox-specific and stays hand-rolled.
 function onKeydown(e: KeyboardEvent) {
-  if (e.key === 'Escape') emit('close')
-  else if (e.key === 'ArrowLeft') prev()
+  if (e.key === 'ArrowLeft') prev()
   else if (e.key === 'ArrowRight') next()
   else if (e.key === '+' || e.key === '=') zoomInBtn()
   else if (e.key === '-' || e.key === '_') zoomOutBtn()
   else if (e.key === '0') resetBtn()
 }
 
+// Reka owns the open state; mirror every close request (Escape, backdrop,
+// DialogClose) back out as the `close` event the parent already listens for.
+function onOpenChange(open: boolean): void {
+  if (!open) emit('close')
+}
+
+/**
+ * Chromium fires `pointerdown` on a native scrollbar with the scroll container
+ * itself as the event target, and Reka dismisses on any pointerdown outside
+ * DialogContent. The overlay IS our scroll container (a full-size card is taller
+ * than the viewport), so dragging its scrollbar would otherwise close the
+ * lightbox mid-drag. A pointer on the scrollbar reports an offset past the
+ * element's padding box — that's how we detect it and veto the dismissal.
+ */
+function onPointerDownOutside(e: Event): void {
+  const original = (e as CustomEvent<{ originalEvent: PointerEvent }>).detail.originalEvent
+  const target = original.target as HTMLElement | null
+  if (!target) return
+  if (original.offsetX > target.clientWidth || original.offsetY > target.clientHeight) {
+    e.preventDefault()
+  }
+}
+
 onMounted(() => {
   document.addEventListener('keydown', onKeydown)
-  document.body.style.overflow = 'hidden'
 })
 
 onUnmounted(() => {
   document.removeEventListener('keydown', onKeydown)
   window.removeEventListener('mousemove', onMouseMove)
   window.removeEventListener('mouseup', onMouseUp)
-  document.body.style.overflow = ''
 })
 </script>
 
 <template>
-  <div class="lightbox-overlay" @click.self="onOverlayClick">
-    <button class="lightbox-close" aria-label="Close lightbox" @click="emit('close')">
-      &times;
-    </button>
-
-    <button
-      v-if="index > -1 && !isZoomed"
-      class="lightbox-nav lightbox-prev"
-      aria-label="Previous image"
-      @click="prev"
-    >
-      &#10094;
-    </button>
-
-    <div class="lightbox-content">
-      <div
-        class="lightbox-viewport"
-        :class="{ zoomed: isZoomed, panning: isPanning }"
-        @wheel="onWheel"
-        @dblclick="onDoubleClick"
-        @mousedown="onMouseDown"
-        @touchstart="onTouchStart"
-        @touchmove="onTouchMove"
-        @touchend="onTouchEnd"
-      >
-        <img
-          ref="imgEl"
-          :src="imageSrc"
-          :alt="imageTitle"
-          :style="{
-            transform: imageTransform,
-            transition: animate ? 'transform 0.2s ease' : 'none',
-          }"
-          draggable="false"
-        />
-      </div>
-
-      <p v-if="imageTitle" class="lightbox-caption">
-        {{ imageTitle }}
-        <span v-if="isReversed" class="lightbox-reversed-tag">(Reversed)</span>
-      </p>
-
-      <div class="lightbox-toolbar">
-        <button
-          class="lightbox-zoom-btn"
-          :disabled="zoom <= MIN_ZOOM"
-          aria-label="Zoom out"
-          @click="zoomOutBtn"
+  <DialogRoot :open="true" @update:open="onOpenChange">
+    <DialogPortal>
+      <!--
+        The overlay is BOTH the backdrop and the scroll container, with
+        DialogContent nested INSIDE it. That keeps a tall image fully reachable
+        (margin:auto centring — align-items:center would clip the top and block
+        scrolling) while leaving the backdrop genuinely outside the content, so
+        Reka's outside-interaction close still works. Reka keys that off
+        pointer-DOWN, so a pan-drag that starts on the image and releases over
+        the backdrop no longer closes the lightbox.
+      -->
+      <DialogOverlay class="lightbox-overlay">
+        <DialogContent
+          class="lightbox-content"
+          :aria-describedby="undefined"
+          @pointer-down-outside="onPointerDownOutside"
         >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']"
-          /></span>
-        </button>
-        <button
-          class="lightbox-zoom-btn lightbox-zoom-reset"
-          aria-label="Reset zoom"
-          @click="resetBtn"
-        >
-          {{ Math.round(zoom * 100) }}%
-        </button>
-        <button
-          class="lightbox-zoom-btn"
-          :disabled="zoom >= MAX_ZOOM"
-          aria-label="Zoom in"
-          @click="zoomInBtn"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']"
-          /></span>
-        </button>
+          <VisuallyHidden>
+            <DialogTitle>{{ imageTitle || 'Card image' }}</DialogTitle>
+          </VisuallyHidden>
 
-        <button
-          v-if="isReversed"
-          class="button is-small is-rounded lightbox-flip-btn"
-          @click="flipped = !flipped"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate']"
-          /></span>
-          <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
-        </button>
+          <DialogClose class="lightbox-close" aria-label="Close lightbox">&times;</DialogClose>
 
-        <button
-          v-if="index > -1"
-          class="button is-small is-rounded lightbox-report-btn"
-          :class="{ 'is-success': alreadyReported }"
-          :disabled="reportingCard || alreadyReported"
-          :title="alreadyReported ? 'Reported' : 'Report a scan artefact or issue with this card'"
-          @click="reportCard"
-        >
-          <span class="icon is-small"
-            ><FontAwesomeIcon
-              :icon="
-                alreadyReported
-                  ? byPrefixAndName.fas['circle-check']
-                  : byPrefixAndName.fas['triangle-exclamation']
+          <button
+            v-if="index > -1 && !isZoomed"
+            class="lightbox-nav lightbox-prev"
+            type="button"
+            aria-label="Previous image"
+            @click="prev"
+          >
+            &#10094;
+          </button>
+          <div
+            class="lightbox-viewport"
+            :class="{ zoomed: isZoomed, panning: isPanning }"
+            @wheel="onWheel"
+            @dblclick="onDoubleClick"
+            @mousedown="onMouseDown"
+            @touchstart="onTouchStart"
+            @touchmove="onTouchMove"
+            @touchend="onTouchEnd"
+          >
+            <img
+              ref="imgEl"
+              :src="imageSrc"
+              :alt="imageTitle"
+              :style="{
+                transform: imageTransform,
+                transition: animate ? 'transform 0.2s ease' : 'none',
+              }"
+              draggable="false"
+            />
+          </div>
+
+          <p v-if="imageTitle" class="lightbox-caption">
+            {{ imageTitle }}
+            <span v-if="isReversed" class="lightbox-reversed-tag">(Reversed)</span>
+          </p>
+
+          <div class="lightbox-toolbar">
+            <button
+              class="lightbox-zoom-btn"
+              :disabled="zoom <= MIN_ZOOM"
+              aria-label="Zoom out"
+              @click="zoomOutBtn"
+            >
+              <span class="icon is-small"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-minus']"
+              /></span>
+            </button>
+            <button
+              class="lightbox-zoom-btn lightbox-zoom-reset"
+              aria-label="Reset zoom"
+              @click="resetBtn"
+            >
+              {{ Math.round(zoom * 100) }}%
+            </button>
+            <button
+              class="lightbox-zoom-btn"
+              :disabled="zoom >= MAX_ZOOM"
+              aria-label="Zoom in"
+              @click="zoomInBtn"
+            >
+              <span class="icon is-small"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass-plus']"
+              /></span>
+            </button>
+
+            <button
+              v-if="isReversed"
+              class="button is-small is-rounded lightbox-flip-btn"
+              @click="flipped = !flipped"
+            >
+              <span class="icon is-small"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate']"
+              /></span>
+              <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
+            </button>
+
+            <Tooltip
+              v-if="index > -1"
+              :text="
+                alreadyReported ? 'Reported' : 'Report a scan artefact or issue with this card'
               "
-          /></span>
-          <span>{{ alreadyReported ? 'Reported' : 'Report scan issue' }}</span>
-        </button>
-      </div>
+            >
+              <button
+                class="button is-small is-rounded lightbox-report-btn"
+                :class="{ 'is-success': alreadyReported }"
+                :disabled="reportingCard || alreadyReported"
+                @click="reportCard"
+              >
+                <span class="icon is-small"
+                  ><FontAwesomeIcon
+                    :icon="
+                      alreadyReported
+                        ? byPrefixAndName.fas['circle-check']
+                        : byPrefixAndName.fas['triangle-exclamation']
+                    "
+                /></span>
+                <span>{{ alreadyReported ? 'Reported' : 'Report scan issue' }}</span>
+              </button>
+            </Tooltip>
+          </div>
 
-      <p class="lightbox-hint">Scroll or double-click to zoom &middot; drag to pan</p>
+          <p class="lightbox-hint">Scroll or double-click to zoom &middot; drag to pan</p>
 
-      <p v-if="index >= 0 && cards.length > 1" class="lightbox-counter">
-        Image {{ index + 1 }} of {{ cards.length }}
-      </p>
-    </div>
-
-    <button
-      v-if="index < cards.length - 1 && !isZoomed"
-      class="lightbox-nav lightbox-next"
-      aria-label="Next image"
-      @click="next"
-    >
-      &#10095;
-    </button>
-  </div>
+          <p v-if="index >= 0 && cards.length > 1" class="lightbox-counter">
+            Image {{ index + 1 }} of {{ cards.length }}
+          </p>
+          <button
+            v-if="index < cards.length - 1 && !isZoomed"
+            class="lightbox-nav lightbox-next"
+            type="button"
+            aria-label="Next image"
+            @click="next"
+          >
+            &#10095;
+          </button>
+        </DialogContent>
+      </DialogOverlay>
+    </DialogPortal>
+  </DialogRoot>
 </template>

@@ -37,6 +37,14 @@ final class Connection
             self::$conn->exec('PRAGMA foreign_keys = ON');
             self::$conn->exec('PRAGMA busy_timeout = 5000');
             self::$conn->exec('PRAGMA journal_mode = WAL');
+            // With WAL, NORMAL is the recommended durability level: it drops the
+            // per-transaction fsync (only syncing at checkpoints), which sharply
+            // cuts write latency for the frequent session-row writes every
+            // authenticated request makes. Trade-off: a transaction committed in
+            // the last moment before an OS crash / power loss can roll back — no
+            // corruption. Acceptable here; revert to FULL if strict durability is
+            // required.
+            self::$conn->exec('PRAGMA synchronous = NORMAL');
         }
 
         return self::$conn;

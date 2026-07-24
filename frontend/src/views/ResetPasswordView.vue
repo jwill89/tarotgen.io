@@ -3,6 +3,8 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import PageHeader from '@/components/PageHeader.vue'
 
 const route = useRoute()
 const { resetPassword } = useUser()
@@ -46,9 +48,12 @@ async function submit() {
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-4-desktop is-6-tablet">
-          <h1 class="title is-3 has-text-centered">Set a New Password</h1>
+          <PageHeader
+            title="Set a New Password"
+            subtitle="Choose a new password for your account."
+          />
 
-          <div v-if="missingToken" class="box">
+          <div v-if="missingToken">
             <div class="notification is-danger is-light">
               This reset link is missing its token. Please request a new link.
             </div>
@@ -59,7 +64,7 @@ async function submit() {
             </div>
           </div>
 
-          <div v-else-if="!done" class="box">
+          <div v-else-if="!done" class="settings-panel">
             <form @submit.prevent="submit">
               <div class="field">
                 <label class="label" for="rp-password">New Password</label>
@@ -103,11 +108,9 @@ async function submit() {
               </div>
 
               <div class="field">
-                <label class="checkbox-inline toggle-switch">
-                  <input v-model="showPassword" type="checkbox" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-state">Show password</span>
-                </label>
+                <ToggleSwitch v-model="showPassword" class="checkbox-inline"
+                  >Show password</ToggleSwitch
+                >
               </div>
 
               <div v-if="error" class="notification is-danger is-light">{{ error }}</div>
@@ -126,7 +129,7 @@ async function submit() {
             </form>
           </div>
 
-          <div v-else class="box">
+          <div v-else>
             <div class="notification is-success is-light">
               <span class="icon"
                 ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-check']"

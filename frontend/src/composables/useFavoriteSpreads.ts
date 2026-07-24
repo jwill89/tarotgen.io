@@ -8,11 +8,21 @@ export interface FavoriteEntry {
 }
 
 const favorites: Ref<FavoriteEntry[]> = ref([])
+// Dedupe concurrent callers: a single page load mounts several components that
+// each call fetchFavorites — collapse them into one in-flight request instead of
+// a burst of identical authenticated calls (each of which the server serializes).
+let inFlight: Promise<void> | null = null
 
 export function useFavoriteSpreads() {
-  async function fetchFavorites(): Promise<void> {
-    const data = await apiFetch<FavoriteEntry[]>(endpoints.account.favorites)
-    if (data) favorites.value = data
+  function fetchFavorites(): Promise<void> {
+    if (inFlight) return inFlight
+    inFlight = (async () => {
+      const data = await apiFetch<FavoriteEntry[]>(endpoints.account.favorites)
+      if (data) favorites.value = data
+    })().finally(() => {
+      inFlight = null
+    })
+    return inFlight
   }
 
   function isFavorite(spreadType: 'public' | 'personal', spreadId: number): boolean {

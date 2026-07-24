@@ -32,16 +32,11 @@
          src/utils/seo.ts); og.php swaps it for the reading's URL for crawlers. -->
     <link rel="canonical" href="https://tarotgen.io/" />
 
-    <link rel="icon" type="image/x-icon" href="/assets/favicon.png" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="icon" type="image/png" href="/assets/favicon.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#1a1330" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <meta name="theme-color" content="#0b0b0f" />
     <style>
       [v-cloak] {
         display: none !important;
@@ -58,7 +53,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: #0e0b1c;
+        background-color: #0b0b0f;
         transition: opacity 0.35s ease;
       }
       #app-loading.is-hiding {
@@ -75,8 +70,8 @@
         width: 4.75rem;
         height: 4.75rem;
         border-radius: 50%;
-        border: 3px solid rgba(255, 255, 255, 0.12);
-        border-top-color: #e9c46a;
+        border: 3px solid rgba(201, 162, 75, 0.16);
+        border-top-color: #e6c47a;
         animation: app-loading-spin 0.9s linear infinite;
       }
       @keyframes app-loading-spin {
@@ -147,7 +142,7 @@
     <div id="app" v-cloak></div>
     <div id="app-loading" role="status" aria-label="Loading">
       <span class="app-loading__ring" aria-hidden="true"></span>
-      <img class="app-loading__orb" src="/assets/favicon.png" alt="" aria-hidden="true" />
+      <img class="app-loading__orb" src="/assets/favicon.svg" alt="" aria-hidden="true" />
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

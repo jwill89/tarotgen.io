@@ -1,9 +1,31 @@
 <script setup lang="ts">
+/**
+ * Spread picker built on Reka UI's Combobox. Same public API as before:
+ * `options` + `modelValue` (a SpreadOption or null), `update:modelValue`, and a
+ * `free-draw` emit. The null "No Spread (Free Draw)" choice is modelled as a
+ * sentinel value so it can live in Reka's value-keyed selection, then mapped back
+ * to null + the `free-draw` emit. Favourites / My Spreads / Public grouping and
+ * the in-item favourite star are preserved.
+ */
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed } from 'vue'
 import type { SpreadOption } from '@/types'
+import {
+  ComboboxRoot,
+  ComboboxAnchor,
+  ComboboxInput,
+  ComboboxTrigger,
+  ComboboxPortal,
+  ComboboxContent,
+  ComboboxViewport,
+  ComboboxGroup,
+  ComboboxLabel,
+  ComboboxItem,
+  ComboboxEmpty,
+} from 'reka-ui'
 import { useFavoriteSpreads } from '@/composables/useFavoriteSpreads'
 import { useUser } from '@/composables/useUser'
+import Tooltip from '@/components/Tooltip.vue'
 
 const props = defineProps<{
   options: SpreadOption[]
@@ -18,15 +40,29 @@ const emit = defineEmits<{
 const { toggleFavorite } = useFavoriteSpreads()
 const { isLoggedIn } = useUser()
 
-const query = ref('')
-const open = ref(false)
-const highlightIndex = ref(-1)
-const inputRef = ref<HTMLInputElement | null>(null)
-const listRef = ref<HTMLElement | null>(null)
+const searchTerm = ref('')
 const freeDrawSelected = ref(props.modelValue === null)
 
+// Sentinel so "No Spread (Free Draw)" is a real, value-keyed Combobox choice.
+const FREE_DRAW_ID = '__free_draw__'
+const FREE_DRAW = { id: FREE_DRAW_ID } as unknown as SpreadOption
+
+const selected = computed<SpreadOption | undefined>({
+  get: () => props.modelValue ?? (freeDrawSelected.value ? FREE_DRAW : undefined),
+  set: (val) => {
+    if (!val || val.id === FREE_DRAW_ID) {
+      freeDrawSelected.value = true
+      emit('update:modelValue', null)
+      emit('free-draw')
+    } else {
+      freeDrawSelected.value = false
+      emit('update:modelValue', val)
+    }
+  },
+})
+
 const filtered = computed(() => {
-  const q = query.value.toLowerCase().trim()
+  const q = searchTerm.value.toLowerCase().trim()
   if (!q) return props.options
   return props.options.filter((o) => o.name.toLowerCase().includes(q))
 })
@@ -42,95 +78,20 @@ const groupedOptions = computed(() => {
   return groups
 })
 
-// Flat list for keyboard navigation
-const flatItems = computed(() => groupedOptions.value.flatMap((g) => g.items))
-
-watch(
-  () => props.modelValue,
-  (val) => {
-    if (val && !open.value) {
-      query.value = val.name
-      freeDrawSelected.value = false
-    }
-  },
-)
-
-function onFocus() {
-  open.value = true
-  query.value = ''
-  highlightIndex.value = -1
+function displayValue(val: SpreadOption | undefined): string {
+  if (!val) return ''
+  return val.id === FREE_DRAW_ID ? 'No Spread (Free Draw)' : val.name
 }
 
-function onBlur() {
-  // Delay so click on option registers first
-  setTimeout(() => {
-    open.value = false
-    // Restore display name if nothing was picked
-    if (props.modelValue) {
-      query.value = props.modelValue.name
-    } else if (freeDrawSelected.value) {
-      query.value = 'No Spread (Free Draw)'
-    } else {
-      query.value = ''
-    }
-  }, 150)
+function onOpenChange(open: boolean): void {
+  if (open) searchTerm.value = ''
 }
 
-function selectOption(option: SpreadOption | null) {
-  emit('update:modelValue', option)
-  open.value = false
-  if (option) {
-    query.value = option.name
-    freeDrawSelected.value = false
-  } else {
-    query.value = 'No Spread (Free Draw)'
-    freeDrawSelected.value = true
-    emit('free-draw')
-  }
-  inputRef.value?.blur()
+function selectFreeDraw(): void {
+  selected.value = FREE_DRAW
 }
 
-function onKeydown(e: KeyboardEvent) {
-  if (!open.value) {
-    if (e.key === 'ArrowDown' || e.key === 'Enter') {
-      open.value = true
-      e.preventDefault()
-    }
-    return
-  }
-
-  if (e.key === 'ArrowDown') {
-    e.preventDefault()
-    highlightIndex.value = Math.min(Number(highlightIndex.value) + 1, flatItems.value.length - 1)
-    scrollToHighlighted()
-  } else if (e.key === 'ArrowUp') {
-    e.preventDefault()
-    highlightIndex.value = Math.max(highlightIndex.value - 1, -1)
-    scrollToHighlighted()
-  } else if (e.key === 'Enter') {
-    e.preventDefault()
-    if (highlightIndex.value >= 0 && highlightIndex.value < flatItems.value.length) {
-      selectOption(flatItems.value[highlightIndex.value])
-    }
-  } else if (e.key === 'Escape') {
-    open.value = false
-    inputRef.value?.blur()
-  }
-}
-
-function scrollToHighlighted() {
-  nextTick(() => {
-    const el = listRef.value?.querySelector('.is-highlighted')
-    el?.scrollIntoView({ block: 'nearest' })
-  })
-}
-
-function clearSelection() {
-  selectOption(null)
-}
-
-function onToggleFavorite(option: SpreadOption, e: Event) {
-  e.stopPropagation()
+function onToggleFavorite(option: SpreadOption): void {
   if (option.type === 'personal') {
     if (option.user_spread_id != null) void toggleFavorite('personal', option.user_spread_id)
   } else if (option.spread_id != null) {
@@ -140,174 +101,85 @@ function onToggleFavorite(option: SpreadOption, e: Event) {
 </script>
 
 <template>
-  <div class="spread-combobox">
-    <div class="control has-icons-left" :class="{ 'has-icons-right': modelValue }">
-      <input
-        ref="inputRef"
-        v-model="query"
-        class="input"
-        type="text"
-        :placeholder="
-          modelValue
-            ? modelValue.name
-            : freeDrawSelected
-              ? 'No Spread (Free Draw)'
-              : 'Search spreads...'
-        "
-        autocomplete="off"
-        @focus="onFocus"
-        @blur="onBlur"
-        @keydown="onKeydown"
-      />
+  <ComboboxRoot
+    v-model="selected"
+    v-model:search-term="searchTerm"
+    by="id"
+    :ignore-filter="true"
+    :reset-search-term-on-blur="true"
+    class="myst-combobox"
+    @update:open="onOpenChange"
+  >
+    <ComboboxAnchor
+      class="myst-combobox__anchor control has-icons-left"
+      :class="{ 'has-clear': !!modelValue }"
+    >
       <span class="icon is-small is-left">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" />
       </span>
-      <span
+      <ComboboxInput class="input" :display-value="displayValue" placeholder="Search spreads..." />
+      <button
         v-if="modelValue"
-        class="icon is-small is-right is-clickable"
-        @mousedown.prevent="clearSelection"
+        type="button"
+        class="myst-combobox__clear"
+        aria-label="Clear spread (free draw)"
+        @pointerdown.prevent="selectFreeDraw"
       >
         <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
-      </span>
-    </div>
+      </button>
+      <ComboboxTrigger class="myst-combobox__trigger" aria-label="Toggle spreads">
+        <FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']" />
+      </ComboboxTrigger>
+    </ComboboxAnchor>
 
-    <div v-show="open" ref="listRef" class="spread-combobox__dropdown">
-      <div
-        class="spread-combobox__item spread-combobox__item--none"
-        @mousedown.prevent="selectOption(null)"
-      >
-        <em>No Spread (Free Draw)</em>
-      </div>
+    <ComboboxPortal>
+      <ComboboxContent class="myst-combobox__content" position="popper" :side-offset="4">
+        <ComboboxViewport class="myst-combobox__viewport">
+          <ComboboxItem :value="FREE_DRAW" class="myst-combobox__item myst-combobox__item--none">
+            No Spread (Free Draw)
+          </ComboboxItem>
 
-      <template v-if="groupedOptions.length > 0">
-        <template v-for="group in groupedOptions" :key="group.label">
-          <div class="spread-combobox__group">{{ group.label }}</div>
-          <div
-            v-for="option in group.items"
-            :key="option.id"
-            class="spread-combobox__item"
-            :class="{ 'is-highlighted': flatItems.indexOf(option) === highlightIndex }"
-            @mousedown.prevent="selectOption(option)"
+          <ComboboxEmpty class="myst-combobox__empty">No spreads found.</ComboboxEmpty>
+
+          <ComboboxGroup
+            v-for="group in groupedOptions"
+            :key="group.label"
+            class="myst-combobox__group-wrap"
           >
-            <span class="spread-combobox__item-name">{{ option.name }}</span>
-            <span class="spread-combobox__card-count ml-2">
-              {{ option.card_count }} card{{ option.card_count === 1 ? '' : 's' }}
-            </span>
-            <span
-              v-if="isLoggedIn"
-              class="spread-combobox__star ml-auto"
-              :class="{ 'is-active': option.isFavorite }"
-              :title="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
-              @mousedown.prevent.stop="onToggleFavorite(option, $event)"
+            <ComboboxLabel class="myst-combobox__group">{{ group.label }}</ComboboxLabel>
+            <ComboboxItem
+              v-for="option in group.items"
+              :key="option.id"
+              :value="option"
+              class="myst-combobox__item"
             >
-              <FontAwesomeIcon
-                :icon="
-                  option.isFavorite ? byPrefixAndName.fas['star'] : byPrefixAndName.far['star']
-                "
-              />
-            </span>
-          </div>
-        </template>
-      </template>
-
-      <div v-else class="spread-combobox__empty">No spreads found.</div>
-    </div>
-  </div>
+              <span class="myst-combobox__item-name">{{ option.name }}</span>
+              <span class="myst-combobox__card-count ml-2">
+                {{ option.card_count }} card{{ option.card_count === 1 ? '' : 's' }}
+              </span>
+              <Tooltip
+                v-if="isLoggedIn"
+                :text="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+              >
+                <span
+                  class="myst-combobox__star ml-auto"
+                  :class="{ 'is-active': option.isFavorite }"
+                  :aria-label="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
+                  role="button"
+                  @pointerdown.stop.prevent
+                  @click.stop.prevent="onToggleFavorite(option)"
+                >
+                  <FontAwesomeIcon
+                    :icon="
+                      option.isFavorite ? byPrefixAndName.fas['star'] : byPrefixAndName.far['star']
+                    "
+                  />
+                </span>
+              </Tooltip>
+            </ComboboxItem>
+          </ComboboxGroup>
+        </ComboboxViewport>
+      </ComboboxContent>
+    </ComboboxPortal>
+  </ComboboxRoot>
 </template>
-
-<style scoped>
-.spread-combobox {
-  position: relative;
-}
-
-.spread-combobox__dropdown {
-  position: absolute;
-  z-index: 30;
-  top: 100%;
-  left: 0;
-  right: 0;
-  max-height: 280px;
-  overflow-y: auto;
-  background: var(--myst-surface);
-  border: 1px solid var(--myst-border-strong);
-  border-radius: 0 0 var(--bulma-radius) var(--bulma-radius);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
-}
-
-.spread-combobox__group {
-  padding: 0.4em 0.75em 0.2em;
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--myst-text-muted);
-  border-top: 1px solid var(--myst-border);
-}
-
-.spread-combobox__group:first-child {
-  border-top: none;
-}
-
-.spread-combobox__item {
-  padding: 0.5em 0.75em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  color: var(--myst-text);
-}
-
-.spread-combobox__item:hover,
-.spread-combobox__item.is-highlighted {
-  background: var(--myst-surface-3);
-}
-
-.spread-combobox__item--none {
-  border-bottom: 1px solid var(--myst-border);
-}
-
-.spread-combobox__item-name {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.spread-combobox__card-count {
-  font-size: 0.75rem;
-  color: var(--myst-text-dim);
-  white-space: nowrap;
-}
-
-.spread-combobox__star {
-  flex-shrink: 0;
-  cursor: pointer;
-  opacity: 0.4;
-  transition:
-    opacity 0.15s,
-    color 0.15s;
-  font-size: 0.85rem;
-  padding: 0.1em 0.25em;
-  color: var(--myst-text-muted);
-}
-
-.spread-combobox__star:hover {
-  opacity: 1;
-  color: var(--myst-gold);
-}
-
-.spread-combobox__star.is-active {
-  opacity: 1;
-  color: var(--myst-gold);
-}
-
-.spread-combobox__empty {
-  padding: 0.75em;
-  color: var(--myst-text-muted);
-  text-align: center;
-  font-style: italic;
-}
-
-.is-clickable {
-  pointer-events: auto !important;
-  cursor: pointer;
-}
-</style>

@@ -19,6 +19,10 @@ import { cardAspectStyle } from '@/utils/cardAspect'
 import { local } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import NumberField from '@/components/NumberField.vue'
+import PageHeader from '@/components/PageHeader.vue'
+import SegmentedControl from '@/components/SegmentedControl.vue'
 import type { Deck, SpreadOption, SpreadPosition } from '@/types'
 
 const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
@@ -34,6 +38,11 @@ const isLoading = ref(false)
 const ownerOptions = useTemplateRef<InstanceType<typeof ReadingOwnerOptions>>('ownerOptions')
 const selectedSpreadOption = ref<SpreadOption | null>(null)
 const freeDrawChosen = ref(true)
+
+const freeDrawModeOptions = [
+  { value: 'standard', label: 'Standard', icon: byPrefixAndName.fas['shuffle'] },
+  { value: 'placement', label: 'With Placement', icon: byPrefixAndName.fas['hand-pointer'] },
+]
 
 const form = reactive({
   deckId: null as number | null,
@@ -310,183 +319,154 @@ async function submitNewReading() {
   <section class="section">
     <div class="container">
       <div class="columns is-centered">
-        <div class="column is-8-desktop is-10-tablet">
-          <h1 class="title is-3 is-size-4-mobile">New Draw</h1>
-          <p class="subtitle is-5 is-size-6-mobile">Choose the settings for your draw.</p>
+        <div class="column is-10-desktop is-11-tablet">
+          <PageHeader title="New Draw" subtitle="Choose the settings for your draw." />
 
-          <div class="field">
-            <label class="label" for="deck_id">Deck</label>
-            <DeckComboBox v-model="form.deckId" :decks="decks" />
-          </div>
-
-          <div
-            v-if="selectedDeck && selectedDeck.additional_cards > 0"
-            class="notification is-warning is-light"
-          >
-            <p class="mb-2">
-              <strong
-                >This deck has {{ selectedDeck.additional_cards }} extra card{{
-                  selectedDeck.additional_cards === 1 ? '' : 's'
-                }}.</strong
-              >
-              Turn this on to allow them to be drawn in your reading.
-            </p>
-            <div class="control">
-              <label class="toggle-switch">
-                <input v-model="form.useAdditionalCards" type="checkbox" />
-                <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                <span class="toggle-state">{{ form.useAdditionalCards ? 'On' : 'Off' }}</span>
-              </label>
+          <div class="settings-panel">
+            <div class="field">
+              <label class="label" for="deck_id">Deck</label>
+              <DeckComboBox v-model="form.deckId" :decks="decks" />
             </div>
-          </div>
 
-          <div class="field">
-            <label class="label">Spread</label>
-            <SpreadComboBox
-              v-model="selectedSpreadOption"
-              :options="spreadOptions"
-              @free-draw="onFreeDrawSelected"
-            />
-          </div>
-
-          <div v-if="selectedSpread" class="columns">
-            <div v-if="selectedSpread.description" class="column">
-              <div class="notification spread-description">
-                <div class="content" v-html="spreadDescriptionHtml"></div>
-              </div>
-            </div>
-            <div class="column is-half">
-              <div
-                class="spread-canvas spread-canvas--preview has-grid mx-auto"
-                :style="cardAspectStyle(selectedDeck)"
-              >
-                <div
-                  v-for="card in previewCards"
-                  :key="'preview-' + card.order"
-                  class="spread-card spread-card--editor"
-                  :style="card.style"
+            <div
+              v-if="selectedDeck && selectedDeck.additional_cards > 0"
+              class="notification is-warning is-light"
+            >
+              <p class="mb-2">
+                <strong
+                  >This deck has {{ selectedDeck.additional_cards }} extra card{{
+                    selectedDeck.additional_cards === 1 ? '' : 's'
+                  }}.</strong
                 >
-                  <span class="preview-number" :style="card.numStyle">{{ card.order }}</span>
+                Turn this on to allow them to be drawn in your reading.
+              </p>
+              <div class="control">
+                <ToggleSwitch v-model="form.useAdditionalCards">{{
+                  form.useAdditionalCards ? 'On' : 'Off'
+                }}</ToggleSwitch>
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Spread</label>
+              <SpreadComboBox
+                v-model="selectedSpreadOption"
+                :options="spreadOptions"
+                @free-draw="onFreeDrawSelected"
+              />
+            </div>
+
+            <div v-if="selectedSpread" class="columns">
+              <div v-if="selectedSpread.description" class="column">
+                <div class="notification spread-description">
+                  <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+                  <!-- eslint-disable-next-line vue/no-v-html -->
+                  <div class="content" v-html="spreadDescriptionHtml"></div>
+                </div>
+              </div>
+              <div class="column is-half">
+                <div
+                  class="spread-canvas spread-canvas--preview has-grid mx-auto"
+                  :style="cardAspectStyle(selectedDeck)"
+                >
+                  <div
+                    v-for="card in previewCards"
+                    :key="'preview-' + card.order"
+                    class="spread-card spread-card--editor"
+                    :style="card.style"
+                  >
+                    <span class="preview-number" :style="card.numStyle">{{ card.order }}</span>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div v-if="selectedSpread" class="field">
-            <label class="label">
-              Position Titles
-              <span class="has-text-grey is-size-7 has-text-weight-normal"
-                >(optional — leave blank to use the spread's defaults)</span
-              >
-            </label>
-            <div class="columns is-multiline">
-              <div
-                v-for="(pos, idx) in selectedSpreadPositions"
-                :key="'title-' + pos.order"
-                class="column is-6"
-              >
-                <div class="field has-addons mb-0">
-                  <p class="control">
-                    <span class="button is-static">#{{ pos.order }}</span>
-                  </p>
-                  <p class="control is-expanded">
-                    <input
-                      v-model="positionTitles[idx]"
-                      class="input"
-                      :placeholder="pos.title || 'Position ' + pos.order"
-                      autocomplete="off"
-                    />
-                  </p>
+            <div v-if="selectedSpread" class="field">
+              <label class="label">
+                Position Titles
+                <span class="has-text-grey is-size-7 has-text-weight-normal"
+                  >(optional — leave blank to use the spread's defaults)</span
+                >
+              </label>
+              <div class="columns is-multiline">
+                <div
+                  v-for="(pos, idx) in selectedSpreadPositions"
+                  :key="'title-' + pos.order"
+                  class="column is-6"
+                >
+                  <div class="field has-addons mb-0">
+                    <p class="control">
+                      <span class="button is-static">#{{ pos.order }}</span>
+                    </p>
+                    <p class="control is-expanded">
+                      <input
+                        v-model="positionTitles[idx]"
+                        class="input"
+                        :placeholder="pos.title || 'Position ' + pos.order"
+                        autocomplete="off"
+                      />
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <div v-if="freeDrawChosen && !selectedSpread" class="field">
-            <label class="label">Free Draw Mode</label>
-            <div class="myst-segmented">
-              <button
-                type="button"
-                class="myst-segmented__btn"
-                :class="{ 'is-active': form.freeDrawMode === 'standard' }"
-                @click="form.freeDrawMode = 'standard'"
-              >
-                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['shuffle']" /></span>
-                <span>Standard</span>
-              </button>
-              <button
-                type="button"
-                class="myst-segmented__btn"
-                :class="{ 'is-active': form.freeDrawMode === 'placement' }"
-                @click="form.freeDrawMode = 'placement'"
-              >
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['hand-pointer']"
-                /></span>
-                <span>With Placement</span>
-              </button>
+            <div v-if="freeDrawChosen && !selectedSpread" class="field">
+              <label class="label">Free Draw Mode</label>
+              <SegmentedControl
+                v-model="form.freeDrawMode"
+                :options="freeDrawModeOptions"
+                aria-label="Free draw mode"
+              />
+              <p v-if="form.freeDrawMode === 'standard'" class="help">
+                Cards are drawn and displayed in order.
+              </p>
+              <p v-else class="help">
+                After drawing, you'll arrange the cards on a spread canvas and name each position.
+              </p>
             </div>
-            <p v-if="form.freeDrawMode === 'standard'" class="help">
-              Cards are drawn and displayed in order.
-            </p>
-            <p v-else class="help">
-              After drawing, you'll arrange the cards on a spread canvas and name each position.
-            </p>
-          </div>
 
-          <div v-if="spreadReady" class="columns is-multiline">
-            <div class="column is-4-desktop is-6-tablet">
-              <div class="field">
-                <label class="label" for="number_of_cards">Number of Cards</label>
-                <div class="control has-icons-left">
-                  <input
-                    id="number_of_cards"
-                    v-model.number="form.numberOfCards"
-                    class="input"
-                    type="number"
-                    min="1"
+            <div v-if="spreadReady" class="columns is-multiline">
+              <div class="column is-4-desktop is-6-tablet">
+                <div class="field">
+                  <label class="label">Number of Cards</label>
+                  <NumberField
+                    v-model="form.numberOfCards"
+                    :min="1"
                     :max="maxCards"
-                    autocomplete="off"
                     :disabled="selectedSpread !== null"
                   />
-                  <span class="icon is-small is-left">
-                    <FontAwesomeIcon :icon="byPrefixAndName.fas['diamond']" />
-                  </span>
+                  <p v-if="selectedSpread" class="help">Set by the selected spread.</p>
+                  <p v-else class="help">Up to {{ maxCards }} cards for this deck.</p>
                 </div>
-                <p v-if="selectedSpread" class="help">Set by the selected spread.</p>
-                <p v-else class="help">Up to {{ maxCards }} cards for this deck.</p>
               </div>
-            </div>
-            <div class="column is-4-desktop is-6-tablet">
-              <div class="field">
-                <label class="label">Reversed Cards</label>
-                <div class="control">
-                  <label class="toggle-switch">
-                    <input v-model="form.useReversals" type="checkbox" />
-                    <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                    <span class="toggle-state">{{ form.useReversals ? 'On' : 'Off' }}</span>
-                  </label>
+              <div class="column is-4-desktop is-6-tablet">
+                <div class="field">
+                  <label class="label">Reversed Cards</label>
+                  <div class="control">
+                    <ToggleSwitch v-model="form.useReversals">{{
+                      form.useReversals ? 'On' : 'Off'
+                    }}</ToggleSwitch>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
-          <ReadingOwnerOptions v-if="spreadReady" ref="ownerOptions" />
+            <ReadingOwnerOptions v-if="spreadReady" ref="ownerOptions" />
 
-          <div class="field">
-            <div class="buttons">
-              <button class="button is-primary is-medium" @click="submitNewReading">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['wand-magic-sparkles']"
-                /></span>
-                <span>Generate New Draw</span>
-              </button>
-              <button class="button is-medium" @click="resetForm">
-                <span class="icon"
-                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']"
-                /></span>
-                <span>Reset</span>
-              </button>
+            <div class="field">
+              <div class="buttons">
+                <button class="button is-primary" @click="submitNewReading">
+                  <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
+                  <span>Generate New Draw</span>
+                </button>
+                <button class="button" @click="resetForm">
+                  <span class="icon"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['rotate-left']"
+                  /></span>
+                  <span>Reset</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>

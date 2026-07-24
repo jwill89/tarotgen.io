@@ -245,6 +245,24 @@ describe('useAdminApi', () => {
     )
   })
 
+  it('del returns true on a 204 No Content success, so callers still refresh', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse(null, { status: 204 })))
+    expect(await useAdminApi().del('/pending-spreads/7')).toBe(true)
+  })
+
+  it('del returns the JSON body when the DELETE responds with one', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({ deleted: 3 })))
+    expect(await useAdminApi().del<{ deleted: number }>('/readings/clean')).toEqual({ deleted: 3 })
+  })
+
+  it('del returns null when the DELETE fails', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(fakeResponse({ error: 'nope' }, { ok: false, status: 500 })),
+    )
+    expect(await useAdminApi().del('/decks/5')).toBeNull()
+  })
+
   it('returns null when fetch rejects', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
     expect(await useAdminApi().get('/decks')).toBeNull()

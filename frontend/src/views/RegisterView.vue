@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
+import ToggleSwitch from '@/components/ToggleSwitch.vue'
+import PageHeader from '@/components/PageHeader.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
@@ -64,12 +66,12 @@ function registerWithGoogle() {
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-5-desktop is-7-tablet">
-          <h1 class="title is-3 has-text-centered">Create an Account</h1>
-          <p class="subtitle is-6 has-text-centered">
-            Save and revisit your readings. (Two-factor and passkeys are coming later.)
-          </p>
+          <PageHeader
+            title="Create an Account"
+            subtitle="Save and revisit your readings. (Two-factor and passkeys are coming later.)"
+          />
 
-          <div v-if="!done" class="box">
+          <div v-if="!done" class="settings-panel">
             <form @submit.prevent="submit">
               <div class="field">
                 <label class="label" for="reg-email">Email</label>
@@ -150,11 +152,9 @@ function registerWithGoogle() {
               </div>
 
               <div class="field">
-                <label class="checkbox-inline toggle-switch">
-                  <input v-model="showPassword" type="checkbox" />
-                  <span class="toggle-track"><span class="toggle-thumb"></span></span>
-                  <span class="toggle-state">Show password</span>
-                </label>
+                <ToggleSwitch v-model="showPassword" class="checkbox-inline"
+                  >Show password</ToggleSwitch
+                >
               </div>
 
               <div v-if="errors.length" class="notification is-danger is-light">
@@ -165,7 +165,7 @@ function registerWithGoogle() {
 
               <div class="field mt-4">
                 <button
-                  class="button is-success is-fullwidth"
+                  class="button is-primary is-fullwidth"
                   type="submit"
                   :class="{ 'is-loading': loading }"
                   :disabled="loading"
@@ -197,7 +197,7 @@ function registerWithGoogle() {
             </form>
           </div>
 
-          <div v-else class="box">
+          <div v-else>
             <div class="notification is-success is-light">
               <span class="icon"
                 ><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope-circle-check']"
@@ -205,7 +205,7 @@ function registerWithGoogle() {
               {{ successMessage }}
             </div>
 
-            <div v-if="activationLink" class="notification is-warning is-light">
+            <div v-if="activationLink" class="myst-callout">
               <p class="mb-2">
                 <strong>Dev shortcut:</strong> email isn't configured here, so activate directly:
               </p>

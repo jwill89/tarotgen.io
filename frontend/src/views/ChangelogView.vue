@@ -2,6 +2,7 @@
 import { onMounted } from 'vue'
 import { useChangelog } from '@/composables/useChangelog'
 import { renderMarkdown } from '@/utils/markdown'
+import PageHeader from '@/components/PageHeader.vue'
 
 const { entries, fetchChangelog } = useChangelog()
 
@@ -19,20 +20,27 @@ function formatDate(date: string): string {
 <template>
   <section class="section">
     <div class="container">
-      <h1 class="title is-3 is-size-4-mobile">Changelog</h1>
-      <p class="subtitle is-5 is-size-6-mobile">News and updates about the generator.</p>
+      <div class="columns is-centered">
+        <div class="column is-8-desktop is-10-tablet">
+          <PageHeader title="Changelog" subtitle="News and updates about the generator." />
 
-      <div class="changelog-timeline">
-        <article v-for="entry in entries" :key="entry.entry_id" class="changelog-entry">
-          <div class="changelog-entry-head">
-            <time class="changelog-date">{{ formatDate(entry.entry_date) }}</time>
-            <h2 class="changelog-title">{{ entry.title }}</h2>
+          <div class="settings-panel">
+            <div class="changelog-timeline">
+              <article v-for="entry in entries" :key="entry.entry_id" class="changelog-entry">
+                <div class="changelog-entry-head">
+                  <time class="changelog-date">{{ formatDate(entry.entry_date) }}</time>
+                  <h2 class="changelog-title">{{ entry.title }}</h2>
+                </div>
+                <!-- Sanitized by renderMarkdown() (marked + DOMPurify) — see utils/markdown.ts -->
+                <!-- eslint-disable-next-line vue/no-v-html -->
+                <div class="content changelog-body" v-html="renderMarkdown(entry.body)"></div>
+              </article>
+            </div>
+
+            <p v-if="entries.length === 0" class="has-text-grey">No changelog entries yet.</p>
           </div>
-          <div class="content changelog-body" v-html="renderMarkdown(entry.body)"></div>
-        </article>
+        </div>
       </div>
-
-      <p v-if="entries.length === 0" class="has-text-grey">No changelog entries yet.</p>
     </div>
   </section>
 </template>

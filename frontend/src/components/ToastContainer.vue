@@ -1,141 +1,54 @@
 <script setup lang="ts">
+/**
+ * Toast stack, built on Reka UI's Toast primitives. `useToasts` remains the
+ * queue owner; Reka handles the animation, swipe-to-dismiss, and pause-on-hover
+ * timing. When a toast closes (timer, swipe, or the close button) we drop it
+ * from the queue after a short beat so its close animation can play. Styles are
+ * global (in style.css) so they apply regardless of where Reka mounts the nodes.
+ */
 import { byPrefixAndName } from '@/fontawesome'
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
+import { ToastProvider, ToastRoot, ToastTitle, ToastClose, ToastViewport } from 'reka-ui'
 import { useToasts, type ToastType } from '@/composables/useToasts'
 
 const { toasts, dismiss } = useToasts()
 
-const ICONS: Record<ToastType, string> = {
-  success: 'fa-circle-check',
-  error: 'fa-circle-exclamation',
-  warning: 'fa-triangle-exclamation',
-  info: 'fa-circle-info',
+// Object form (byPrefixAndName), matching the rest of the app — the old string
+// form ('fa-circle-check') never resolved with this self-hosted kit setup.
+const ICONS: Record<ToastType, IconDefinition> = {
+  success: byPrefixAndName.fas['circle-check'],
+  error: byPrefixAndName.fas['circle-exclamation'],
+  warning: byPrefixAndName.fas['triangle-exclamation'],
+  info: byPrefixAndName.fas['circle-info'],
+}
+
+// Persisting toasts (duration 0) get an effectively-infinite Reka timer.
+const PERSIST = 1_000_000_000
+
+function onOpenChange(open: boolean, id: number): void {
+  // Let the close animation finish before removing the node from the queue.
+  if (!open) window.setTimeout(() => dismiss(id), 160)
 }
 </script>
 
 <template>
-  <div class="toast-stack" aria-live="polite" aria-atomic="false">
-    <TransitionGroup name="toast">
-      <div
-        v-for="toast in toasts"
-        :key="toast.id"
-        class="toast-item"
-        :class="'toast-item--' + toast.type"
-        role="status"
-      >
-        <span class="toast-icon icon">
-          <FontAwesomeIcon :icon="ICONS[toast.type]" />
-        </span>
-        <span class="toast-message">{{ toast.message }}</span>
-        <button class="toast-close" aria-label="Dismiss" @click="dismiss(toast.id)">
-          <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
-        </button>
-      </div>
-    </TransitionGroup>
-  </div>
+  <ToastProvider swipe-direction="right">
+    <ToastRoot
+      v-for="toast in toasts"
+      :key="toast.id"
+      class="toast-item"
+      :class="'toast-item--' + toast.type"
+      :duration="toast.duration > 0 ? toast.duration : PERSIST"
+      @update:open="(open: boolean) => onOpenChange(open, toast.id)"
+    >
+      <span class="toast-icon icon">
+        <FontAwesomeIcon :icon="ICONS[toast.type]" />
+      </span>
+      <ToastTitle class="toast-message">{{ toast.message }}</ToastTitle>
+      <ToastClose class="toast-close" aria-label="Dismiss">
+        <FontAwesomeIcon :icon="byPrefixAndName.fas['xmark']" />
+      </ToastClose>
+    </ToastRoot>
+    <ToastViewport class="toast-viewport" />
+  </ToastProvider>
 </template>
-
-<style scoped>
-.toast-stack {
-  position: fixed;
-  top: 4.25rem; /* clear the fixed navbar */
-  right: 1rem;
-  z-index: 11000;
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  width: min(24rem, calc(100vw - 2rem));
-  pointer-events: none;
-}
-
-.toast-item {
-  pointer-events: auto;
-  display: flex;
-  align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.85rem 1rem;
-  border-radius: 12px;
-  color: #f5f3ff;
-  background: #2a2342;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-left-width: 4px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-}
-
-.toast-item--success {
-  border-left-color: #4ade80;
-}
-.toast-item--error {
-  border-left-color: #f87171;
-}
-.toast-item--warning {
-  border-left-color: #fbbf24;
-}
-.toast-item--info {
-  border-left-color: #a78bfa;
-}
-
-.toast-icon {
-  flex: none;
-  margin-top: 0.1rem;
-}
-.toast-item--success .toast-icon {
-  color: #4ade80;
-}
-.toast-item--error .toast-icon {
-  color: #f87171;
-}
-.toast-item--warning .toast-icon {
-  color: #fbbf24;
-}
-.toast-item--info .toast-icon {
-  color: #a78bfa;
-}
-
-.toast-message {
-  flex: 1 1 auto;
-  line-height: 1.35;
-  font-size: 0.95rem;
-  word-break: break-word;
-}
-
-.toast-close {
-  flex: none;
-  cursor: pointer;
-  background: none;
-  border: none;
-  color: inherit;
-  opacity: 0.6;
-  padding: 0 0.15rem;
-  font-size: 1rem;
-  line-height: 1;
-  transition: opacity 0.15s ease;
-}
-
-.toast-close:hover {
-  opacity: 1;
-}
-
-/* Enter/leave animation */
-.toast-enter-active,
-.toast-leave-active {
-  transition:
-    transform 0.25s ease,
-    opacity 0.25s ease;
-}
-
-.toast-enter-from {
-  transform: translateX(120%);
-  opacity: 0;
-}
-
-.toast-leave-to {
-  transform: translateX(120%);
-  opacity: 0;
-}
-
-.toast-leave-active {
-  position: absolute;
-  right: 0;
-  width: 100%;
-}
-</style>
