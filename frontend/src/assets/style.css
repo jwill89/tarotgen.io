@@ -1429,7 +1429,7 @@ body {
   font-size: 0.8rem;
 }
 .myst-select__content {
-  z-index: 60;
+  z-index: 10650;
   min-width: var(--reka-select-trigger-width);
   max-height: var(--reka-select-content-available-height);
   background: var(--myst-chrome);
@@ -1497,7 +1497,7 @@ body {
   border-radius: 12px;
   padding: 6px;
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.55);
-  z-index: 60;
+  z-index: 10650; /* above the dialog layers — see .myst-select__content */
   font-family:
     system-ui,
     -apple-system,
@@ -2032,7 +2032,7 @@ body {
   transform: rotate(180deg);
 }
 .myst-combobox__content {
-  z-index: 60;
+  z-index: 10650; /* above the dialog layers — see .myst-select__content */
   width: var(--reka-combobox-trigger-width);
   background: var(--myst-surface);
   border: 1px solid var(--myst-border-strong);
