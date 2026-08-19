@@ -113,7 +113,6 @@ public sealed class LinkService
             var query = context.Request.QueryString;
             var returnedState = query["state"];
             var code = query["code"];
-            var guestClientToken = query["client_token"];
 
             if (returnedState != state)
             {
@@ -121,17 +120,7 @@ public sealed class LinkService
                 throw new InvalidOperationException("The state did not match.");
             }
 
-            // Guest path: the site minted a client token and handed it straight back.
-            if (!string.IsNullOrEmpty(guestClientToken))
-            {
-                RespondHtml(context, "TarotGen connected. You can close this tab and return to the game.");
-                int.TryParse(query["client_id"], out var guestClientId);
-                this.tokens.SaveClient(guestClientToken, guestClientId);
-                this.Status = "Connected as guest.";
-                return;
-            }
-
-            // Account path: exchange the PKCE code for the account + client tokens.
+            // Exchange the PKCE code for the account token.
             if (string.IsNullOrEmpty(code))
             {
                 RespondHtml(context, "TarotGen connection cancelled. You can close this tab.");
@@ -151,8 +140,6 @@ public sealed class LinkService
                 throw new InvalidOperationException("The server did not return a token.");
 
             this.tokens.Save(payload.Token, payload.DisplayName ?? string.Empty);
-            if (!string.IsNullOrEmpty(payload.ClientToken))
-                this.tokens.SaveClient(payload.ClientToken, payload.ClientId);
             this.Status = $"Linked as {this.tokens.LinkedName}";
         }
         catch (Exception ex)
@@ -211,11 +198,5 @@ public sealed class LinkService
 
         [JsonPropertyName("display_name")]
         public string? DisplayName { get; set; }
-
-        [JsonPropertyName("client_token")]
-        public string? ClientToken { get; set; }
-
-        [JsonPropertyName("client_id")]
-        public int ClientId { get; set; }
     }
 }

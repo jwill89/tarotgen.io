@@ -19,7 +19,7 @@ import type { ReadingInfo, Deck } from '@/types'
 
 const route = useRoute()
 const router = useRouter()
-const { decks } = useDecks()
+const { decks, fetchDecks } = useDecks()
 const { isLoggedIn } = useUser()
 const { createUserSpread } = useUserSpreads()
 const toasts = useToasts()
@@ -61,6 +61,8 @@ const spreadSaving = ref(false)
 
 // Fetch the reading data
 onMounted(async () => {
+  // Cached module-wide; fired alongside the reading fetch rather than awaited.
+  void fetchDecks()
   try {
     const res = await fetch('/api' + endpoints.readings.byId(readingId.value))
     if (!res.ok) {

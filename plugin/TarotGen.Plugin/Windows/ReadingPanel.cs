@@ -27,8 +27,6 @@ public sealed class ReadingPanel
 
     private readonly TarotApiClient api;
     private readonly CardTextureCache textures;
-    private readonly ShareRelay shareRelay;
-    private readonly GameSocial social;
 
     private Reading? reading;
     private string codeBuffer = "";
@@ -46,15 +44,10 @@ public sealed class ReadingPanel
     private volatile bool reportingCard;
     private string? reportCardStatus;
 
-    private volatile bool sharing;
-    private string? shareStatus;
-
-    public ReadingPanel(TarotApiClient api, CardTextureCache textures, ShareRelay shareRelay, GameSocial social)
+    public ReadingPanel(TarotApiClient api, CardTextureCache textures)
     {
         this.api = api;
         this.textures = textures;
-        this.shareRelay = shareRelay;
-        this.social = social;
     }
 
     public bool HasReading => this.reading != null;
@@ -170,28 +163,8 @@ public sealed class ReadingPanel
         if (Ui.Button("Open in browser"))
             Util.OpenLink(url);
 
-        if (this.shareRelay.CanShare)
-        {
-            ImGui.SameLine();
-            using (ImRaii.Disabled(this.sharing))
-            {
-                if (Ui.Button("Share to a player…"))
-                {
-                    this.shareStatus = null;
-                    ImGui.OpenPopup("##sharePicker");
-                }
-            }
-        }
-
         // No lock control here: plugin-generated readings are always auto-locked on
         // creation, so there is nothing to lock and no state worth surfacing.
-        DrawSharePicker(r);
-
-        if (!string.IsNullOrEmpty(this.shareStatus))
-        {
-            ImGui.Spacing();
-            ImGui.TextDisabled(this.shareStatus);
-        }
 
         if (info?.Spread != null && !string.IsNullOrWhiteSpace(info.Spread.Description))
         {
@@ -517,49 +490,6 @@ public sealed class ReadingPanel
         });
     }
 
-    // ── Share picker ──────────────────────────────────────────────────────────
-
-    private void DrawSharePicker(Reading r)
-    {
-        using var popup = ImRaii.Popup("##sharePicker");
-        if (!popup)
-            return;
-
-        if (this.social.Self() is not { } me)
-        {
-            ImGui.TextDisabled("Log in to a character to share readings.");
-            return;
-        }
-
-        ImGui.TextDisabled("Send this reading to:");
-        ImGui.Separator();
-
-        bool any = false;
-
-        if (this.social.Target() is { } target)
-        {
-            any = true;
-            if (ImGui.Selectable($"{target.Name} ({target.World})  — current target"))
-            {
-                StartShare(r.ReadingId, target, me);
-                ImGui.CloseCurrentPopup();
-            }
-        }
-
-        foreach (var member in this.social.AllPartyMembers())
-        {
-            any = true;
-            if (ImGui.Selectable($"{member.Name} ({member.World})"))
-            {
-                StartShare(r.ReadingId, member, me);
-                ImGui.CloseCurrentPopup();
-            }
-        }
-
-        if (!any)
-            ImGui.TextDisabled("No party members or player target found.\nTarget a player or join a party, then try again.");
-    }
-
     private void StartReportCard(int deckId, int cardId, string cardName)
     {
         this.reportingCard = true;
@@ -587,18 +517,6 @@ public sealed class ReadingPanel
             {
                 this.reportingCard = false;
             }
-        });
-    }
-
-    private void StartShare(string readingId, GameSocial.Recipient to, GameSocial.Recipient self)
-    {
-        this.sharing = true;
-        this.shareStatus = $"Sending to {to.Name}…";
-        _ = Task.Run(async () =>
-        {
-            var result = await this.shareRelay.SendAsync(readingId, to, self).ConfigureAwait(false);
-            this.shareStatus = result;
-            this.sharing = false;
         });
     }
 

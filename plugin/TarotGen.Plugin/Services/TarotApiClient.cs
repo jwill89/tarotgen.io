@@ -52,10 +52,6 @@ public sealed class TarotApiClient : IDisposable
 
     public string LinkedName => this.tokens.LinkedName;
 
-    public bool IsConnected => this.tokens.IsConnected;
-
-    public int ClientId => this.tokens.ClientId;
-
     private static string ApiBase => Configuration.SiteUrl + "/api";
 
     public string SiteBase => Configuration.SiteUrl;
@@ -127,24 +123,6 @@ public sealed class TarotApiClient : IDisposable
             new { },
             ct);
 
-    // ── Share relay (client-token auth) ──────────────────────────────────────
-
-    public Task<ClientView?> RegisterClientAsync(RegisterClientRequest req, CancellationToken ct = default)
-        => PostJsonClientAsync<RegisterClientRequest, ClientView>("/plugin/clients/register", req, ct);
-
-    public Task<List<ShareMessage>?> GetInboxAsync(CancellationToken ct = default)
-        => GetJsonClientAsync<List<ShareMessage>>("/plugin/inbox", ct);
-
-    /// <summary>Push a reading share. Throws <see cref="TarotApiException"/> on refusal (403/404/429).</summary>
-    public Task ShareAsync(ShareRequest req, CancellationToken ct = default)
-        => PostJsonClientAsync<ShareRequest, ShareAck>("/plugin/share", req, ct);
-
-    public Task BlockAsync(string action, int clientId, CancellationToken ct = default)
-        => PostJsonClientAsync<object, ShareAck>(
-            "/plugin/clients/block",
-            new { action, client_id = clientId },
-            ct);
-
     // ── HTTP plumbing ────────────────────────────────────────────────────────
 
     private async Task<T?> GetJsonAsync<T>(string path, CancellationToken ct)
@@ -168,37 +146,9 @@ public sealed class TarotApiClient : IDisposable
         return await ReadOrThrow<TOut>(resp, linked.Token).ConfigureAwait(false);
     }
 
-    private async Task<T?> GetJsonClientAsync<T>(string path, CancellationToken ct)
-    {
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, this.cts.Token);
-        using var request = new HttpRequestMessage(HttpMethod.Get, ApiBase + path);
-        AddClientAuth(request);
-        using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
-        return await ReadOrThrow<T>(resp, linked.Token).ConfigureAwait(false);
-    }
-
-    private async Task<TOut?> PostJsonClientAsync<TIn, TOut>(string path, TIn body, CancellationToken ct)
-    {
-        using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, this.cts.Token);
-        using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + path)
-        {
-            Content = JsonContent.Create(body, options: JsonOpts),
-        };
-        AddClientAuth(request);
-        using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
-        return await ReadOrThrow<TOut>(resp, linked.Token).ConfigureAwait(false);
-    }
-
     private void AddAuth(HttpRequestMessage request)
     {
         var token = this.tokens.Token;
-        if (!string.IsNullOrEmpty(token))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-    }
-
-    private void AddClientAuth(HttpRequestMessage request)
-    {
-        var token = this.tokens.ClientToken;
         if (!string.IsNullOrEmpty(token))
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
     }

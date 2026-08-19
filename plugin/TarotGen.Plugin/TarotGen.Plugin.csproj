@@ -14,7 +14,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>TarotGen.Plugin</AssemblyName>
     <RootNamespace>TarotGen.Plugin</RootNamespace>
-    <Version>0.4.3</Version>
+    <Version>0.5.0</Version>
     <Deterministic>true</Deterministic>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
@@ -28,6 +28,6 @@
 
   <!-- Windows DPAPI for at-rest token encryption (bundled by DalamudPackager). -->
   <ItemGroup>
-    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="9.0.0" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.11" />
   </ItemGroup>
 </Project>

@@ -26,8 +26,6 @@ public sealed class MainWindow : Window, IDisposable
     private readonly TarotApiClient api;
     private readonly ReadingPanel readingPanel;
     private readonly LinkService linkService;
-    private readonly ShareRelay shareRelay;
-    private readonly GameSocial social;
     private readonly Configuration config;
     private readonly IDalamudPluginInterface pluginInterface;
 
@@ -68,8 +66,6 @@ public sealed class MainWindow : Window, IDisposable
         TarotApiClient api,
         ReadingPanel readingPanel,
         LinkService linkService,
-        ShareRelay shareRelay,
-        GameSocial social,
         Configuration config,
         IDalamudPluginInterface pluginInterface)
         : base("TarotGen###TarotGenMain")
@@ -77,8 +73,6 @@ public sealed class MainWindow : Window, IDisposable
         this.api = api;
         this.readingPanel = readingPanel;
         this.linkService = linkService;
-        this.shareRelay = shareRelay;
-        this.social = social;
         this.config = config;
         this.pluginInterface = pluginInterface;
         this.freeDrawCount = Math.Max(1, config.FreeDrawCount);
@@ -120,8 +114,6 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.OpenPopup("Welcome to TarotGen###onboarding");
         }
 
-        DrawUnlinkedBanner();
-
         using (var tabs = ImRaii.TabBar("##tarotgen-tabs"))
         {
             if (tabs)
@@ -161,27 +153,6 @@ public sealed class MainWindow : Window, IDisposable
         DrawOnboarding();
     }
 
-    /// <summary>A dismissible banner nudging the user to link the character they're on.</summary>
-    private void DrawUnlinkedBanner()
-    {
-        if (!this.api.IsConnected || !this.config.IncomingSharesEnabled)
-            return;
-        if (this.social.Current() is not { } cur)
-            return;
-        if (this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
-            return;
-
-        ImGui.AlignTextToFramePadding();
-        ImGui.TextColored(Ui.WarnColor, $"\"{cur.Name}\" isn't linked for shared readings.");
-        ImGui.SameLine();
-        if (Ui.Button("Link this character"))
-            LinkCharacter(cur);
-        ImGui.SameLine();
-        ImGui.AlignTextToFramePadding();
-        Ui.HelpMarker("People can only send you readings on characters you've linked. Manage links in Settings → Sharing.");
-        ImGui.Separator();
-    }
-
     private void DrawOnboarding()
     {
         var vp = ImGui.GetMainViewport();
@@ -199,12 +170,11 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.TextColored(Ui.SectionColor, "How it works");
         ImGui.BulletText("New Reading: pick a deck + spread (or a free draw) and draw.");
         ImGui.BulletText("Reading: view the cards, click one for full-res, copy the share code.");
-        ImGui.BulletText("Share a reading's code in chat, or push it straight to a party member.");
+        ImGui.BulletText("Share a reading's code in chat — anyone can open it with /tarot <code>.");
         ImGui.Spacing();
         ImGui.TextColored(Ui.SectionColor, "Optional: connect your account");
         ImGui.TextWrapped(
-            "Link your TarotGen.io account to lock readings, see \"My Readings\", and unlock more. "
-            + "Or continue as a guest — sharing works either way.");
+            "Link your TarotGen.io account to lock readings, see \"My Readings\", and unlock more.");
         ImGui.PopTextWrapPos();
 
         ImGui.Spacing();
@@ -226,20 +196,6 @@ public sealed class MainWindow : Window, IDisposable
         this.config.OnboardingComplete = true;
         this.config.Save(this.pluginInterface);
         ImGui.CloseCurrentPopup();
-    }
-
-    private void LinkCharacter(GameSocial.CurrentChar cur)
-    {
-        if (this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
-            return;
-        this.config.LinkedCharacters.Add(new LinkedCharacter
-        {
-            ContentId = cur.ContentId,
-            Name = cur.Name,
-            World = cur.World,
-        });
-        this.config.Save(this.pluginInterface);
-        this.shareRelay.InvalidateRegistration();
     }
 
     // ── New Reading tab ───────────────────────────────────────────────────────
@@ -548,13 +504,6 @@ public sealed class MainWindow : Window, IDisposable
                 DrawConnectionSection();
         }
 
-        // ── Sharing (only once a client token exists) ───────────────────────
-        if (this.api.IsConnected && Ui.CollapsingSection(FontAwesomeIcon.ShareAlt, "Sharing"))
-        {
-            using (Ui.Body())
-                DrawSharingSettings();
-        }
-
         // ── Links (never collapsed, per request) ────────────────────────────
         DrawLinksSection();
     }
@@ -665,24 +614,10 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawConnectionSection()
     {
-        if (this.api.IsConnected)
+        if (this.api.IsLinked)
         {
-            if (this.api.IsLinked)
-            {
-                ImGui.TextColored(Ui.SuccessColor, $"Linked as {this.api.LinkedName}");
-                Ui.Help("Account features (locking, favorites, My Readings) are available.");
-            }
-            else
-            {
-                ImGui.TextColored(Ui.SuccessColor, "Connected as guest");
-                Ui.Help("You can send and receive shared readings — no account needed.");
-                ImGui.Spacing();
-                using (ImRaii.Disabled(this.linkService.IsBusy))
-                {
-                    if (Ui.Button("Log in to link an account…"))
-                        this.linkService.StartLink();
-                }
-            }
+            ImGui.TextColored(Ui.SuccessColor, $"Linked as {this.api.LinkedName}");
+            Ui.Help("Account features (locking, favorites, My Readings) are available.");
 
             ImGui.Spacing();
             using (ImRaii.Disabled(this.linkService.IsBusy))
@@ -694,8 +629,8 @@ public sealed class MainWindow : Window, IDisposable
         else
         {
             ImGui.TextWrapped(
-                "Connect to TarotGen.io to send and receive shared readings. Log in for account "
-                + "features (locking, favorites, My Readings), or continue as a guest — no account needed.");
+                "Link your TarotGen.io account for account features (locking, favorites, and "
+                + "My Readings). Drawing and viewing readings works without an account.");
             ImGui.Spacing();
             using (ImRaii.Disabled(this.linkService.IsBusy))
             {
@@ -711,114 +646,12 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         // Only show the transient link status (progress / errors). Its terminal
-        // success messages ("Linked as X", "Connected as guest") duplicate the
-        // labels above, so suppress the status once we're settled into a
-        // connected state.
-        if (!string.IsNullOrEmpty(this.linkService.Status) && (this.linkService.IsBusy || !this.api.IsConnected))
+        // success message ("Linked as X") duplicates the label above, so suppress
+        // the status once we're settled into a linked state.
+        if (!string.IsNullOrEmpty(this.linkService.Status) && (this.linkService.IsBusy || !this.api.IsLinked))
         {
             ImGui.Spacing();
             ImGui.TextWrapped(this.linkService.Status);
-        }
-    }
-
-    private void DrawSharingSettings()
-    {
-        bool incoming = this.config.IncomingSharesEnabled;
-        if (ImGui.Checkbox("Receive shared readings", ref incoming))
-        {
-            this.config.IncomingSharesEnabled = incoming;
-            this.config.Save(this.pluginInterface);
-            this.shareRelay.InvalidateRegistration();
-        }
-        Ui.Help("A popup appears in-game when someone shares a reading with you.");
-
-        if (!this.config.IncomingSharesEnabled)
-            return;
-
-        ImGui.Spacing();
-        Ui.Label("Accept shares from");
-        using (var tiers = ImRaii.Table("##tiers", 2, ImGuiTableFlags.SizingStretchSame))
-        {
-            if (tiers)
-            {
-                ImGui.TableNextColumn();
-                DrawTierRadio("Party members", "party");
-                ImGui.TableNextColumn();
-                DrawTierRadio("Friends", "friends");
-                ImGui.TableNextColumn();
-                DrawTierRadio("Party or friends", "party_or_friends");
-                ImGui.TableNextColumn();
-                DrawTierRadio("Anyone", "anyone");
-            }
-        }
-
-        // The game populates the friend list lazily; warn if we can't read it yet.
-        if ((this.config.AcceptTier is "friends" or "party_or_friends") && !this.social.FriendsListLoaded)
-        {
-            using (ImRaii.PushColor(ImGuiCol.Text, Ui.WarnColor))
-                ImGui.TextWrapped("Open your in-game Friend List once so the plugin can read who's on it.");
-        }
-
-        ImGui.Spacing();
-        ImGui.TextWrapped(
-            "While this is on, the character name and home world of each linked character are shared "
-            + "with the relay so others can send you readings. Turn it off to stop receiving.");
-
-        DrawLinkedCharacters();
-    }
-
-    private void DrawTierRadio(string label, string tier)
-    {
-        if (ImGui.RadioButton(label, this.config.AcceptTier == tier))
-        {
-            this.config.AcceptTier = tier;
-            this.config.Save(this.pluginInterface);
-        }
-    }
-
-    private void DrawLinkedCharacters()
-    {
-        ImGui.Spacing();
-        Ui.Label("Linked characters");
-        ImGui.SameLine();
-        Ui.HelpMarker(
-            "Only characters listed here can receive readings people send you. One TarotGen "
-            + "connection can cover all of your characters — link each one from that character.");
-
-        if (this.config.LinkedCharacters.Count == 0)
-            Ui.Help("   No characters linked yet.");
-
-        ulong? removeId = null;
-        foreach (var c in this.config.LinkedCharacters)
-        {
-            ImGui.AlignTextToFramePadding();
-            ImGui.Bullet();
-            ImGui.SameLine();
-            ImGui.TextUnformatted(c.Display);
-            ImGui.SameLine();
-            if (Ui.IconButton($"lc{c.ContentId}", FontAwesomeIcon.Trash, $"Remove {c.Name}"))
-                removeId = c.ContentId;
-        }
-
-        if (removeId is { } id)
-        {
-            this.config.LinkedCharacters.RemoveAll(c => c.ContentId == id);
-            this.config.Save(this.pluginInterface);
-            this.shareRelay.InvalidateRegistration();
-        }
-
-        if (this.social.Current() is { } cur)
-        {
-            if (!this.config.LinkedCharacters.Any(c => c.ContentId == cur.ContentId))
-            {
-                ImGui.Spacing();
-                if (Ui.Button($"Link this character  ({cur.Name} @ {cur.World})"))
-                    LinkCharacter(cur);
-            }
-        }
-        else
-        {
-            Ui.Help("Log in to a character to link it.");
         }
     }
 

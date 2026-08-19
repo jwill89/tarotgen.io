@@ -12,7 +12,7 @@ import { statSync } from 'node:fs'
 function withAssetVersion(url: string, relPath: string): string {
   try {
     // Seconds (not ms) to match og.php's filemtime() token for the same file.
-    return `${url}?v=${Math.floor(statSync(resolve(__dirname, relPath)).mtimeMs / 1000)}`
+    return `${url}?v=${Math.floor(statSync(resolve(import.meta.dirname, relPath)).mtimeMs / 1000)}`
   } catch {
     // Warn loudly rather than failing silently: without the token, crawlers keep
     // serving whatever banner they cached first.
@@ -47,7 +47,17 @@ export default defineConfig({
   ],
   resolve: {
     alias: {
-      '@': resolve(__dirname, 'src'),
+      '@': resolve(import.meta.dirname, 'src'),
+    },
+  },
+  css: {
+    preprocessorOptions: {
+      scss: {
+        // Bulma 1.0.4's own sources still use the deprecated `if()` call, which
+        // otherwise prints a wall of warnings on every build. Nothing we can fix
+        // from here — drop it when Bulma ships a version that doesn't.
+        silenceDeprecations: ['if-function'],
+      },
     },
   },
   test: {

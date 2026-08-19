@@ -28,7 +28,7 @@ import type { Deck, SpreadOption, SpreadPosition } from '@/types'
 const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
 
 const router = useRouter()
-const { decks } = useDecks()
+const { decks, fetchDecks } = useDecks()
 const { fetchFavoriteDecks } = useFavoriteDecks()
 const { spreadOptions, fetchSpreads } = useSpreads()
 const toasts = useToasts()
@@ -55,6 +55,7 @@ const form = reactive({
 })
 
 onMounted(() => {
+  void fetchDecks()
   void fetchSpreads()
   void fetchFavoriteDecks()
 })

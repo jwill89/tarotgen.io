@@ -13,7 +13,7 @@ namespace TarotGen.Plugin;
 /// <summary>
 /// Composition root. Wires services + windows, registers /tarot, and tears
 /// everything down symmetrically on unload. P0 (anonymous) scope: generate and
-/// view readings; account linking (P1) and the share relay (P2) are additive.
+/// view readings; account linking (P1) is additive.
 /// </summary>
 public sealed class Plugin : IDalamudPlugin
 {
@@ -29,24 +29,15 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TarotApiClient api;
     private readonly LinkService linkService;
     private readonly CardTextureCache textures;
-    private readonly GameSocial social;
-    private readonly ShareRelay shareRelay;
 
     private readonly WindowSystem windowSystem = new("TarotGen");
     private readonly MainWindow mainWindow;
     private readonly ReadingPanel readingPanel;
-    private readonly SharePrompt sharePrompt;
 
     public Plugin(
         IDalamudPluginInterface pluginInterface,
         ICommandManager commandManager,
         ITextureProvider textureProvider,
-        IFramework framework,
-        IPlayerState playerState,
-        IPartyList partyList,
-        ITargetManager targetManager,
-        IDataManager dataManager,
-        INotificationManager notificationManager,
         IPluginLog log)
     {
         this.pluginInterface = pluginInterface;
@@ -66,22 +57,11 @@ public sealed class Plugin : IDalamudPlugin
         var cacheDir = Path.Combine(pluginInterface.GetPluginConfigDirectory(), "cards");
         this.textures = new CardTextureCache(this.http, textureProvider, log, cacheDir);
 
-        this.social = new GameSocial(playerState, partyList, targetManager, dataManager);
-
-        // The share relay's popup opens a shared reading via the main window; blocking
-        // a sender routes through the relay. Both fields are set below before any click.
-        this.sharePrompt = new SharePrompt(
-            onView: id => this.mainWindow!.ShowReading(id),
-            onBlock: clientId => this.shareRelay!.Block(clientId));
-        this.shareRelay = new ShareRelay(
-            this.api, this.config, framework, this.social, notificationManager, log, this.sharePrompt.Enqueue);
-
-        this.readingPanel = new ReadingPanel(this.api, this.textures, this.shareRelay, this.social);
+        this.readingPanel = new ReadingPanel(this.api, this.textures);
         this.mainWindow = new MainWindow(
-            this.api, this.readingPanel, this.linkService, this.shareRelay, this.social, this.config, this.pluginInterface);
+            this.api, this.readingPanel, this.linkService, this.config, this.pluginInterface);
 
         this.windowSystem.AddWindow(this.mainWindow);
-        this.windowSystem.AddWindow(this.sharePrompt);
 
         this.commandManager.AddHandler(CommandName, new CommandInfo(OnCommand)
         {
@@ -91,8 +71,6 @@ public sealed class Plugin : IDalamudPlugin
         this.pluginInterface.UiBuilder.Draw += this.windowSystem.Draw;
         this.pluginInterface.UiBuilder.OpenMainUi += this.OpenMain;
         this.pluginInterface.UiBuilder.OpenConfigUi += this.OpenConfig;
-
-        this.shareRelay.Start();
     }
 
     public void Dispose()
@@ -106,7 +84,6 @@ public sealed class Plugin : IDalamudPlugin
 
         this.mainWindow.Dispose();
 
-        this.shareRelay.Dispose();
         this.textures.Dispose();
         this.api.Dispose();
         this.http.Dispose();

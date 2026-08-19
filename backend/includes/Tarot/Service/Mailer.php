@@ -89,6 +89,13 @@ class Mailer
         try {
             $mail = new PHPMailer(true);
             $mail->isSMTP();
+
+            // Mail goes out inline during the request, so PHPMailer's 300s default
+            // outlives Cloudflare's 100s origin timeout: a stalled SMTP connect
+            // surfaces to the caller as a 524 rather than a handled failure. Cap it
+            // low enough that we always get to return a real response.
+            $mail->Timeout    = 10;
+
             $mail->Host       = (string)Env::get('SMTP_HOST');
             $mail->Port       = (int)Env::get('SMTP_PORT', '587');
             $mail->SMTPAuth   = Env::get('SMTP_USER') !== null;

@@ -125,72 +125,8 @@ public sealed class GenerateRequest
     public string? Password { get; set; }
 }
 
-// ── Share relay (P2) ─────────────────────────────────────────────────────────
-
-/// <summary>One queued share drained from GET /api/plugin/inbox.</summary>
-public sealed class ShareMessage
-{
-    public int Id { get; set; }
-    public string SenderLabel { get; set; } = "";
-    public int SenderClientId { get; set; }
-    /// <summary>Sender's self-disclosed character — used for the party consent filter.</summary>
-    public string? SenderCharacter { get; set; }
-    public string? SenderWorld { get; set; }
-    public string Type { get; set; } = "reading_share";
-    /// <summary>For a reading_share, the shared reading's share code.</summary>
-    public string Payload { get; set; } = "";
-    public string CreatedAt { get; set; } = "";
-}
-
-/// <summary>The client's own view returned by POST /api/plugin/clients/register.</summary>
-public sealed class ClientView
-{
-    public int ClientId { get; set; }
-    public int? UserId { get; set; }
-    public string? CharacterName { get; set; }
-    public string? World { get; set; }
-    public string AcceptTier { get; set; } = "party_or_friends";
-    public string? LastSeen { get; set; }
-}
-
-/// <summary>One Character@World identity in a register sync.</summary>
-public sealed class CharacterIdentity
-{
-    public string CharacterName { get; set; } = "";
-    public string World { get; set; } = "";
-}
-
-/// <summary>Request body for POST /api/plugin/clients/register.</summary>
-public sealed class RegisterClientRequest
-{
-    public string? AcceptTier { get; set; }
-
-    /// <summary>The FULL desired identity set (synced server-side). Empty = unpublish all.</summary>
-    public List<CharacterIdentity> Characters { get; set; } = new();
-}
-
-/// <summary>Minimal ack body from POST /api/plugin/share and /clients/block.</summary>
-public sealed class ShareAck
-{
-    public string? Status { get; set; }
-}
-
 /// <summary>Ack body from POST /api/card-reports ("reported" | "already_reported").</summary>
 public sealed class CardReportAck
 {
     public string? Status { get; set; }
-}
-
-/// <summary>Request body for POST /api/plugin/share.</summary>
-public sealed class ShareRequest
-{
-    /// <summary>Recipient character + world.</summary>
-    public string CharacterName { get; set; } = "";
-    public string World { get; set; } = "";
-    public string ReadingId { get; set; } = "";
-    /// <summary>Display name shown to the recipient.</summary>
-    public string SenderLabel { get; set; } = "";
-    /// <summary>Sender's own character + world (for the recipient's party filter).</summary>
-    public string SenderCharacter { get; set; } = "";
-    public string SenderWorld { get; set; } = "";
 }

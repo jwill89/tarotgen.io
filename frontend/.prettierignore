@@ -4,3 +4,6 @@ node_modules
 eslint-config
 public
 src/types/api.generated.ts
+# Rules copied verbatim out of bulma.min.css — keep them byte-identical to the
+# upstream so they can still be diffed against it on a Bulma upgrade.
+src/assets/bulma-helpers.css

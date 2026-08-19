@@ -1243,23 +1243,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/plugin/guest-authorize": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Mint a guest relay client token (no account required) */
-        post: operations["522aa817019a865df06d50132bd83c0c"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/plugin/token": {
         parameters: {
             query?: never;
@@ -1306,74 +1289,6 @@ export interface paths {
         post?: never;
         /** Revoke a linked plugin token (forces the plugin to re-link) */
         delete: operations["c7e190b264e9c6ecaa242c88ec6bd95f"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plugin/clients/register": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Publish this install's recipient identity + consent tier (and refresh presence) */
-        post: operations["f95a22f0d59b6a5732c36d5090f49f3e"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plugin/inbox": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Drain queued shares for this install (delivers each once) */
-        get: operations["b72bdeb4a0d80ddbfbba0b3f6bc203be"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plugin/share": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Push a reading share to a self-published Character@World */
-        post: operations["e76fc4f31ddc2fc6ebbd7e99e63a5f9a"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/plugin/clients/block": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Block or unblock a sender by their routing id */
-        post: operations["9057316b75c5bb6724228457df73bd4f"];
-        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1762,34 +1677,6 @@ export interface components {
             submitter?: string;
             user_id?: number | null;
             submitted_at?: string;
-        };
-        /** @description A plugin install's relay routing identity (no secret value exposed). */
-        PluginClient: {
-            client_id?: number;
-            /** @description Linked account id, or null for a guest install. */
-            user_id?: number | null;
-            /** @description Who may push a share: nobody | friends | party_or_friends | anyone. */
-            accept_tier?: string;
-            last_seen?: string | null;
-            created_at?: string;
-            revoked_at?: string | null;
-        };
-        /** @description A queued share delivered to a recipient plugin install. */
-        PluginMessage: {
-            id?: number;
-            /** @description Display name shown in the popup (the sender). */
-            sender_label?: string;
-            /** @description Sender routing id (for client-side block/report). */
-            sender_client_id?: number;
-            /** @description Sender's self-disclosed character (for the party consent filter). */
-            sender_character?: string | null;
-            /** @description Sender's self-disclosed home world. */
-            sender_world?: string | null;
-            /** @description Message kind; currently always "reading_share". */
-            type?: string;
-            /** @description The shared reading share code (dereferenced only on View). */
-            payload?: string;
-            created_at?: string;
         };
         /** @description A linked-plugin personal access token (no secret value exposed). */
         PluginToken: {
@@ -4414,50 +4301,6 @@ export interface operations {
             };
         };
     };
-    "522aa817019a865df06d50132bd83c0c": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Loopback URI, e.g. http://127.0.0.1:<port>/callback */
-                    redirect_uri: string;
-                    state?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Loopback redirect target carrying the guest client token */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        redirect_uri?: string;
-                    };
-                };
-            };
-            /** @description Non-loopback redirect_uri */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Too many guest tokens issued from this IP */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     "9cee09bafbc85842806ed3b5d8696f77": {
         parameters: {
             query?: never;
@@ -4485,9 +4328,6 @@ export interface operations {
                         token_type?: string;
                         scope?: string;
                         display_name?: string;
-                        /** @description Relay routing token */
-                        client_token?: string;
-                        client_id?: number;
                     };
                 };
             };
@@ -4540,166 +4380,6 @@ export interface operations {
             };
             /** @description Token not found */
             404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    f95a22f0d59b6a5732c36d5090f49f3e: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    accept_tier?: "nobody" | "party" | "friends" | "party_or_friends" | "anyone";
-                    /** @description Full desired identity set (synced): each {character_name, world}. [] unpublishes all. */
-                    characters?: {
-                        character_name?: string;
-                        world?: string;
-                    }[];
-                    /** @description Legacy single-identity form */
-                    character_name?: string | null;
-                    /** @description Legacy single-identity form */
-                    world?: string | null;
-                };
-            };
-        };
-        responses: {
-            /** @description The updated client view */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PluginClient"];
-                };
-            };
-            /** @description Invalid or missing client token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    b72bdeb4a0d80ddbfbba0b3f6bc203be: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Queued shares (may be empty) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PluginMessage"][];
-                };
-            };
-            /** @description Invalid or missing client token */
-            401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    e76fc4f31ddc2fc6ebbd7e99e63a5f9a: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @description Recipient's character */
-                    character_name: string;
-                    /** @description Recipient's home world */
-                    world: string;
-                    /** @description The share code to deliver */
-                    reading_id: string;
-                    /** @description Display name shown to the recipient */
-                    sender_label?: string;
-                    /** @description Sender's own character */
-                    sender_character?: string;
-                    /** @description Sender's own home world */
-                    sender_world?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Accepted (delivered only if the recipient is reachable and accepting) */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Malformed request (missing recipient or reading) */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Sending too quickly */
-            429: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "9057316b75c5bb6724228457df73bd4f": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    /** @enum {string} */
-                    action: "block" | "unblock";
-                    /** @description The sender routing id to (un)block */
-                    client_id: number;
-                };
-            };
-        };
-        responses: {
-            /** @description Applied */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Unknown action */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Invalid or missing client token */
-            401: {
                 headers: {
                     [name: string]: unknown;
                 };

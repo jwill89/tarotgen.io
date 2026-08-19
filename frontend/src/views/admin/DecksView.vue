@@ -107,8 +107,7 @@ async function saveDeck() {
           'Deck updated.',
         )
     if (!result) return
-    await fetchDecks()
-    await fetchPendingDecks()
+    await Promise.all([fetchDecks(), fetchPendingDecks()])
     closeEdit()
   } finally {
     saving.value = false
@@ -125,16 +124,14 @@ async function deleteDeck(deck: Deck) {
   if (!ok) return
   const result = await api.del(endpoints.admin.decks.byId(deck.deck_id), 'Deck deleted.')
   if (result) {
-    await fetchDecks()
-    await fetchPendingDecks()
+    await Promise.all([fetchDecks(), fetchPendingDecks()])
   }
 }
 
 async function approveDeck(deck: Deck) {
   const result = await api.post(endpoints.admin.decks.approve(deck.deck_id), {}, 'Deck approved.')
   if (result) {
-    await fetchDecks()
-    await fetchPendingDecks()
+    await Promise.all([fetchDecks(), fetchPendingDecks()])
   }
 }
 

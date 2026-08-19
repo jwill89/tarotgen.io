@@ -1,0 +1,57 @@
+// Modular Bulma build — only the modules this app still uses.
+//
+// The reskin replaced most Bulma components with bespoke ones (.site-nav,
+// .myst-modal, .myst-menu, .myst-select, SpreadCanvasEditor, …), so importing
+// bulma/css/bulma.min.css meant shipping ~660 KB of stylesheet to use maybe a
+// fifth of it. Pulling the modules individually roughly halves the app's
+// render-blocking CSS.
+//
+// Dropped deliberately — each verified to have zero exact-class usage in any
+// template AND no override in our own CSS:
+//   elements/image, elements/loader, elements/progress
+//   components/breadcrumb, card, dropdown, menu, message, modal, navbar, tabs
+//   form/file
+//   grid/grid        (the .cell / .fixed-grid system — 52 KB on its own;
+//                     we use the older .columns/.column grid)
+//   layout/media
+//   helpers          (1,716 classes for the 41 we use — see bulma-helpers.css)
+//
+// Adding a Bulma class that isn't styled? Its module probably isn't imported.
+// Add the @use line here rather than reaching back for the full stylesheet.
+@charset "utf-8";
+
+// Infrastructure: functions, mixins, CSS custom properties, the theme that
+// defines every --bulma-* variable the rules below read.
+@use 'bulma/sass/utilities';
+@use 'bulma/sass/themes';
+@use 'bulma/sass/base';
+
+@use 'bulma/sass/elements/block';
+@use 'bulma/sass/elements/box';
+@use 'bulma/sass/elements/button';
+@use 'bulma/sass/elements/content';
+@use 'bulma/sass/elements/delete';
+@use 'bulma/sass/elements/icon';
+@use 'bulma/sass/elements/notification';
+@use 'bulma/sass/elements/table';
+@use 'bulma/sass/elements/tag';
+@use 'bulma/sass/elements/title';
+
+@use 'bulma/sass/form/shared';
+@use 'bulma/sass/form/input-textarea';
+@use 'bulma/sass/form/checkbox-radio';
+@use 'bulma/sass/form/select';
+@use 'bulma/sass/form/tools';
+
+@use 'bulma/sass/layout/container';
+@use 'bulma/sass/layout/hero';
+@use 'bulma/sass/layout/level';
+@use 'bulma/sass/layout/section';
+@use 'bulma/sass/layout/footer';
+
+@use 'bulma/sass/grid/columns';
+
+@use 'bulma/sass/components/panel';
+// Admin readings drives Reka's Pagination with Bulma's classes — .pagination-ellipsis
+// is the one that matters (see views/admin/ReadingsView.vue).
+@use 'bulma/sass/components/pagination';

@@ -1,23 +1,8 @@
 using System;
-using System.Collections.Generic;
 using Dalamud.Configuration;
 using Dalamud.Plugin;
 
 namespace TarotGen.Plugin;
-
-/// <summary>
-/// One FFXIV character the user has linked to this install for receiving shared
-/// readings. Only the user's own characters (their names are theirs to store).
-/// </summary>
-[Serializable]
-public sealed class LinkedCharacter
-{
-    public ulong ContentId { get; set; }
-    public string Name { get; set; } = string.Empty;
-    public string World { get; set; } = string.Empty;
-
-    public string Display => $"{this.Name} @ {this.World}";
-}
 
 /// <summary>
 /// Persisted plugin settings. Stored by Dalamud as plaintext JSON under
@@ -48,21 +33,6 @@ public sealed class Configuration : IPluginConfiguration
     public string? EncryptedToken { get; set; }
     public bool TokenIsEncrypted { get; set; }
     public string? LinkedName { get; set; }
-
-    // Share relay (P2). Every connected install holds a client (routing) token —
-    // guest by default, linked when the account token is present. Encrypted the
-    // same way as the account token; ClientId is the server-side routing id.
-    public string? EncryptedClientToken { get; set; }
-    public bool ClientTokenIsEncrypted { get; set; }
-    public int ClientId { get; set; }
-
-    // Whether to receive incoming shares (opt-in), and from whom. AcceptTier is
-    // one of: party | friends | party_or_friends | anyone.
-    public bool IncomingSharesEnabled { get; set; }
-    public string AcceptTier { get; set; } = "party_or_friends";
-
-    // Characters linked to this install for receiving shares (multi-character).
-    public List<LinkedCharacter> LinkedCharacters { get; set; } = new();
 
     // First-run onboarding — shown once, then never again.
     public bool OnboardingComplete { get; set; }

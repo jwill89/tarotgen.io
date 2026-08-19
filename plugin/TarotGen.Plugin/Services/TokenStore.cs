@@ -23,7 +23,6 @@ public sealed class TokenStore
     private readonly IPluginLog log;
 
     private string? cachedToken;
-    private string? cachedClientToken;
 
     public TokenStore(Configuration config, IDalamudPluginInterface pluginInterface, IPluginLog log)
     {
@@ -31,7 +30,6 @@ public sealed class TokenStore
         this.pluginInterface = pluginInterface;
         this.log = log;
         this.cachedToken = Decrypt(config.EncryptedToken, config.TokenIsEncrypted);
-        this.cachedClientToken = Decrypt(config.EncryptedClientToken, config.ClientTokenIsEncrypted);
     }
 
     /// <summary>An account token is present (unlocks finalize / favorites / My Readings).</summary>
@@ -40,13 +38,6 @@ public sealed class TokenStore
     public string? Token => this.cachedToken;
 
     public string LinkedName => this.config.LinkedName ?? string.Empty;
-
-    /// <summary>A relay client token is present (can send/receive shares).</summary>
-    public bool IsConnected => !string.IsNullOrEmpty(this.cachedClientToken);
-
-    public string? ClientToken => this.cachedClientToken;
-
-    public int ClientId => this.config.ClientId;
 
     public void Save(string token, string displayName)
     {
@@ -58,27 +49,12 @@ public sealed class TokenStore
         this.config.Save(this.pluginInterface);
     }
 
-    public void SaveClient(string clientToken, int clientId)
-    {
-        this.cachedClientToken = clientToken;
-        var (blob, encrypted) = Encrypt(clientToken);
-        this.config.EncryptedClientToken = blob;
-        this.config.ClientTokenIsEncrypted = encrypted;
-        this.config.ClientId = clientId;
-        this.config.Save(this.pluginInterface);
-    }
-
     public void Clear()
     {
         this.cachedToken = null;
         this.config.EncryptedToken = null;
         this.config.TokenIsEncrypted = false;
         this.config.LinkedName = null;
-
-        this.cachedClientToken = null;
-        this.config.EncryptedClientToken = null;
-        this.config.ClientTokenIsEncrypted = false;
-        this.config.ClientId = 0;
 
         this.config.Save(this.pluginInterface);
     }

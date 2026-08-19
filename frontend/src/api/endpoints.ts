@@ -153,12 +153,10 @@ export const endpoints = {
     tokenById: (id: string | number) => `/account/tokens/${id}`,
   },
 
-  /** Dalamud plugin account linking (OAuth-style, PKCE) + guest relay connect. */
+  /** Dalamud plugin account linking (OAuth-style, PKCE). */
   plugin: {
     /** `POST` — browser consent approval → PKCE authorization code (session). */
     authorize: '/plugin/authorize',
-    /** `POST` — mint a guest relay client token (no account; loopback handback). */
-    guestAuthorize: '/plugin/guest-authorize',
     /** `POST` — plugin exchanges code + verifier for a Bearer token (public). */
     token: '/plugin/token',
   },

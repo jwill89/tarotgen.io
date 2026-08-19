@@ -1,0 +1,66 @@
+/*
+ * The only Bulma helper classes this app actually uses.
+ *
+ * The full helpers module ships 1,716 classes (about 15 KB gzipped) so that a
+ * handful of margins and text colours can be spelled Bulma's way. These rules
+ * are lifted verbatim from bulma.min.css v1.0.4, so the values are identical —
+ * this file just stops us paying for the other 1675 classes.
+ *
+ * If you reach for a Bulma helper that isn't here it will simply do nothing —
+ * copy its rule across from node_modules/bulma/css/bulma.min.css, or write a
+ * bespoke class instead.
+ */
+
+.has-text-white{color:hsl(var(--bulma-white-h),var(--bulma-white-s),var(--bulma-white-l))!important}
+a.has-text-white:focus-visible,a.has-text-white:hover,button.has-text-white:focus-visible,button.has-text-white:hover{color:hsl(var(--bulma-white-h),var(--bulma-white-s),calc(var(--bulma-white-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-white:active,button.has-text-white:active{color:hsl(var(--bulma-white-h),var(--bulma-white-s),calc(var(--bulma-white-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-link{color:hsl(var(--bulma-link-h),var(--bulma-link-s),var(--bulma-link-l))!important}
+a.has-text-link:focus-visible,a.has-text-link:hover,button.has-text-link:focus-visible,button.has-text-link:hover{color:hsl(var(--bulma-link-h),var(--bulma-link-s),calc(var(--bulma-link-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-link:active,button.has-text-link:active{color:hsl(var(--bulma-link-h),var(--bulma-link-s),calc(var(--bulma-link-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-info{color:hsl(var(--bulma-info-h),var(--bulma-info-s),var(--bulma-info-l))!important}
+a.has-text-info:focus-visible,a.has-text-info:hover,button.has-text-info:focus-visible,button.has-text-info:hover{color:hsl(var(--bulma-info-h),var(--bulma-info-s),calc(var(--bulma-info-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-info:active,button.has-text-info:active{color:hsl(var(--bulma-info-h),var(--bulma-info-s),calc(var(--bulma-info-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-success{color:hsl(var(--bulma-success-h),var(--bulma-success-s),var(--bulma-success-l))!important}
+a.has-text-success:focus-visible,a.has-text-success:hover,button.has-text-success:focus-visible,button.has-text-success:hover{color:hsl(var(--bulma-success-h),var(--bulma-success-s),calc(var(--bulma-success-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-success:active,button.has-text-success:active{color:hsl(var(--bulma-success-h),var(--bulma-success-s),calc(var(--bulma-success-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-warning{color:hsl(var(--bulma-warning-h),var(--bulma-warning-s),var(--bulma-warning-l))!important}
+a.has-text-warning:focus-visible,a.has-text-warning:hover,button.has-text-warning:focus-visible,button.has-text-warning:hover{color:hsl(var(--bulma-warning-h),var(--bulma-warning-s),calc(var(--bulma-warning-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-warning:active,button.has-text-warning:active{color:hsl(var(--bulma-warning-h),var(--bulma-warning-s),calc(var(--bulma-warning-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-danger{color:hsl(var(--bulma-danger-h),var(--bulma-danger-s),var(--bulma-danger-l))!important}
+a.has-text-danger:focus-visible,a.has-text-danger:hover,button.has-text-danger:focus-visible,button.has-text-danger:hover{color:hsl(var(--bulma-danger-h),var(--bulma-danger-s),calc(var(--bulma-danger-l) + var(--bulma-hover-color-l-delta)))!important}
+a.has-text-danger:active,button.has-text-danger:active{color:hsl(var(--bulma-danger-h),var(--bulma-danger-s),calc(var(--bulma-danger-l) + var(--bulma-active-color-l-delta)))!important}
+.has-text-grey{color:#69748c!important}
+.has-text-grey-light{color:#abb1bf!important}
+.is-flex-wrap-wrap{flex-wrap:wrap!important}
+.is-justify-content-flex-end{justify-content:flex-end!important}
+.is-justify-content-space-between{justify-content:space-between!important}
+.is-align-items-center{align-items:center!important}
+.is-align-self-center{align-self:center!important}
+.mb-0{margin-bottom:0!important}
+.mt-1{margin-top:.25rem!important}
+.mr-1{margin-right:.25rem!important}
+.mb-1{margin-bottom:.25rem!important}
+.ml-1{margin-left:.25rem!important}
+.mt-2{margin-top:.5rem!important}
+.mb-2{margin-bottom:.5rem!important}
+.ml-2{margin-left:.5rem!important}
+.mt-3{margin-top:.75rem!important}
+.mb-3{margin-bottom:.75rem!important}
+.mt-4{margin-top:1rem!important}
+.mb-4{margin-bottom:1rem!important}
+.mt-5{margin-top:1.5rem!important}
+.mb-5{margin-bottom:1.5rem!important}
+.mt-6{margin-top:3rem!important}
+.mb-6{margin-bottom:3rem!important}
+.mt-auto{margin-top:auto!important}
+.ml-auto,.mx-auto{margin-left:auto!important}
+.mx-auto{margin-right:auto!important}
+.py-6{padding-bottom:3rem!important;padding-top:3rem!important}
+.is-size-5{font-size:1.25rem!important}
+.is-size-7{font-size:.75rem!important}
+.has-text-centered{text-align:center!important}
+.has-text-right{text-align:right!important}
+.is-italic{font-style:italic!important}
+.has-text-weight-normal{font-weight:400!important}
+.has-text-weight-bold{font-weight:700!important}
+.is-flex{display:flex!important}

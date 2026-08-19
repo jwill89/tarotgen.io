@@ -1,13 +1,21 @@
 import { ref, type Ref } from 'vue'
 import { apiFetch } from './useApi'
 import { endpoints } from '@/api/endpoints'
+import { useUser } from './useUser'
 
 const favoriteDecks: Ref<number[]> = ref([])
 // Dedupe concurrent callers into a single in-flight request (see useFavoriteSpreads).
 let inFlight: Promise<void> | null = null
 
 export function useFavoriteDecks() {
+  const { isLoggedIn } = useUser()
+
   function fetchFavoriteDecks(): Promise<void> {
+    // Favourites are account data: for a signed-out visitor this endpoint can
+    // only ever answer 401, and both deck-picker pages call it on mount. Guard
+    // here rather than at each call site so every caller is covered (mirrors
+    // the isLoggedIn checks in useSpreads).
+    if (!isLoggedIn.value) return Promise.resolve()
     if (inFlight) return inFlight
     inFlight = (async () => {
       const data = await apiFetch<number[]>(endpoints.account.favoriteDecks)

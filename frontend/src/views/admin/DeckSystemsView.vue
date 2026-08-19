@@ -137,8 +137,7 @@ async function saveSystem() {
       )
     }
     if (!result) return
-    await fetchSystems()
-    await fetchPendingSystems()
+    await Promise.all([fetchSystems(), fetchPendingSystems()])
     closeEdit()
   } finally {
     saving.value = false
@@ -152,8 +151,7 @@ async function approveSystem(system: DeckSystem) {
     'Deck system approved.',
   )
   if (result) {
-    await fetchSystems()
-    await fetchPendingSystems()
+    await Promise.all([fetchSystems(), fetchPendingSystems()])
   }
 }
 
@@ -170,8 +168,7 @@ async function deleteSystem(system: DeckSystem) {
     'Deck system deleted.',
   )
   if (result) {
-    await fetchSystems()
-    await fetchPendingSystems()
+    await Promise.all([fetchSystems(), fetchPendingSystems()])
   }
 }
 

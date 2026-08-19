@@ -8,7 +8,7 @@ import PageHeader from '@/components/PageHeader.vue'
 // The plugin opens this page with the PKCE + loopback query params.
 const route = useRoute()
 const { currentUser, isLoggedIn, fetchMe } = useUser()
-const { authorize, connectGuest } = usePluginLink()
+const { authorize } = usePluginLink()
 
 const q = route.query
 const codeChallenge = String(q.code_challenge ?? '')
@@ -21,11 +21,7 @@ const state = String(q.state ?? '')
 const isLoopback = computed(() =>
   /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(redirectUri),
 )
-// The guest path needs only a loopback redirect; the account path also needs PKCE.
-const paramsValid = computed(() => isLoopback.value)
-const accountParamsValid = computed(
-  () => codeChallenge !== '' && method === 'S256' && isLoopback.value,
-)
+const paramsValid = computed(() => codeChallenge !== '' && method === 'S256' && isLoopback.value)
 
 const checkingSession = ref(true)
 const submitting = ref(false)
@@ -56,19 +52,11 @@ async function approve(): Promise<void> {
   finish(res)
 }
 
-async function approveGuest(): Promise<void> {
-  submitting.value = true
-  error.value = null
-
-  const res = await connectGuest({ redirect_uri: redirectUri, state })
-  finish(res)
-}
-
 function finish(res: { ok: boolean; redirectUri?: string; error?: string }): void {
   submitting.value = false
   if (res.ok && res.redirectUri) {
     done.value = true
-    // Hand the code / client token back to the plugin's loopback listener.
+    // Hand the authorization code back to the plugin's loopback listener.
     window.location.href = res.redirectUri
   } else {
     error.value = res.error ?? 'Connection failed.'
@@ -81,7 +69,7 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
     <div class="container" style="max-width: 40rem">
       <PageHeader
         title="Connect the TarotGen Plugin"
-        subtitle="Authorize the TarotGen FFXIV plugin to connect to your account, or continue as a guest."
+        subtitle="Authorize the TarotGen FFXIV plugin to connect to your account."
       />
 
       <div v-if="!paramsValid" class="myst-callout">
@@ -96,22 +84,17 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
       </div>
 
       <div v-else class="settings-panel">
-        <p class="mb-4">
-          Choose how the <strong>TarotGen FFXIV plugin</strong> connects to TarotGen.io:
-        </p>
-
         <p v-if="error" class="help is-danger mb-3">{{ error }}</p>
 
-        <!-- Account link -->
         <div class="mb-4">
           <p class="mb-1"><strong>Link your account</strong></p>
           <p class="is-size-7 has-text-grey mb-2">
-            Unlocks locking readings, favorites, and My Readings — plus sending &amp; receiving
-            shared readings. The plugin <strong>cannot</strong> change your password, delete your
-            account, or manage other links, and you can revoke it any time from Account Settings.
+            Unlocks locking readings, favorites, and My Readings. The plugin
+            <strong>cannot</strong> change your password, delete your account, or manage other
+            links, and you can revoke it any time from Account Settings.
           </p>
           <button
-            v-if="isLoggedIn && accountParamsValid"
+            v-if="isLoggedIn"
             class="button is-primary"
             :class="{ 'is-loading': submitting }"
             :disabled="submitting"
@@ -122,25 +105,6 @@ function finish(res: { ok: boolean; redirectUri?: string; error?: string }): voi
           <router-link v-else class="button is-primary" :to="loginTo">
             Log in to link your account
           </router-link>
-        </div>
-
-        <hr />
-
-        <!-- Guest -->
-        <div class="mb-2">
-          <p class="mb-1"><strong>Continue as a guest</strong></p>
-          <p class="is-size-7 has-text-grey mb-2">
-            No account needed. You can send and receive shared readings. You can link an account
-            later from the plugin's settings.
-          </p>
-          <button
-            class="button"
-            :class="{ 'is-loading': submitting }"
-            :disabled="submitting"
-            @click="approveGuest"
-          >
-            Continue as guest
-          </button>
         </div>
 
         <div class="mt-4">

@@ -26,7 +26,7 @@ import Tooltip from '@/components/Tooltip.vue'
 
 const route = useRoute()
 const router = useRouter()
-const { deckLookup } = useDecks()
+const { deckLookup, fetchDecks } = useDecks()
 const { isLoggedIn } = useUser()
 const toasts = useToasts()
 const { confirm } = useConfirm()
@@ -426,6 +426,9 @@ watch(
     activeIndex.value = null
     showSpreadDetails.value = false
     lightboxIndex.value = null
+    // deckLookup resolves this reading's deck name/aspect; cached module-wide,
+    // so this is a no-op after the first call.
+    void fetchDecks()
     void fetchReading(id)
   },
   { immediate: true },

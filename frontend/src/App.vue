@@ -3,7 +3,6 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
-import { useDecks } from '@/composables/useDecks'
 import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
@@ -29,7 +28,6 @@ import CookieBanner from '@/components/CookieBanner.vue'
 
 const router = useRouter()
 const { currentUser, isLoggedIn, logout: userLogout } = useUser()
-const { fetchDecks } = useDecks()
 
 const burgerOpen = ref(false)
 const searchReadingId = ref('')
@@ -68,8 +66,6 @@ const adminItems = [
   { label: 'Errored Cards', icon: 'triangle-exclamation', to: { name: 'admin-card-reports' } },
   { label: 'Changelog', icon: 'newspaper', to: { name: 'admin-changelog' } },
 ]
-
-void fetchDecks()
 
 function closeMenu() {
   burgerOpen.value = false

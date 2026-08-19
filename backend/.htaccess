@@ -10,6 +10,19 @@
     # live SPA, Cloudflare Turnstile, or Google Fonts. After watching for false
     # positives, promote it by renaming the header to "Content-Security-Policy".
     Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+
+    # Vite writes content-hashed filenames into /_app/ (assetsDir), so the bytes
+    # behind a given URL never change — a new build means a new URL. Say so, or
+    # the origin sends nothing and Cloudflare's default 4-hour Browser Cache TTL
+    # applies: returning visitors re-download the whole bundle (and sit through
+    # the boot loader again) roughly twice a day.
+    SetEnvIf Request_URI "^/_app/" TG_HASHED_ASSET
+    Header always set Cache-Control "public, max-age=31536000, immutable" env=TG_HASHED_ASSET
+
+    # Fonts are NOT hashed, so they can't claim immutability — but they change
+    # about never, and a month keeps them off the critical path for repeat visits.
+    SetEnvIf Request_URI "^/fonts/" TG_FONT
+    Header always set Cache-Control "public, max-age=2592000" env=TG_FONT
 </IfModule>
 
 RewriteEngine On
