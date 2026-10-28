@@ -37,7 +37,7 @@ verification are listed at the end so nobody re-chases them.
 |---|---|---|---|---|
 | 0 | State of the tree | 1 | 2 | Owner's git housekeeping: dead worktrees/branches, old branches, a stash |
 | 1 | Bugs and risks | 8 | 1 | §1.7 retention — built, cron installed; tick after the first live run (03:17 UTC 2026-10-29) |
-| 2 | Database | 7 | 0 | Prod: run §2.3's and §2.7's migrations (backup first) before the next backend deploy |
+| 2 | Database | 7 | 0 | — (all migrations run on prod 2026-10-28) |
 | 3 | Performance | 5 | 0 | — |
 | 4 | Duplication | 7 | 0 | — |
 | 5 | Standards | 4 | 5 | §5.1 `"*"` constraints, §5.3 metadata, §5.4 plugin/AGENTS doc lines, §5.6 a11y, §5.9 Slim error shape |
@@ -547,7 +547,11 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     re-checked: it pages on `idx_readings_time`, then looks up users and decks by
     primary key for the page's rows only. `schema.sql` hand-edited; dev DB =
     `schema.sql` object-for-object. The dashboard's whole-table `json_extract`
-    stays as is (generated columns only if the table grows past tens of thousands). `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
+    stays as is (generated columns only if the table grows past tens of thousands).
+  - **DONE on prod 2026-10-28 21:23 UTC**, after a backup
+    (`tarotdb-20261028-212309.db.gz`, 2,059 readings), run as www-data. Both
+    indexes were created, `idx_readings_user` was dropped, and integrity is ok.
+    Prod's schema then matched a fresh `schema.sql` build object for object (41). `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
   - **Where:** 18 occurrences across `ChangelogData`, `DeckSystemData` (×6),
     `SpecialCardData` (×3), `UserData` (×4), plus `DeckData`'s `d.*` (fixed in
     §1.2). Any added
@@ -672,6 +676,11 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     other deck's. It fails (500) against the old schema. **Order on prod: back
     up, run this migration, then deploy the backend** — the new `delete()` relies
     on the cascade.
+    **DONE on prod 2026-10-28 21:23 UTC**, with the same backup as §2.3. 0 orphans
+    beforehand; all 9 rows kept. `foreign_key_check` came back empty, integrity is
+    ok, and the files are still www-data's. The backend had gone out a little
+    earlier, so deleting a deck that had special cards would have been refused
+    until then; nothing was lost.
   - Mixed timestamp sources — §1.4.
   - No `ANALYZE`/`PRAGMA optimize` ever runs; fold into the retention cron (§1.7).
     **Done in §1.7** (`scripts/retention.php` runs `ANALYZE` nightly; `PRAGMA
@@ -1407,20 +1416,18 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
    first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
    branches, stash.
-2. **Before the next backend deploy:** `sudo tarotgen-backup`, then §2.3's and
-   §2.7's migrations as www-data.
-3. **Small fixes (each S):** §5.9 Slim error shape, §5.1 version constraints,
+2. **Small fixes (each S):** §5.9 Slim error shape, §5.1 version constraints,
    §5.4 the leftover plugin/AGENTS doc lines, §5.3 metadata, §5.6 `<main>` +
    skip link.
-4. **Tests:** §8.1's next targets (account ownership, reading flows, plugin
+3. **Tests:** §8.1's next targets (account ownership, reading flows, plugin
    PKCE, the other admin controllers), §8.2, §8.4's remainder, then §8.3
    component tests and §8.6 Playwright; §8.7 coverage with §6.1/§6.2.
-5. **Tooling that stops regressions:** §6.1 Stylelint (enforces §4.6) + Knip,
+4. **Tooling that stops regressions:** §6.1 Stylelint (enforces §4.6) + Knip,
    §6.2 PHPStan extensions, §6.3 plugin CI build, §6.4 Dependabot.
-6. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
+5. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
    vitest 5, happy-dom 21) one at a time; TypeScript 7 waits for Vue (owner);
    §7.4 plugin packages.
-7. **Features:** §9.1 → §9.4 first.
+6. **Features:** §9.1 → §9.4 first.
 
 ---
 

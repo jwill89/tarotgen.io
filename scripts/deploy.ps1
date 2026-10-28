@@ -9,34 +9,42 @@
     ever touching the server-side data (.env + the database, which live outside
     the web root in TAROT_DATA_DIR, and assets/decks/).
 
+    Each target is packed into one tarball (a "bundle") with the shell that
+    installs it. A run uploads all its bundles in ONE pscp call, to the SSH user's
+    home directory (outside the web root), and installs them in ONE plink call:
+    checksums verified first, then each bundle unpacked into a staging dir and
+    swapped in. Two SSH connections whatever the target, so `ufw limit ssh` (which
+    drops the IP after 6 connections in 30s) never needs a pause, and one archive
+    replaces the per-file round trips that made a 1 MB upload take ~20s.
+
     -Target frontend (default):
-        1. Builds the SPA (vite) -> dist/.
-        2. Uploads it to <WebRoot>/dist.new via pscp (one stream; elapsed-time
-           indicator, not per-file output).
-        3. Verifies every file arrived, then swaps it in: live "dist" -> "dist.old"
-           (rollback backup, overwritten each deploy), new build -> "dist".
+        Builds the SPA (vite) -> dist/, then swaps it in: live "dist" -> "dist.old"
+        (rollback backup, overwritten each deploy), new build -> "dist".
 
     -Target backend:
-        1. Stages the runtime PHP payload locally (api/, includes/, og.php,
-           composer.json, composer.lock, .htaccess) — NOT vendor/, db/, .env, assets/.
-        2. Uploads it to <WebRoot>/.deploy.new in one stream.
-        3. Archives the current backend to .deploy/backend-prev.tgz (rollback), swaps
-           the new files into place, and — only if composer.lock changed — runs
-           `composer install --no-dev --optimize-autoloader` on the droplet.
+        Packs the runtime PHP payload (api/, includes/, scripts/, og.php,
+        openapi.json, composer.json, composer.lock, .htaccess) — NOT vendor/, db/,
+        .env, assets/. Archives the current backend to .deploy/backend-prev.tgz
+        (rollback), swaps the new files into place, and — only if composer.lock
+        changed — runs `composer install --no-dev --optimize-autoloader`.
 
-    -Target both: frontend, then backend (with a short pause between to stay under
-    the SSH rate limit).
+    -Target both: frontend and backend, in one upload and one install.
+
+    -Target plugin: builds the FFXIV plugin and publishes it to <WebRoot>/plugin.
+
+    Nothing goes live unless every bundle of the run built and uploaded intact.
+    Unpacked files get the server's usual modes (644 files, 755 dirs, owned by the
+    SSH user) and the extraction time as mtime, exactly as the old per-file pscp
+    upload left them — Windows tar records 0666 files and read-only dirs, which
+    are deliberately not kept.
 
     Uses PuTTY's pscp/plink so the DigitalOcean .ppk key works directly. pscp/plink
     run in batch mode, so a passphrase-protected .ppk must be loaded into Pageant
     first:  pageant.exe "<KeyPath>"  (enter the passphrase once per Windows session).
-
-    Each target uses just THREE SSH connections and does not poll during transfers,
-    to stay under `ufw limit ssh` (which drops the IP after 6 connections in 30s).
     A connection that gets rate-limited is retried once after a 35s wait.
 
 .PARAMETER Target
-    What to deploy: frontend (default), backend, or both.
+    What to deploy: frontend (default), backend, both, or plugin.
 
 .PARAMETER VpsHost
     Droplet IP or hostname. Defaults to the production droplet.
@@ -118,25 +126,26 @@ function Invoke-RemoteWithRetry([string]$cmd) {
     return ($LASTEXITCODE -eq 0)
 }
 
-# One pscp upload of a local directory -> a remote staging dir, with an elapsed-time
-# indicator and no polling. Returns @{ Ok; Err; Elapsed }.
-function Invoke-Upload([string]$WorkingDir, [string]$LocalItem, [string]$RemoteDest, [string]$Label, [int]$FileCount) {
+# One pscp upload of the bundles (bare file names in $BundleDir: run from there so
+# no path with a space reaches the argument list) to the SSH user's home directory,
+# with an elapsed-time indicator and no polling. Returns @{ Ok; Err; Elapsed }.
+function Invoke-Upload([string[]]$Files) {
     $outFile = Join-Path $env:TEMP ("pscp-out-{0}.log" -f [guid]::NewGuid())
     $errFile = Join-Path $env:TEMP ("pscp-err-{0}.log" -f [guid]::NewGuid())
-    $proc = Start-Process -FilePath $pscp -NoNewWindow -PassThru -WorkingDirectory $WorkingDir `
+    $proc = Start-Process -FilePath $pscp -NoNewWindow -PassThru -WorkingDirectory $BundleDir `
         -RedirectStandardOutput $outFile -RedirectStandardError $errFile `
-        -ArgumentList @('-batch', '-C', '-r', '-i', $KeyPath, $LocalItem, "${remoteTarget}:$RemoteDest")
+        -ArgumentList (@('-batch', '-q', '-i', $KeyPath) + $Files + "${remoteTarget}:")
     $sw = [System.Diagnostics.Stopwatch]::StartNew()
     $maxSeconds = 900
     $killed = $false
     while (-not $proc.HasExited) {
         Start-Sleep -Seconds 1
-        Write-Progress -Activity $Label -Status ("{0} files - {1:mm\:ss} elapsed" -f $FileCount, $sw.Elapsed)
+        Write-Progress -Activity 'Uploading' -Status ("{0} - {1:mm\:ss} elapsed" -f ($Files -join ', '), $sw.Elapsed)
         if ($sw.Elapsed.TotalSeconds -gt $maxSeconds) { try { $proc.Kill() } catch {}; $killed = $true; break }
     }
     $proc.WaitForExit()
     $sw.Stop()
-    Write-Progress -Activity $Label -Completed
+    Write-Progress -Activity 'Uploading' -Completed
     $code = $proc.ExitCode
     $err = if ($killed) { "Upload exceeded ${maxSeconds}s and was aborted." }
     elseif ($code -ne 0) { Get-Content $errFile -Raw -ErrorAction SilentlyContinue } else { '' }
@@ -179,14 +188,44 @@ function Resolve-PuttyTool($name) {
 $pscp = Resolve-PuttyTool "pscp"
 $plink = Resolve-PuttyTool "plink"
 
+# Windows' own bsdtar, by full path: Git's GNU tar can come first on PATH, and it
+# reads "C:\..." as a remote host.
+$tar = Join-Path $env:SystemRoot 'System32\tar.exe'
+if (-not (Test-Path $tar)) { Fail "tar.exe not found at $tar (it ships with Windows 10 1803 and later)." }
+
 $remoteTarget = "$VpsUser@$VpsHost"
-$remoteLive = "$WebRoot/dist"
-$remoteNew = "$WebRoot/dist.new"
-$remoteOld = "$WebRoot/dist.old"
+
+# ── Bundles ───────────────────────────────────────────────────────────────────
+$BundleDir = Join-Path $env:TEMP 'tarotgen-deploy'
+Remove-Item $BundleDir -Recurse -Force -ErrorAction SilentlyContinue
+New-Item -ItemType Directory -Force -Path $BundleDir | Out-Null
+$Bundles = [System.Collections.Generic.List[object]]::new()
+
+# Pack $Items (relative to $Root) into tarotgen-<Name>.tgz. $Install is the remote
+# shell that puts it live, run from <WebRoot> after every checksum has passed, with
+# `unpack <archive> <dir>` available; $Done is printed once the whole run succeeds.
+function Add-Bundle([string]$Name, [string]$Root, [string[]]$Items, [string]$Install, [string[]]$Done) {
+    $file = "tarotgen-$Name.tgz"
+    $path = Join-Path $BundleDir $file
+    # ustar, not the default pax: pax carries Windows file flags (SCHILY.fflags)
+    # that GNU tar on the droplet warns about for every entry.
+    & $tar --format ustar -czf $path -C $Root @Items
+    if ($LASTEXITCODE -ne 0) { Fail "Could not pack the $Name bundle (tar exit $LASTEXITCODE). Live site untouched." }
+    $count = @(& $tar -tzf $path | Where-Object { $_ -notmatch '/$' }).Count
+    $size = (Get-Item $path).Length
+    Write-Ok ("Packed {0} files into {1} ({2:N0} KB)." -f $count, $file, ($size / 1KB))
+    $Bundles.Add([pscustomobject]@{
+            Name    = $Name
+            File    = $file
+            Size    = $size
+            Sha256  = (Get-FileHash $path -Algorithm SHA256).Hash.ToLowerInvariant()
+            Install = $Install
+            Done    = $Done
+        })
+}
 
 # ══ Frontend ══════════════════════════════════════════════════════════════════
-function Deploy-Frontend {
-    # 1. Build
+function Add-FrontendBundle {
     if ($SkipBuild) {
         Write-Step "Skipping frontend build (-SkipBuild); using existing dist/"
     }
@@ -202,56 +241,24 @@ function Deploy-Frontend {
     if (-not (Test-Path (Join-Path $DistDir "index.html"))) {
         Fail "dist/index.html is missing - nothing to deploy."
     }
-    Write-Ok "Build present: $DistDir"
 
-    # 2. Connect + prepare staging (1 connection)
-    Write-Step "Connecting and preparing staging dir..."
-    if (-not (Invoke-RemoteWithRetry "test -d '$WebRoot' && rm -rf '$remoteNew' && mkdir -p '$remoteNew'")) {
-        Fail @"
-Could not connect, or $WebRoot does not exist / is not writable.
-  - If the .ppk has a passphrase, load it into Pageant first, then re-run:
-        pageant.exe "$KeyPath"
-  - First-ever connection from PuTTY also needs the host key cached once:
-        plink -i "$KeyPath" $remoteTarget   (accept the fingerprint)
-  - Otherwise verify the host ($VpsHost), user ($VpsUser), and that $WebRoot exists.
+    $install = @"
+unpack tarotgen-frontend.tgz dist.new
+rm -rf dist.old
+if [ -d dist ]; then mv dist dist.old; fi
+mv dist.new/dist dist
+rm -rf dist.new
 "@
-    }
-    Write-Ok "Connected; staging dir ready."
+    if ($NoBackup) { $install += "`nrm -rf dist.old" }
+    $install += "`necho 'frontend deployed'"
 
-    # 3. Upload (1 connection)
-    $localFileCount = (Get-ChildItem -Recurse -File $DistDir).Count
-    if ($localFileCount -eq 0) { Fail "No files in $DistDir to upload." }
-    Write-Step ("Uploading {0} files (single stream)..." -f $localFileCount)
-    $r = Invoke-Upload -WorkingDir $RepoRoot -LocalItem 'dist' -RemoteDest $remoteNew -Label 'Uploading frontend' -FileCount $localFileCount
-    if (-not $r.Ok) {
-        Write-Host "    Upload failed - possibly the SSH rate limit (ufw limit ssh)." -ForegroundColor Yellow
-        Write-Host "    Waiting 35s for the 30s window to clear, then retrying once..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 35
-        $r = Invoke-Upload -WorkingDir $FrontendDir -LocalItem 'dist' -RemoteDest $remoteNew -Label 'Uploading frontend' -FileCount $localFileCount
-    }
-    if (-not $r.Ok) { Fail "Upload failed. Live site untouched (still serving the previous build).`n$($r.Err)" }
-    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
-
-    # 4. Verify + swap (1 connection)
-    Write-Step "Verifying upload and swapping into place..."
-    $swap = @"
-set -e
-cnt=`$(find '$remoteNew/dist' -type f | wc -l)
-if [ "`$cnt" -ne $localFileCount ]; then echo "incomplete upload: `$cnt/$localFileCount files" >&2; exit 3; fi
-rm -rf '$remoteOld'
-if [ -d '$remoteLive' ]; then mv '$remoteLive' '$remoteOld'; fi
-mv '$remoteNew/dist' '$remoteLive'
-rm -rf '$remoteNew'
-"@
-    if ($NoBackup) { $swap += "`nrm -rf '$remoteOld'" }
-    if (-not (Invoke-RemoteWithRetry $swap)) {
-        Fail "Verify/swap failed. The previous build may be at $remoteOld - on the host, restore with: mv '$remoteOld' '$remoteLive'"
-    }
-    Write-Host "`n[OK] Frontend deployed to ${remoteTarget}:$remoteLive" -ForegroundColor Green
+    $done = @("[OK] Frontend deployed to ${remoteTarget}:$WebRoot/dist")
     if (-not $NoBackup) {
-        Write-Host "     Previous build kept at $remoteOld (rollback: mv '$remoteOld' '$remoteLive')." -ForegroundColor DarkGray
+        $done += "Previous build kept at $WebRoot/dist.old (rollback: cd '$WebRoot' && rm -rf dist && mv dist.old dist)."
     }
-    Write-Host "     Assets are content-hashed and the PWA auto-updates, so no manual cache bust is needed." -ForegroundColor DarkGray
+    $done += "Assets are content-hashed and the PWA auto-updates, so no manual cache bust is needed."
+
+    Add-Bundle -Name 'frontend' -Root $FrontendDir -Items @('dist') -Install $install -Done $done
 }
 
 # ══ Backend ═══════════════════════════════════════════════════════════════════
@@ -263,53 +270,16 @@ rm -rf '$remoteNew'
 # cron runs scripts/retention.php (AUDIT §1.7); .htaccess keeps it off the web.
 $BackendPayload = @('api', 'includes', 'scripts', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
 
-function Deploy-Backend {
-    $remoteStageRoot = "$WebRoot/.deploy.new"
-    $remoteStage = "$remoteStageRoot/payload"
-    $remoteBackup = "$WebRoot/.deploy/backend-prev.tgz"
-
-    # 1. Stage the payload locally so it uploads as a single stream (1 transfer).
-    Write-Step "Staging backend payload..."
-    $stageRoot = Join-Path $env:TEMP "tarot-be-deploy"
-    $stage = Join-Path $stageRoot "payload"
-    Remove-Item $stageRoot -Recurse -Force -ErrorAction SilentlyContinue
-    New-Item -ItemType Directory -Force -Path $stage | Out-Null
+function Add-BackendBundle {
+    Write-Step "Packing backend payload..."
     foreach ($item in $BackendPayload) {
-        $src = Join-Path $BackendDir $item
-        if (-not (Test-Path $src)) { Fail "Backend payload item not found: $src" }
-        Copy-Item $src -Destination $stage -Recurse -Force
+        if (-not (Test-Path (Join-Path $BackendDir $item))) { Fail "Backend payload item not found: $(Join-Path $BackendDir $item)" }
     }
-    $localFileCount = (Get-ChildItem -Recurse -File $stage).Count
-    Write-Ok ("Staged {0} files: {1}" -f $localFileCount, ($BackendPayload -join ', '))
 
-    # 2. Connect + prepare staging dir (1 connection)
-    Write-Step "Connecting and preparing staging dir..."
-    if (-not (Invoke-RemoteWithRetry "test -d '$WebRoot' && rm -rf '$remoteStageRoot' && mkdir -p '$remoteStageRoot'")) {
-        Fail @"
-Could not connect, or $WebRoot does not exist / is not writable.
-  - If the .ppk has a passphrase: pageant.exe "$KeyPath"
-  - First connection needs the host key cached: plink -i "$KeyPath" $remoteTarget
-"@
-    }
-    Write-Ok "Connected; staging dir ready."
-
-    # 3. Upload the payload (1 connection)
-    Write-Step ("Uploading {0} files (single stream)..." -f $localFileCount)
-    $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'payload' -RemoteDest $remoteStageRoot -Label 'Uploading backend' -FileCount $localFileCount
-    if (-not $r.Ok) {
-        Write-Host "    Upload failed - possibly the SSH rate limit. Waiting 35s, then retrying once..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 35
-        $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'payload' -RemoteDest $remoteStageRoot -Label 'Uploading backend' -FileCount $localFileCount
-    }
-    if (-not $r.Ok) { Fail "Upload failed. Live site untouched.`n$($r.Err)" }
-    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
-
-    # 4. Verify + archive + swap + (conditional) composer install (1 connection)
-    Write-Step "Verifying, backing up, and swapping into place..."
     $items = $BackendPayload -join ' '
-    $swap = @"
-set -e
-cd '$WebRoot'
+    $install = @"
+rm -rf .deploy.new
+unpack tarotgen-backend.tgz .deploy.new/payload
 stage='.deploy.new/payload'
 for p in $items; do
   if [ ! -e "`$stage/`$p" ]; then echo "missing staged `$p" >&2; exit 3; fi
@@ -334,30 +304,25 @@ if [ "`$deps_changed" = "1" ]; then
 else
   echo 'composer.lock unchanged - skipping composer install.'
 fi
-echo 'backend-deployed'
 "@
-    if ($NoBackup) { $swap += "`nrm -f '$remoteBackup'" }
-    if (-not (Invoke-RemoteWithRetry $swap)) {
-        Fail @"
-Verify/swap/install failed. If the swap happened, the previous backend is archived at
-  $remoteBackup
-Restore on the host with:
-  cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o
-"@
-    }
-    Write-Host "`n[OK] Backend deployed to ${remoteTarget}:$WebRoot" -ForegroundColor Green
+    if ($NoBackup) { $install += "`nrm -f '.deploy/backend-prev.tgz'" }
+    $install += "`necho 'backend deployed'"
+
+    $done = @("[OK] Backend deployed to ${remoteTarget}:$WebRoot")
     if (-not $NoBackup) {
-        Write-Host "     Previous backend archived at $remoteBackup" -ForegroundColor DarkGray
-        Write-Host "     (rollback: cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o)." -ForegroundColor DarkGray
+        $done += "Previous backend archived at $WebRoot/.deploy/backend-prev.tgz"
+        $done += "(rollback: cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o)."
     }
-    Write-Host "     Server-side data (TAROT_DATA_DIR: .env + database) and assets/ were not touched." -ForegroundColor DarkGray
+    $done += "Server-side data (TAROT_DATA_DIR: .env + database) and assets/ were not touched."
+
+    Add-Bundle -Name 'backend' -Root $BackendDir -Items $BackendPayload -Install $install -Done $done
 }
 
 # ══ Plugin (Dalamud custom repo) ══════════════════════════════════════════════
 # Publishes the FFXIV plugin to <WebRoot>/plugin as a self-hosted "custom repo":
 # latest.zip (the built plugin), icon.png, and repo.json (the pluginmaster users
 # add under Dalamud's /xlsettings). Independent of the site's dist/ and backend.
-function Deploy-Plugin {
+function Add-PluginBundle {
     $pluginProj = Join-Path $RepoRoot 'plugin\TarotGen.Plugin\TarotGen.Plugin.csproj'
     if (-not (Test-Path $pluginProj)) { Fail "Plugin project not found: $pluginProj" }
 
@@ -405,54 +370,98 @@ function Deploy-Plugin {
     Copy-Item $iconPath -Destination (Join-Path $stage 'icon.png')
     Write-Ok ("Staged v{0}: repo.json, latest.zip, icon.png" -f $m.AssemblyVersion)
 
-    # 1 connection: prepare staging dir.
-    Write-Step "Preparing remote staging dir..."
-    if (-not (Invoke-RemoteWithRetry "test -d '$WebRoot' && rm -rf '$WebRoot/.plugin.new' && mkdir -p '$WebRoot/.plugin.new'")) {
-        Fail "Could not connect, or $WebRoot is not writable."
-    }
-
-    # 1 connection: upload as a single stream.
-    Write-Step "Uploading plugin files (single stream)..."
-    $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'plugin' -RemoteDest "$WebRoot/.plugin.new" -Label 'Uploading plugin' -FileCount 3
-    if (-not $r.Ok) {
-        Write-Host "    Upload failed - possibly the SSH rate limit. Waiting 35s, then retrying once..." -ForegroundColor Yellow
-        Start-Sleep -Seconds 35
-        $r = Invoke-Upload -WorkingDir $stageRoot -LocalItem 'plugin' -RemoteDest "$WebRoot/.plugin.new" -Label 'Uploading plugin' -FileCount 3
-    }
-    if (-not $r.Ok) { Fail "Plugin upload failed. Live repo untouched.`n$($r.Err)" }
-    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
-
-    # 1 connection: swap into place. Move the live dir ASIDE first and delete it
-    # only AFTER the new one is in place, so the window where plugin/ is absent
-    # shrinks from "duration of an rm -rf" to the instant between two renames.
-    # (During any absence, a request for latest.zip 404s via .htaccess rather
-    # than returning the SPA shell — see backend/.htaccess — so Cloudflare can't
-    # cache a broken 200-HTML under the .zip URL.)
-    Write-Step "Swapping into place..."
-    $swap = @"
-set -e
-cd '$WebRoot'
+    # Move the live dir ASIDE first and delete it only AFTER the new one is in
+    # place, so the window where plugin/ is absent shrinks from "duration of an
+    # rm -rf" to the instant between two renames. (During any absence, a request
+    # for latest.zip 404s via .htaccess rather than returning the SPA shell — see
+    # backend/.htaccess — so Cloudflare can't cache a broken 200-HTML under the
+    # .zip URL.)
+    $install = @"
+unpack tarotgen-plugin.tgz .plugin.new
 rm -rf plugin.old
-[ -d plugin ] && mv plugin plugin.old
+if [ -d plugin ]; then mv plugin plugin.old; fi
 mv .plugin.new/plugin plugin
 rm -rf .plugin.new plugin.old
+echo 'plugin published'
 "@
-    if (-not (Invoke-RemoteWithRetry $swap)) { Fail "Plugin swap failed." }
+    $done = @(
+        "[OK] Plugin published to ${remoteTarget}:$WebRoot/plugin",
+        "Custom repo URL to share with testers: $base/repo.json"
+    )
 
-    Write-Host "`n[OK] Plugin published to ${remoteTarget}:$WebRoot/plugin" -ForegroundColor Green
-    Write-Host "     Custom repo URL to share with testers: $base/repo.json" -ForegroundColor DarkGray
+    Add-Bundle -Name 'plugin' -Root $stageRoot -Items @('plugin') -Install $install -Done $done
+}
+
+# ══ Publish: one upload, one install ══════════════════════════════════════════
+function Publish-Bundles {
+    $files = @($Bundles | ForEach-Object { $_.File })
+
+    # 1. Upload every bundle (1 connection).
+    Write-Step ("Uploading {0} ({1:N0} KB)..." -f ($files -join ' + '), (($Bundles | Measure-Object Size -Sum).Sum / 1KB))
+    $r = Invoke-Upload -Files $files
+    if (-not $r.Ok) {
+        Write-Host "    Upload failed - possibly the SSH rate limit (ufw limit ssh)." -ForegroundColor Yellow
+        Write-Host "    Waiting 35s for the 30s window to clear, then retrying once..." -ForegroundColor Yellow
+        Start-Sleep -Seconds 35
+        $r = Invoke-Upload -Files $files
+    }
+    if (-not $r.Ok) {
+        Fail @"
+Upload failed. Live site untouched.
+$($r.Err)
+  - If the .ppk has a passphrase, load it into Pageant first, then re-run:
+        pageant.exe "$KeyPath"
+  - First-ever connection from PuTTY also needs the host key cached once:
+        plink -i "$KeyPath" $remoteTarget   (accept the fingerprint)
+  - Otherwise verify the host ($VpsHost) and user ($VpsUser).
+"@
+    }
+    Write-Ok ("Upload finished in {0:mm\:ss}." -f $r.Elapsed)
+
+    # 2. Verify every checksum, then install each bundle in order (1 connection).
+    # A failed checksum stops the run before anything is touched; `set -e` stops it
+    # at the first failing step after that.
+    Write-Step "Verifying, unpacking and swapping into place..."
+    $sums = ($Bundles | ForEach-Object { "'$($_.Sha256)' '$($_.File)'" }) -join ' '
+    $remote = @"
+set -e
+test -d '$WebRoot'
+cd "`$HOME"
+printf '%s  %s\n' $sums | sha256sum -c --quiet -
+cd '$WebRoot'
+# unpack <archive in `$HOME> <dir>: a fresh <dir> holding the archive's files with
+# this server's usual owner, modes and mtimes rather than the archive's.
+unpack() {
+  rm -rf "`$2" && mkdir -p "`$2"
+  tar --no-same-owner --no-same-permissions --touch -xzf "`$HOME/`$1" -C "`$2"
+  find "`$2" -type d -exec chmod 755 {} +
+  find "`$2" -type f -exec chmod 644 {} +
+}
+"@
+    $remote += "`n" + (($Bundles | ForEach-Object { $_.Install }) -join "`n")
+    $remote += "`ncd `"`$HOME`" && rm -f $($files -join ' ')"
+
+    if (-not (Invoke-RemoteWithRetry $remote)) {
+        Fail @"
+Install failed; the lines above show how far it got (each target prints "<target> deployed").
+The uploaded bundles are left in the SSH user's home directory. To roll back on the host:
+  frontend: cd '$WebRoot' && rm -rf dist && mv dist.old dist
+  backend:  cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o
+"@
+    }
+
+    foreach ($bundle in $Bundles) {
+        Write-Host "`n$($bundle.Done[0])" -ForegroundColor Green
+        foreach ($line in $bundle.Done | Select-Object -Skip 1) { Write-Host "     $line" -ForegroundColor DarkGray }
+    }
 }
 
 # ── Dispatch ──────────────────────────────────────────────────────────────────
 Write-Host "Deploy target: $Target -> $remoteTarget : $WebRoot" -ForegroundColor Yellow
 switch ($Target) {
-    'frontend' { Deploy-Frontend }
-    'backend' { Deploy-Backend }
-    'plugin' { Deploy-Plugin }
-    'both' {
-        Deploy-Frontend
-        Write-Step "Pausing 35s between targets to stay under the SSH connection rate limit..."
-        Start-Sleep -Seconds 35
-        Deploy-Backend
-    }
+    'frontend' { Add-FrontendBundle }
+    'backend' { Add-BackendBundle }
+    'plugin' { Add-PluginBundle }
+    'both' { Add-FrontendBundle; Add-BackendBundle }
 }
+Publish-Bundles

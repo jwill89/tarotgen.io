@@ -356,7 +356,7 @@ The site runs on a DigitalOcean droplet (Apache + PHP 8.5) at
 ```powershell
 .\scripts\deploy.ps1                    # frontend (default): npm build + atomic dist swap
 .\scripts\deploy.ps1 -Target backend    # PHP code; runs composer install on the droplet if composer.lock changed
-.\scripts\deploy.ps1 -Target both       # frontend, then backend
+.\scripts\deploy.ps1 -Target both       # frontend and backend, in one upload and one install
 .\scripts\deploy.ps1 -Target plugin     # build the plugin (Release) + publish to its custom Dalamud repo (§12)
 .\scripts\deploy.ps1 -SkipBuild         # deploy existing dist/ without rebuilding
 ```
@@ -369,8 +369,16 @@ refusing `db/`, `includes/`, `vendor/`, `scripts/`, `.deploy/`, `.env*` and
 `composer.*` (they were once served verbatim). Frontend keeps a `dist.old` rollback;
 backend archives the previous code to `.deploy/backend-prev.tgz`. The `plugin`
 target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
-`$WebRoot/plugin`. It keeps each target to ≤3 SSH connections (the droplet runs
-`ufw limit ssh`).
+`$WebRoot/plugin`.
+
+Each target is packed into one tarball (Windows `tar.exe`, ustar format). A run
+then makes exactly **two SSH connections**, which keeps it under `ufw limit ssh`
+(6 connections in 30s) with no pauses. One `pscp` uploads every tarball to the SSH
+user's home directory, outside the web root. One `plink` verifies their SHA-256
+sums, then unpacks and swaps each target in. A bad checksum stops the run before
+anything is touched. Unpacked files get root ownership, 644/755 modes and the
+extraction time, as the old per-file upload left them. Per-file uploading cost
+~0.15 s a file (240 files ≈ 35 s); the tarballs total ~0.8 MB.
 
 **Backups.** `/etc/cron.d/tarotgen` runs `/usr/local/sbin/tarotgen-backup` at 03:17
 UTC: an online `.backup` of the DB, integrity-checked, gzipped into
