@@ -6,6 +6,7 @@ use Tarot\Config\Env;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserTokenRepository;
 use Tarot\Structure\User;
+use Tarot\Utility\Clock;
 
 /**
  * Account lifecycle: registration (+ activation token/email), activation, and
@@ -321,7 +322,7 @@ class AuthService
         $this->tokens->deleteForUserType($userId, self::TOKEN_ACTIVATION);
 
         $raw     = bin2hex(random_bytes(32));
-        $expires = date('Y-m-d H:i:s', time() + self::ACTIVATION_TTL);
+        $expires = Clock::in(self::ACTIVATION_TTL);
         $this->tokens->store($userId, self::TOKEN_ACTIVATION, self::hashToken($raw), $expires);
 
         $base = rtrim((string)Env::get('APP_URL', 'https://tarotgen.io'), '/');
@@ -337,7 +338,7 @@ class AuthService
         $this->tokens->deleteForUserType($userId, self::TOKEN_PASSWORD_RESET);
 
         $raw     = bin2hex(random_bytes(32));
-        $expires = date('Y-m-d H:i:s', time() + self::RESET_TTL);
+        $expires = Clock::in(self::RESET_TTL);
         $this->tokens->store($userId, self::TOKEN_PASSWORD_RESET, self::hashToken($raw), $expires);
 
         $base = rtrim((string)Env::get('APP_URL', 'https://tarotgen.io'), '/');

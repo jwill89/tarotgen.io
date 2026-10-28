@@ -12,6 +12,7 @@ use Tarot\Data\PluginTokenData;
 use Tarot\Repository\PluginAuthCodeRepository;
 use Tarot\Repository\PluginTokenRepository;
 use Tarot\Service\PluginTokenService;
+use Tarot\Utility\Clock;
 
 /**
  * Exercises the plugin account-linking engine against an in-memory SQLite DB:
@@ -109,8 +110,9 @@ final class PluginTokenServiceTest extends TestCase
         )->execute([
             ':hash'      => hash('sha256', $code),
             ':challenge' => $this->challengeFor($verifier),
-            ':now'       => date('Y-m-d H:i:s', time() - 600),
-            ':past'      => date('Y-m-d H:i:s', time() - 60),
+            // In the code's own clock (UTC) — date() would follow PHP's zone.
+            ':now'       => Clock::in(-600),
+            ':past'      => Clock::in(-60),
         ]);
 
         $this->assertNull($this->service->exchangeCode($code, $verifier));

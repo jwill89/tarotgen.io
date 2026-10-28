@@ -4,6 +4,7 @@ namespace Tarot\Data;
 
 use PDO;
 use Tarot\Structure\ChangelogEntry;
+use Tarot\Utility\Clock;
 
 class ChangelogData extends AbstractData
 {
@@ -128,6 +129,6 @@ class ChangelogData extends AbstractData
             return $date;
         }
 
-        return date('Y-m-d');
+        return Clock::today();
     }
 }

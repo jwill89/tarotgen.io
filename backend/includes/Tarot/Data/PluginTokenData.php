@@ -4,6 +4,7 @@ namespace Tarot\Data;
 
 use PDO;
 use Tarot\Structure\PluginToken;
+use Tarot\Utility\Clock;
 
 /**
  * Storage for plugin personal access tokens: long-lived, revocable, multi-use.
@@ -24,7 +25,7 @@ class PluginTokenData extends AbstractData
             ':label'   => $label,
             ':scope'   => $scope,
             ':expires' => $expiresAt,
-            ':now'     => date('Y-m-d H:i:s'),
+            ':now'     => Clock::now(),
         ]);
 
         return (int)$this->db->lastInsertId();
@@ -44,7 +45,7 @@ class PluginTokenData extends AbstractData
                 LIMIT 1';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $tokenHash, ':now' => date('Y-m-d H:i:s')]);
+        $stmt->execute([':hash' => $tokenHash, ':now' => Clock::now()]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!is_array($row)) {
@@ -57,7 +58,7 @@ class PluginTokenData extends AbstractData
     public function touchLastUsed(int $id): void
     {
         $stmt = $this->db->prepare('UPDATE plugin_tokens SET last_used_at = :now WHERE id = :id');
-        $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $id]);
+        $stmt->execute([':now' => Clock::now(), ':id' => $id]);
     }
 
     /**
@@ -82,7 +83,7 @@ class PluginTokenData extends AbstractData
             'UPDATE plugin_tokens SET revoked_at = :now
              WHERE id = :id AND user_id = :uid AND revoked_at IS NULL'
         );
-        $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $id, ':uid' => $userId]);
+        $stmt->execute([':now' => Clock::now(), ':id' => $id, ':uid' => $userId]);
 
         return $stmt->rowCount() > 0;
     }

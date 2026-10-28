@@ -4,6 +4,7 @@ namespace Tarot\Data;
 
 use PDO;
 use Tarot\Structure\User;
+use Tarot\Utility\Clock;
 
 class UserData extends AbstractData
 {
@@ -83,7 +84,7 @@ class UserData extends AbstractData
             ':email' => $email,
             ':hash'  => $passwordHash,
             ':name'  => $displayName,
-            ':now'   => date('Y-m-d H:i:s'),
+            ':now'   => Clock::now(),
         ]);
 
         return $this->findById((int)$this->db->lastInsertId());
@@ -104,7 +105,7 @@ class UserData extends AbstractData
     public function touchLogin(int $userId): bool
     {
         $stmt = $this->db->prepare('UPDATE users SET last_login_at = :now WHERE user_id = :id');
-        return $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $userId]);
+        return $stmt->execute([':now' => Clock::now(), ':id' => $userId]);
     }
 
     public function updatePasswordHash(int $userId, string $passwordHash): bool
@@ -168,7 +169,7 @@ class UserData extends AbstractData
             ':email' => $email,
             ':hash'  => '', // No password — Google-only accounts log in via OAuth.
             ':name'  => $displayName,
-            ':now'   => date('Y-m-d H:i:s'),
+            ':now'   => Clock::now(),
             ':gid'   => $googleId,
         ]);
 

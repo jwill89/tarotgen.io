@@ -5,6 +5,7 @@ namespace Tarot\Data;
 use Tarot\Structure\CardReport;
 use Tarot\Structure\CardReportSubmission;
 use Throwable;
+use Tarot\Utility\Clock;
 
 /**
  * Storage for card reports. Reporting a card upserts one row per (deck, card):
@@ -21,7 +22,7 @@ class CardReportData extends AbstractData
      */
     public function report(int $deckId, int $cardId, string $cardName, ?string $reason, string $details): void
     {
-        $now = date('Y-m-d H:i:s');
+        $now = Clock::now();
 
         $this->db->beginTransaction();
 
@@ -108,7 +109,7 @@ class CardReportData extends AbstractData
     public function setResolved(int $reportId, bool $resolved): bool
     {
         $stmt = $this->db->prepare('UPDATE card_reports SET resolved_at = :val WHERE report_id = :id');
-        $stmt->execute([':val' => $resolved ? date('Y-m-d H:i:s') : null, ':id' => $reportId]);
+        $stmt->execute([':val' => $resolved ? Clock::now() : null, ':id' => $reportId]);
 
         return $stmt->rowCount() > 0;
     }

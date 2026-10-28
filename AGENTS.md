@@ -417,6 +417,10 @@ scripts/retention.php --dry-run`.
 - **Security first:** always use prepared statements; never trust client input;
   keep error responses as `{ error }`; preserve auth guards on protected routes.
 - **Keep types in sync** between PHP responses and `src/types/index.ts`.
+- **Timestamps are UTC.** Write them with `Tarot\Utility\Clock` (`now()`, `in($seconds)`
+  for expiries, `today()`), never `date()` — it follows PHP's zone, while SQLite's
+  `CURRENT_TIMESTAMP` and the frontend (`utils/datetime.ts`) are UTC. Check with
+  `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
 - **Comments** in this codebase explain *why*, not *what* — follow that style.
 - **PSR-4 / PSR-12** for PHP (run php-cs-fixer/phpcs). **Strict TypeScript**
   (`strict: true`) — keep `npm run type-check` clean.

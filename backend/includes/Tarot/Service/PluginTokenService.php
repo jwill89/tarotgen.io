@@ -6,6 +6,7 @@ use Random\RandomException;
 use Tarot\Repository\PluginAuthCodeRepository;
 use Tarot\Repository\PluginTokenRepository;
 use Tarot\Structure\PluginToken;
+use Tarot\Utility\Clock;
 
 /**
  * The plugin account-linking engine (OAuth-style, PKCE public client).
@@ -164,6 +165,6 @@ class PluginTokenService
 
     private function expiresIn(int $seconds): string
     {
-        return date('Y-m-d H:i:s', time() + $seconds);
+        return Clock::in($seconds);
     }
 }

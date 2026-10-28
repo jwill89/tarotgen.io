@@ -3,6 +3,7 @@
 namespace Tarot\Data;
 
 use PDO;
+use Tarot\Utility\Clock;
 
 /**
  * Single-use, hashed tokens for email activation and (future) password resets.
@@ -22,7 +23,7 @@ class UserTokenData extends AbstractData
             ':type'    => $type,
             ':hash'    => $tokenHash,
             ':expires' => $expiresAt,
-            ':now'     => date('Y-m-d H:i:s'),
+            ':now'     => Clock::now(),
         ]);
     }
 
@@ -39,7 +40,7 @@ class UserTokenData extends AbstractData
                 LIMIT 1';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $tokenHash, ':type' => $type, ':now' => date('Y-m-d H:i:s')]);
+        $stmt->execute([':hash' => $tokenHash, ':type' => $type, ':now' => Clock::now()]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         return $row ?: null;
@@ -48,7 +49,7 @@ class UserTokenData extends AbstractData
     public function markUsed(int $tokenId): bool
     {
         $stmt = $this->db->prepare('UPDATE user_tokens SET used_at = :now WHERE token_id = :id');
-        return $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $tokenId]);
+        return $stmt->execute([':now' => Clock::now(), ':id' => $tokenId]);
     }
 
     /** Invalidate any outstanding tokens of a type for a user (e.g. before issuing a new one). */

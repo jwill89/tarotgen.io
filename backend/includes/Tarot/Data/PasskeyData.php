@@ -3,6 +3,7 @@
 namespace Tarot\Data;
 
 use PDO;
+use Tarot\Utility\Clock;
 
 class PasskeyData extends AbstractData
 {
@@ -61,7 +62,7 @@ class PasskeyData extends AbstractData
             ':pem'  => $publicKeyPem,
             ':name' => $name,
             ':sc'   => $signCount,
-            ':now'  => date('Y-m-d H:i:s'),
+            ':now'  => Clock::now(),
         ]);
         return (int)$this->db->lastInsertId();
     }
@@ -74,7 +75,7 @@ class PasskeyData extends AbstractData
         $stmt = $this->db->prepare(
             'UPDATE user_passkeys SET sign_count = :sc, last_used_at = :now WHERE passkey_id = :id'
         );
-        $stmt->execute([':sc' => $signCount, ':now' => date('Y-m-d H:i:s'), ':id' => $passkeyId]);
+        $stmt->execute([':sc' => $signCount, ':now' => Clock::now(), ':id' => $passkeyId]);
     }
 
     /**

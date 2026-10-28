@@ -12,6 +12,7 @@ use Slim\Http\Response;
 use Tarot\Config\Env;
 use Tarot\Repository\PasskeyRepository;
 use Tarot\Repository\UserRepository;
+use Tarot\Utility\Clock;
 use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 
@@ -173,7 +174,7 @@ class PasskeyController extends AbstractController
             'passkey' => [
                 'passkey_id'  => $passkeyId,
                 'name'        => $name,
-                'created_at'  => date('Y-m-d H:i:s'),
+                'created_at'  => Clock::now(),
                 'last_used_at' => null,
             ],
         ], 201);

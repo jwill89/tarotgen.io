@@ -3,6 +3,10 @@
 // Required Autoloader
 require_once('../vendor/autoload.php');
 
+// Timestamps are UTC everywhere (Tarot\Utility\Clock, SQLite's CURRENT_TIMESTAMP);
+// pin PHP's zone too, so any stray date() — ours or a library's — agrees (AUDIT §1.4).
+date_default_timezone_set('UTC');
+
 use Slim\Factory\AppFactory;
 use Slim\Routing\RouteCollectorProxy;
 use DI\ContainerBuilder;

@@ -3,6 +3,7 @@
 namespace Tarot\Data;
 
 use PDO;
+use Tarot\Utility\Clock;
 
 /**
  * Storage for short-lived, single-use PKCE authorization codes. The browser
@@ -24,7 +25,7 @@ class PluginAuthCodeData extends AbstractData
             ':challenge' => $codeChallenge,
             ':scope'     => $scope,
             ':expires'   => $expiresAt,
-            ':now'       => date('Y-m-d H:i:s'),
+            ':now'       => Clock::now(),
         ]);
     }
 
@@ -40,7 +41,7 @@ class PluginAuthCodeData extends AbstractData
                 LIMIT 1';
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $codeHash, ':now' => date('Y-m-d H:i:s')]);
+        $stmt->execute([':hash' => $codeHash, ':now' => Clock::now()]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if (!is_array($row)) {
@@ -58,6 +59,6 @@ class PluginAuthCodeData extends AbstractData
     public function markUsed(int $id): bool
     {
         $stmt = $this->db->prepare('UPDATE plugin_auth_codes SET used_at = :now WHERE id = :id');
-        return $stmt->execute([':now' => date('Y-m-d H:i:s'), ':id' => $id]);
+        return $stmt->execute([':now' => Clock::now(), ':id' => $id]);
     }
 }

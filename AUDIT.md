@@ -221,7 +221,7 @@ five-entry baseline; strict TS + typed ESLint.
     30-day header twice (`regenerate(persistent)` then `persist()`) — identical
     values, harmless.
 
-- [ ] **1.4 Timezone coupling between PHP and SQLite timestamps.** [low] [S]
+- [x] **1.4 Timezone coupling between PHP and SQLite timestamps.** [low] [S]
   - **Prod recon:** prod PHP and OS are both UTC, so this is latent there. It
     bites on dev (Windows PHP writes local time, the UI reads it as UTC) and on
     any future host whose `date.timezone` isn't UTC.
@@ -241,6 +241,21 @@ five-entry baseline; strict TS + typed ESLint.
   - **Verify:** `grep -rn "date('Y-m-d H:i:s')" backend/includes backend/api`
     returns nothing; run the suite under a non-UTC zone:
     `vendor\bin\phpunit -d date.timezone=America/Chicago`.
+  - **DONE 2026-10-28:** the count missed the three **expiry** writes
+    (`AuthService` activation/reset, `PluginTokenService::expiry`,
+    `date(…, time() + TTL)`), which are compared as strings against `:now` and so
+    had to move in step — 21 writes + `ChangelogData`'s date fallback, all now
+    `Tarot\Utility\Clock::now()/in()/today()` (`gmdate`). Nothing parses
+    timestamps in PHP (no `strtotime`/`DateTime`), so string comparisons stay
+    consistent. `api/index.php` pins `date_default_timezone_set('UTC')` as the
+    belt; not `og.php` (no date handling) and not the autoloader (that would also
+    force UTC on the suite and defeat the non-UTC run). New `ClockTest` runs in
+    UTC+14: a user created there had `registered_at` **50,400 s (14 h)** off
+    SQLite's clock before the change, ≤2 s after. The non-UTC run also caught a
+    test fixture writing an "expired" auth code with `date()` — fixed to
+    `Clock::in(-60)`. The grep is empty; 257 tests pass under UTC−11, −6, 0 and
+    +14; PHPStan/phpcs clean. Prod data needs nothing (it always ran UTC); rows a
+    Windows dev PHP wrote in local time stay as they are on dev.
 
 - [ ] **1.5 CSP has been "report-only, promote later" since it shipped.** [medium] [S–M]
   - **Where:** `backend/.htaccess:12`. The policy still allows
@@ -326,12 +341,21 @@ five-entry baseline; strict TS + typed ESLint.
   - `frontend/src/composables/useDecks.ts:32` swallows a failed deck load
     (`// Silently fail`), leaving the New Reading page with an empty picker and
     no message. Surface it (toast) — see §4.2, which replaces that fetch anyway.
+  - **Found 2026-10-28 (§2.1 verification):** every API 404 writes a full Slim
+    stack trace (~2 KB, `[php:notice]`) to the shared `/var/log/apache2/error.log`
+    — `addErrorMiddleware(…, true, true)` at `api/index.php:72` logs errors with
+    details, and `HttpNotFoundException` counts. The traffic is scanners: in 14
+    days ~1,300 API 404s led by `/api/.env` (236), `/api/v1/.env` (162) and
+    `..%2f` traversal probes, all correctly 404. Harmless, but it buries real
+    errors. Fix: a handler for `HttpNotFoundException` /
+    `HttpMethodNotAllowedException` that renders without logging (or log one
+    line, no trace); keep full detail for real exceptions.
 
 ---
 
 ## 2. Database
 
-- [ ] **2.1 Four dead tables and six dead indexes from the removed share relay.** [medium] [S]
+- [x] **2.1 Four dead tables and six dead indexes from the removed share relay.** [medium] [S]
   - **Where:** `plugin_clients`, `plugin_client_identities`, `plugin_messages`,
     `plugin_blocks` + `idx_plugin_clients_hash`, `idx_plugin_clients_identity`,
     `idx_client_identities_pair`, `idx_client_identities_hash`,
@@ -362,6 +386,15 @@ five-entry baseline; strict TS + typed ESLint.
     253 tests / PHPStan / phpcs pass. **Prod:** `sudo tarotgen-backup`, upload the
     migration to `<WebRoot>/db/`, run as www-data, verify `.tables`; then delete
     the dead `PLUGIN_IDENTITY_SALT=` line from `/var/lib/tarotgen/.env`.
+  - **DONE on prod 2026-10-28 06:56 UTC** (after the backend deploy): backup
+    `tarotdb-20261028-065605.db.gz` first; dropped `plugin_messages` (0 rows),
+    `plugin_blocks` (0), `plugin_client_identities` (7), `plugin_clients` (7) —
+    exactly the dead rows counted above; `plugin_tokens`/`plugin_auth_codes` kept
+    (5 rows each). Integrity ok, 0 FK violations, files still www-data. **Prod's
+    schema now equals the committed `schema.sql` object-for-object (49)** —
+    compared against a fresh build in a root-only temp dir. Live: `/api/config`,
+    `/api/decks/1`, a reading → 200, `/api/auth/me` → 401. Owner to delete the
+    `PLUGIN_IDENTITY_SALT=` line from the live `.env`.
 
 - [ ] **2.2 Legacy deck columns** — handled by §1.2 (drop them, stop selecting `*`).
 
