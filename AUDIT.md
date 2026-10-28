@@ -131,7 +131,7 @@ five-entry baseline; strict TS + typed ESLint.
     backups exist. Long term, give the vhost a `public/` document root so code,
     vendor and scripts aren't in it either.
 
-- [ ] **1.1 No database backups exist anywhere.** [critical] [S]
+- [x] **1.1 No database backups exist anywhere.** [critical] [S]
   - **Where:** one SQLite file, one droplet. `scripts/deploy.ps1` deliberately
     never touches `db/`; nothing else does either. No cron, no script, no doc
     (confirmed: no crontab for `root`/`www-data`). The only copies are four
@@ -176,7 +176,7 @@ five-entry baseline; strict TS + typed ESLint.
   - **Verify:** the appendix one-liner prints only `hydrated N decks` on dev; a
     DB built from `schema.sql` has the same `decks` columns as prod.
 
-- [ ] **1.3 PHP warning on every login/logout.** [medium] [S]
+- [x] **1.3 PHP warning on every login/logout.** [medium] [S]
   - **Where:** `backend/includes/Tarot/Utility/Session.php:80` —
     `Session::regenerate()` calls `session_set_cookie_params()` while the session
     started by `Session::start()` (line ~58) is active. PHP: *"Session cookie
@@ -192,6 +192,23 @@ five-entry baseline; strict TS + typed ESLint.
   - **Verify:** `curl -i -X POST localhost/api/auth/login …` returns a body
     starting with `{`; PHP log clean; remember-me cookie still carries the 30-day
     `Expires`.
+  - **Correction to the fix:** "always call `sendCookie($lifetime)`" would log
+    every non-remembered login straight back out — `$lifetime` is 0 there, and
+    `sendCookie()` sends `expires = time() + 0`, an already-expired cookie. The
+    failing `session_set_cookie_params()` call was a no-op all along (PHP refuses
+    it and keeps the bootstrap params), so the right fix is just to delete it.
+  - **DONE 2026-10-28:** `Session::regenerate()` now only calls
+    `session_regenerate_id(true)` (+ `sendCookie(30 days)` when persistent), with
+    the reasoning in its docblock. Verified on the dev server with a throwaway
+    account (DB restored from a pre-test `VACUUM INTO` copy afterwards): login
+    with and without remember-me and logout return bodies starting with `{`;
+    plain login → session cookie, remember-me → `Max-Age=2592000`, `/me` slides
+    it, logout from a remembered session sends exactly one new-ID session cookie
+    (PHP drops the old-ID sliding header queued by `start()`), `/me` afterwards
+    401; no PHP warning after the change. Same `Set-Cookie` behaviour as before,
+    minus the warning. Aside: a remembered password login still sends the
+    30-day header twice (`regenerate(persistent)` then `persist()`) — identical
+    values, harmless.
 
 - [ ] **1.4 Timezone coupling between PHP and SQLite timestamps.** [low] [S]
   - **Prod recon:** prod PHP and OS are both UTC, so this is latent there. It
@@ -341,7 +358,7 @@ five-entry baseline; strict TS + typed ESLint.
 
 ## 3. Performance and bandwidth
 
-- [ ] **3.1 Card images are served with no cache headers.** [high] [S]
+- [x] **3.1 Card images are served with no cache headers.** [high] [S]
   - **Where:** `backend/.htaccess:20-25` sets `Cache-Control` only for `/_app/`
     (hashed bundles) and `/fonts/`. `/assets/decks/**` — the heaviest assets on
     the site, a full-size PNG per lightbox open — fall to Cloudflare's 4-hour
@@ -431,7 +448,7 @@ five-entry baseline; strict TS + typed ESLint.
 
 ## 4. Duplication
 
-- [ ] **4.1 Card image URL building is copied four times.** [medium] [S]
+- [x] **4.1 Card image URL building is copied four times.** [medium] [S]
   - **Where:** `'Card_' + String(id).padStart(4, '0')` + `/assets/decks/{deck}/…`
     in `views/ReadingView.vue:83` (+ back-card literals at 66, 71, 81),
     `views/CustomReadingView.vue:200`, `views/FreeDrawPlacementView.vue:134`,
@@ -593,9 +610,9 @@ plugin is never compiled in CI, and no bot watches dependencies.
   - **Rector** (`rector/rector`) with the PHP 8.5 level set + dead-code set,
     `--dry-run` in CI.
   - `composer-unused` + `composer-require-checker` (implicit deps, e.g. `ext-gd`
-    for `ThumbnailService`, `ext-mbstring`, `ext-json` are not declared).
+    for `CardImageService`, `ext-mbstring`, `ext-json` are not declared).
   - `ergebnis/composer-normalize`.
-  - **`composer audit` as a CI step** — it is red today (§7).
+  - **`composer audit` as a CI step** — green since §7.1, so it can gate now.
   - Coverage with `pcov` in CI.
 
 - [ ] **6.3 Plugin.** [medium] [S]
@@ -620,13 +637,40 @@ plugin is never compiled in CI, and no bot watches dependencies.
 
 ## 7. Outdated dependencies (as of 2026-10-27)
 
-- [ ] **7.1 `composer audit` fails: HIGH CVE-2026-109413 in `symfony/yaml`**
+- [x] **7.1 `composer audit` fails: HIGH CVE-2026-109413 in `symfony/yaml`**
   (transitive via `friendsofphp/php-cs-fixer`, dev-only, but red). [high] [S]
   `composer update friendsofphp/php-cs-fixer symfony/yaml` and re-run.
+  - **Correction:** `symfony/yaml` comes in through `zircote/swagger-php`
+    (`composer why`), not php-cs-fixer. Both are `require-dev`, and the deploy
+    runs `composer install --no-dev`, so it never reached production; it only
+    ran in `composer docs`.
+  - **DONE 2026-10-28:** `symfony/yaml` 8.1.2 → 8.1.9 and
+    `roave/security-advisories` refreshed. That refresh first failed: the
+    advisories now flag PHP itself below 8.5.12, and `config.platform.php` was
+    still pinned to 8.5.6. The pin is now **8.5.12**, matching production
+    (`php -v` on the droplet), local and CI. `composer audit` is clean;
+    `composer docs` produces an identical `openapi.json`; tests, PHPStan and
+    phpcs pass. `composer audit` now runs in CI after the install step.
+  - **Production check (read-only, 2026-10-28):** `composer audit --no-dev` on
+    the installed packages is clean; `vendor/` matches the lock; no dev packages
+    present; Apache's `libapache2-mod-php8.5` and the CLI are both 8.5.12 with no
+    pending php/apache/openssl/sqlite upgrades. One runtime update was still
+    warranted — see §7.2 (`slim/slim` 4.15.3).
 - [ ] **7.2 Composer, direct:** `zircote/swagger-php` 6.6.0 → 6.20.0 (14 minors
   behind — regenerate and diff `openapi.json` after), `phpstan/phpstan`
   2.2.8 → 2.3.3, `phpunit/phpunit` 13.3.1 → 13.4.5, `php-cs-fixer`
   3.95.20 → 3.95.27, `slim/slim` 4.15.2 → 4.15.3. [low] [S]
+  - **`slim/slim` 4.15.3 — DONE 2026-10-28** (runtime; ships on the next backend
+    deploy). Not in the advisory database, but the release fixes
+    GHSA-h377-p8x2-prf9: route arguments were URL-decoded twice, bypassing route
+    regex constraints. This API has no constraints, so the exposure was a
+    double-decoded `{reading_id}` etc. reaching controllers (int casts / bound
+    parameters); low, but worth the patch. Smoke-tested on the dev server:
+    `/readings/a3921cc26%2566` now 404s instead of resolving to `…26f`; 404/405
+    still negotiate JSON for `Accept: application/json`. Tests/PHPStan/phpcs pass,
+    `openapi.json` unchanged. `laravel/serializable-closure` 2.0.15 → 2.1.0
+    (php-di's, used to compile the prod container) left alone: bug fix + PHP 8.6
+    support only.
 - [ ] **7.3 npm:** 20 packages behind. Minors: `vue` 3.5.44, `vue-router` 5.4.0,
   `vite` 8.3.5, `reka-ui` 2.11.0, `@tiptap/*` 3.32.0, `dompurify` 3.4.17,
   `marked` 18.1.2, `eslint` 10.13.0, `vue-tsc` 3.3.13, `@vitejs/plugin-vue`

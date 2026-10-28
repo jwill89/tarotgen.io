@@ -19,7 +19,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 - **Frontend:** Vue 3 (`<script setup>` + TypeScript), Vue Router, Bulma CSS
   (layout/utilities), Reka UI (headless interactive primitives), TipTap
   (markdown editor), built with Vite.
-- **Backend:** PHP 8.5+ (Composer platform pinned to `8.5.6`),
+- **Backend:** PHP 8.5+ (Composer platform pinned to `8.5.12`, production's version),
   Slim 4 framework with PHP-DI (autowiring) container, a layered architecture
   over a SQLite database.
 - **Database:** SQLite (`db/tarotdb.db`) accessed through PDO, WAL mode.

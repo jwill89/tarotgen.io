@@ -67,30 +67,20 @@ final class Session
      * while ensuring the cookie is sent with the correct persistent lifetime
      * when $persistent is true.
      *
-     * This replaces bare session_regenerate_id(true) calls — which would send
-     * the cookie with PHP's default lifetime (0 = session cookie) causing the
-     * browser to discard it on close.
+     * session_regenerate_id() sends the new cookie with the params set at
+     * bootstrap (api/index.php: a session cookie, HttpOnly, SameSite=Lax), and
+     * replaces any session cookie already queued this request — e.g. start()'s
+     * sliding refresh carrying the old ID. Those params can't be changed here:
+     * session_set_cookie_params() is refused once the session is active.
      */
     public static function regenerate(bool $persistent = false): void
     {
-        $lifetime = $persistent ? self::REMEMBER_ME_LIFETIME : 0;
-
-        // Configure cookie params BEFORE regenerating so PHP's internal
-        // Set-Cookie header already carries the correct expiry.
-        session_set_cookie_params([
-            'lifetime' => $lifetime,
-            'path'     => '/',
-            'httponly'  => true,
-            'samesite' => 'Lax',
-            'secure'   => Env::isProduction(),
-        ]);
-
         session_regenerate_id(true);
 
-        // Belt-and-suspenders: also send our own cookie to guarantee the
-        // correct attributes reach the browser (overrides any stale header).
+        // A remembered login needs the 30-day expiry, which setcookie() can
+        // still add mid-session. Sent after PHP's header, so browsers keep it.
         if ($persistent) {
-            self::sendCookie($lifetime);
+            self::sendCookie(self::REMEMBER_ME_LIFETIME);
         }
     }
 

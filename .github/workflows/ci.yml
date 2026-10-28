@@ -105,6 +105,11 @@ jobs:
       - name: Install dependencies
         run: composer install --no-interaction --no-progress --prefer-dist
 
+      # Dev packages included: they run here and on developer machines
+      # (symfony/yaml via swagger-php was the case that went unnoticed, AUDIT §7.1).
+      - name: Security advisories (composer audit)
+        run: composer audit
+
       # The committed OpenAPI spec must match the swagger-php attributes.
       # (composer test also enforces this via OpenApiSpecTest.)
       - name: Verify OpenAPI spec is current
