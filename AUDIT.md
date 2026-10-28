@@ -302,6 +302,17 @@ five-entry baseline; strict TS + typed ESLint.
     plain `ANALYZE` — tested on a root-only temp copy of the nightly backup,
     deleted after. The script now runs `PRAGMA analysis_limit=400; ANALYZE`;
     that change needs a backend deploy before the cron line goes in.
+  - **Cron installed 2026-10-28 06:46 UTC** (after the `ANALYZE` deploy, confirmed
+    on the droplet): `/etc/cron.d/tarotgen` root:root 644, LF, trailing newline
+    checked; previous file kept as
+    `/var/backups/tarotgen/tarotgen.cron.prev-20261028-064618`; cron logged
+    `RELOAD (/etc/cron.d/tarotgen)` at 06:47. Rehearsal of the exact installed
+    command (`true` for the backup, `--dry-run` added) under cron's environment
+    logged `dry run: 210 …` to `journalctl -t tarotgen-retention`; readings
+    still 2,044. **First real run: 03:17 UTC 2026-10-29**, after that night's
+    backup. Tick this item once `journalctl -t tarotgen-retention` shows
+    `deleted 210 …` (± any that age past a year meanwhile) and the backup log
+    shows the pre-deletion copy.
 
 - [ ] **1.8 Small leaks / decisions to record.** [low] [S]
   - Public `GET /decks` and `/deck-systems` return `submitted_by` user ids
@@ -757,6 +768,14 @@ plugin is never compiled in CI, and no bot watches dependencies.
     `@tiptap/core` ReDoS. Dev/test only: `undici`, `brace-expansion`,
     `@vitest/mocker`, `postcss-selector-parser`, `happy-dom` (major). Every
     shipped fix is in range → `npm audit fix` (no `--force`), as its own commit.
+  - **Audit fix done 2026-10-28:** `npm audit fix` took 36 → 8, but left the
+    TipTap family split — `starter-kit` on 3.32.0 while `extension-link`,
+    `extension-placeholder`, `pm` and `vue-3` stayed on 3.30.2 with a second,
+    vulnerable `@tiptap/core`. Installed all five at `^3.32.0` (one core now) and
+    `vitest` at `^4.1.12` (patched `@vitest/mocker`). **Shipped deps: 0
+    vulnerabilities.** Left: `happy-dom` (dev/test, needs 21 — a major, planned
+    with the other majors). type-check, lint, 135 tests, build pass; the TipTap
+    editor (contact form) typed + toggled Bold → `<p>… <strong>…</strong></p>`.
   - **SQLite on prod is 3.45.1 and stays there on 24.04:** PHP (packages.sury.org)
     links the distro `libsqlite3`, and noble only gets 3.45.1 security patches.
     26.04 LTS (offered to the droplet) ships 3.46.1 — enough for `PRAGMA
