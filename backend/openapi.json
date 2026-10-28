@@ -4965,11 +4965,6 @@
                 "type": "http",
                 "description": "Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).",
                 "scheme": "bearer"
-            },
-            "clientToken": {
-                "type": "http",
-                "description": "Relay routing token held by every plugin install, guest or linked (Authorization: Bearer …).",
-                "scheme": "bearer"
             }
         }
     },

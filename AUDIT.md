@@ -16,9 +16,10 @@ verification are listed at the end so nobody re-chases them.
 - Conventions, commands, and layering rules live in `AGENTS.md`; read it first.
   Three rules that bite here:
   1. `backend/db/schema.sql` must be edited **by hand** after a migration. Do not
-     regenerate it with `scripts/dump_schema.php` — the local DB has drifted
-     (it still has the legacy deck columns and is missing `plugin_client_identities`),
-     so a wholesale regen silently changes unrelated tables and reorders the file.
+     regenerate it with `scripts/dump_schema.php` — its `ORDER BY name` reorders
+     the whole file, and a dev DB that has drifted (as it had until §1.2/§2.1,
+     after which it matched `schema.sql` object-for-object) silently rewrites
+     unrelated tables.
   2. `backend/db/migrate_*.php` scripts are **gitignored**; `scripts/deploy.ps1`
      never uploads `db/`. Every migration must be copied to the droplet's
      `<WebRoot>/db/` and run there *before* deploying backend code that needs it.
@@ -345,6 +346,22 @@ five-entry baseline; strict TS + typed ESLint.
     design needs — don't keep this one "just in case".)
   - **Verify:** `sqlite3 db/tarotdb.db .tables` shows none of the four;
     `composer test` green; `grep -rn PLUGIN_IDENTITY_SALT backend` empty.
+  - **Implemented 2026-10-28 (dev done; prod migration pending):** re-checked —
+    no code in `backend/`, `frontend/src`, `plugin/` or `scripts/` references the
+    tables, `ClientAuth`, `ShareRelay` or `SharePrompt`.
+    `db/migrate_drop_plugin_relay.php` (gitignored like every migration) drops
+    children first, all in one transaction, prints each table's row count, and is
+    idempotent; `plugin_tokens`/`plugin_auth_codes` (live linking) untouched. Dev:
+    dropped 3 tables (dev never had `plugin_client_identities`), integrity ok,
+    0 FK violations; second run skips all four. `schema.sql`: a fresh build lost
+    exactly the 4 tables + 6 indexes (+ `plugin_blocks`' PK autoindex), the other
+    50 objects byte-identical — and the dev DB now equals `schema.sql`
+    object-for-object. Also removed: the `PLUGIN_IDENTITY_SALT` block in
+    `.env.example` (0 references left) and the unused `clientToken` security
+    scheme in `OpenApiSpec.php` (`openapi.json` −5 lines; generated TS unchanged).
+    253 tests / PHPStan / phpcs pass. **Prod:** `sudo tarotgen-backup`, upload the
+    migration to `<WebRoot>/db/`, run as www-data, verify `.tables`; then delete
+    the dead `PLUGIN_IDENTITY_SALT=` line from `/var/lib/tarotgen/.env`.
 
 - [ ] **2.2 Legacy deck columns** — handled by §1.2 (drop them, stop selecting `*`).
 
@@ -636,6 +653,10 @@ five-entry baseline; strict TS + typed ESLint.
   - `plugin/TarotGen.Plugin/Configuration.cs` docblock references `docs/auth.md`,
     which does not exist.
   - `backend/.env.example`: the `PLUGIN_IDENTITY_SALT` block (§2.1).
+  - **Partly done with §2.1:** AGENTS.md §12 no longer describes the relay
+    (layout list matches the plugin's real files; auth paragraph rewritten) and
+    the `.env.example` block is gone. Still open: the eslint/PHPStan-level lines
+    in AGENTS.md §3, `plugin/README.md`, `TarotGen.Plugin.json`, `Configuration.cs`.
 
 - [ ] **5.5 `contactForm.spec.ts` tests a re-implementation, not the code.** [low] [S]
   The spec defines its own `submitContact()` with its own fetch logic and tests

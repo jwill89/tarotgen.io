@@ -472,15 +472,17 @@ and it has its own version, package, and release channel.
   `$WebRoot/plugin`. Testers add `https://tarotgen.io/plugin/repo.json` as a
   custom repo under Dalamud's `/xlsettings`.
 - **Layout:** `Plugin.cs` (composition root + lifecycle), `Services/`
-  (`TarotApiClient`, `CardTextureCache`, `LinkService` account link, `ShareRelay`
-  share relay, `TokenStore` DPAPI), `Windows/` (`MainWindow`, `ReadingPanel`,
-  `SharePrompt`), `Models/ApiModels.cs` (DTOs), `Configuration.cs`.
-- **Talks to the API over HTTPS with Bearer tokens** (not the session cookie): a
-  per-account token for the account routes (`AccountAuth`) and a per-install
-  **client token** for the share relay (`ClientAuth`). Both are obtained through a
-  browser loopback + PKCE flow on the site's `/authorize` page and stored
-  DPAPI-encrypted. The endpoints it uses are the `Plugin`/`Cards`-tagged routes in
-  `api/index.php` (`/plugin/*`, `/account/tokens`, `/card-reports`).
+  (`TarotApiClient`, `CardTextureCache`, `LinkService` account link, `TokenStore`
+  DPAPI, `ReadingFormat`, `SpreadDraw`, `SpreadLayout`), `Windows/` (`MainWindow`,
+  `ReadingPanel`, `Ui`), `Models/ApiModels.cs` (DTOs), `Configuration.cs`.
+- **Talks to the API over HTTPS** (not the session cookie). Drawing and viewing
+  readings needs no auth; a linked account adds a per-account **Bearer token** for
+  the account routes (`AccountAuth`), obtained through a browser loopback + PKCE
+  flow on the site's `/authorize` page and stored DPAPI-encrypted. The endpoints
+  it uses are the `Plugin`/`Cards`-tagged routes in `api/index.php` (`/plugin/*`,
+  `/account/tokens`, `/card-reports`). The chatless share relay (per-install
+  client token, `plugin_clients` & co.) was removed; its tables were dropped in
+  AUDIT §2.1 — a future relay gets a fresh design.
 - **Conventions/gotchas:** ImGui is `Dalamud.Bindings.ImGui` (not `ImGuiNET`);
   **never block the framework thread** (all HTTP runs async off-thread; results are
   read in `Draw`); read local-player identity from `IPlayerState` (v15 removed
