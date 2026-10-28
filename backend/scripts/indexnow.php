@@ -15,9 +15,10 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Tarot\Config\Env;
+use Tarot\Config\Paths;
 use Tarot\Service\IndexNow;
 
-Env::load(__DIR__ . '/../.env');
+Env::load(Paths::envFile());
 
 $indexNow = new IndexNow();
 if (!$indexNow->isConfigured()) {

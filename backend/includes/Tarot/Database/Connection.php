@@ -3,6 +3,10 @@
 namespace Tarot\Database;
 
 use PDO;
+use PDOException;
+use Pdo\Sqlite;
+use RuntimeException;
+use Tarot\Config\Paths;
 
 final class Connection
 {
@@ -23,12 +27,21 @@ final class Connection
     {
         // If the connection isn't set, set it.
         if (!isset(self::$conn)) {
-            // Anchor the DB path to this file's location (project_root/db) so it
+            // An absolute path (TAROT_DATA_DIR, or the project root in dev), so it
             // resolves identically regardless of the caller's working directory
             // (web request from /, /api, the og.php shim, or a CLI/cron script).
-            $path = dirname(__DIR__, 3) . '/db/tarotdb.db';
+            $path = Paths::database();
 
-            self::$conn = new PDO("sqlite:" . $path);
+            // Open read-write but never CREATE: a mis-set TAROT_DATA_DIR must fail
+            // loudly, not silently start a brand-new empty database (the site
+            // would look wiped, and a migration would run against nothing).
+            try {
+                self::$conn = new PDO('sqlite:' . $path, null, null, [
+                    Sqlite::ATTR_OPEN_FLAGS => Sqlite::OPEN_READWRITE,
+                ]);
+            } catch (PDOException $e) {
+                throw new RuntimeException("Cannot open the database at {$path} (check TAROT_DATA_DIR).", 0, $e);
+            }
             self::$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
             // Enforce declared foreign keys (off by default in SQLite), wait a

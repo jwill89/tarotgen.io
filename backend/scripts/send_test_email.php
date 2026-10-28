@@ -13,6 +13,7 @@
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use Tarot\Config\Env;
+use Tarot\Config\Paths;
 use Tarot\Service\Mailer;
 
 $to = $argv[1] ?? '';
@@ -21,7 +22,7 @@ if ($to === '' || filter_var($to, FILTER_VALIDATE_EMAIL) === false) {
     exit(1);
 }
 
-Env::load(__DIR__ . '/../.env');
+Env::load(Paths::envFile());
 
 // Surface SMTP errors on the console for this diagnostic run.
 ini_set('display_errors', '1');

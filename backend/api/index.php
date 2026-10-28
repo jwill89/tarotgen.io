@@ -25,9 +25,11 @@ use Routes\Middleware\AdminAuth;
 use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
 use Tarot\Config\Env;
+use Tarot\Config\Paths;
 
-// Load environment variables
-Env::load(__DIR__ . '/../.env');
+// Load environment variables (from TAROT_DATA_DIR in production — outside the
+// web root — or the project root in dev; see Tarot\Config\Paths).
+Env::load(Paths::envFile());
 
 $is_production = Env::isProduction();
 

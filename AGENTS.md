@@ -311,7 +311,11 @@ The site runs on a DigitalOcean droplet (Apache + PHP 8.5) at
 ```
 
 The script flattens the repo into the server layout and **never** uploads the
-server-side `db/`, `.env`, or `assets/decks/`. Frontend keeps a `dist.old` rollback;
+server-side data: `.env` and the database (which live **outside the web root**, in
+`TAROT_DATA_DIR` = `/var/lib/tarotgen` — see §9) or `assets/decks/`. Everything the
+script does upload lands in the document root, so `backend/.htaccess` must keep
+refusing `db/`, `includes/`, `vendor/`, `scripts/`, `.deploy/`, `.env*` and
+`composer.*` (they were once served verbatim). Frontend keeps a `dist.old` rollback;
 backend archives the previous code to `.deploy/backend-prev.tgz`. The `plugin`
 target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 `$WebRoot/plugin`. It keeps each target to ≤3 SSH connections (the droplet runs
@@ -321,16 +325,22 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 
 ## 7. Database
 
-- Single SQLite file: `db/tarotdb.db`. Accessed via `Tarot\Database\Connection`
+- Single SQLite file at `Tarot\Config\Paths::database()`: `<TAROT_DATA_DIR>/db/tarotdb.db`
+  in production, `backend/db/tarotdb.db` locally. Accessed via `Tarot\Database\Connection`
   (PDO singleton). Foreign keys are enforced (`PRAGMA foreign_keys = ON`), WAL
-  journaling is enabled, and `busy_timeout` is set.
+  journaling is enabled, and `busy_timeout` is set. `Connection` opens the file
+  read-write but **never creates it**: a missing DB (e.g. a mis-set
+  `TAROT_DATA_DIR`) is an error, not a new empty database.
 - **Schema changes** are applied via the one-off scripts in `db/`
   (`migrate_*.php`, `add_*`, `drop_*`). They are plain PHP run from the CLI:
   `php db/migrate_xxx.php`. There is no automated migration framework — add a new
   `migrate_*.php` script following the existing pattern when you change schema.
 - `php db/check_state.php` prints current tables/schema for inspection.
-- The DB path resolves relative to `Connection.php` (`<root>/db/tarotdb.db`), so
-  scripts work regardless of the working directory.
+- The DB path is absolute (`Paths::database()`), so scripts work regardless of the
+  working directory. On the droplet the migration scripts still sit in
+  `<WebRoot>/db/` (they need `../vendor/autoload.php`; `.htaccess` blocks the
+  folder) and reach the real DB through `TAROT_DATA_DIR`, which `/etc/environment`
+  sets for SSH sessions.
 - **Rebuilding the schema:** the committed `db/schema.sql` recreates the full
   structure — `sqlite3 db/tarotdb.db < db/schema.sql`. Regenerate it after a
   migration with `php scripts/dump_schema.php` so the committed schema stays in
@@ -357,7 +367,12 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 ## 9. Configuration / environment
 
 - Copy `.env.example` to `.env` and fill in values. Loaded by `Tarot\Config\Env`
-  in `api/index.php`.
+  in `api/index.php` from `Tarot\Config\Paths::envFile()`.
+- **`TAROT_DATA_DIR`** (process/Apache environment, not `.env`) names the private
+  directory holding `.env` and `db/tarotdb.db`. Production: `/var/lib/tarotgen`,
+  set by `SetEnv` in the Apache vhost (web), `/etc/environment` (SSH sessions) and
+  `/etc/cron.d/tarotgen` (cron). Unset locally, where it falls back to `backend/`.
+  Nothing private may live in the web root (AUDIT.md §1.0).
 - Separately, a gitignored **`.npmrc`** at `frontend/` must hold the FontAwesome
   Pro registry auth token for `npm install` to resolve the icon packages (see §6).
 - Key vars: `APP_ENV` (`development`/`production`), `APP_ORIGIN` (CORS),

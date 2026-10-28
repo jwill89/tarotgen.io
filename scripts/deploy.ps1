@@ -6,7 +6,8 @@
 .DESCRIPTION
     The live site at <WebRoot> (Apache + PHP) has a flat layout that mirrors this
     repo's runtime files. This script flattens the repo into that layout WITHOUT
-    ever touching the server-side data (db/, .env, assets/decks/).
+    ever touching the server-side data (.env + the database, which live outside
+    the web root in TAROT_DATA_DIR, and assets/decks/).
 
     -Target frontend (default):
         1. Builds the SPA (vite) -> dist/.
@@ -348,7 +349,7 @@ Restore on the host with:
         Write-Host "     Previous backend archived at $remoteBackup" -ForegroundColor DarkGray
         Write-Host "     (rollback: cd '$WebRoot' && tar xzf '.deploy/backend-prev.tgz' && composer install --no-dev -o)." -ForegroundColor DarkGray
     }
-    Write-Host "     Server-side db/, .env, and assets/ were not touched." -ForegroundColor DarkGray
+    Write-Host "     Server-side data (TAROT_DATA_DIR: .env + database) and assets/ were not touched." -ForegroundColor DarkGray
 }
 
 # ══ Plugin (Dalamud custom repo) ══════════════════════════════════════════════

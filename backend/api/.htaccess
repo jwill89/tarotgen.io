@@ -1,5 +1,10 @@
 RewriteEngine On
 
+# index.php is the only entry point. Every other file in here (dependencies.php,
+# Routes/**) is a class or config file that must never be served or run by URL.
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule !^index\.php$ - [R=404,L]
+
 # Preserve the Authorization header (plugin Bearer tokens) — some SAPIs drop it
 # before PHP sees it. Re-expose it via the environment for the PSR-7 layer.
 RewriteCond %{HTTP:Authorization} .

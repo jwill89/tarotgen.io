@@ -94,6 +94,31 @@ five-entry baseline; strict TS + typed ESLint.
 
 ## 1. Bugs and risks
 
+- [ ] **1.0 The production database and `.env` were publicly downloadable.** [critical] [S + M]
+  - **Found 2026-10-28** while placing the §1.1 backup script. The deploy flattens
+    `backend/` into one web root and `.htaccess` serves every existing file, so
+    `/.env`, `/db/tarotdb.db` (+ the `db/tarotdb.pre-*.db` copies),
+    `/.deploy/backend-prev.tgz`, `/composer.*`, `/openapi.json` were served
+    verbatim, and any `.php` under `db/`, `scripts/` (incl. `make_admin.php`),
+    `includes/`, `vendor/`, `api/` executed by URL.
+  - **Evidence:** the Apache access log (14 days, Oct 14-28) shows `GET /.env`
+    answered with the real file (3,177 bytes logged = 2,345-byte body + headers)
+    **11 times between Oct 17 and Oct 26**, by scanners. No download of the DB
+    appears in those 14 days; earlier history is gone.
+  - **Hotfix — DONE 2026-10-28 05:06 UTC:** deny rules at the top of
+    `backend/.htaccess` and an index.php-only rule in `backend/api/.htaccess`;
+    installed on the droplet with automatic rollback; 23 server-side checks plus
+    external bypass attempts (encoded, doubled-slash, dot-segment paths) all 404.
+    Previous files kept as `.htaccess.bak-20261028-050600` (Apache denies `.ht*`).
+  - **Owner (in progress):** rotate `GOOGLE_CLIENT_SECRET` and
+    `CLOUDFLARE_TURNSTILE_SECRET`; decide on notifying the 7 users and
+    contact-form senders (DB held emails, Argon2id hashes, contact messages,
+    reading contents; sessions/tokens are stored hashed and are not replayable).
+    `PLUGIN_IDENTITY_SALT` is dead (§2.1) — delete, don't rotate.
+  - **Durable fix (next):** move `.env` and the database **out of the web root**
+    so a missing rule can never expose them again; later, give the vhost a
+    `public/` document root (§1.9).
+
 - [ ] **1.1 No database backups exist anywhere.** [critical] [S]
   - **Where:** one SQLite file, one droplet. `scripts/deploy.ps1` deliberately
     never touches `db/`; nothing else does either. No cron, no script, no doc
