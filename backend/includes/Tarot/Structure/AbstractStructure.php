@@ -80,4 +80,15 @@ abstract class AbstractStructure implements JsonSerializable
 
         return $data;
     }
+
+    /**
+     * The serialized object minus some properties — for public responses that
+     * must not carry fields only admin views need (e.g. `submitted_by`).
+     *
+     * @return array<string,mixed>
+     */
+    public function jsonSerializeWithout(string ...$properties): array
+    {
+        return array_diff_key($this->jsonSerialize(), array_flip($properties));
+    }
 }

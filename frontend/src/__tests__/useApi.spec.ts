@@ -107,7 +107,7 @@ describe('apiRequest', () => {
 
     const res = await apiRequest('/account/readings/abc')
 
-    expect(res).toEqual({ ok: true, status: 204, data: null })
+    expect(res).toEqual({ ok: true, status: 204, data: null, headers: expect.any(Headers) })
     expect(jsonSpy).not.toHaveBeenCalled()
   })
 
@@ -127,8 +127,24 @@ describe('apiRequest', () => {
 
     const res = await apiRequest('/account/favorites/public/1')
 
-    expect(res).toEqual({ ok: true, status: 200, data: null })
+    expect(res).toEqual({ ok: true, status: 200, data: null, headers: expect.any(Headers) })
     expect(jsonSpy).not.toHaveBeenCalled()
+  })
+
+  it('passes response headers through on success (e.g. X-Total-Count)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => [],
+        headers: new Headers({ 'x-total-count': '42' }),
+      }),
+    )
+
+    const res = await apiRequest<unknown[]>('/account/readings?limit=25&offset=0')
+
+    expect(res.ok && res.headers?.get('X-Total-Count')).toBe('42')
   })
 })
 

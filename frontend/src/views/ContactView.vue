@@ -3,12 +3,13 @@ import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
-import { endpoints } from '@/api/endpoints'
+import { useContact } from '@/composables/useContact'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import PageHeader from '@/components/PageHeader.vue'
 
 const { currentUser, isLoggedIn } = useUser()
 const { success: toastSuccess, error: toastError } = useToasts()
+const { sendMessage } = useContact()
 
 const name = ref('')
 const email = ref('')
@@ -30,36 +31,20 @@ async function submit() {
   }
 
   submitting.value = true
+  const result = await sendMessage({
+    name: name.value,
+    email: email.value,
+    message: message.value,
+  })
+  submitting.value = false
 
-  try {
-    const res = await fetch('/api' + endpoints.contacts, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: name.value.trim(),
-        email: email.value.trim(),
-        message: message.value.trim(),
-      }),
-    })
-
-    if (res.status === 429) {
-      toastError('You have submitted too many messages recently. Please try again later.')
-      return
-    }
-
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { error?: string }
-      toastError(body.error || 'Failed to send your message. Please try again.')
-      return
-    }
-
-    submitted.value = true
-    toastSuccess('Your message has been sent!')
-  } catch {
-    toastError('Network error. Please check your connection and try again.')
-  } finally {
-    submitting.value = false
+  if (!result.ok) {
+    toastError(result.error)
+    return
   }
+
+  submitted.value = true
+  toastSuccess('Your message has been sent!')
 }
 
 function resetForm() {

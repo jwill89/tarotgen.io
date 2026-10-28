@@ -17,9 +17,14 @@ readonly class ReadingRepository
     }
 
     /** @return Reading[] */
-    public function listByUser(int $userId): array
+    public function listByUser(int $userId, ?int $limit = null, int $offset = 0): array
     {
-        return $this->data->listByUser($userId);
+        return $this->data->listByUser($userId, $limit, $offset);
+    }
+
+    public function countByUser(int $userId): int
+    {
+        return $this->data->countByUser($userId);
     }
 
     public function save(Reading $reading, ?string $passwordHash = null): ?Reading

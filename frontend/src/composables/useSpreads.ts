@@ -1,6 +1,7 @@
 import { ref, computed, type Ref } from 'vue'
 import type { Spread, SpreadOption } from '@/types'
-import { apiFetch } from './useApi'
+import { apiRequest } from './apiClient'
+import { useToasts } from './useToasts'
 import { endpoints } from '@/api/endpoints'
 import { useUserSpreads } from './useUserSpreads'
 import { useFavoriteSpreads } from './useFavoriteSpreads'
@@ -18,12 +19,17 @@ export function useSpreads() {
     // favorites/user-spreads calls don't depend on the public list (favorites are
     // reconciled by id in spreadOptions), so awaiting the public list first only
     // added a serial round trip to every spread-selector page load.
-    const [data] = await Promise.all([
-      apiFetch<Spread[]>(endpoints.spreads.list),
+    const [res] = await Promise.all([
+      apiRequest<Spread[]>(endpoints.spreads.list),
       isLoggedIn.value ? fetchUserSpreads() : Promise.resolve(),
       isLoggedIn.value ? fetchFavorites() : Promise.resolve(),
     ])
-    if (data) spreads.value = data
+    if (res.ok) {
+      spreads.value = res.data
+    } else {
+      // An empty spread picker reads as "there are no spreads"; say why.
+      useToasts().error(`Couldn't load the spreads. ${res.error}`, { detail: res })
+    }
   }
 
   /** Combined list of public + personal spreads for the spread selector. */

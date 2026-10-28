@@ -68,14 +68,22 @@ import PageHeader from '@/components/PageHeader.vue'
               <h2 class="title is-4">5. Data Sharing</h2>
               <p>
                 We do not share your personal information with any third parties, except where
-                required by law. We do not use third-party analytics or advertising services that
-                would receive your data.
+                required by law, and we use no advertising services.
+              </p>
+              <p>
+                The site is delivered through Cloudflare. We use Cloudflare Web Analytics to see, in
+                aggregate, how many pages are viewed and how quickly they load. Cloudflare states
+                that it does not collect or use visitors' personal data, and it stores nothing in
+                your browser — no cookies, no local storage. Cloudflare also runs a short script on
+                each page to tell real visitors from automated traffic.
               </p>
 
               <h2 class="title is-4">6. Cookies</h2>
               <p>
-                We use only essential cookies (or local storage) required for authentication and
-                session management. We do not use tracking cookies or third-party cookies.
+                The only cookie we use is an essential session cookie, which keeps you signed in.
+                Your browser's local storage remembers a few conveniences on this device, such as
+                readings you viewed recently and the deck you last used. We do not use tracking
+                cookies or third-party cookies.
               </p>
 
               <h2 class="title is-4">7. Your Rights</h2>

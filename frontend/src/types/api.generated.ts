@@ -12,8 +12,11 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The current user's readings, newest first
-         * @description All of the current user's readings, newest first.
+         * The current user's readings, newest first (one page with ?limit, else all)
+         * @description The current user's readings, newest first. The site pages with ?limit and
+         *     reads the total from X-Total-Count; without ?limit every reading comes back
+         *     as a plain array, which the Dalamud plugin's List<Reading> still expects —
+         *     keep that shape until the plugin pages too (AUDIT §2.6).
          */
         get: operations["52d06296825f7d5198b9620f6ee0c77a"];
         put?: never;
@@ -1783,7 +1786,11 @@ export type $defs = Record<string, never>;
 export interface operations {
     "52d06296825f7d5198b9620f6ee0c77a": {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Page size (1–100). Omit to get every reading. */
+                limit?: number;
+                offset?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -1793,6 +1800,8 @@ export interface operations {
             /** @description Array of readings */
             200: {
                 headers: {
+                    /** @description The user's total reading count (sent when paging with ?limit) */
+                    "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {

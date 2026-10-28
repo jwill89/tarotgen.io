@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Tarot\Tests\Unit\Service;
 
+use PDO;
+use PDOException;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Tarot\Exception\ApiException;
@@ -60,6 +62,82 @@ final class ReadingServiceTest extends TestCase
     private function decodeInfo(Reading $reading): array
     {
         return json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    /**
+     * The exception SQLite really raises for a duplicate reading id, captured
+     * from an in-memory table shaped like `readings` — so the tests exercise
+     * the actual message the retry matches on, not a hand-written imitation.
+     */
+    private static function realIdCollision(): PDOException
+    {
+        $db = new PDO('sqlite::memory:');
+        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+        $db->exec('CREATE TABLE readings (reading_id TEXT NOT NULL UNIQUE, PRIMARY KEY (reading_id))');
+        $db->exec("INSERT INTO readings VALUES ('abc')");
+        try {
+            $db->exec("INSERT INTO readings VALUES ('abc')");
+        } catch (PDOException $e) {
+            return $e;
+        }
+        self::fail('SQLite accepted a duplicate reading id.');
+    }
+
+    /** A stub that rejects the first $collisions saves with $error, then echoes the reading. */
+    private function saveFailsThenSucceeds(int $collisions, PDOException $error): void
+    {
+        $calls = 0;
+        $this->readings->method('save')->willReturnCallback(
+            static function (Reading $r) use (&$calls, $collisions, $error): Reading {
+                if (++$calls <= $collisions) {
+                    throw $error;
+                }
+                return $r;
+            }
+        );
+    }
+
+    private function generateOneCard(): Reading
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
+
+        return $this->service()->generate(['deck_id' => 1, 'number_of_cards' => 1]);
+    }
+
+    // ── persist(): reading-id collisions (AUDIT §1.6) ───────────
+
+    public function testAnIdCollisionIsRetriedWithAFreshId(): void
+    {
+        $this->saveFailsThenSucceeds(1, self::realIdCollision());
+
+        $reading = $this->generateOneCard();
+
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{10}$/', $reading->reading_id);
+    }
+
+    public function testRepeatedCollisionsGiveUpAfterThreeAttempts(): void
+    {
+        $this->saveFailsThenSucceeds(3, self::realIdCollision());
+
+        $this->expectException(PDOException::class);
+        $this->generateOneCard();
+    }
+
+    public function testOtherIntegrityErrorsAreNotRetried(): void
+    {
+        $calls = 0;
+        $this->readings->method('save')->willReturnCallback(static function () use (&$calls): never {
+            $calls++;
+            throw new PDOException('SQLSTATE[23000]: Integrity constraint violation: 19 FOREIGN KEY constraint failed');
+        });
+
+        try {
+            $this->generateOneCard();
+            $this->fail('Expected the foreign-key error to propagate.');
+        } catch (PDOException) {
+            $this->assertSame(1, $calls);
+        }
     }
 
     // ── generate() ──────────────────────────────────────────────

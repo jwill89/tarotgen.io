@@ -7,6 +7,10 @@ require_once('../vendor/autoload.php');
 // pin PHP's zone too, so any stray date() — ours or a library's — agrees (AUDIT §1.4).
 date_default_timezone_set('UTC');
 
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Slim\Exception\HttpMethodNotAllowedException;
+use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
 use Slim\Routing\RouteCollectorProxy;
 use DI\ContainerBuilder;
@@ -75,6 +79,17 @@ $app->addRoutingMiddleware();
 // Setup Error Handling — never leak details/stack traces in production.
 $error_middleware = $app->addErrorMiddleware($is_production === false, true, true);
 
+// 404/405s are mostly scanners probing for /api/.env and the like (~100 a day).
+// Answer them exactly as before, but without writing a stack trace to the shared
+// Apache error log each time; real exceptions keep full logging (AUDIT §1.8).
+// Not a static closure: Slim's CallableResolver binds closures to the container.
+$default_error_handler = $error_middleware->getDefaultErrorHandler();
+$error_middleware->setErrorHandler(
+    [HttpNotFoundException::class, HttpMethodNotAllowedException::class],
+    fn (ServerRequestInterface $request, Throwable $exception, bool $displayErrorDetails): ResponseInterface
+        => $default_error_handler($request, $exception, $displayErrorDetails, false, false)
+);
+
 // Security headers + opt-in CORS. The SPA is same-origin, so cross-origin
 // access is only enabled when APP_ORIGIN is explicitly configured (never '*'
 // alongside credentialed session cookies).
@@ -119,8 +134,17 @@ $app->get('/openapi.json', function ($request, $response) {
         ->withHeader('Cache-Control', 'public, max-age=300');
 });
 
+// Scalar runs on our origin, where a signed-in admin's cookies live, so the
+// bundle is pinned to one version with Subresource Integrity and the page gets
+// its own enforced CSP (the site policy in .htaccess skips /api/docs). To
+// upgrade: bump the version, recompute the sha384 of the same file, update both.
+const SCALAR_BUNDLE = 'https://cdn.jsdelivr.net/npm/@scalar/api-reference@1.74.0/dist/browser/standalone.js';
+const SCALAR_SRI    = 'sha384-VXnKAz61Xwc3tbw1P+KKrUP7YbcsSl1Ik4is5UnogJyw9XEYZ5Ay/T1i0zPYtSZH';
+
 $app->get('/docs', function ($request, $response) {
-    $response->getBody()->write(<<<'HTML'
+    $bundle = SCALAR_BUNDLE;
+    $sri    = SCALAR_SRI;
+    $response->getBody()->write(<<<HTML
         <!doctype html>
         <html>
           <head>
@@ -130,12 +154,20 @@ $app->get('/docs', function ($request, $response) {
           </head>
           <body>
             <script id="api-reference" data-url="/api/openapi.json"></script>
-            <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
+            <script src="{$bundle}" integrity="{$sri}" crossorigin="anonymous"></script>
           </body>
         </html>
         HTML);
 
-    return $response->withHeader('Content-Type', 'text/html; charset=utf-8');
+    // Only that one script; Scalar injects its own styles and loads its fonts
+    // from fonts.scalar.com. No proxy.scalar.com: the API is same-origin.
+    $csp = "default-src 'none'; script-src {$bundle}; style-src 'unsafe-inline'; "
+        . "font-src https://fonts.scalar.com data:; img-src 'self' data:; connect-src 'self'; "
+        . "base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+
+    return $response
+        ->withHeader('Content-Type', 'text/html; charset=utf-8')
+        ->withHeader('Content-Security-Policy', $csp);
 });
 
 // ── Decks (public read + user submission) ────────────────────────────────────

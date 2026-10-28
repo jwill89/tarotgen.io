@@ -7,8 +7,9 @@ manage decks, spreads, users, and more.
 
 It's a **Vue 3 SPA frontend + PHP REST API backend**, split into `frontend/` and
 `backend/`. In production both are served from a single flat web root behind Apache
-(the SPA is the static `dist/` build; `/api/*` hits the PHP app; `/reading/{id}` is
-server-rendered by `og.php` for social link previews). The deploy script flattens
+(the SPA is the static `dist/` build; `/api/*` hits the PHP app; every page's HTML
+shell goes through `og.php`, which adds a per-response CSP nonce and, for
+`/reading/{id}`, social link-preview meta). The deploy script flattens
 the two folders into that web root.
 
 A companion **FFXIV Dalamud plugin** lives in `plugin/` — a self-contained C# /
@@ -39,7 +40,7 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `frontend/public/` | PWA assets (manifest, service worker, icons), `robots.txt`, `sitemap.xml`, self-hosted fonts. |
 | `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. Endpoints are documented via swagger-php attributes → `backend/openapi.json` (`composer docs`), served at `/api/docs`. |
 | `backend/includes/Tarot/` | Domain code (PSR-4 `Tarot\`): Data → Repository → Service → Structure, plus Config/Database/Utility. |
-| `backend/og.php` | Server-rendered Open Graph meta for `/reading/{id}` shares. |
+| `backend/og.php` | Serves every page's HTML shell: per-response CSP nonce, plus Open Graph meta for `/reading/{id}` shares. |
 | `backend/tests/Unit/` | PHPUnit tests. |
 | `backend/scripts/` | PHP/Python CLI utilities (`make_admin.php`, `indexnow.php`, …). |
 | `backend/{phpunit.xml,phpstan.neon}` | QA configs (auto-discovered when running `composer` from `backend/`). |

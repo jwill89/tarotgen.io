@@ -41,7 +41,9 @@ export async function readApiError(res: Response, fallback: string): Promise<str
  * whether the failure was a transport error vs. an error response.
  */
 export type ApiResult<T> =
-  | { ok: true; status: number; data: T }
+  // `headers` carries metadata such as X-Total-Count on paged lists (optional
+  // because hand-rolled test doubles of Response omit it).
+  | { ok: true; status: number; data: T; headers?: Headers }
   | { ok: false; status: number; data: unknown; error: string; networkError: boolean }
 
 /**
@@ -93,7 +95,12 @@ export async function apiRequest<T>(
   const body = hasNoBody(res) ? null : await parseJsonSafe(res)
 
   if (res.ok) {
-    return { ok: true, status: res.status, data: body as T }
+    return {
+      ok: true,
+      status: res.status,
+      data: body as T,
+      headers: res.headers,
+    }
   }
 
   return {

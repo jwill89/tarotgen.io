@@ -3,6 +3,7 @@
 namespace Tarot\Service;
 
 use JsonException;
+use PDOException;
 use Random\RandomException;
 use Tarot\Exception\ApiException;
 use Tarot\Repository\DeckRepository;
@@ -32,6 +33,12 @@ class ReadingService
      * per-card reversal rate, so tune this to taste (e.g. 0.27 ≈ 27%).
      */
     private const float REVERSAL_TURN_PROBABILITY = 0.27;
+
+    /** How many fresh ids persist() draws before giving up on collisions. */
+    private const int ID_ATTEMPTS = 3;
+
+    /** SQLite's message for a duplicate reading id — the only error worth a retry. */
+    private const string ID_COLLISION = 'UNIQUE constraint failed: readings.reading_id';
 
     public function __construct(
         private readonly ReadingRepository $readings,
@@ -432,7 +439,6 @@ class ReadingService
     private function persist(array $reading_data, array $owner = [], int $failureStatus = 404): Reading
     {
         $reading = new Reading();
-        $reading->setReadingId(bin2hex(random_bytes(5)));
         $reading->setReadingInfo(json_encode($reading_data, JSON_THROW_ON_ERROR));
 
         if (isset($owner['user_id'])) {
@@ -442,7 +448,21 @@ class ReadingService
             $reading->setReadingNotes($owner['reading_notes'] ?? null);
         }
 
-        $saved = $this->readings->save($reading, $owner['password_hash'] ?? null);
+        // Ids are 40 random bits: a collision is rare, but it used to surface as
+        // a 500. Draw a fresh id and retry; any other database error, or a
+        // collision on the last attempt, propagates as before (AUDIT §1.6).
+        for ($attempt = 1;; $attempt++) {
+            $reading->setReadingId(bin2hex(random_bytes(5)));
+            try {
+                $saved = $this->readings->save($reading, $owner['password_hash'] ?? null);
+                break;
+            } catch (PDOException $e) {
+                if ($attempt >= self::ID_ATTEMPTS || !str_contains($e->getMessage(), self::ID_COLLISION)) {
+                    throw $e;
+                }
+            }
+        }
+
         if (!($saved instanceof Reading)) {
             throw new ApiException('ErrorGeneratingReading', $failureStatus);
         }

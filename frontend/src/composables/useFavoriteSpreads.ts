@@ -1,6 +1,7 @@
 import { ref, type Ref } from 'vue'
-import { apiFetch } from './useApi'
+import { apiRequest } from './apiClient'
 import { endpoints } from '@/api/endpoints'
+import { useToasts } from './useToasts'
 
 export interface FavoriteEntry {
   spread_type: 'public' | 'personal'
@@ -17,8 +18,13 @@ export function useFavoriteSpreads() {
   function fetchFavorites(): Promise<void> {
     if (inFlight) return inFlight
     inFlight = (async () => {
-      const data = await apiFetch<FavoriteEntry[]>(endpoints.account.favorites)
-      if (data) favorites.value = data
+      const res = await apiRequest<FavoriteEntry[]>(endpoints.account.favorites)
+      if (res.ok) {
+        favorites.value = res.data
+      } else if (res.status !== 401) {
+        // A 401 is an expired session, which the router's revalidation handles.
+        useToasts().error(`Couldn't load your favourite spreads. ${res.error}`, { detail: res })
+      }
     })().finally(() => {
       inFlight = null
     })
@@ -33,7 +39,7 @@ export function useFavoriteSpreads() {
     spreadType: 'public' | 'personal',
     spreadId: number,
   ): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.favorites, {
+    const res = await apiRequest(endpoints.account.favorites, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ spread_type: spreadType, spread_id: spreadId }),
@@ -47,7 +53,7 @@ export function useFavoriteSpreads() {
     spreadType: 'public' | 'personal',
     spreadId: number,
   ): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.favoriteById(spreadType, spreadId), {
+    const res = await apiRequest(endpoints.account.favoriteById(spreadType, spreadId), {
       method: 'DELETE',
     })
     if (!res.ok) return false
@@ -61,11 +67,12 @@ export function useFavoriteSpreads() {
     spreadType: 'public' | 'personal',
     spreadId: number,
   ): Promise<boolean> {
-    if (isFavorite(spreadType, spreadId)) {
-      return removeFavorite(spreadType, spreadId)
-    } else {
-      return addFavorite(spreadType, spreadId)
-    }
+    const ok = isFavorite(spreadType, spreadId)
+      ? await removeFavorite(spreadType, spreadId)
+      : await addFavorite(spreadType, spreadId)
+    // Callers fire-and-forget (the star just doesn't change), so say it here.
+    if (!ok) useToasts().error("Couldn't update your favourite spreads. Please try again.")
+    return ok
   }
 
   return {

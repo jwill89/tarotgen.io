@@ -76,9 +76,9 @@ flattens both into the live server's single flat web root.
 │       └── __tests__/      #   Vitest specs (*.spec.ts).
 │
 ├── backend/                # PHP API — run composer from here
-│   ├── og.php              # Server-rendered Open Graph meta for /reading/{id} shares.
+│   ├── og.php              # Serves the SPA shell for every page: per-response CSP nonce + /reading/{id} share meta.
 │   ├── dev-router.php      # Local PHP built-in-server router (composer dev); mimics .htaccess.
-│   ├── .htaccess           # Web-root rewrites (api/ → og.php → SPA fallback).
+│   ├── .htaccess           # Web-root rewrites (api/ → static files → every page via og.php).
 │   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`.
 │   ├── phpunit.xml         # PHPUnit config (tests/Unit suite).
 │   ├── phpstan.neon        # PHPStan config (level 6); phpstan-baseline.neon holds pre-existing findings.
@@ -157,6 +157,9 @@ declared in `index.php`). `OpenApiSpecTest` fails if the committed spec drifts f
 the attributes — so **after changing a route or a response shape, run `composer docs`
 and commit `openapi.json`** (and `npm run gen:types` for the frontend types). Global
 metadata (info, server, security scheme, tags) lives in `api/Routes/OpenApiSpec.php`.
+The Scalar bundle is pinned to one version with Subresource Integrity, and `/api/docs`
+sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` in `api/index.php`); to
+upgrade, change the version and recompute the sha384 of that exact file.
 
 ### Auth & security
 - Sessions use PHP sessions hardened in `index.php` (HttpOnly, SameSite=Lax,
@@ -169,10 +172,23 @@ metadata (info, server, security scheme, tags) lives in `api/Routes/OpenApiSpec.
 - Passkeys/WebAuthn via `lbuchs/webauthn`; optional Google OAuth.
 - In production the DI container is compiled to disk and error detail is hidden.
 
-### og.php
-The SPA can't set Open Graph tags for crawlers, so `/reading/{id}` is rewritten
-to `og.php`, which serves the built `dist/index.html` with reading-specific
-meta tags injected (and is careful not to leak password-protected readings).
+### og.php (every page) and the Content-Security-Policy
+Every page route is rewritten to `og.php`, which serves the built `dist/index.html`
+with two things only a server can add (the shell is never cached, so this costs a
+little PHP per navigation):
+
+- **An enforced CSP with a fresh nonce per response**
+  (`Tarot\Utility\ContentSecurityPolicy`). Cloudflare injects scripts into our pages —
+  Bot Fight Mode's JS detection (an inline script that differs on every request) and
+  the Web Analytics beacon — and stamps the header's nonce onto them, so `script-src`
+  needs no `'unsafe-inline'`. Our own code needs no nonce (one external module
+  script). A new third-party script host must be added to that class, or it is blocked.
+  `CSP_MODE=report-only` in the live `.env` downgrades to report-only without a deploy.
+  `/index.html` and `/dist/index.html` also go through `og.php` (a static copy would
+  be a CSP-free bypass). `/api/docs` sends its own policy.
+- **Share meta for `/reading/{id}`:** crawlers can't run the SPA, so the generic title
+  and og:/twitter: tags are swapped for the reading's (never leaking a
+  password-protected reading). Other pages get the shell exactly as built.
 
 ---
 

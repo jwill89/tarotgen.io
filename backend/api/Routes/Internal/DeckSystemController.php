@@ -36,7 +36,13 @@ class DeckSystemController extends AbstractController
      */
     public function getSystems(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->systems->getApproved())
+        // submitted_by is a user id for the admin views only; keep it off the public API.
+        $systems = array_map(
+            static fn(DeckSystem $s): array => $s->jsonSerializeWithout('submitted_by'),
+            $this->systems->getApproved()
+        );
+
+        return $response->withJson($systems)
             ->withHeader('Cache-Control', 'public, max-age=300');
     }
 
@@ -72,7 +78,7 @@ class DeckSystemController extends AbstractController
 
         $cards = $this->systems->getCards($id);
 
-        $data = $system->jsonSerialize();
+        $data = $system->jsonSerializeWithout('submitted_by');
         $data['cards'] = array_map(fn($c) => $c->jsonSerialize(), $cards);
 
         return $response->withJson($data)

@@ -5,11 +5,10 @@
     Header always set X-Content-Type-Options "nosniff"
     Header always set Referrer-Policy "strict-origin-when-cross-origin"
 
-    # Content-Security-Policy, rolled out in Report-Only mode first: browsers
-    # REPORT violations to the console but never block, so this can't break the
-    # live SPA, Cloudflare Turnstile, or Google Fonts. After watching for false
-    # positives, promote it by renaming the header to "Content-Security-Policy".
-    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; manifest-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; object-src 'none'"
+    # No Content-Security-Policy here: it is set per response by PHP, because it
+    # needs a fresh nonce each time (og.php → Tarot\Utility\ContentSecurityPolicy;
+    # /api/docs sends its own). Only HTML documents need one, and every page now
+    # goes through og.php — see the SPA fallback at the bottom (AUDIT §1.5).
 
     # /_app/ and /fonts/ are served by an internal rewrite into dist/ (below), so
     # these match on the FILE being served, not the URL: a `SetEnvIf Request_URI
@@ -31,8 +30,9 @@
         Header always set Cache-Control "public, max-age=2592000"
     </If>
 
-    # The HTML shell (SPA index.html, and og.php for shared readings) must be
-    # revalidated on every load: it names the hashed bundles of ONE build, and a
+    # The HTML shell (served by og.php for every page; index.html if ever hit
+    # directly) must be revalidated on every load — and it now carries a
+    # per-response CSP nonce: it names the hashed bundles of ONE build, and a
     # deploy deletes the previous build's files. Left to heuristic caching, a
     # returning browser could boot a stale shell that requests bundles which no
     # longer exist — a blank app until a hard refresh.
@@ -63,6 +63,11 @@ RewriteRule ^(\.env.*|composer\.(json|lock)|openapi\.json)$ - [R=404,L]
 RewriteCond %{REQUEST_URI} ^/api/
 RewriteRule ^ - [L]
 
+# The shell is only ever served by og.php, which attaches the CSP. Served as a
+# static file (/index.html via the dist rule, /dist/index.html via the -f rule)
+# it would load the whole app with no policy — a ready-made CSP bypass link.
+RewriteRule ^(dist/)?index\.html$ og.php [L]
+
 # Existing files served directly (card images, etc.)
 RewriteCond %{REQUEST_FILENAME} -f
 RewriteRule ^ - [L]
@@ -71,9 +76,6 @@ RewriteRule ^ - [L]
 RewriteCond %{DOCUMENT_ROOT}/dist%{REQUEST_URI} -f
 RewriteRule ^(.*)$ dist/$1 [L]
 
-# Shared reading links: serve the built app shell with per-reading social meta
-# injected server-side (the SPA still hydrates as normal for visitors).
-RewriteRule ^reading/[A-Za-z0-9]+/?$ og.php [L]
 
 # Static file trees (/plugin/*, /assets/*, /_app/*, /fonts/*): a missing file
 # here MUST 404, never fall through to the SPA shell below. Existing files were
@@ -87,5 +89,6 @@ RewriteRule ^reading/[A-Za-z0-9]+/?$ og.php [L]
 RewriteCond %{REQUEST_URI} ^/(plugin|assets|_app|fonts)/
 RewriteRule ^ - [R=404,L]
 
-# SPA fallback — serve the built app
-RewriteRule ^ dist/index.html [L]
+# SPA fallback — every page route. og.php serves the built shell with a fresh
+# CSP nonce (and, for /reading/{id}, that reading's social meta).
+RewriteRule ^ og.php [L]

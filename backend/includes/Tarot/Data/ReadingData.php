@@ -28,19 +28,36 @@ class ReadingData extends AbstractData
     }
 
     /**
-     * Every reading owned by a user, newest first — for the account dashboard.
+     * A user's readings, newest first. With a $limit, one page of them (the
+     * account page); without, all of them (what the plugin's list still expects).
      *
      * @return Reading[]
      */
-    public function listByUser(int $userId): array
+    public function listByUser(int $userId, ?int $limit = null, int $offset = 0): array
     {
-        $stmt = $this->db->prepare(
-            'SELECT ' . self::SELECT_COLS . ' FROM readings WHERE user_id = :uid
-             ORDER BY reading_time DESC, reading_id DESC'
-        );
-        $stmt->execute([':uid' => $userId]);
+        $sql = 'SELECT ' . self::SELECT_COLS . ' FROM readings WHERE user_id = :uid
+                ORDER BY reading_time DESC, reading_id DESC';
+        if ($limit !== null) {
+            $sql .= ' LIMIT :limit OFFSET :offset';
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
+        if ($limit !== null) {
+            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        }
+        $stmt->execute();
 
         return array_map([$this, 'hydrate'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+    }
+
+    public function countByUser(int $userId): int
+    {
+        $stmt = $this->db->prepare('SELECT COUNT(*) FROM readings WHERE user_id = :uid');
+        $stmt->execute([':uid' => $userId]);
+
+        return (int)$stmt->fetchColumn();
     }
 
     public function store(Reading $reading, ?string $passwordHash = null): ?Reading

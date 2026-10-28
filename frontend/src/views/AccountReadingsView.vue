@@ -1,6 +1,14 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
+import {
+  PaginationRoot,
+  PaginationList,
+  PaginationListItem,
+  PaginationPrev,
+  PaginationNext,
+  PaginationEllipsis,
+} from 'reka-ui'
 import { useAccount } from '@/composables/useAccount'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
@@ -11,7 +19,7 @@ import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import type { AccountReading, DrawCard } from '@/types'
 
-const { listReadings, updateReading, deleteReading } = useAccount()
+const { listReadingsPage, updateReading, deleteReading } = useAccount()
 const toasts = useToasts()
 const { confirm } = useConfirm()
 const deletingId = ref<string | null>(null)
@@ -47,11 +55,30 @@ function summarize(r: AccountReading): string {
   }
 }
 
+// One page at a time: the list used to fetch every reading with its full body
+// (AUDIT §2.6).
+const PER_PAGE = 25
+const page = ref(1)
+const total = ref(0)
+const loadError = ref('')
+
 async function load() {
   loading.value = true
-  readings.value = await listReadings()
+  const res = await listReadingsPage(page.value, PER_PAGE)
   loading.value = false
+  if (!res.ok) {
+    // Shown in place of the list — an empty list would read as "no readings yet".
+    loadError.value = res.error
+    return
+  }
+  loadError.value = ''
+  readings.value = res.readings
+  total.value = res.total
+  // Deleting the only reading on the last page leaves it empty: step back.
+  if (res.readings.length === 0 && page.value > 1) page.value -= 1
 }
+
+watch(page, load)
 
 function openEdit(r: AccountReading) {
   editId.value = r.reading_id
@@ -108,7 +135,8 @@ async function removeReading(r: AccountReading) {
     const res = await deleteReading(r.reading_id)
     if (res.ok) {
       toasts.success('Reading deleted.')
-      readings.value = readings.value.filter((x) => x.reading_id !== r.reading_id)
+      // Reload the page so the next reading moves up and the total stays right.
+      await load()
     } else {
       toasts.error(res.error ?? 'Could not delete the reading.')
     }
@@ -135,14 +163,21 @@ onMounted(load)
             subtitle="View your readings and manage their title, visibility, and password."
           />
 
-          <p v-if="loading" class="has-text-grey">
+          <p v-if="loading && readings.length === 0" class="has-text-grey">
             <span class="icon"
               ><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin
             /></span>
             <span>Loading your readings…</span>
           </p>
 
-          <p v-else-if="readings.length === 0" class="has-text-grey">
+          <div v-else-if="loadError" class="notification is-danger is-light">
+            <p class="mb-3">Couldn't load your readings. {{ loadError }}</p>
+            <button class="button is-small" :class="{ 'is-loading': loading }" @click="load">
+              Try again
+            </button>
+          </div>
+
+          <p v-else-if="total === 0" class="has-text-grey">
             You haven't saved any readings yet. New draws and recreations you make while signed in
             appear here.
           </p>
@@ -207,6 +242,34 @@ onMounted(load)
                 </tbody>
               </table>
             </div>
+
+            <PaginationRoot
+              v-if="total > PER_PAGE"
+              v-model:page="page"
+              :total="total"
+              :items-per-page="PER_PAGE"
+              :sibling-count="1"
+              show-edges
+              :default-page="1"
+              class="mt-4"
+            >
+              <PaginationList v-slot="{ items }" class="pagination-list-reka">
+                <PaginationPrev class="button is-small">‹</PaginationPrev>
+                <template v-for="(item, i) in items" :key="i">
+                  <PaginationListItem
+                    v-if="item.type === 'page'"
+                    :value="item.value"
+                    class="button is-small"
+                  >
+                    {{ item.value }}
+                  </PaginationListItem>
+                  <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
+                    >&hellip;</PaginationEllipsis
+                  >
+                </template>
+                <PaginationNext class="button is-small">›</PaginationNext>
+              </PaginationList>
+            </PaginationRoot>
           </div>
         </div>
       </div>

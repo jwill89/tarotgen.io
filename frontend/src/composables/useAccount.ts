@@ -1,5 +1,6 @@
 import { useUser } from './useUser'
 import { endpoints } from '@/api/endpoints'
+import { apiRequest } from './apiClient'
 import type { AccountReading, User } from '@/types'
 
 const JSON_HEADERS = { 'Content-Type': 'application/json' }
@@ -23,13 +24,32 @@ export interface ReadingMetaUpdate {
 export function useAccount() {
   const { currentUser } = useUser()
 
-  async function listReadings(): Promise<AccountReading[]> {
-    try {
-      const res = await fetch('/api' + endpoints.account.readings)
-      if (!res.ok) return []
-      return (await res.json()) as AccountReading[]
-    } catch {
-      return []
+  /**
+   * One page of the user's readings, newest first, plus their total count. A
+   * failure comes back as `{ ok: false, error }` rather than an empty list, so
+   * the page can't mistake "couldn't load" for "no readings yet".
+   */
+  async function listReadingsPage(
+    page: number,
+    perPage: number,
+  ): Promise<
+    { ok: true; readings: AccountReading[]; total: number } | { ok: false; error: string }
+  > {
+    const offset = (Math.max(1, page) - 1) * perPage
+    const res = await apiRequest<AccountReading[]>(
+      `${endpoints.account.readings}?limit=${perPage}&offset=${offset}`,
+    )
+    if (!res.ok) return { ok: false, error: res.error }
+
+    // get() returns null when absent, and Number(null) is 0 — parse only a real value.
+    const header = res.headers?.get('X-Total-Count')
+    const total = header ? Number(header) : NaN
+    return {
+      ok: true,
+      readings: res.data,
+      // A proxy that strips the header must not break paging: fall back to
+      // "at least what we can see".
+      total: Number.isFinite(total) ? total : offset + res.data.length,
     }
   }
 
@@ -131,7 +151,7 @@ export function useAccount() {
   }
 
   return {
-    listReadings,
+    listReadingsPage,
     updateReading,
     deleteReading,
     changeDisplayName,

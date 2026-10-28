@@ -56,15 +56,22 @@ class DeckController extends AbstractController
 
         $status = 200;
 
+        // Public responses omit submitted_by: it's a user id, needed only by the
+        // admin deck list (AdminController), not by anyone browsing decks.
         if ($deck_id !== null) {
-            $data = $this->decks->get((int)$deck_id);
-            if (!($data instanceof Deck)) {
+            $deck = $this->decks->get((int)$deck_id);
+            if ($deck instanceof Deck) {
+                $data = $deck->jsonSerializeWithout('submitted_by');
+            } else {
                 $data   = ['error' => 'InvalidDeckID'];
                 $status = 404;
             }
         } else {
             // Public listing: only usable decks
-            $data = $this->decks->getUsable();
+            $data = array_map(
+                static fn(Deck $d): array => $d->jsonSerializeWithout('submitted_by'),
+                $this->decks->getUsable()
+            );
         }
 
         $response = $response->withJson($data, $status);

@@ -78,6 +78,22 @@ final class StructureTest extends TestCase
         $this->assertSame([['order' => 1]], $data['positions']);
     }
 
+    public function testJsonSerializeWithoutDropsOnlyTheNamedProperties(): void
+    {
+        // The public deck endpoints rely on this to keep submitted_by (a user id) private.
+        $deck = new Deck(['deck_id' => 4, 'name' => 'Thoth', 'submitted_by' => 7]);
+
+        $data = $deck->jsonSerializeWithout('submitted_by');
+
+        $this->assertArrayNotHasKey('submitted_by', $data);
+        $this->assertSame(4, $data['deck_id']);
+        $this->assertSame('Thoth', $data['name']);
+        $this->assertSame(
+            array_values(array_diff(array_keys($deck->jsonSerialize()), ['submitted_by'])),
+            array_keys($data)
+        );
+    }
+
     public function testJsonEncodeRoundTrip(): void
     {
         $spread = new Spread(['spread_id' => 1, 'name' => 'Single']);

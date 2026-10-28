@@ -116,6 +116,8 @@ five-entry baseline; strict TS + typed ESLint.
     contact-form senders (DB held emails, Argon2id hashes, contact messages,
     reading contents; sessions/tokens are stored hashed and are not replayable).
     `PLUGIN_IDENTITY_SALT` is dead (§2.1) — delete, don't rotate.
+    *2026-10-28:* both secrets rotated and the salt line deleted by the owner;
+    only the notification decision remains open.
   - **Durable fix — DONE 2026-10-28 05:21 UTC** (commit `2a44c27` + droplet
     change): `Tarot\Config\Paths` resolves `.env` and the DB from
     `TAROT_DATA_DIR` (fallback `backend/` for dev); `Connection` refuses to
@@ -269,13 +271,63 @@ five-entry baseline; strict TS + typed ESLint.
     if you want ongoing signal.
   - **Verify:** every route + Turnstile on `/login` + `/api/docs` load with a
     clean console under the enforced header.
+  - **Partly done 2026-10-28.** Google Fonts hosts removed (fonts self-hosted;
+    nothing references them). `/api/docs` now pins Scalar to
+    `@scalar/api-reference@1.74.0/dist/browser/standalone.js` with SRI
+    (`sha384-VXnK…`, stable across fetches) and sends its **own enforced CSP**
+    (one script, `fonts.scalar.com`, `connect-src 'self'` — so no
+    `proxy.scalar.com` and no "Ask AI" egress); the site policy skips it via
+    `<If "%{THE_REQUEST} !~ …">`. Verified on dev: renders, fonts load,
+    "Test Request" GET /config → 200, console clean. The built SPA is clean
+    under the site policy (no inline scripts — the one inline `<script>` is
+    JSON-LD data — no `style=`, no foreign hosts but Turnstile; Google sign-in
+    is a navigation, so `form-action` is moot).
+  - **Blocked on an owner decision — what Cloudflare injects.** Browsing prod
+    under report-only logged violations from two Cloudflare features, not our
+    code: (1) **Bot Fight Mode's JS-detection inline script**, which embeds a
+    per-request ray id (hash differs every load — measured), so only a
+    per-request **nonce in the CSP header** can allow it (Cloudflare stamps the
+    header's nonce onto scripts it injects; `unsafe-inline` defeats the point);
+    on the free plan it can't be turned off without turning off Bot Fight Mode;
+    (2) the **Web Analytics** beacon from `static.cloudflareinsights.com` — note
+    the privacy policy says "we do not use third-party analytics". Options:
+    serve the HTML shell through PHP with a per-request nonce (strict policy,
+    keeps both features); or turn the features off and enforce the static
+    policy as is.
+  - **Decided (owner): keep Web Analytics and Bot Fight Mode → nonce.
+    Implemented 2026-10-28, awaiting deploy + prod verification.** Every page
+    route now goes through `og.php`, which sends an **enforced** CSP built by
+    `Tarot\Utility\ContentSecurityPolicy` with a fresh 128-bit nonce per
+    response: `script-src 'self' 'nonce-…' challenges.cloudflare.com
+    static.cloudflareinsights.com` — no `'unsafe-inline'` (styles keep it).
+    The static `.htaccess` header is gone; `/index.html` and `/dist/index.html`
+    also route to `og.php` so no CSP-free copy of the app exists. Escape hatch:
+    `CSP_MODE=report-only` in the live `.env` (no deploy). Verified locally via
+    php-cgi: header present + nonce fresh per response, ordinary pages' body
+    byte-identical to the build, `/reading/{id}` share meta intact, look-alike
+    paths untouched, the escape hatch flips the header. Unit-tested policy.
+    Privacy policy §5/§6 now name Cloudflare Web Analytics accurately — beacon
+    reports to our own `/cdn-cgi/rum`; measured on prod: no cookies, no
+    storage — and Cloudflare's bot script. **What can only be verified on
+    prod:** that Cloudflare stamps the nonce onto its JS-detection script and
+    the beacon. After deploy, browse home / New Draw / a reading + lightbox /
+    login (Turnstile) / `/api/docs` with the console open: expect zero CSP
+    violations and both `/cdn-cgi/challenge-platform/…` and `/cdn-cgi/rum`
+    requests. If anything is blocked, set `CSP_MODE=report-only` first, then
+    fix.
 
-- [ ] **1.6 Reading-id collision is a 500.** [low] [S]
+- [x] **1.6 Reading-id collision is a 500.** [low] [S]
   - **Where:** `backend/includes/Tarot/Service/ReadingService.php:435` — 5 random
     bytes (40 bits), no retry; a UNIQUE violation surfaces as a PDOException.
   - **Fix:** in `persist()`, catch the constraint violation (SQLSTATE 23000),
     regenerate, retry up to 3 times.
   - **Verify:** unit test with a `ReadingRepository` double that throws once.
+  - **DONE 2026-10-28:** `persist()` draws a fresh id and retries (3 attempts)
+    only when the error is SQLite's `UNIQUE constraint failed:
+    readings.reading_id`; any other error, or a third collision, propagates as
+    before. Tests replay a *real* SQLite collision exception (captured from an
+    in-memory table) — one collision → saved with a new id; three → gives up;
+    a foreign-key error → not retried (one attempt).
 
 - [ ] **1.7 Guest readings never expire.** [medium] [S]
   - **Where:** `ReadingData::cleanGuestOlderThan()` (`ReadingData.php:233`) is
@@ -330,7 +382,7 @@ five-entry baseline; strict TS + typed ESLint.
     `deleted 210 …` (± any that age past a year meanwhile) and the backup log
     shows the pre-deletion copy.
 
-- [ ] **1.8 Small leaks / decisions to record.** [low] [S]
+- [x] **1.8 Small leaks / decisions to record.** [low] [S]
   - Public `GET /decks` and `/deck-systems` return `submitted_by` user ids
     (`Structure/Deck.php:47`, `Structure/DeckSystem.php:29`). Strip for non-admin
     responses.
@@ -350,6 +402,17 @@ five-entry baseline; strict TS + typed ESLint.
     errors. Fix: a handler for `HttpNotFoundException` /
     `HttpMethodNotAllowedException` that renders without logging (or log one
     line, no trace); keep full detail for real exceptions.
+  - **DONE 2026-10-28 (all four):** `submitted_by` is stripped from public
+    `GET /decks`, `/decks/{id}`, `/deck-systems`, `/deck-systems/{id}` via a new
+    `AbstractStructure::jsonSerializeWithout()` (admin endpoints keep it; the
+    plugin's nullable `SubmittedBy` was never read). The enumeration trade-off
+    is written down in `API.md` (forgot-password's uniform reply verified in
+    code). Deck-load failures toast (§5.7). 404/405s use the default renderer
+    with logging off — same JSON/HTML negotiation, no stack trace; real
+    exceptions untouched. (A `static fn` handler broke 404s into 200 + warning:
+    Slim binds handler closures to the container — caught on the dev server,
+    fixed, documented in a comment.) Also removed the dead share-relay rows from
+    `API.md`'s auth section.
 
 ---
 
@@ -396,7 +459,7 @@ five-entry baseline; strict TS + typed ESLint.
     `/api/decks/1`, a reading → 200, `/api/auth/me` → 401. Owner to delete the
     `PLUGIN_IDENTITY_SALT=` line from the live `.env`.
 
-- [ ] **2.2 Legacy deck columns** — handled by §1.2 (drop them, stop selecting `*`).
+- [x] **2.2 Legacy deck columns** — handled by §1.2 (drop them, stop selecting `*`).
 
 - [ ] **2.3 `readings` has no index on `reading_time`.** [low] [S]
   - **Prod recon:** 2,044 rows in a 1.43 MB DB — the scans cost nothing today.
@@ -451,7 +514,7 @@ five-entry baseline; strict TS + typed ESLint.
     decoding or derived flags are needed, e.g. `ReadingData`).
   - **Verify:** existing Data tests; no new deprecations.
 
-- [ ] **2.6 `myReadings` is unbounded.** [medium] [M]
+- [x] **2.6 `myReadings` is unbounded.** [medium] [M]
   - **Where:** `AccountController.php:52` → `ReadingData::listByUser` returns
     every reading with its full `reading_info` JSON. `AccountReadingsView.vue`
     has no search, filter, or paging.
@@ -462,6 +525,17 @@ five-entry baseline; strict TS + typed ESLint.
     (or bump the plugin) before changing the shape. Pairs with feature §9.1.
   - **Verify:** payload size for a 200-reading account; plugin "My Readings"
     tab still renders.
+  - **DONE 2026-10-28:** `GET /account/readings?limit=&offset=` returns one page
+    (max 100) with the total in `X-Total-Count`; **without `limit` the response
+    is unchanged** (a plain array), so the current plugin keeps working — page
+    it in the plugin later, then the unbounded path can go. `apiRequest`
+    success results now carry optional `headers`. My Readings shows 25 per page
+    (Reka pagination, styles moved to `style.css` from the admin view's scoped
+    copy), reloads after delete, steps back when a delete empties the last
+    page, and shows "Couldn't load your readings" + Try again instead of the
+    misleading empty state. A test caught `Number(null) === 0` hiding the list
+    when the header is missing. Verified on dev with 30 seeded readings
+    (pages 25 + 5, delete, step-back). The light-summary payload is left for §9.1.
 
 - [ ] **2.7 Cosmetic / when-you-touch-it.** [low]
   - `special_cards` FK has no `ON DELETE CASCADE` (worked around manually in
@@ -564,6 +638,11 @@ five-entry baseline; strict TS + typed ESLint.
     the shell per view and makes those pages edge-uncacheable. Fine at today's
     scale; it is the first thing to revisit if reading views climb. Options:
     rewrite only for crawler user agents, or a 60-second per-id micro-cache.
+  - **Since §1.5 (2026-10-28) `og.php` serves every page**, for the per-response
+    CSP nonce. Non-reading pages do no queries (file read + header), and the
+    shell was already `no-cache`, so no edge caching was lost. The reading-page
+    cost above is unchanged; a micro-cache would have to vary the nonce, so
+    "crawler-only meta" is now the simpler option.
 
 - [ ] **3.5 Eager thumbnails.** [low] [S]
   - Only two `loading="lazy"` attributes exist (both `ReadingView.vue`). Add to
@@ -691,25 +770,44 @@ five-entry baseline; strict TS + typed ESLint.
     the `.env.example` block is gone. Still open: the eslint/PHPStan-level lines
     in AGENTS.md §3, `plugin/README.md`, `TarotGen.Plugin.json`, `Configuration.cs`.
 
-- [ ] **5.5 `contactForm.spec.ts` tests a re-implementation, not the code.** [low] [S]
+- [x] **5.5 `contactForm.spec.ts` tests a re-implementation, not the code.** [low] [S]
   The spec defines its own `submitContact()` with its own fetch logic and tests
   that. It cannot fail when `ContactView.vue` changes. Replace with a test of
   the composable §4.2 introduces, or a `@vue/test-utils` mount.
+  - **DONE 2026-10-28** (with §8.5): the submit logic moved into
+    `composables/useContact.ts` (on `apiRequest`; same user-facing messages),
+    `ContactView` calls it, and `useContact.spec.ts` replaces the old spec —
+    request shape incl. trimming, server message, 429, body-less 500, network
+    error. Submitted for real on dev → success panel.
 
 - [ ] **5.6 Accessibility basics.** [low] [S] No `<main>` landmark anywhere in
   `src/`, no skip link. Add both in `App.vue`; add
   `eslint-plugin-vuejs-accessibility` (§6.1). Reka already covers the widgets.
 
-- [ ] **5.7 Error-swallowing composables.** [low] [S] `useDecks.ts:32` and
+- [x] **5.7 Error-swallowing composables.** [low] [S] `useDecks.ts:32` and
   friends (`useSpreads`, `useFavorite*`) catch and drop failures. Return an
   `ApiResult` or toast; §4.2 is the natural moment.
+  - **DONE 2026-10-28:** `useDecks`, `useSpreads`, `useFavoriteDecks`,
+    `useFavoriteSpreads` (and `useAccount.listReadings` — §2.6) now use
+    `apiRequest` and toast what failed; favourites stay quiet on 401 (expired
+    session, the router handles it). `useDecks` shares one in-flight request
+    and retries on the next call. `toggleFavorite` (called fire-and-forget by
+    the comboboxes) toasts on failure and can no longer reject. Specs:
+    `useDecks.spec.ts` (rewritten), `useFavoriteDecks.spec.ts`. Seen on dev with
+    the API stopped: toasts instead of empty pickers. Known rough edge: a
+    *total* outage on New Draw stacks four toasts (decks, spreads, two
+    favourites) — accurate but loud; group them if it ever matters.
 
-- [ ] **5.8 Native controls render light on the dark theme.** [low] [S] No
+- [x] **5.8 Native controls render light on the dark theme.** [low] [S] No
   `color-scheme` is declared anywhere (`getComputedStyle(html).colorScheme`
   is `normal`), so scrollbars inside tall modals and native form chrome are
   white-on-charcoal. Add `color-scheme: dark` at `:root` in `tokens.css` and a
   restrained `scrollbar-color` using existing tokens. (This was one of the three
   tasks that never landed.)
+  - **DONE 2026-10-28:** `:root` in `tokens.css` declares `color-scheme: dark`
+    and `scrollbar-color: var(--myst-border-strong) transparent` (inherited;
+    colour only, so the modal scroll-lock widths are untouched). Computed on dev:
+    `colorScheme` = `dark`, scrollbar `rgba(255,255,255,.16) transparent`.
 
 ---
 
@@ -868,7 +966,7 @@ across 17 specs (utils + composables only). Coverage is not measured anywhere
   (272 lines; mock `navigator.credentials`), `usePluginLink`,
   `useReadingExport` (393 lines; canvas — at least the layout math),
   `useSpreads`, `useUserSpreads`, `utils/seo.ts`. [medium] [M] Easier after §4.2.
-- [ ] **8.5 Replace `contactForm.spec.ts`** (§5.5). [low] [S]
+- [x] **8.5 Replace `contactForm.spec.ts`** (§5.5). [low] [S]
 - [ ] **8.6 One Playwright smoke run in CI:** home → new draw → reading →
   lightbox → report a problem → (seeded admin) Errored Cards shows it. [medium] [M]
   This app is interaction-heavy; one end-to-end path catches whole classes of

@@ -17,12 +17,39 @@
                 "tags": [
                     "Account"
                 ],
-                "summary": "The current user's readings, newest first",
-                "description": "All of the current user's readings, newest first.",
+                "summary": "The current user's readings, newest first (one page with ?limit, else all)",
+                "description": "The current user's readings, newest first. The site pages with ?limit and\nreads the total from X-Total-Count; without ?limit every reading comes back\nas a plain array, which the Dalamud plugin's List<Reading> still expects —\nkeep that shape until the plugin pages too (AUDIT §2.6).",
                 "operationId": "52d06296825f7d5198b9620f6ee0c77a",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Page size (1–100). Omit to get every reading.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Array of readings",
+                        "headers": {
+                            "X-Total-Count": {
+                                "description": "The user's total reading count (sent when paging with ?limit)",
+                                "schema": {
+                                    "type": "integer"
+                                }
+                            }
+                        },
                         "content": {
                             "application/json": {
                                 "schema": {

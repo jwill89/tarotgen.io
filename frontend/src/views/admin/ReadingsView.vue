@@ -368,19 +368,3 @@ onMounted(fetchReadings)
     </template>
   </BaseModal>
 </template>
-
-<style scoped>
-.pagination-list-reka {
-  display: flex;
-  gap: 0.25rem;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.pagination-list-reka [data-selected] {
-  background: var(--myst-aqua-deep);
-  color: #fff;
-  border-color: var(--myst-aqua-deep);
-}
-</style>

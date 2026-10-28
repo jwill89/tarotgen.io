@@ -60,12 +60,12 @@ A signed-in **browser** user is identified by the `PHPSESSID` **session cookie**
 (HttpOnly, SameSite=Lax, Secure in production) — the `sessionCookie` OpenAPI
 scheme. The first-party SPA uses only this; there are no API keys.
 
-The **Dalamud plugin** is the one non-browser client and authenticates with
-**Bearer tokens** over HTTPS instead (a native `HttpClient` sends no `Origin`,
-which `OriginGuard` already permits): a per-account **plugin token**
-(`pluginToken` scheme) for the read-only account routes it may reach, and a
-per-install **client token** (`clientToken` scheme) for the share relay. Both are
-minted via a browser loopback + PKCE consent flow and are individually revocable.
+The **Dalamud plugin** is the one non-browser client. Drawing and viewing readings
+needs no auth; a linked account adds a per-account **plugin token** (`pluginToken`
+scheme, Bearer over HTTPS — a native `HttpClient` sends no `Origin`, which
+`OriginGuard` already permits) for the read-only account routes it may reach. It is
+minted via a browser loopback + PKCE consent flow and is individually revocable.
+(The per-install client token and share relay were removed — AUDIT.md §2.1.)
 
 | Audience | How a request authenticates | Guard |
 |----------|-----------------------------|-------|
@@ -73,13 +73,19 @@ minted via a browser loopback + PKCE consent flow and are individually revocable
 | Signed-in user (`/account/*`) | `PHPSESSID` for an **active** account | `UserAuth` → `401 Not authenticated` |
 | Admin (`/admin/*`) | `PHPSESSID` for an active **`is_admin`** account | `AdminAuth` → `401 Unauthorized` |
 | Linked plugin (account routes it may reach) | session **or** a plugin Bearer token | `AccountAuth` → `401 Not authenticated` |
-| Plugin share relay (`/plugin/inbox`, `/plugin/share`, …) | a per-install client Bearer token | `ClientAuth` → `401` |
 
 - **CSRF** — the `OriginGuard` middleware rejects state-changing requests
   (`POST`/`PUT`/`PATCH`/`DELETE`) from a foreign origin. Safe methods and the GET OAuth
   callback pass through.
 - **CORS** — same-origin by default; cross-origin is enabled only when `APP_ORIGIN` is
   configured (never `*` with credentials).
+- **Account enumeration — a recorded decision, not an oversight.**
+  `POST /auth/register` says when an email or display name is already taken, so
+  someone can tell that an address has an account. `POST /auth/forgot-password`
+  deliberately does **not** (same response either way). Registration keeps the
+  helpful message because a silent failure would strand real users, display names
+  are public anyway, and the endpoint is rate-limited (5 per IP per hour). Don't
+  "fix" either endpoint toward the other without revisiting this trade-off.
 
 Logging in is done via the auth endpoints (`POST /api/auth/login`, passkeys, or
 Google) — there is no separate admin login.

@@ -22,6 +22,9 @@ use Tarot\Utility\Session;
  */
 class AccountController extends AbstractController
 {
+    /** Largest page GET /account/readings serves when ?limit is given. */
+    private const int READINGS_PAGE_MAX = 100;
+
     public function __construct(
         private readonly ReadingRepository $readings,
         private readonly UserRepository $users,
@@ -35,21 +38,55 @@ class AccountController extends AbstractController
 
     #[OA\Get(
         path: '/account/readings',
-        summary: "The current user's readings, newest first",
+        summary: "The current user's readings, newest first (one page with ?limit, else all)",
         tags: ['Account'],
         security: [['sessionCookie' => []], ['pluginToken' => []]],
+        parameters: [
+            new OA\Parameter(
+                name: 'limit',
+                in: 'query',
+                required: false,
+                description: 'Page size (1–' . self::READINGS_PAGE_MAX . '). Omit to get every reading.',
+                schema: new OA\Schema(type: 'integer')
+            ),
+            new OA\Parameter(name: 'offset', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
                 description: 'Array of readings',
+                headers: [
+                    new OA\Header(
+                        header: 'X-Total-Count',
+                        description: "The user's total reading count (sent when paging with ?limit)",
+                        schema: new OA\Schema(type: 'integer')
+                    ),
+                ],
                 content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Reading'))
             ),
         ]
     )]
-    /** All of the current user's readings, newest first. */
+    /**
+     * The current user's readings, newest first. The site pages with ?limit and
+     * reads the total from X-Total-Count; without ?limit every reading comes back
+     * as a plain array, which the Dalamud plugin's List<Reading> still expects —
+     * keep that shape until the plugin pages too (AUDIT §2.6).
+     */
     public function myReadings(Request $request, Response $response): Response|ResponseInterface
     {
-        return $response->withJson($this->readings->listByUser($this->userId($request)));
+        $userId = $this->userId($request);
+        $params = $request->getQueryParams();
+
+        if (!isset($params['limit'])) {
+            return $response->withJson($this->readings->listByUser($userId));
+        }
+
+        $limit  = min(self::READINGS_PAGE_MAX, max(1, (int)$params['limit']));
+        $offset = max(0, (int)($params['offset'] ?? 0));
+
+        return $response
+            ->withJson($this->readings->listByUser($userId, $limit, $offset))
+            ->withHeader('X-Total-Count', (string)$this->readings->countByUser($userId));
     }
 
     /**

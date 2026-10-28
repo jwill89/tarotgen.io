@@ -1,7 +1,8 @@
 import { ref, type Ref } from 'vue'
-import { apiFetch } from './useApi'
+import { apiRequest } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 import { useUser } from './useUser'
+import { useToasts } from './useToasts'
 
 const favoriteDecks: Ref<number[]> = ref([])
 // Dedupe concurrent callers into a single in-flight request (see useFavoriteSpreads).
@@ -18,8 +19,13 @@ export function useFavoriteDecks() {
     if (!isLoggedIn.value) return Promise.resolve()
     if (inFlight) return inFlight
     inFlight = (async () => {
-      const data = await apiFetch<number[]>(endpoints.account.favoriteDecks)
-      if (data) favoriteDecks.value = data
+      const res = await apiRequest<number[]>(endpoints.account.favoriteDecks)
+      if (res.ok) {
+        favoriteDecks.value = res.data
+      } else if (res.status !== 401) {
+        // A 401 is an expired session, which the router's revalidation handles.
+        useToasts().error(`Couldn't load your favourite decks. ${res.error}`, { detail: res })
+      }
     })().finally(() => {
       inFlight = null
     })
@@ -31,7 +37,7 @@ export function useFavoriteDecks() {
   }
 
   async function addFavorite(deckId: number): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.favoriteDecks, {
+    const res = await apiRequest(endpoints.account.favoriteDecks, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deck_id: deckId }),
@@ -42,7 +48,7 @@ export function useFavoriteDecks() {
   }
 
   async function removeFavorite(deckId: number): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.favoriteDeckById(deckId), {
+    const res = await apiRequest(endpoints.account.favoriteDeckById(deckId), {
       method: 'DELETE',
     })
     if (!res.ok) return false
@@ -51,11 +57,10 @@ export function useFavoriteDecks() {
   }
 
   async function toggleFavorite(deckId: number): Promise<boolean> {
-    if (isFavorite(deckId)) {
-      return removeFavorite(deckId)
-    } else {
-      return addFavorite(deckId)
-    }
+    const ok = isFavorite(deckId) ? await removeFavorite(deckId) : await addFavorite(deckId)
+    // Callers fire-and-forget (the star just doesn't change), so say it here.
+    if (!ok) useToasts().error("Couldn't update your favourite decks. Please try again.")
+    return ok
   }
 
   return {

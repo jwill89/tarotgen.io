@@ -47,6 +47,26 @@ final class ReadingDataTest extends TestCase
         return $r;
     }
 
+    public function testListByUserPagesNewestFirstAndCounts(): void
+    {
+        $insert = $this->pdo->prepare(
+            "INSERT INTO readings (reading_id, reading_info, reading_time, user_id)
+             VALUES (:id, '{}', datetime('now', :age), :uid)"
+        );
+        foreach (['r1' => '-3 days', 'r2' => '-2 days', 'r3' => '-1 days'] as $id => $age) {
+            $insert->execute([':id' => $id, ':age' => $age, ':uid' => 7]);
+        }
+        $insert->execute([':id' => 'other', ':age' => '-1 days', ':uid' => 8]);
+
+        $ids = static fn(array $readings): array => array_map(static fn(Reading $r) => $r->reading_id, $readings);
+
+        $this->assertSame(['r3', 'r2', 'r1'], $ids($this->data->listByUser(7)));
+        $this->assertSame(['r3', 'r2'], $ids($this->data->listByUser(7, 2)));
+        $this->assertSame(['r1'], $ids($this->data->listByUser(7, 2, 2)));
+        $this->assertSame(3, $this->data->countByUser(7));
+        $this->assertSame(0, $this->data->countByUser(99));
+    }
+
     public function testCleanGuestOlderThanDeletesOnlyOldGuestReadings(): void
     {
         // The nightly retention job (scripts/retention.php, AUDIT §1.7) relies on

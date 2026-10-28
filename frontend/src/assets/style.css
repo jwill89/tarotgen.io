@@ -2102,3 +2102,18 @@ body {
 .myst-combobox__anchor.has-clear .input {
   padding-right: 4.2em;
 }
+
+/* Reka pagination (admin readings, My Readings): page buttons in a centred row,
+   the current page in the aqua pop. */
+.pagination-list-reka {
+  display: flex;
+  gap: 0.25rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.pagination-list-reka [data-selected] {
+  background: var(--myst-aqua-deep);
+  color: #fff;
+  border-color: var(--myst-aqua-deep);
+}
