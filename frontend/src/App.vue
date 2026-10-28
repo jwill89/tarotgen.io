@@ -460,7 +460,7 @@ async function doUserLogout() {
 .code-dialog-input:focus {
   outline: none;
   border-color: var(--hair-gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .nav-code-label {
   white-space: nowrap;
@@ -488,11 +488,11 @@ async function doUserLogout() {
 .btn:hover {
   border-color: var(--gold);
   color: var(--gold-bright);
-  background: rgba(201, 162, 75, 0.06);
+  background: color-mix(in srgb, var(--myst-gold) 6%, transparent);
 }
 .btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
 }
 .btn-quiet {
   border-color: var(--hair);
@@ -546,11 +546,11 @@ async function doUserLogout() {
 }
 .hamburger:hover {
   border-color: var(--gold);
-  background: rgba(201, 162, 75, 0.06);
+  background: color-mix(in srgb, var(--myst-gold) 6%, transparent);
 }
 .hamburger:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 .hamburger.is-open span:nth-child(1) {
   transform: translateY(6.6px) rotate(45deg);

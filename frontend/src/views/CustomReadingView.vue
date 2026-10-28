@@ -20,8 +20,7 @@ import { local } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
-import { readApiError } from '@/composables/useApi'
-import { endpoints } from '@/api/endpoints'
+import { useReadings } from '@/composables/useReadings'
 import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls } from '@/utils/cardImages'
@@ -32,7 +31,8 @@ import BaseModal from '@/components/BaseModal.vue'
 const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
 
 const router = useRouter()
-const { decks, fetchDecks } = useDecks()
+const { decks, fetchDecks, fetchDeckCards } = useDecks()
+const { createCustom } = useReadings()
 const { fetchFavoriteDecks } = useFavoriteDecks()
 const { spreads, fetchSpreads } = useSpreads()
 const { confirm } = useConfirm()
@@ -149,14 +149,10 @@ watch(
       s.cardId = null
     })
     loadingCards.value = true
-    try {
-      const res = await fetch('/api' + endpoints.decks.cards(val))
-      deckCards.value = res.ok ? ((await res.json()) as DeckCard[]) : []
-    } catch {
-      deckCards.value = []
-    } finally {
-      loadingCards.value = false
-    }
+    const cards = await fetchDeckCards(val)
+    loadingCards.value = false
+    if (!cards) toasts.error("Couldn't load this deck's cards. Please try again.")
+    deckCards.value = cards ?? []
   },
   { immediate: true },
 )
@@ -245,34 +241,24 @@ async function submit() {
   }
 
   isLoading.value = true
-  try {
-    const res = await fetch('/api' + endpoints.readings.create, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+  const res = await createCustom(payload)
+  isLoading.value = false
 
-    if (!res.ok) {
-      toasts.error(await readApiError(res, 'There was an error saving your reading.'))
-      return
-    }
-
-    const data = await res.json()
-    recordReading({
-      id: data.reading_id,
-      deckName: selectedDeck.value?.name ?? 'Tarot',
-      summary:
-        readingName.value.trim() ||
-        String(slots.value.length) + (slots.value.length === 1 ? ' card' : ' cards'),
-      at: data.reading_time ?? new Date().toISOString(),
-    })
-    toasts.success('Your custom reading has been saved!')
-    void router.push({ name: 'reading', params: { id: data.reading_id } })
-  } catch (e) {
-    toasts.error('Network error. Please check your connection and try again.', { detail: e })
-  } finally {
-    isLoading.value = false
+  if (!res.ok) {
+    toasts.error(res.error, { detail: res })
+    return
   }
+
+  recordReading({
+    id: res.data.reading_id,
+    deckName: selectedDeck.value?.name ?? 'Tarot',
+    summary:
+      readingName.value.trim() ||
+      String(slots.value.length) + (slots.value.length === 1 ? ' card' : ' cards'),
+    at: res.data.reading_time ?? new Date().toISOString(),
+  })
+  toasts.success('Your custom reading has been saved!')
+  void router.push({ name: 'reading', params: { id: res.data.reading_id } })
 }
 </script>
 
@@ -359,6 +345,7 @@ async function submit() {
                   class="cr-card-img"
                   alt=""
                   draggable="false"
+                  loading="lazy"
                 />
               </template>
 

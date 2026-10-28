@@ -1,11 +1,11 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, reactive, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import BaseModal from '@/components/BaseModal.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import type { ChangelogEntry } from '@/types'
 
@@ -102,66 +102,52 @@ onMounted(fetchChangelog)
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage title="Manage Changelog" subtitle="Post news and updates for the changelog page.">
+    <template #actions>
+      <button class="button is-primary" @click="openAdd">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
+        <span>Add Entry</span>
+      </button>
+    </template>
 
-          <PageHeader
-            title="Manage Changelog"
-            subtitle="Post news and updates for the changelog page."
-          >
-            <button class="button is-primary" @click="openAdd">
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-              <span>Add Entry</span>
-            </button>
-          </PageHeader>
-
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Title</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="entry in entries" :key="entry.entry_id">
-                    <td>{{ entry.entry_date }}</td>
-                    <td>{{ entry.title }}</td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          :icon="byPrefixAndName.fas['pen-to-square']"
-                          label="Edit"
-                          @click="openEdit(entry)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['trash']"
-                          label="Delete"
-                          intent="danger"
-                          @click="deleteEntry(entry)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p v-if="entries.length === 0" class="has-text-grey">
-            No entries yet. Click "Add Entry" to create one.
-          </p>
-        </div>
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Title</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="entry in entries" :key="entry.entry_id">
+              <td>{{ entry.entry_date }}</td>
+              <td>{{ entry.title }}</td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    :icon="byPrefixAndName.fas['pen-to-square']"
+                    label="Edit"
+                    @click="openEdit(entry)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['trash']"
+                    label="Delete"
+                    intent="danger"
+                    @click="deleteEntry(entry)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </section>
+    <p v-if="entries.length === 0" class="has-text-grey">
+      No entries yet. Click "Add Entry" to create one.
+    </p>
+  </AdminListPage>
 
   <!-- Add/Edit Modal -->
   <BaseModal

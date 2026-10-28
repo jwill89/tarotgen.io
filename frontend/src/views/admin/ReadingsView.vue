@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
@@ -8,7 +10,6 @@ import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import BaseModal from '@/components/BaseModal.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import { formatDateTime } from '@/utils/datetime'
@@ -141,202 +142,180 @@ onMounted(fetchReadings)
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage title="Manage Readings" subtitle="Browse and manage all saved readings.">
+    <template #actions>
+      <button class="button is-danger" @click="cleanModalActive = true">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
+        <span>Clean Readings</span>
+      </button>
+    </template>
 
-          <PageHeader title="Manage Readings" subtitle="Browse and manage all saved readings.">
-            <button class="button is-danger" @click="cleanModalActive = true">
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['broom']" /></span>
-              <span>Clean Readings</span>
-            </button>
-          </PageHeader>
+    <AdminSearchField
+      v-model="search"
+      placeholder="Search by reading ID, deck, spread, or user..."
+    />
 
-          <div class="field">
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search by reading ID, deck, spread, or user..."
-              />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
+    <p v-if="loading" class="has-text-grey">
+      <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin /></span>
+      <span>Loading readings…</span>
+    </p>
+
+    <template v-else>
+      <div class="level mb-4">
+        <div class="level-left">
+          <div class="level-item">
+            <div class="field has-addons">
+              <p class="control">
+                <span class="button is-static">Per page</span>
+              </p>
+              <p class="control">
+                <BaseSelect
+                  v-model="perPage"
+                  :options="perPageSelectOptions"
+                  aria-label="Per page"
+                />
+              </p>
             </div>
           </div>
-
-          <p v-if="loading" class="has-text-grey">
-            <span class="icon"
-              ><FontAwesomeIcon :icon="byPrefixAndName.fas['spinner']" spin
-            /></span>
-            <span>Loading readings…</span>
-          </p>
-
-          <template v-else>
-            <div class="level mb-4">
-              <div class="level-left">
-                <div class="level-item">
-                  <div class="field has-addons">
-                    <p class="control">
-                      <span class="button is-static">Per page</span>
-                    </p>
-                    <p class="control">
-                      <BaseSelect
-                        v-model="perPage"
-                        :options="perPageSelectOptions"
-                        aria-label="Per page"
-                      />
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <PaginationRoot
-              v-if="totalPages > 1"
-              v-model:page="page"
-              :total="totalFiltered"
-              :items-per-page="perPage"
-              :sibling-count="1"
-              show-edges
-              :default-page="1"
-              class="mb-4"
-            >
-              <PaginationList v-slot="{ items }" class="pagination-list-reka">
-                <PaginationPrev class="button is-small">‹</PaginationPrev>
-                <template v-for="(item, i) in items" :key="i">
-                  <PaginationListItem
-                    v-if="item.type === 'page'"
-                    :value="item.value"
-                    class="button is-small"
-                  >
-                    {{ item.value }}
-                  </PaginationListItem>
-                  <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
-                    >&hellip;</PaginationEllipsis
-                  >
-                </template>
-                <PaginationNext class="button is-small">›</PaginationNext>
-              </PaginationList>
-            </PaginationRoot>
-
-            <div class="settings-panel">
-              <div class="table-container">
-                <table class="table is-fullwidth is-hoverable is-striped">
-                  <thead>
-                    <tr>
-                      <SortableTh
-                        label="Date"
-                        sort-key="reading_time"
-                        :active-key="sortKey"
-                        :dir="sortDir"
-                        @sort="toggleSort"
-                      />
-                      <SortableTh
-                        label="Reading ID"
-                        sort-key="reading_id"
-                        :active-key="sortKey"
-                        :dir="sortDir"
-                        @sort="toggleSort"
-                      />
-                      <SortableTh
-                        label="User"
-                        sort-key="display_name"
-                        :active-key="sortKey"
-                        :dir="sortDir"
-                        @sort="toggleSort"
-                      />
-                      <SortableTh
-                        label="Spread"
-                        sort-key="spread_name"
-                        :active-key="sortKey"
-                        :dir="sortDir"
-                        @sort="toggleSort"
-                      />
-                      <SortableTh
-                        label="Deck"
-                        sort-key="deck_name"
-                        :active-key="sortKey"
-                        :dir="sortDir"
-                        @sort="toggleSort"
-                      />
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="reading in pagedReadings" :key="reading.reading_id">
-                      <td>{{ formatDateTime(reading.reading_time) }}</td>
-                      <td>
-                        <code>{{ reading.reading_id }}</code>
-                      </td>
-                      <td>{{ reading.display_name }}</td>
-                      <td>{{ reading.spread_name || '—' }}</td>
-                      <td>{{ reading.deck_name }}</td>
-                      <td>
-                        <div class="row-actions">
-                          <IconButton
-                            :icon="byPrefixAndName.fas['eye']"
-                            label="View"
-                            @click="viewReading(reading)"
-                          />
-                          <IconButton
-                            :icon="byPrefixAndName.fas['trash']"
-                            label="Delete"
-                            intent="danger"
-                            @click="deleteReading(reading)"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <PaginationRoot
-              v-if="totalPages > 1"
-              v-model:page="page"
-              :total="totalFiltered"
-              :items-per-page="perPage"
-              :sibling-count="1"
-              show-edges
-              :default-page="1"
-              class="mt-4"
-              @update:page="scrollToTop"
-            >
-              <PaginationList v-slot="{ items }" class="pagination-list-reka">
-                <PaginationPrev class="button is-small">‹</PaginationPrev>
-                <template v-for="(item, i) in items" :key="i">
-                  <PaginationListItem
-                    v-if="item.type === 'page'"
-                    :value="item.value"
-                    class="button is-small"
-                  >
-                    {{ item.value }}
-                  </PaginationListItem>
-                  <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
-                    >&hellip;</PaginationEllipsis
-                  >
-                </template>
-                <PaginationNext class="button is-small">›</PaginationNext>
-              </PaginationList>
-            </PaginationRoot>
-
-            <p class="has-text-grey mt-3">
-              Showing {{ pagedReadings.length }} of {{ totalFiltered.toLocaleString() }} readings
-              (page {{ safePage }} of {{ totalPages }}).
-            </p>
-          </template>
         </div>
       </div>
-    </div>
-  </section>
+
+      <PaginationRoot
+        v-if="totalPages > 1"
+        v-model:page="page"
+        :total="totalFiltered"
+        :items-per-page="perPage"
+        :sibling-count="1"
+        show-edges
+        :default-page="1"
+        class="mb-4"
+      >
+        <PaginationList v-slot="{ items }" class="pagination-list-reka">
+          <PaginationPrev class="button is-small">‹</PaginationPrev>
+          <template v-for="(item, i) in items" :key="i">
+            <PaginationListItem
+              v-if="item.type === 'page'"
+              :value="item.value"
+              class="button is-small"
+            >
+              {{ item.value }}
+            </PaginationListItem>
+            <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
+              >&hellip;</PaginationEllipsis
+            >
+          </template>
+          <PaginationNext class="button is-small">›</PaginationNext>
+        </PaginationList>
+      </PaginationRoot>
+
+      <div class="settings-panel">
+        <div class="table-container">
+          <table class="table is-fullwidth is-hoverable is-striped">
+            <thead>
+              <tr>
+                <SortableTh
+                  label="Date"
+                  sort-key="reading_time"
+                  :active-key="sortKey"
+                  :dir="sortDir"
+                  @sort="toggleSort"
+                />
+                <SortableTh
+                  label="Reading ID"
+                  sort-key="reading_id"
+                  :active-key="sortKey"
+                  :dir="sortDir"
+                  @sort="toggleSort"
+                />
+                <SortableTh
+                  label="User"
+                  sort-key="display_name"
+                  :active-key="sortKey"
+                  :dir="sortDir"
+                  @sort="toggleSort"
+                />
+                <SortableTh
+                  label="Spread"
+                  sort-key="spread_name"
+                  :active-key="sortKey"
+                  :dir="sortDir"
+                  @sort="toggleSort"
+                />
+                <SortableTh
+                  label="Deck"
+                  sort-key="deck_name"
+                  :active-key="sortKey"
+                  :dir="sortDir"
+                  @sort="toggleSort"
+                />
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="reading in pagedReadings" :key="reading.reading_id">
+                <td>{{ formatDateTime(reading.reading_time) }}</td>
+                <td>
+                  <code>{{ reading.reading_id }}</code>
+                </td>
+                <td>{{ reading.display_name }}</td>
+                <td>{{ reading.spread_name || '—' }}</td>
+                <td>{{ reading.deck_name }}</td>
+                <td>
+                  <div class="row-actions">
+                    <IconButton
+                      :icon="byPrefixAndName.fas['eye']"
+                      label="View"
+                      @click="viewReading(reading)"
+                    />
+                    <IconButton
+                      :icon="byPrefixAndName.fas['trash']"
+                      label="Delete"
+                      intent="danger"
+                      @click="deleteReading(reading)"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <PaginationRoot
+        v-if="totalPages > 1"
+        v-model:page="page"
+        :total="totalFiltered"
+        :items-per-page="perPage"
+        :sibling-count="1"
+        show-edges
+        :default-page="1"
+        class="mt-4"
+        @update:page="scrollToTop"
+      >
+        <PaginationList v-slot="{ items }" class="pagination-list-reka">
+          <PaginationPrev class="button is-small">‹</PaginationPrev>
+          <template v-for="(item, i) in items" :key="i">
+            <PaginationListItem
+              v-if="item.type === 'page'"
+              :value="item.value"
+              class="button is-small"
+            >
+              {{ item.value }}
+            </PaginationListItem>
+            <PaginationEllipsis v-else :index="i" class="pagination-ellipsis"
+              >&hellip;</PaginationEllipsis
+            >
+          </template>
+          <PaginationNext class="button is-small">›</PaginationNext>
+        </PaginationList>
+      </PaginationRoot>
+
+      <p class="has-text-grey mt-3">
+        Showing {{ pagedReadings.length }} of {{ totalFiltered.toLocaleString() }} readings (page
+        {{ safePage }} of {{ totalPages }}).
+      </p>
+    </template>
+  </AdminListPage>
 
   <BaseModal
     :active="cleanModalActive"

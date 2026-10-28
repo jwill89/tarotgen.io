@@ -645,7 +645,7 @@ five-entry baseline; strict TS + typed ESLint.
     Switching it to the display WebP needs a check that Dalamud's texture
     provider decodes WebP; until then the PNGs must stay.
 
-- [ ] **3.3 The CSS bundle is 407 KB (48.6 KB gz) and roughly 60% unreferenced.** [medium] [M]
+- [x] **3.3 The CSS bundle is 407 KB (48.6 KB gz) and roughly 60% unreferenced.** [medium] [M]
   - **Where:** census (appendix): 780 class selectors in `dist/_app/index-*.css`,
     310 referenced anywhere in `src/` (generous substring match), 367 of the
     unused are Bulma `is-*` modifiers, 66 are `fa-*`. `bulma.scss` is already
@@ -656,8 +656,29 @@ five-entry baseline; strict TS + typed ESLint.
     classes toggled at runtime and defeat itself. Re-run the census after.
   - **Verify:** census ratio; a visual pass over home, reading, new-draw,
     account settings, two admin pages.
+  - **DONE 2026-10-28 — 418 → 256 KB, 48.7 → 34.5 KB gzip (−29%).** Measured
+    per module first (each compiled on its own, classes matched against `src/`).
+    The weight was not where the census pointed: Bulma's **themes** module was
+    181 KB / 17.2 KB gz — the light theme written three times and the dark twice
+    (`:root`, `prefers-color-scheme`, `[data-theme]`). The site is dark-only, so
+    `bulma.scss` now writes what those rules settle on for
+    `<html data-theme="dark">` once — light as the base, dark over it, the
+    shared setup — 61 KB / 6.2 KB gz. Dropped `layout/hero` and
+    `components/panel` (38 KB): their only "users" were HomeView's own scoped
+    `.hero`/`.panel`, which matched Bulma's names by accident. Two things that
+    leak gave the home cards — a 24 px bottom margin on the first and a faint
+    white resting shadow on the second — are now written in HomeView explicitly,
+    so the page looks the same (both look accidental; say if they should go).
+    One unused helper removed (`has-text-weight-bold`). Left alone, on purpose:
+    `grid/columns` (28 KB, 334 of 357 classes unused, but 2.9 KB gz — hand-
+    trimming the grid would make the next `is-offset-2` silently do nothing)
+    and the button colour variants (≈1 KB gz, measured in August).
+  - **Verified** with the computed-style walk from the August trim: 35 routes,
+    signed in and out, about 7,700 elements × 61 properties, before vs after.
+    Identical everywhere except the intended changes listed under §4.6 and the
+    home hero's `display` (flex → block, no element changes size).
 
-- [ ] **3.4 `og.php` runs for every human visit to `/reading/{id}`.** [low] [M]
+- [x] **3.4 `og.php` runs for every human visit to `/reading/{id}`.** [low] [M]
   - **Where:** `.htaccess` rewrite; `og.php` does PHP + 2 queries + regex over
     the shell per view and makes those pages edge-uncacheable. Fine at today's
     scale; it is the first thing to revisit if reading views climb. Options:
@@ -667,11 +688,24 @@ five-entry baseline; strict TS + typed ESLint.
     shell was already `no-cache`, so no edge caching was lost. The reading-page
     cost above is unchanged; a micro-cache would have to vary the nonce, so
     "crawler-only meta" is now the simpler option.
+  - **Decided 2026-10-28: keep it.** Measured on prod (median of 9, as a browser
+    navigation): `/privacy` (shell only) 238 ms, `/reading/{id}` 232 ms,
+    `/api/config` 245 ms — the share-meta lookup (two primary-key queries)
+    doesn't register against the network. A crawler-only rewrite would trade
+    that for UA sniffing, where any chat app missing from the list loses its
+    link preview without anyone noticing. Revisit only if reading views grow by
+    orders of magnitude.
 
-- [ ] **3.5 Eager thumbnails.** [low] [S]
+- [x] **3.5 Eager thumbnails.** [low] [S]
   - Only two `loading="lazy"` attributes exist (both `ReadingView.vue`). Add to
     card thumbnails in `AccountReadingsView`, the `CustomReadingView` picker,
     and admin tables.
+  - **DONE 2026-10-28.** Every `<img>` reviewed: lazy where an image can start
+    off-screen — the card images on the `CustomReadingView` and
+    `FreeDrawPlacementView` canvases and the admin card-reports table (one
+    thumbnail per row). `AccountReadingsView` no longer shows images. Left eager:
+    the brand logo, the lightbox image, the report dialog's preview (visible the
+    moment they render) and the reading's card backs (one cached URL).
 
 ---
 
@@ -691,7 +725,7 @@ five-entry baseline; strict TS + typed ESLint.
     covered by `cardImages.spec.ts`; all four views use it and the grep is clean.
     No `?v=` token: §3.1 settled on purging Cloudflare after a re-scan instead.
 
-- [ ] **4.2 Forty raw `fetch('/api' + …)` call sites bypass the API client.** [medium] [M]
+- [x] **4.2 Forty raw `fetch('/api' + …)` call sites bypass the API client.** [medium] [M]
   - **Where:** composables `useAccount` (6), `usePasskeys` (9),
     `useFavoriteDecks` (2), `useFavoriteSpreads` (2), `useUserSpreads` (4),
     `useDecks` (1); views `AccountSettingsView`, `admin/DeckSystemsView`,
@@ -707,8 +741,28 @@ five-entry baseline; strict TS + typed ESLint.
     `fetch(` outside `composables/apiClient.ts`.
   - **Verify:** `grep -rn "fetch('/api" src` → only `apiClient.ts`; lint rule
     fails on a new raw fetch.
+  - **DONE 2026-10-28.** 34 were left (the bug batch had moved some); all are
+    on `apiRequest`/`apiFetch` now, through composables: new `useReadings`
+    (generate, custom, get, unlock, draw more, finalize, placement) and
+    `useSubmissions` (deck, deck system, spread — the spread submit was pasted
+    into two views), `useDecks.fetchDeckCards`, `useAccount.unlinkGoogle`, and
+    `useAccount`/`usePasskeys`/`useUserSpreads` rewritten (each had its own
+    `parseJson` + `JSON_HEADERS` copy). `sendJson()`/`sendForm()` in
+    `apiClient.ts` replace four copies of the JSON-body helper. The pasted 429
+    branch is gone: the server's message *is* that text. Errors that were
+    swallowed now surface (deck systems failing to load on Submit a Deck, a
+    deck's cards on Recreate Draw, `useUserSpreads` no longer throws offline),
+    and a rate-limited reading no longer says "we couldn't find that reading".
+    `usePasskeys` now builds typed WebAuthn options instead of mutating `any`.
+    Lint rule `tarot/api-client-only` (`no-restricted-syntax` on `fetch(` and
+    `window|globalThis|self.fetch`, outside `apiClient.ts` and specs) — tested
+    to fail on both forms. New specs: `useReadings`, `useSubmissions`,
+    `usePasskeys` (byte conversion both ways, cancel, server reasons),
+    `useUserSpreads`, more `useAccount`. Clicked through live on dev: new draw,
+    draw more, mark final, free-draw placement + public spread submission,
+    Recreate Draw's deck cards, account settings — all working.
 
-- [ ] **4.3 The admin list-page scaffold is repeated in nine views.** [low] [M]
+- [x] **4.3 The admin list-page scaffold is repeated in nine views.** [low] [M]
   - **Where:** back link + `PageHeader` + search field + `.settings-panel` +
     table + empty-state in `views/admin/{Changelog,Contacts,Decks,DeckSystems,
     ErroredCards,Readings,SpecialCards,Spreads,Users}View.vue`.
@@ -716,8 +770,18 @@ five-entry baseline; strict TS + typed ESLint.
     `searchPlaceholder` props and `actions`/`default`/`empty` slots; views keep
     their table bodies.
   - **Verify:** each page renders identically (screenshots), line count drops.
+  - **DONE 2026-10-28.** `AdminListPage` (column, back link, `PageHeader` with an
+    `#actions` slot that only renders when used — `PageHeader` drops its actions
+    box otherwise) and `AdminSearchField` (optional `label`, for Special Cards'
+    filter row). Converted by script so the DOM stayed identical; the
+    computed-style walk shows changelog, contacts, decks, deck systems, special
+    cards and users **identical** to before. Views: −211 lines, +61 shared.
+    **Manage Spreads changed on purpose:** it was the one admin page with no
+    column (full container width) and a hand-rolled Bulma `level` heading; it
+    now has the same width, `PageHeader` and gold rule as the other eight, and
+    its add/edit mode uses the same frame.
 
-- [ ] **4.4 Two type systems, one of them dead.** [medium] [M]
+- [x] **4.4 Two type systems, one of them dead.** [medium] [M]
   - **Where:** `src/types/index.ts` (251 lines, hand-maintained) and
     `src/types/api.generated.ts` (regenerated and diff-checked in CI on every
     run, **imported by nothing**).
@@ -728,8 +792,22 @@ five-entry baseline; strict TS + typed ESLint.
     `types/index.ts` and delete the hand copies. Otherwise delete the generator,
     the npm script, and the CI step.
   - **Verify:** `npm run type-check`; one source of truth.
+  - **DONE 2026-10-28.** Rather than 14 hand-kept `required: [...]` lists, a
+    swagger-php processor (`Routes\RequireStructureProperties`, run by
+    `composer docs` and OpenApiSpecTest) marks every property of a
+    `Tarot\Structure` schema required — true by construction, since
+    `jsonSerialize()` sends them all. Spread `positions` were "array of object";
+    a `SpreadPosition` schema (in `OpenApiSpec.php`, the shape
+    `NormalizesPositions` stores, with descriptions) now types them and the
+    five request bodies that take positions. `types/index.ts` re-exports 15
+    entity types from the generated file and deletes their hand copies; the
+    reading-view payload, `AccountReading`, `UsageStats` and client shapes stay
+    hand-written (no schema describes them). Type-check clean with no call-site
+    changes. Found while doing it: the `Reading` schema documents the stored row
+    (with `reading_info` as a string), not what `GET /readings/{id}` sends — the
+    docs for that endpoint are wrong; fixing them is a docs task for later.
 
-- [ ] **4.5 `AdminController` is 1,505 lines / 45 methods.** [medium] [M]
+- [x] **4.5 `AdminController` is 1,505 lines / 45 methods.** [medium] [M]
   - **Fix:** split per resource to mirror the admin views and the route groups
     already in `api/index.php:252-318`: `AdminDashboardController`,
     `AdminDeckController` (+ special cards, thumbnails), `AdminDeckSystemController`,
@@ -739,8 +817,16 @@ five-entry baseline; strict TS + typed ESLint.
     doesn't move.
   - **Verify:** `composer docs` produces an identical `openapi.json`
     (operationIds are hash-based — expect them to change; paths/schemas must not).
+  - **DONE 2026-10-28.** Split by script into the nine controllers named above
+    (special cards and card images inside `AdminDeckController`, pending spreads
+    in `AdminSpreadController`, the session check in `AdminDashboardController`),
+    each with only the dependencies its methods use. Checked mechanically: all
+    44 methods moved with byte-identical bodies and attributes; the only lines
+    lost are the nine section headings each class now replaces. `openapi.json`:
+    paths, components and tags identical; the 44 admin operationIds changed, as
+    predicted. All 16 admin GET routes answered 200 on dev afterwards.
 
-- [ ] **4.6 The gold tint is typed out 39 times.** [medium] [S]
+- [x] **4.6 The gold tint is typed out 39 times.** [medium] [S]
   - **Where:** `rgba(201, 162, 75, α)` at eight alphas (.06 .1 .12 .2 .25 .4 .55
     .6) across `style.css`, `HomeView.vue` (27 colour literals in its 666-line
     style block), `App.vue` (10), and six components; aqua `rgba(67, 179, 167, α)`
@@ -751,11 +837,32 @@ five-entry baseline; strict TS + typed ESLint.
     token); replace the literals; then enforce with Stylelint (§6.1).
   - **Verify:** `grep -rhoE "rgba\(201, ?162, ?75" src` count is 0 outside
     `tokens.css`.
+  - **DONE 2026-10-28 — and the count is 0 inside `tokens.css` too.** 62 palette
+    copies replaced by `color-mix(in srgb, var(--token) N%, transparent)`, alpha
+    for alpha, by script: 39 gold, 12 aqua, 5 status tints (info/success/
+    warning/danger), 2 surface-3, and `tokens.css`'s own derived tints
+    (`--myst-hair-gold`, the aqua washes) — so each colour is defined once.
+    `color-mix` over `transparent` computes to the same colour; the style walk
+    confirms no element changed. Off-palette leftovers, which **do** change
+    slightly: the lightbox caption/counter/hint greys (`#ddd/#999/#888` → text
+    tokens) and its orange "(Reversed)" (`#f4a261` → `--myst-warning`, what the
+    reading page already uses for it); the toggle's bluish border (`#4a4f63` →
+    `--myst-border-strong`); pure-white headings (spread details, changelog
+    titles → `--myst-text-strong`). White stays where it sits on a fill or on
+    card art. Deleted as dead: the five `.notification.is-warning:not(.is-light)
+    .toggle-*` rules (no such notification exists). Stylelint enforcement waits
+    for §6.1.
 
-- [ ] **4.7 Card-report reason copy lives in three places by design** (frontend
+- [x] **4.7 Card-report reason copy lives in three places by design** (frontend
   `utils/cardReports.ts`, backend `CardReportReason`, plugin `ApiModels.cs`).
   [low] [S] Add a Vitest that reads `backend/openapi.json` and asserts the
   frontend keys equal the `CardReportReason` enum so they cannot drift.
+  - **DONE 2026-10-28, differently.** With §4.4 the frontend's
+    `CardReportReason` *is* the spec's enum, and `REASON_COPY` is a
+    `Record<CardReportReason, …>` — a new backend reason fails type-checking
+    until it has copy, which is stronger than the suggested test. The unguarded
+    copy was the plugin's: `tests/Unit/Structure/CardReportReasonTest.php`
+    reads `ApiModels.cs` and asserts its keys equal the enum's cases.
 
 ---
 
@@ -1044,7 +1151,8 @@ across 17 specs (utils + composables only). Coverage is not measured anywhere
   - Next targets, by risk: `AccountController` (ownership: one user's
     readings/spreads vs another's), `ReadingController` (draw/finalize/unlock,
     password-protected readings), `PluginAuthController` (PKCE code → token),
-    the rest of `AdminController` (§4.5 wants these before it is split).
+    the other eight admin controllers (§4.5 split them; only changelog has
+    HTTP tests).
 - [ ] **8.2 Untested Data classes:** `ChangelogData`, `SpecialCardData`,
   `FavoriteDeckData`. [low] [S] Same in-memory pattern as `CardReportDataTest`.
 - [ ] **8.3 Zero component/view tests on the frontend.** [medium] [M]

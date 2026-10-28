@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { useUser } from './useUser'
 import { endpoints } from '@/api/endpoints'
+import { apiFetch, apiRequest, sendJson } from './apiClient'
 import type { User } from '@/types'
 
 export interface Passkey {
@@ -10,13 +11,26 @@ export interface Passkey {
   last_used_at: string | null
 }
 
-const JSON_HEADERS = { 'Content-Type': 'application/json' }
+/** A credential reference as the server sends it: the id is base64url, not bytes. */
+type CredentialDescriptorJson = Omit<PublicKeyCredentialDescriptor, 'id'> & { id: string }
 
-async function parseJson(res: Response): Promise<Record<string, unknown>> {
-  try {
-    return (await res.json()) as Record<string, unknown>
-  } catch {
-    return {}
+/** `navigator.credentials.create()` options as the server sends them (binary fields base64url). */
+interface CreationOptionsJson {
+  publicKey: Omit<
+    PublicKeyCredentialCreationOptions,
+    'challenge' | 'user' | 'excludeCredentials'
+  > & {
+    challenge: string
+    user: Omit<PublicKeyCredentialUserEntity, 'id'> & { id: string }
+    excludeCredentials?: CredentialDescriptorJson[]
+  }
+}
+
+/** `navigator.credentials.get()` options as the server sends them (binary fields base64url). */
+interface RequestOptionsJson {
+  publicKey: Omit<PublicKeyCredentialRequestOptions, 'challenge' | 'allowCredentials'> & {
+    challenge: string
+    allowCredentials?: CredentialDescriptorJson[]
   }
 }
 
@@ -42,6 +56,10 @@ function base64UrlToBuffer(base64url: string): ArrayBuffer {
   return bytes.buffer
 }
 
+function toDescriptor(cred: CredentialDescriptorJson): PublicKeyCredentialDescriptor {
+  return { ...cred, id: base64UrlToBuffer(cred.id) }
+}
+
 export function usePasskeys() {
   const { currentUser, fetchMe } = useUser()
   const passkeys = ref<Passkey[]>([])
@@ -50,10 +68,8 @@ export function usePasskeys() {
   async function listPasskeys(): Promise<void> {
     loading.value = true
     try {
-      const res = await fetch('/api' + endpoints.passkeys.list)
-      if (res.ok) {
-        passkeys.value = (await res.json()) as Passkey[]
-      }
+      const data = await apiFetch<Passkey[]>(endpoints.passkeys.list)
+      if (data) passkeys.value = data
     } finally {
       loading.value = false
     }
@@ -64,31 +80,22 @@ export function usePasskeys() {
   ): Promise<{ ok: boolean; error?: string; passkey?: Passkey }> {
     try {
       // 1. Get creation options from server.
-      const optRes = await fetch('/api' + endpoints.passkeys.registerOptions, { method: 'POST' })
-      if (!optRes.ok) {
-        const data = await parseJson(optRes)
-        return {
-          ok: false,
-          error:
-            typeof data.error === 'string' ? data.error : 'Failed to get registration options.',
-        }
-      }
+      const options = await apiRequest<CreationOptionsJson>(
+        endpoints.passkeys.registerOptions,
+        { method: 'POST' },
+        'Failed to get registration options.',
+      )
+      if (!options.ok) return { ok: false, error: options.error }
 
-      const options = await optRes.json()
-
-      // 2. Convert base64url fields to ArrayBuffer for the browser API.
-      const publicKey = options.publicKey
-      publicKey.challenge = base64UrlToBuffer(publicKey.challenge)
-      publicKey.user.id = base64UrlToBuffer(publicKey.user.id)
-      if (publicKey.excludeCredentials) {
-        for (const cred of publicKey.excludeCredentials) {
-          cred.id = base64UrlToBuffer(cred.id)
-        }
-      }
-
-      // 3. Call WebAuthn browser API.
+      // 2. Call the WebAuthn browser API, with the base64url fields as bytes.
+      const { publicKey } = options.data
       const credential = (await navigator.credentials.create({
-        publicKey,
+        publicKey: {
+          ...publicKey,
+          challenge: base64UrlToBuffer(publicKey.challenge),
+          user: { ...publicKey.user, id: base64UrlToBuffer(publicKey.user.id) },
+          excludeCredentials: publicKey.excludeCredentials?.map(toDescriptor),
+        },
       })) as PublicKeyCredential | null
       if (!credential) {
         return { ok: false, error: 'Passkey creation was cancelled.' }
@@ -96,28 +103,21 @@ export function usePasskeys() {
 
       const attestationResponse = credential.response as AuthenticatorAttestationResponse
 
-      // 4. Send attestation to server.
-      const regRes = await fetch('/api' + endpoints.passkeys.register, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
+      // 3. Send attestation to server.
+      const registered = await apiRequest<{ passkey: Passkey }>(
+        endpoints.passkeys.register,
+        sendJson('POST', {
           clientDataJSON: bufferToBase64Url(attestationResponse.clientDataJSON),
           attestationObject: bufferToBase64Url(attestationResponse.attestationObject),
           name,
         }),
-      })
+        'Registration failed.',
+      )
+      if (!registered.ok) return { ok: false, error: registered.error }
 
-      const regData = await parseJson(regRes)
-      if (regRes.ok) {
-        const passkey = regData.passkey as Passkey
-        passkeys.value.unshift(passkey)
-        await fetchMe() // Refresh user to pick up has_passkeys
-        return { ok: true, passkey }
-      }
-      return {
-        ok: false,
-        error: typeof regData.error === 'string' ? regData.error : 'Registration failed.',
-      }
+      passkeys.value.unshift(registered.data.passkey)
+      await fetchMe() // Refresh user to pick up has_passkeys
+      return { ok: true, passkey: registered.data.passkey }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'NotAllowedError') {
         return { ok: false, error: 'Passkey creation was cancelled or not allowed.' }
@@ -129,31 +129,21 @@ export function usePasskeys() {
   async function loginWithPasskey(email?: string): Promise<{ ok: boolean; error?: string }> {
     try {
       // 1. Get assertion options.
-      const optRes = await fetch('/api' + endpoints.passkeys.loginOptions, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ email: email ?? '' }),
-      })
-      if (!optRes.ok) {
-        const data = await parseJson(optRes)
-        return {
-          ok: false,
-          error: typeof data.error === 'string' ? data.error : 'Failed to get login options.',
-        }
-      }
+      const options = await apiRequest<RequestOptionsJson>(
+        endpoints.passkeys.loginOptions,
+        sendJson('POST', { email: email ?? '' }),
+        'Failed to get login options.',
+      )
+      if (!options.ok) return { ok: false, error: options.error }
 
-      const options = await optRes.json()
-      const publicKey = options.publicKey
-      publicKey.challenge = base64UrlToBuffer(publicKey.challenge)
-      if (publicKey.allowCredentials) {
-        for (const cred of publicKey.allowCredentials) {
-          cred.id = base64UrlToBuffer(cred.id)
-        }
-      }
-
-      // 2. Call WebAuthn browser API.
+      // 2. Call the WebAuthn browser API, with the base64url fields as bytes.
+      const { publicKey } = options.data
       const assertion = (await navigator.credentials.get({
-        publicKey,
+        publicKey: {
+          ...publicKey,
+          challenge: base64UrlToBuffer(publicKey.challenge),
+          allowCredentials: publicKey.allowCredentials?.map(toDescriptor),
+        },
       })) as PublicKeyCredential | null
       if (!assertion) {
         return { ok: false, error: 'Passkey authentication was cancelled.' }
@@ -162,26 +152,20 @@ export function usePasskeys() {
       const assertionResponse = assertion.response as AuthenticatorAssertionResponse
 
       // 3. Send assertion to server.
-      const loginRes = await fetch('/api' + endpoints.passkeys.login, {
-        method: 'POST',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({
+      const signedIn = await apiRequest<{ user: User | null }>(
+        endpoints.passkeys.login,
+        sendJson('POST', {
           id: bufferToBase64Url(assertion.rawId),
           clientDataJSON: bufferToBase64Url(assertionResponse.clientDataJSON),
           authenticatorData: bufferToBase64Url(assertionResponse.authenticatorData),
           signature: bufferToBase64Url(assertionResponse.signature),
         }),
-      })
+        'Passkey login failed.',
+      )
+      if (!signedIn.ok) return { ok: false, error: signedIn.error }
 
-      const loginData = await parseJson(loginRes)
-      if (loginRes.ok) {
-        currentUser.value = (loginData.user as User | null) ?? null
-        return { ok: true }
-      }
-      return {
-        ok: false,
-        error: typeof loginData.error === 'string' ? loginData.error : 'Passkey login failed.',
-      }
+      currentUser.value = signedIn.data.user ?? null
+      return { ok: true }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'NotAllowedError') {
         return { ok: false, error: 'Passkey authentication was cancelled or not allowed.' }
@@ -191,64 +175,38 @@ export function usePasskeys() {
   }
 
   async function renamePasskey(id: number, name: string): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch('/api' + endpoints.passkeys.byId(id), {
-        method: 'PATCH',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ name }),
-      })
-      const data = await parseJson(res)
-      if (res.ok) {
-        const pk = passkeys.value.find((p) => p.passkey_id === id)
-        if (pk) pk.name = name
-        return { ok: true }
-      }
-      return {
-        ok: false,
-        error: typeof data.error === 'string' ? data.error : 'Could not rename passkey.',
-      }
-    } catch {
-      return { ok: false, error: 'Network error.' }
-    }
+    const res = await apiRequest(
+      endpoints.passkeys.byId(id),
+      sendJson('PATCH', { name }),
+      'Could not rename passkey.',
+    )
+    if (!res.ok) return { ok: false, error: res.error }
+    const pk = passkeys.value.find((p) => p.passkey_id === id)
+    if (pk) pk.name = name
+    return { ok: true }
   }
 
   async function deletePasskey(id: number): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch('/api' + endpoints.passkeys.byId(id), { method: 'DELETE' })
-      const data = await parseJson(res)
-      if (res.ok) {
-        passkeys.value = passkeys.value.filter((p) => p.passkey_id !== id)
-        await fetchMe()
-        return { ok: true }
-      }
-      return {
-        ok: false,
-        error: typeof data.error === 'string' ? data.error : 'Could not delete passkey.',
-      }
-    } catch {
-      return { ok: false, error: 'Network error.' }
-    }
+    const res = await apiRequest(
+      endpoints.passkeys.byId(id),
+      { method: 'DELETE' },
+      'Could not delete passkey.',
+    )
+    if (!res.ok) return { ok: false, error: res.error }
+    passkeys.value = passkeys.value.filter((p) => p.passkey_id !== id)
+    await fetchMe()
+    return { ok: true }
   }
 
   async function togglePasswordLogin(disable: boolean): Promise<{ ok: boolean; error?: string }> {
-    try {
-      const res = await fetch('/api' + endpoints.passkeys.passwordLogin, {
-        method: 'PATCH',
-        headers: JSON_HEADERS,
-        body: JSON.stringify({ disable }),
-      })
-      const data = await parseJson(res)
-      if (res.ok) {
-        if (data.user) currentUser.value = data.user as User
-        return { ok: true }
-      }
-      return {
-        ok: false,
-        error: typeof data.error === 'string' ? data.error : 'Could not update setting.',
-      }
-    } catch {
-      return { ok: false, error: 'Network error.' }
-    }
+    const res = await apiRequest<{ user?: User }>(
+      endpoints.passkeys.passwordLogin,
+      sendJson('PATCH', { disable }),
+      'Could not update setting.',
+    )
+    if (!res.ok) return { ok: false, error: res.error }
+    if (res.data.user) currentUser.value = res.data.user
+    return { ok: true }
   }
 
   /**

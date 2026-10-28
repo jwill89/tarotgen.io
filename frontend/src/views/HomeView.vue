@@ -388,7 +388,7 @@ async function clearAll() {
   z-index: 0;
 }
 .hero-astro :deep(svg) {
-  filter: drop-shadow(0 0 22px rgba(201, 162, 75, 0.12));
+  filter: drop-shadow(0 0 22px color-mix(in srgb, var(--myst-gold) 12%, transparent));
 }
 .hero-copy {
   position: relative;
@@ -444,7 +444,7 @@ async function clearAll() {
     90deg,
     var(--gold) 0%,
     var(--gold) 34%,
-    rgba(201, 162, 75, 0.55) 64%,
+    color-mix(in srgb, var(--myst-gold) 55%, transparent) 64%,
     transparent 100%
   );
 }
@@ -503,18 +503,25 @@ async function clearAll() {
   min-height: 236px;
   height: 100%; /* fill the grid row so both panels are exactly equal height */
   overflow: hidden;
+  /* This and the margin below came from Bulma's .panel, which these cards matched
+     by name until its module was dropped (AUDIT §3.3); kept so the page looks
+     the same. */
+  box-shadow: var(--bulma-shadow);
   transition:
     transform 0.3s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
 }
+.panel:not(:last-child) {
+  margin-bottom: 1.5rem;
+}
 .panel:hover {
   transform: translateY(-4px);
-  border-color: rgba(201, 162, 75, 0.6);
+  border-color: color-mix(in srgb, var(--myst-gold) 60%, transparent);
   box-shadow: 0 18px 46px rgba(0, 0, 0, 0.5);
 }
 .panel:focus-within {
-  border-color: rgba(201, 162, 75, 0.6);
+  border-color: color-mix(in srgb, var(--myst-gold) 60%, transparent);
 }
 .panel .p-icon {
   width: 42px;
@@ -558,9 +565,9 @@ async function clearAll() {
   border-color: var(--aqua-dim);
   background:
     radial-gradient(120% 90% at 82% 0%, var(--aqua-soft), transparent 55%),
-    linear-gradient(180deg, rgba(67, 179, 167, 0.05), var(--chrome));
+    linear-gradient(180deg, color-mix(in srgb, var(--myst-aqua) 5%, transparent), var(--chrome));
   box-shadow:
-    inset 0 0 0 1px rgba(67, 179, 167, 0.06),
+    inset 0 0 0 1px color-mix(in srgb, var(--myst-aqua) 6%, transparent),
     0 16px 42px rgba(0, 0, 0, 0.4);
   padding: 34px 34px 32px;
 }
@@ -601,8 +608,8 @@ async function clearAll() {
   border-radius: 11px;
   text-decoration: none;
   box-shadow:
-    0 0 0 1px rgba(67, 179, 167, 0.35),
-    0 8px 26px -12px rgba(67, 179, 167, 0.7);
+    0 0 0 1px color-mix(in srgb, var(--myst-aqua) 35%, transparent),
+    0 8px 26px -12px color-mix(in srgb, var(--myst-aqua) 70%, transparent);
   transition:
     transform 0.25s ease,
     box-shadow 0.25s ease,
@@ -612,12 +619,12 @@ async function clearAll() {
   transform: translateY(-2px);
   background: var(--myst-aqua-bright);
   box-shadow:
-    0 0 0 1px rgba(67, 179, 167, 0.5),
-    0 14px 34px -12px rgba(67, 179, 167, 0.85);
+    0 0 0 1px color-mix(in srgb, var(--myst-aqua) 50%, transparent),
+    0 14px 34px -12px color-mix(in srgb, var(--myst-aqua) 85%, transparent);
 }
 .btn-primary:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(67, 179, 167, 0.4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-aqua) 40%, transparent);
 }
 .btn-primary .arrow {
   width: 18px;
@@ -638,8 +645,8 @@ async function clearAll() {
     box-shadow 0.25s ease;
 }
 .panel-code:focus-within {
-  border-color: rgba(201, 162, 75, 0.7);
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+  border-color: color-mix(in srgb, var(--myst-gold) 70%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .panel-code input {
   flex: 1;
@@ -673,11 +680,11 @@ async function clearAll() {
   transition: background 0.25s ease;
 }
 .panel-code button:hover {
-  background: rgba(201, 162, 75, 0.12);
+  background: color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .panel-code button:focus-visible {
   outline: none;
-  box-shadow: inset 0 0 0 2px rgba(201, 162, 75, 0.4);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--myst-gold) 40%, transparent);
 }
 .panel-code .arrow {
   width: 18px;
@@ -720,13 +727,13 @@ async function clearAll() {
   display: none;
 }
 .quiet-item:hover {
-  background: rgba(36, 36, 47, 0.45);
+  background: color-mix(in srgb, var(--myst-surface-3) 45%, transparent);
   transform: translateY(-3px);
 }
 .quiet-item:focus-visible {
   outline: none;
-  background: rgba(36, 36, 47, 0.55);
-  box-shadow: 0 0 0 2px rgba(201, 162, 75, 0.3);
+  background: color-mix(in srgb, var(--myst-surface-3) 55%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--myst-gold) 30%, transparent);
 }
 .quiet-item .q-icon {
   width: 32px;
@@ -815,11 +822,11 @@ async function clearAll() {
 .recent-head .recent-clear:hover {
   color: var(--text);
   border-color: var(--hair-gold);
-  background: rgba(201, 162, 75, 0.08);
+  background: color-mix(in srgb, var(--myst-gold) 8%, transparent);
 }
 .recent-head .recent-clear:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
 }
 .table-wrap {
   width: 100%;
@@ -903,7 +910,7 @@ async function clearAll() {
   font-family: var(--font-ui);
   font-size: 0.85rem;
   text-decoration: underline;
-  text-decoration-color: rgba(201, 162, 75, 0.55);
+  text-decoration-color: color-mix(in srgb, var(--myst-gold) 55%, transparent);
   text-underline-offset: 3px;
   padding: 5px 8px;
   border-radius: 7px;
@@ -914,7 +921,7 @@ async function clearAll() {
 }
 .t-open:hover {
   text-decoration-color: var(--gold-bright);
-  background: rgba(201, 162, 75, 0.1);
+  background: color-mix(in srgb, var(--myst-gold) 10%, transparent);
 }
 .t-remove {
   width: 28px;
@@ -939,11 +946,11 @@ async function clearAll() {
 .t-remove:hover {
   color: var(--text);
   border-color: var(--hair-gold);
-  background: rgba(201, 162, 75, 0.1);
+  background: color-mix(in srgb, var(--myst-gold) 10%, transparent);
 }
 .t-remove:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 20%, transparent);
 }
 
 /* ============ RESPONSIVE ============ */

@@ -26,7 +26,7 @@ class UserSpread extends AbstractStructure
     public private(set) int $card_count = 1;
 
     /** @var list<array<string,mixed>> */
-    #[OA\Property(type: 'array', items: new OA\Items(type: 'object'))]
+    #[OA\Property(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition'))]
     public private(set) array $positions = [];
 
     #[OA\Property(type: 'string')]

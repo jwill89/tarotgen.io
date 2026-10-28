@@ -5,11 +5,11 @@ import { useRoute, useRouter } from 'vue-router'
 import { useDecks } from '@/composables/useDecks'
 import { useUser } from '@/composables/useUser'
 import { useUserSpreads } from '@/composables/useUserSpreads'
+import { useReadings } from '@/composables/useReadings'
+import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls } from '@/utils/cardImages'
-import { readApiError } from '@/composables/useApi'
-import { endpoints } from '@/api/endpoints'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -23,6 +23,8 @@ const router = useRouter()
 const { decks, fetchDecks } = useDecks()
 const { isLoggedIn } = useUser()
 const { createUserSpread } = useUserSpreads()
+const { get: getReading, savePlacement } = useReadings()
+const { submitSpread } = useSubmissions()
 const toasts = useToasts()
 
 const readingId = computed(() => route.params.id as string)
@@ -65,22 +67,22 @@ onMounted(async () => {
   // Cached module-wide; fired alongside the reading fetch rather than awaited.
   void fetchDecks()
   try {
-    const res = await fetch('/api' + endpoints.readings.byId(readingId.value))
-    if (!res.ok) {
-      toasts.error('Could not load the reading.')
+    const res = await getReading(readingId.value)
+    // Only the owner arranges a reading, and an owner never gets the locked shape.
+    if (!res.ok || res.data.locked) {
+      toasts.error('Could not load the reading.', { detail: res })
       void router.replace({ name: 'home' })
       return
     }
-    const data = await res.json()
 
     // A finalized reading is locked — there is nothing to arrange.
-    if (data.is_final) {
+    if (res.data.is_final) {
       toasts.warning('This reading is final and can no longer be edited.')
       void router.replace({ name: 'reading', params: { id: readingId.value } })
       return
     }
 
-    const info = data.reading_info as ReadingInfo
+    const info = res.data.reading_info
     readingInfo.value = info
 
     // Find deck
@@ -108,9 +110,6 @@ onMounted(async () => {
         cardName: card.card_name,
       })
     })
-  } catch {
-    toasts.error('Failed to load reading data.')
-    void router.replace({ name: 'home' })
   } finally {
     loading.value = false
   }
@@ -143,44 +142,35 @@ async function finalizePlacement() {
   }
 
   saving.value = true
-  try {
-    const positions = slots.value.map((s: Slot) => ({
-      title: s.title,
-      x: s.x,
-      y: s.y,
-      rotation: s.rotation,
-    }))
+  const positions = slots.value.map((s: Slot) => ({
+    title: s.title,
+    x: s.x,
+    y: s.y,
+    rotation: s.rotation,
+  }))
+  const res = await savePlacement(
+    readingId.value,
+    positions,
+    existingSpreadName.value || 'Free Draw Placement',
+  )
+  saving.value = false
 
-    const res = await fetch('/api' + endpoints.readings.placement(readingId.value), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        positions,
-        spread_name: existingSpreadName.value || 'Free Draw Placement',
-      }),
-    })
-
-    if (!res.ok) {
-      toasts.error(await readApiError(res, 'Failed to save placement.'))
-      return
-    }
-
-    toasts.success('Placement saved!')
-
-    // Editing an existing spread (drew more cards): no need to re-offer
-    // saving it as a reusable spread — go straight back to the reading.
-    if (isExistingSpread.value) {
-      void router.push({ name: 'reading', params: { id: readingId.value } })
-      return
-    }
-
-    // Fresh free draw: offer to save the layout as a reusable spread.
-    showSaveSpreadModal.value = true
-  } catch (e) {
-    toasts.error('Network error. Please try again.', { detail: e })
-  } finally {
-    saving.value = false
+  if (!res.ok) {
+    toasts.error(res.error, { detail: res })
+    return
   }
+
+  toasts.success('Placement saved!')
+
+  // Editing an existing spread (drew more cards): no need to re-offer
+  // saving it as a reusable spread — go straight back to the reading.
+  if (isExistingSpread.value) {
+    void router.push({ name: 'reading', params: { id: readingId.value } })
+    return
+  }
+
+  // Fresh free draw: offer to save the layout as a reusable spread.
+  showSaveSpreadModal.value = true
 }
 
 // Save the spread (optional step after placement is saved)
@@ -215,16 +205,11 @@ async function saveSpread() {
         toasts.error('Failed to save personal spread.')
       }
     } else {
-      // Submit as public
-      const res = await fetch('/api' + endpoints.spreads.list, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      const res = await submitSpread(payload)
       if (res.ok) {
         toasts.success('Spread submitted for review!')
       } else {
-        toasts.error('Failed to submit spread.')
+        toasts.error(res.error)
       }
     }
   } finally {
@@ -259,6 +244,7 @@ function skipSaveSpread() {
                   class="fdp-card-img"
                   :alt="item.cardName"
                   draggable="false"
+                  loading="lazy"
                 />
               </template>
 

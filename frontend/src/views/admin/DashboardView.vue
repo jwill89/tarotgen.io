@@ -382,7 +382,7 @@ onMounted(async () => {
   font-variant-numeric: tabular-nums;
 }
 .admin-nav-item:hover {
-  background: rgba(201, 162, 75, 0.1);
+  background: color-mix(in srgb, var(--myst-gold) 10%, transparent);
   color: var(--myst-text-strong);
 }
 .admin-nav-item:hover .nav-label {
@@ -390,7 +390,7 @@ onMounted(async () => {
 }
 .admin-nav-item:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 .admin-insights {

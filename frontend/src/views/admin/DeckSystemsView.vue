@@ -1,14 +1,16 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, watch, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
+import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import Tooltip from '@/components/Tooltip.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import NumberField from '@/components/NumberField.vue'
 import DeckCardListEditor from '@/components/DeckCardListEditor.vue'
@@ -21,6 +23,7 @@ import {
 import type { DeckSystem, DeckSystemWithCards, DeckSystemCard } from '@/types'
 
 const api = useAdminApi()
+const { submitDeckSystem } = useSubmissions()
 const { confirm } = useConfirm()
 const toasts = useToasts()
 
@@ -116,19 +119,20 @@ async function saveSystem() {
   try {
     let result
     if (isNew.value) {
-      const res = await fetch('/api' + endpoints.deckSystems.list, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editingSystem.value),
+      // There is no admin create route: an admin's submission is approved on arrival.
+      const s = editingSystem.value
+      const res = await submitDeckSystem({
+        name: s.name ?? '',
+        short_name: s.short_name ?? '',
+        total_cards: s.total_cards ?? s.cards.length,
+        cards: s.cards,
       })
-      if (res.ok) {
-        result = await res.json()
-        toasts.success('Deck system created.')
-      } else {
-        const err = (await res.json().catch(() => ({}))) as { error?: string }
-        toasts.error(err.error || 'Failed to create deck system.')
+      if (!res.ok) {
+        toasts.error(res.error)
         return
       }
+      result = res.data
+      toasts.success('Deck system created.')
     } else {
       result = await api.put(
         endpoints.admin.deckSystems.byId(editingSystem.value.deck_system_id),
@@ -179,243 +183,216 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage
+    title="Manage Deck Systems"
+    subtitle="Manage card naming systems (e.g. Rider-Waite-Smith, Thoth)."
+  >
+    <template #actions>
+      <button class="button is-primary" :disabled="editingSystem !== null" @click="openAdd">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
+        <span>Add Deck System</span>
+      </button>
+    </template>
 
-          <PageHeader
-            title="Manage Deck Systems"
-            subtitle="Manage card naming systems (e.g. Rider-Waite-Smith, Thoth)."
-          >
-            <button class="button is-primary" :disabled="editingSystem !== null" @click="openAdd">
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-              <span>Add Deck System</span>
-            </button>
-          </PageHeader>
+    <!-- Inline Add/Edit Form -->
+    <div v-if="editingSystem" class="settings-panel mb-6 deck-system-editor">
+      <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
+        <h3 class="title is-4 mb-0">
+          {{ isNew ? 'Add Deck System' : 'Edit Deck System #' + editingSystem.deck_system_id }}
+        </h3>
+        <button class="delete" aria-label="close" @click="closeEdit"></button>
+      </div>
 
-          <!-- Inline Add/Edit Form -->
-          <div v-if="editingSystem" class="settings-panel mb-6 deck-system-editor">
-            <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-              <h3 class="title is-4 mb-0">
-                {{
-                  isNew ? 'Add Deck System' : 'Edit Deck System #' + editingSystem.deck_system_id
-                }}
-              </h3>
-              <button class="delete" aria-label="close" @click="closeEdit"></button>
-            </div>
-
-            <div class="columns">
-              <div class="column is-4">
-                <div class="field">
-                  <label class="label">Name <span class="has-text-danger">*</span></label>
-                  <input
-                    v-model="editingSystem.name"
-                    class="input"
-                    placeholder="e.g. Rider-Waite-Smith"
-                  />
-                </div>
-              </div>
-              <div class="column is-4">
-                <div class="field">
-                  <label class="label">Short Name <span class="has-text-danger">*</span></label>
-                  <input v-model="editingSystem.short_name" class="input" placeholder="e.g. RWS" />
-                </div>
-              </div>
-              <div class="column is-4">
-                <div class="field">
-                  <label class="label">Total Cards <span class="has-text-danger">*</span></label>
-                  <NumberField v-model="editingSystem.total_cards" :min="1" />
-                </div>
-              </div>
-            </div>
-
-            <DeckCardListEditor
-              :key="isNew ? 'new' : editingSystem.deck_system_id"
-              ref="cardEditor"
-              v-model="editingSystem.cards"
-              heading-tag="h5"
-              max-height="600px"
-              :initial-open="isNew ? ['0'] : []"
-            >
-              <template #hint>
-                <p class="mb-4 has-text-grey is-size-7">
-                  Each card needs a name at minimum. Other fields are optional.
-                </p>
-              </template>
-            </DeckCardListEditor>
-
-            <div class="is-flex is-justify-content-space-between is-align-items-center mt-5">
-              <div>
-                <p v-if="!allCardTitlesValid" class="help is-danger">
-                  All cards must have a title before saving.
-                </p>
-              </div>
-              <div class="buttons">
-                <button class="button" @click="closeEdit">Cancel</button>
-                <button
-                  class="button is-success"
-                  :class="{ 'is-loading': saving }"
-                  :disabled="saving || !allCardTitlesValid"
-                  @click="saveSystem"
-                >
-                  <span class="icon"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']"
-                  /></span>
-                  <span>{{ isNew ? 'Create' : 'Save' }}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Pending Submissions -->
-          <div v-if="pendingSystems.length > 0" class="mb-6">
-            <h2 class="title is-4">
-              Pending Submissions
-              <span class="tag is-warning ml-2">{{ pendingSystems.length }}</span>
-            </h2>
-            <div class="settings-panel">
-              <div class="table-container">
-                <table class="table is-fullwidth is-hoverable is-striped">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Short Name</th>
-                      <th>Cards</th>
-                      <th>Submitted By</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="sys in pendingSystems" :key="sys.deck_system_id">
-                      <td>{{ sys.deck_system_id }}</td>
-                      <td>{{ sys.name }}</td>
-                      <td>{{ sys.short_name }}</td>
-                      <td>{{ sys.total_cards }}</td>
-                      <td>{{ sys.submitted_by ?? '—' }}</td>
-                      <td>
-                        <div class="row-actions">
-                          <IconButton
-                            :icon="byPrefixAndName.fas['check']"
-                            label="Approve"
-                            intent="success"
-                            @click="approveSystem(sys)"
-                          />
-                          <IconButton
-                            :icon="byPrefixAndName.fas['pen-to-square']"
-                            label="Edit"
-                            @click="openEdit(sys)"
-                          />
-                          <IconButton
-                            :icon="byPrefixAndName.fas['trash']"
-                            label="Delete"
-                            intent="danger"
-                            @click="deleteSystem(sys)"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Approved Systems -->
-          <h2 class="title is-4">Approved Systems</h2>
-
+      <div class="columns">
+        <div class="column is-4">
           <div class="field">
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search by name or short name..."
-              />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
-            </div>
+            <label class="label">Name <span class="has-text-danger">*</span></label>
+            <input
+              v-model="editingSystem.name"
+              class="input"
+              placeholder="e.g. Rider-Waite-Smith"
+            />
           </div>
+        </div>
+        <div class="column is-4">
+          <div class="field">
+            <label class="label">Short Name <span class="has-text-danger">*</span></label>
+            <input v-model="editingSystem.short_name" class="input" placeholder="e.g. RWS" />
+          </div>
+        </div>
+        <div class="column is-4">
+          <div class="field">
+            <label class="label">Total Cards <span class="has-text-danger">*</span></label>
+            <NumberField v-model="editingSystem.total_cards" :min="1" />
+          </div>
+        </div>
+      </div>
 
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped">
-                <thead>
-                  <tr>
-                    <SortableTh
-                      label="ID"
-                      sort-key="deck_system_id"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Name"
-                      sort-key="name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Short Name"
-                      sort-key="short_name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Total Cards"
-                      sort-key="total_cards"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="sys in visibleSystems" :key="sys.deck_system_id">
-                    <td>{{ sys.deck_system_id }}</td>
-                    <td>{{ sys.name }}</td>
-                    <td>
-                      <Tooltip :text="sys.name">
-                        <span class="data-chip">{{ sys.short_name }}</span>
-                      </Tooltip>
-                    </td>
-                    <td>{{ sys.total_cards }}</td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          :icon="byPrefixAndName.fas['pen-to-square']"
-                          label="Edit"
-                          @click="openEdit(sys)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['trash']"
-                          label="Delete"
-                          intent="danger"
-                          @click="deleteSystem(sys)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p v-if="visibleSystems.length === 0" class="has-text-grey">
-            No deck systems match your search.
+      <DeckCardListEditor
+        :key="isNew ? 'new' : editingSystem.deck_system_id"
+        ref="cardEditor"
+        v-model="editingSystem.cards"
+        heading-tag="h5"
+        max-height="600px"
+        :initial-open="isNew ? ['0'] : []"
+      >
+        <template #hint>
+          <p class="mb-4 has-text-grey is-size-7">
+            Each card needs a name at minimum. Other fields are optional.
           </p>
+        </template>
+      </DeckCardListEditor>
+
+      <div class="is-flex is-justify-content-space-between is-align-items-center mt-5">
+        <div>
+          <p v-if="!allCardTitlesValid" class="help is-danger">
+            All cards must have a title before saving.
+          </p>
+        </div>
+        <div class="buttons">
+          <button class="button" @click="closeEdit">Cancel</button>
+          <button
+            class="button is-success"
+            :class="{ 'is-loading': saving }"
+            :disabled="saving || !allCardTitlesValid"
+            @click="saveSystem"
+          >
+            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
+            <span>{{ isNew ? 'Create' : 'Save' }}</span>
+          </button>
         </div>
       </div>
     </div>
-  </section>
+
+    <!-- Pending Submissions -->
+    <div v-if="pendingSystems.length > 0" class="mb-6">
+      <h2 class="title is-4">
+        Pending Submissions
+        <span class="tag is-warning ml-2">{{ pendingSystems.length }}</span>
+      </h2>
+      <div class="settings-panel">
+        <div class="table-container">
+          <table class="table is-fullwidth is-hoverable is-striped">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Short Name</th>
+                <th>Cards</th>
+                <th>Submitted By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="sys in pendingSystems" :key="sys.deck_system_id">
+                <td>{{ sys.deck_system_id }}</td>
+                <td>{{ sys.name }}</td>
+                <td>{{ sys.short_name }}</td>
+                <td>{{ sys.total_cards }}</td>
+                <td>{{ sys.submitted_by ?? '—' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <IconButton
+                      :icon="byPrefixAndName.fas['check']"
+                      label="Approve"
+                      intent="success"
+                      @click="approveSystem(sys)"
+                    />
+                    <IconButton
+                      :icon="byPrefixAndName.fas['pen-to-square']"
+                      label="Edit"
+                      @click="openEdit(sys)"
+                    />
+                    <IconButton
+                      :icon="byPrefixAndName.fas['trash']"
+                      label="Delete"
+                      intent="danger"
+                      @click="deleteSystem(sys)"
+                    />
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approved Systems -->
+    <h2 class="title is-4">Approved Systems</h2>
+
+    <AdminSearchField v-model="search" placeholder="Search by name or short name..." />
+
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped">
+          <thead>
+            <tr>
+              <SortableTh
+                label="ID"
+                sort-key="deck_system_id"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Name"
+                sort-key="name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Short Name"
+                sort-key="short_name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Total Cards"
+                sort-key="total_cards"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="sys in visibleSystems" :key="sys.deck_system_id">
+              <td>{{ sys.deck_system_id }}</td>
+              <td>{{ sys.name }}</td>
+              <td>
+                <Tooltip :text="sys.name">
+                  <span class="data-chip">{{ sys.short_name }}</span>
+                </Tooltip>
+              </td>
+              <td>{{ sys.total_cards }}</td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    :icon="byPrefixAndName.fas['pen-to-square']"
+                    label="Edit"
+                    @click="openEdit(sys)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['trash']"
+                    label="Delete"
+                    intent="danger"
+                    @click="deleteSystem(sys)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p v-if="visibleSystems.length === 0" class="has-text-grey">
+      No deck systems match your search.
+    </p>
+  </AdminListPage>
 </template>
 
 <style scoped>

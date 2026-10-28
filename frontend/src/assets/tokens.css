@@ -26,7 +26,7 @@
   --myst-surface-3: #24242f; /* raised / hover */
   --myst-border: rgba(255, 255, 255, 0.1);
   --myst-border-strong: rgba(255, 255, 255, 0.16);
-  --myst-hair-gold: rgba(201, 162, 75, 0.38); /* thin gold hairline */
+  --myst-hair-gold: color-mix(in srgb, var(--myst-gold) 38%, transparent); /* thin gold hairline */
 
   /* Text tiers — all SOLID and WCAG-AA (>=6:1) on every surface. The old
        opacity-based --myst-text-dim (0.45 white) FAILED AA at ~3.3:1; it is now
@@ -43,9 +43,17 @@
   --myst-silver: #c7ccd6;
   --myst-aqua: #43b3a7; /* the ONE pop: primary action + active/selected state only */
   --myst-aqua-deep: #12796d; /* dark teal for filled badges/pills (white text ~5:1) */
-  --myst-aqua-soft: rgba(67, 179, 167, 0.1); /* tinted wash behind the primary CTA */
-  --myst-aqua-dim: rgba(67, 179, 167, 0.55); /* primary border at rest */
-  --myst-aqua-glow: rgba(67, 179, 167, 0.2); /* primary hover glow */
+  --myst-aqua-soft: color-mix(
+    in srgb,
+    var(--myst-aqua) 10%,
+    transparent
+  ); /* tinted wash behind the primary CTA */
+  --myst-aqua-dim: color-mix(
+    in srgb,
+    var(--myst-aqua) 55%,
+    transparent
+  ); /* primary border at rest */
+  --myst-aqua-glow: color-mix(in srgb, var(--myst-aqua) 20%, transparent); /* primary hover glow */
   --myst-aqua-bright: #54c6ba; /* brighter aqua for the primary-CTA hover */
   --myst-on-aqua: #062421; /* dark ink for text/icons sitting on a filled aqua surface */
 
@@ -204,32 +212,32 @@ a:hover {
    with the dark theme. Override to use translucent tinted backgrounds with matching
    text colours for a cohesive mystical look. */
 .tag.is-info.is-light {
-  background-color: rgba(74, 159, 209, 0.12);
+  background-color: color-mix(in srgb, var(--myst-info) 12%, transparent);
   color: var(--myst-info);
 }
 
 .tag.is-success.is-light {
-  background-color: rgba(68, 168, 120, 0.12);
+  background-color: color-mix(in srgb, var(--myst-success) 12%, transparent);
   color: var(--myst-success);
 }
 
 .tag.is-warning.is-light {
-  background-color: rgba(221, 161, 58, 0.12);
+  background-color: color-mix(in srgb, var(--myst-warning) 12%, transparent);
   color: var(--myst-warning);
 }
 
 .tag.is-danger.is-light {
-  background-color: rgba(217, 90, 114, 0.12);
+  background-color: color-mix(in srgb, var(--myst-danger) 12%, transparent);
   color: var(--myst-danger);
 }
 
 .tag.is-primary.is-light {
-  background-color: rgba(67, 179, 167, 0.12);
+  background-color: color-mix(in srgb, var(--myst-aqua) 12%, transparent);
   color: var(--myst-aqua);
 }
 
 .tag.is-link.is-light {
-  background-color: rgba(201, 162, 75, 0.12);
+  background-color: color-mix(in srgb, var(--myst-gold) 12%, transparent);
   color: var(--myst-gold);
 }
 

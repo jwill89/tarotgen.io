@@ -4,7 +4,7 @@
  * The full helpers module ships 1,716 classes (about 15 KB gzipped) so that a
  * handful of margins and text colours can be spelled Bulma's way. These rules
  * are lifted verbatim from bulma.min.css v1.0.4, so the values are identical —
- * this file just stops us paying for the other 1675 classes.
+ * this file just stops us paying for the rest.
  *
  * If you reach for a Bulma helper that isn't here it will simply do nothing —
  * copy its rule across from node_modules/bulma/css/bulma.min.css, or write a
@@ -62,5 +62,4 @@ a.has-text-danger:active,button.has-text-danger:active{color:hsl(var(--bulma-dan
 .has-text-right{text-align:right!important}
 .is-italic{font-style:italic!important}
 .has-text-weight-normal{font-weight:400!important}
-.has-text-weight-bold{font-weight:700!important}
 .is-flex{display:flex!important}

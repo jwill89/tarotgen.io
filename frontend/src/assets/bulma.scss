@@ -14,7 +14,11 @@
 //   grid/grid        (the .cell / .fixed-grid system — 52 KB on its own;
 //                     we use the older .columns/.column grid)
 //   layout/media
-//   helpers          (1,716 classes for the 41 we use — see bulma-helpers.css)
+//   layout/hero, components/panel
+//                    (HomeView's own .hero/.panel are scoped classes that
+//                     only collided with Bulma's names; 38 KB together)
+//   helpers          (1,716 classes for the few dozen we use — see bulma-helpers.css)
+//   themes           (replaced by the dark-only block at the end of this file)
 //
 // Adding a Bulma class that isn't styled? Its module probably isn't imported.
 // Add the @use line here rather than reaching back for the full stylesheet.
@@ -23,7 +27,9 @@
 // Infrastructure: functions, mixins, CSS custom properties, the theme that
 // defines every --bulma-* variable the rules below read.
 @use 'bulma/sass/utilities';
-@use 'bulma/sass/themes';
+@use 'bulma/sass/themes/light';
+@use 'bulma/sass/themes/dark';
+@use 'bulma/sass/themes/setup';
 @use 'bulma/sass/base';
 
 @use 'bulma/sass/elements/block';
@@ -44,14 +50,24 @@
 @use 'bulma/sass/form/tools';
 
 @use 'bulma/sass/layout/container';
-@use 'bulma/sass/layout/hero';
 @use 'bulma/sass/layout/level';
 @use 'bulma/sass/layout/section';
 @use 'bulma/sass/layout/footer';
 
 @use 'bulma/sass/grid/columns';
 
-@use 'bulma/sass/components/panel';
 // Admin readings drives Reka's Pagination with Bulma's classes — .pagination-ellipsis
 // is the one that matters (see views/admin/ReadingsView.vue).
 @use 'bulma/sass/components/pagination';
+
+// Theme variables, dark only. Bulma's themes module writes the light theme three
+// times and the dark theme twice (for :root, prefers-color-scheme and
+// [data-theme]) — 181 KB, a third of this stylesheet. This site is always dark
+// (<html data-theme="dark">), and for that page those rules settle on: light as
+// the base, dark over it, then the shared setup. This writes exactly that, once
+// (61 KB). tokens.css then maps the result onto the --myst-* palette.
+:root {
+  @include light.light-theme;
+  @include dark.dark-theme;
+  @include setup.setup-theme;
+}

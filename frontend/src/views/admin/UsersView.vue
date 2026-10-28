@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
@@ -7,7 +9,6 @@ import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { formatDateTime } from '@/utils/datetime'
@@ -118,153 +119,128 @@ onMounted(fetchUsers)
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage
+    title="Manage Users"
+    subtitle="Activate, resend activation emails, or remove accounts."
+  >
+    <AdminSearchField v-model="search" placeholder="Search by email, name, or ID..." />
 
-          <PageHeader
-            title="Manage Users"
-            subtitle="Activate, resend activation emails, or remove accounts."
-          />
-
-          <div class="field">
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search by email, name, or ID..."
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped">
+          <thead>
+            <tr>
+              <SortableTh
+                label="ID"
+                sort-key="user_id"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
               />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
-            </div>
-          </div>
-
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped">
-                <thead>
-                  <tr>
-                    <SortableTh
-                      label="ID"
-                      sort-key="user_id"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Email"
-                      sort-key="email"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Display Name"
-                      sort-key="display_name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Status"
-                      sort-key="is_active"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Registered"
-                      sort-key="registered_at"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Last Login"
-                      sort-key="last_login_at"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="user in visibleUsers" :key="user.user_id">
-                    <td>{{ user.user_id }}</td>
-                    <td>{{ user.email }}</td>
-                    <td>
-                      {{ user.display_name }}
-                      <Tooltip v-if="user.is_admin" text="Admin">
-                        <span class="icon has-text-link ml-1"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']"
-                        /></span>
-                      </Tooltip>
-                      <Tooltip v-if="user.google_linked" text="Google linked">
-                        <span class="icon has-text-info ml-1"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fab['google']"
-                        /></span>
-                      </Tooltip>
-                      <Tooltip v-if="user.has_passkeys" text="Has passkey(s)">
-                        <span class="icon has-text-success ml-1"
-                          ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
-                        /></span>
-                      </Tooltip>
-                    </td>
-                    <td>
-                      <span v-if="user.is_active" class="status-tag is-on">Active</span>
-                      <span v-else class="status-tag is-warn">Pending</span>
-                    </td>
-                    <td>{{ formatDateTime(user.registered_at) }}</td>
-                    <td>{{ user.last_login_at ? formatDateTime(user.last_login_at) : '—' }}</td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          v-if="!user.is_active"
-                          :icon="byPrefixAndName.fas['circle-check']"
-                          label="Activate"
-                          intent="success"
-                          :loading="busyId === user.user_id"
-                          @click="activate(user)"
-                        />
-                        <IconButton
-                          v-if="!user.is_active"
-                          :icon="byPrefixAndName.fas['paper-plane']"
-                          label="Resend Email"
-                          intent="gold"
-                          :loading="busyId === user.user_id"
-                          @click="resend(user)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['user-shield']"
-                          :label="user.is_admin ? 'Revoke Admin' : 'Make Admin'"
-                          :intent="user.is_admin ? 'warning' : 'default'"
-                          :disabled="busyId === user.user_id"
-                          @click="toggleAdmin(user)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['trash']"
-                          label="Delete"
-                          intent="danger"
-                          @click="remove(user)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p v-if="users.length === 0" class="has-text-grey">No accounts yet.</p>
-        </div>
+              <SortableTh
+                label="Email"
+                sort-key="email"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Display Name"
+                sort-key="display_name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Status"
+                sort-key="is_active"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Registered"
+                sort-key="registered_at"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Last Login"
+                sort-key="last_login_at"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in visibleUsers" :key="user.user_id">
+              <td>{{ user.user_id }}</td>
+              <td>{{ user.email }}</td>
+              <td>
+                {{ user.display_name }}
+                <Tooltip v-if="user.is_admin" text="Admin">
+                  <span class="icon has-text-link ml-1"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['user-shield']"
+                  /></span>
+                </Tooltip>
+                <Tooltip v-if="user.google_linked" text="Google linked">
+                  <span class="icon has-text-info ml-1"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fab['google']"
+                  /></span>
+                </Tooltip>
+                <Tooltip v-if="user.has_passkeys" text="Has passkey(s)">
+                  <span class="icon has-text-success ml-1"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
+                  /></span>
+                </Tooltip>
+              </td>
+              <td>
+                <span v-if="user.is_active" class="status-tag is-on">Active</span>
+                <span v-else class="status-tag is-warn">Pending</span>
+              </td>
+              <td>{{ formatDateTime(user.registered_at) }}</td>
+              <td>{{ user.last_login_at ? formatDateTime(user.last_login_at) : '—' }}</td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    v-if="!user.is_active"
+                    :icon="byPrefixAndName.fas['circle-check']"
+                    label="Activate"
+                    intent="success"
+                    :loading="busyId === user.user_id"
+                    @click="activate(user)"
+                  />
+                  <IconButton
+                    v-if="!user.is_active"
+                    :icon="byPrefixAndName.fas['paper-plane']"
+                    label="Resend Email"
+                    intent="gold"
+                    :loading="busyId === user.user_id"
+                    @click="resend(user)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['user-shield']"
+                    :label="user.is_admin ? 'Revoke Admin' : 'Make Admin'"
+                    :intent="user.is_admin ? 'warning' : 'default'"
+                    :disabled="busyId === user.user_id"
+                    @click="toggleAdmin(user)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['trash']"
+                    label="Delete"
+                    intent="danger"
+                    @click="remove(user)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </section>
+    <p v-if="users.length === 0" class="has-text-grey">No accounts yet.</p>
+  </AdminListPage>
 </template>

@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { UserSpread } from '@/types'
-import { apiFetch } from './useApi'
+import { apiFetch, apiRequest, sendJson } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 
 const userSpreads: Ref<UserSpread[]> = ref([])
@@ -17,41 +17,34 @@ export function useUserSpreads() {
     card_count: number
     positions: unknown[]
   }): Promise<UserSpread | null> {
-    const res = await fetch('/api' + endpoints.account.spreads, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const res = await apiRequest<UserSpread>(endpoints.account.spreads, sendJson('POST', payload))
     if (!res.ok) return null
-    const spread = (await res.json()) as UserSpread
-    userSpreads.value = [spread, ...userSpreads.value]
-    return spread
+    userSpreads.value = [res.data, ...userSpreads.value]
+    return res.data
   }
 
   async function updateUserSpread(
     id: number,
     payload: { name?: string; description?: string; card_count?: number; positions?: unknown[] },
   ): Promise<UserSpread | null> {
-    const res = await fetch('/api' + endpoints.account.spreadById(id), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
+    const res = await apiRequest<UserSpread>(
+      endpoints.account.spreadById(id),
+      sendJson('PUT', payload),
+    )
     if (!res.ok) return null
-    const updated = (await res.json()) as UserSpread
-    userSpreads.value = userSpreads.value.map((s) => (s.user_spread_id === id ? updated : s))
-    return updated
+    userSpreads.value = userSpreads.value.map((s) => (s.user_spread_id === id ? res.data : s))
+    return res.data
   }
 
   async function deleteUserSpread(id: number): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.spreadById(id), { method: 'DELETE' })
+    const res = await apiRequest(endpoints.account.spreadById(id), { method: 'DELETE' })
     if (!res.ok) return false
     userSpreads.value = userSpreads.value.filter((s) => s.user_spread_id !== id)
     return true
   }
 
   async function submitAsPublic(id: number): Promise<boolean> {
-    const res = await fetch('/api' + endpoints.account.spreadSubmit(id), { method: 'POST' })
+    const res = await apiRequest(endpoints.account.spreadSubmit(id), { method: 'POST' })
     return res.ok
   }
 

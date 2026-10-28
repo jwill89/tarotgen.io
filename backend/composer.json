@@ -43,6 +43,6 @@
         "stan": "phpstan analyse --memory-limit=512M",
         "lint": "php-cs-fixer check --show-progress=none",
         "lint:fix": "php-cs-fixer fix",
-        "docs": "openapi api includes --version 3.1.0 --format json --output openapi.json"
+        "docs": "openapi api includes --version 3.1.0 --format json --add-processor \"Routes\\RequireStructureProperties\" --output openapi.json"
     }
 }

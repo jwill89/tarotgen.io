@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
@@ -6,7 +8,6 @@ import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
 import BaseModal from '@/components/BaseModal.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import NumberField from '@/components/NumberField.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
@@ -150,119 +151,99 @@ onMounted(fetchData)
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage
+    title="Manage Special Cards"
+    subtitle="Manage extra cards specific to certain decks."
+  >
+    <template #actions>
+      <button class="button is-primary" @click="openAdd">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
+        <span>Add Special Card</span>
+      </button>
+    </template>
 
-          <PageHeader
-            title="Manage Special Cards"
-            subtitle="Manage extra cards specific to certain decks."
-          >
-            <button class="button is-primary" @click="openAdd">
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-              <span>Add Special Card</span>
-            </button>
-          </PageHeader>
-
-          <div class="columns">
-            <div class="column is-4">
-              <div class="field">
-                <label class="label">Filter by Deck</label>
-                <BaseSelect
-                  v-model="filterDeckModel"
-                  :options="filterDeckOptions"
-                  aria-label="Filter by deck"
-                />
-              </div>
-            </div>
-            <div class="column is-8">
-              <div class="field">
-                <label class="label">Search</label>
-                <div class="control has-icons-left">
-                  <input
-                    v-model="search"
-                    class="input"
-                    type="text"
-                    placeholder="Search by name, card ID, or deck..."
-                  />
-                  <span class="icon is-small is-left"
-                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-                  /></span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped">
-                <thead>
-                  <tr>
-                    <SortableTh
-                      label="Deck"
-                      sort-key="deck"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>System</th>
-                    <SortableTh
-                      label="Card ID"
-                      sort-key="card_id"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Name"
-                      sort-key="name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="card in visibleCards" :key="card.deck_id + '-' + card.card_id">
-                    <td>{{ deckLookup[card.deck_id]?.name ?? card.deck_id }}</td>
-                    <td>
-                      <span class="data-chip">{{
-                        deckLookup[card.deck_id]?.system_short_name ?? '—'
-                      }}</span>
-                    </td>
-                    <td>{{ card.card_id }}</td>
-                    <td>{{ card.name }}</td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          :icon="byPrefixAndName.fas['pen-to-square']"
-                          label="Edit"
-                          @click="openEdit(card)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['trash']"
-                          label="Delete"
-                          intent="danger"
-                          @click="deleteCard(card)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p v-if="visibleCards.length === 0" class="has-text-grey">No special cards found.</p>
+    <div class="columns">
+      <div class="column is-4">
+        <div class="field">
+          <label class="label">Filter by Deck</label>
+          <BaseSelect
+            v-model="filterDeckModel"
+            :options="filterDeckOptions"
+            aria-label="Filter by deck"
+          />
         </div>
       </div>
+      <div class="column is-8">
+        <AdminSearchField
+          v-model="search"
+          label="Search"
+          placeholder="Search by name, card ID, or deck..."
+        />
+      </div>
     </div>
-  </section>
+
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped">
+          <thead>
+            <tr>
+              <SortableTh
+                label="Deck"
+                sort-key="deck"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>System</th>
+              <SortableTh
+                label="Card ID"
+                sort-key="card_id"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Name"
+                sort-key="name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="card in visibleCards" :key="card.deck_id + '-' + card.card_id">
+              <td>{{ deckLookup[card.deck_id]?.name ?? card.deck_id }}</td>
+              <td>
+                <span class="data-chip">{{
+                  deckLookup[card.deck_id]?.system_short_name ?? '—'
+                }}</span>
+              </td>
+              <td>{{ card.card_id }}</td>
+              <td>{{ card.name }}</td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    :icon="byPrefixAndName.fas['pen-to-square']"
+                    label="Edit"
+                    @click="openEdit(card)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['trash']"
+                    label="Delete"
+                    intent="danger"
+                    @click="deleteCard(card)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p v-if="visibleCards.length === 0" class="has-text-grey">No special cards found.</p>
+  </AdminListPage>
 
   <!-- Add/Edit Modal -->
   <BaseModal

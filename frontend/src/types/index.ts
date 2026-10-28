@@ -1,82 +1,33 @@
-/** A logged-in user account, as returned by the /user endpoints (no secrets). */
-export interface User {
-  user_id: number
-  email: string
-  display_name: string
-  is_active: boolean
-  is_admin: boolean
-  registered_at: string
-  last_login_at: string | null
-  google_linked: boolean
-  password_login_disabled: boolean
-  has_passkeys: boolean
-}
+import type { components } from './api.generated'
 
-/** A linked-plugin personal access token, as shown in "Connected Apps". */
-export interface PluginToken {
-  id: number
-  label: string
-  scope: string
-  created_at: string
-  last_used_at: string | null
-  expires_at: string | null
-  revoked_at: string | null
-}
+type Schemas = components['schemas']
 
-export interface Deck {
-  deck_id: number
-  deck_system_id: number
-  name: string
-  artist: string
-  purchase_url: string
-  additional_cards: number
-  /** Card slot aspect ratio (width / height components); defaults 5 × 8.6. */
-  card_aspect_w: number
-  card_aspect_h: number
-  approved: boolean
-  usable: boolean
-  submitted_by: number | null
-  /** Deck system short name (populated by JOIN). */
-  system_short_name: string
-  /** Deck system total cards (populated by JOIN). */
-  system_total_cards: number
-}
-
-export interface DeckSystem {
-  deck_system_id: number
-  name: string
-  short_name: string
-  total_cards: number
-  approved: boolean
-  submitted_by: number | null
-}
-
-export interface DeckSystemCard {
-  deck_system_id: number
-  card_id: number
-  name: string
-  keywords: string | null
-  meaning: string | null
-  advice: string | null
-  reversed_keywords: string | null
-  reversed_meaning: string | null
-  reversed_advice: string | null
-}
+/*
+ * Entities the API sends exactly as a backend Structure come from the spec
+ * (`npm run gen:types` regenerates api.generated.ts from backend/openapi.json,
+ * and CI fails if it is stale), so a field added or retyped in PHP reaches the
+ * frontend without a hand copy to update. Payloads a controller assembles itself
+ * (a reading as viewed, the account's reading list, the stats overview) and
+ * client-side shapes are written by hand further down.
+ */
+export type User = Schemas['User']
+export type PluginToken = Schemas['PluginToken']
+export type Deck = Schemas['Deck']
+export type DeckSystem = Schemas['DeckSystem']
+export type DeckSystemCard = Schemas['DeckSystemCard']
+export type SpecialCard = Schemas['SpecialCard']
+export type SpreadPosition = Schemas['SpreadPosition']
+export type Spread = Schemas['Spread']
+export type PendingSpread = Schemas['PendingSpread']
+export type UserSpread = Schemas['UserSpread']
+export type ChangelogEntry = Schemas['ChangelogEntry']
+export type Contact = Schemas['Contact']
+export type CardReportReason = Schemas['CardReportReason']
+export type CardReportSubmission = Schemas['CardReportSubmission']
+export type CardReport = Schemas['CardReport']
 
 export interface DeckSystemWithCards extends DeckSystem {
   cards: DeckSystemCard[]
-}
-
-export interface SpecialCard {
-  deck_id: number
-  card_id: number
-  name: string
-  keywords: string | null
-  meaning: string | null
-  advice: string | null
-  keywords_reversed: string | null
-  meaning_reversed: string | null
-  advice_reversed: string | null
 }
 
 /** A selectable card within a deck (id + display name) for the custom reading picker. */
@@ -85,49 +36,8 @@ export interface DeckCard {
   name: string
 }
 
-export interface SpreadPosition {
-  order: number
-  title: string
-  x: number
-  y: number
-  rotation: number
-}
-
-export interface Spread {
-  spread_id: number
-  name: string
-  description: string
-  card_count: number
-  positions: SpreadPosition[]
-}
-
 /** Snapshot of a spread stored within a saved reading. */
 export type SpreadSnapshot = Pick<Spread, 'spread_id' | 'name' | 'description' | 'positions'>
-
-/** A user-submitted spread awaiting admin approval. */
-export interface PendingSpread {
-  pending_id: number
-  name: string
-  description: string
-  card_count: number
-  positions: SpreadPosition[]
-  /** Resolved submitter label: the account's display name, or "Guest". */
-  submitter: string
-  user_id: number | null
-  submitted_at: string
-}
-
-/** A user's personal/private spread. */
-export interface UserSpread {
-  user_spread_id: number
-  user_id: number
-  name: string
-  description: string
-  card_count: number
-  positions: SpreadPosition[]
-  created_at: string
-  updated_at: string
-}
 
 /** Union type used by the spread selector to display both public and user spreads. */
 export interface SpreadOption {
@@ -140,13 +50,6 @@ export interface SpreadOption {
   positions: SpreadPosition[]
   type: 'public' | 'personal'
   isFavorite?: boolean
-}
-
-export interface ChangelogEntry {
-  entry_id: number
-  title: string
-  body: string
-  entry_date: string
 }
 
 export interface Reading {
@@ -210,46 +113,4 @@ export interface UsageStats {
   topDecks: { deck_id: number; name: string; count: number }[]
   topSpreads: { name: string; count: number }[]
   daily: { date: string; count: number }[]
-}
-
-/** A contact form submission visible in the admin panel. */
-export interface Contact {
-  contact_id: number
-  user_id: number | null
-  name: string
-  email: string
-  message: string
-  is_read: number
-  submitted_at: string
-}
-
-/** What a reporter says is wrong with a card (mirrors the backend CardReportReason enum). */
-export type CardReportReason = 'artefact' | 'cropping' | 'quality' | 'wrong_card' | 'other'
-
-/** One user's report of a card, with the reason they gave (admin panel). */
-export interface CardReportSubmission {
-  submission_id: number
-  report_id: number
-  /** The card's round when this was submitted; compare with CardReport.round. */
-  round: number
-  reason: CardReportReason
-  details: string
-  submitted_at: string
-}
-
-/** A card users have reported as having a problem with its image (admin panel). */
-export interface CardReport {
-  report_id: number
-  deck_id: number
-  deck_name: string
-  card_id: number
-  card_name: string
-  report_count: number
-  resolved_at: string | null
-  first_reported_at: string
-  last_reported_at: string
-  /** Goes up each time the card is reported again after an admin resolved it. */
-  round: number
-  /** Each reason given, newest first. Reports from before reasons existed have none. */
-  submissions: CardReportSubmission[]
 }

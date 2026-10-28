@@ -1,8 +1,8 @@
 import { ref, type Ref } from 'vue'
 import { endpoints } from '@/api/endpoints'
-import { apiRequest } from './apiClient'
+import { apiFetch, apiRequest } from './apiClient'
 import { useToasts } from './useToasts'
-import type { Deck } from '@/types'
+import type { Deck, DeckCard } from '@/types'
 
 const decks: Ref<Deck[]> = ref([])
 const deckLookup: Ref<Record<number, Deck>> = ref({})
@@ -39,5 +39,10 @@ export function useDecks() {
     return inFlight
   }
 
-  return { decks, deckLookup, fetchDecks }
+  /** A deck's cards (id + name) for the custom-reading picker; null when they can't be loaded. */
+  function fetchDeckCards(deckId: number): Promise<DeckCard[] | null> {
+    return apiFetch<DeckCard[]>(endpoints.decks.cards(deckId))
+  }
+
+  return { decks, deckLookup, fetchDecks, fetchDeckCards }
 }

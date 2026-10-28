@@ -159,7 +159,11 @@ regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's served raw 
 served by `ApiDocsController`). `OpenApiSpecTest` fails if the committed spec drifts from
 the attributes — so **after changing a route or a response shape, run `composer docs`
 and commit `openapi.json`** (and `npm run gen:types` for the frontend types). Global
-metadata (info, server, security scheme, tags) lives in `api/Routes/OpenApiSpec.php`.
+metadata (info, server, security scheme, tags, and the shared `SpreadPosition` schema)
+lives in `api/Routes/OpenApiSpec.php`. `composer docs` also runs
+`Routes\RequireStructureProperties`, which marks every property of a `Tarot\Structure`
+schema required (their `jsonSerialize()` always sends all of them); OpenApiSpecTest
+adds the same processor.
 The Scalar bundle is pinned to one version with Subresource Integrity, and `/api/docs`
 sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` on `ApiDocsController`); to
 upgrade, change the version and recompute the sha384 of that exact file.
@@ -213,15 +217,26 @@ little PHP per navigation):
     caller must tell failures apart or show *why* something failed (`useUser` does).
   - `useAdminApi()` — Vue-aware admin wrapper (auto 401→login, toasts errors).
 
-  All paths are relative to `/api`. The backend returns `{ error: '...' }` on
-  failure; `readApiError()`/`messageFromBody()` extract the message. Note
+  All paths are relative to `/api`; build bodies with `sendJson(method, body)` (or
+  `sendForm(params)` for the two form-encoded reading calls). The backend returns
+  `{ error: '...' }` on failure and `ApiResult.error` carries it, with your fallback
+  when there is none — prefer showing it as is to re-wording statuses. Note
   `apiClient.ts` imports nothing local (so `useUser` can use it without an import
   cycle); the Vue-aware `useAdminApi` stays in `useApi.ts`.
-- **Types:** `src/types/index.ts` holds the hand-written API payload types.
-  `src/types/api.generated.ts` is **generated** from `backend/openapi.json` via
-  `npm run gen:types` (openapi-typescript) — never edit it by hand; regenerate it
-  after the backend spec changes. Keep hand-written types in sync with backend
-  `Structure`/controller output when changing a response shape.
+
+  **A raw `fetch(` anywhere else is a lint error** (`tarot/api-client-only` in
+  `eslint.config.ts`). Calls belong in a composable: `useReadings` (generate,
+  custom, get, unlock, draw more, finalize, placement), `useSubmissions` (public
+  deck / deck-system / spread submissions), `useAccount`, `usePasskeys`,
+  `useUserSpreads`, `useDecks`, `useContact`, `useUser`.
+- **Types:** `src/types/api.generated.ts` is **generated** from `backend/openapi.json`
+  via `npm run gen:types` (openapi-typescript) — never edit it by hand; regenerate
+  it after the backend spec changes (CI fails if it's stale). `src/types/index.ts`
+  re-exports every entity the API sends as a backend `Structure` from it (`User`,
+  `Deck`, `Spread`, `CardReport`, …), so a PHP property change reaches the frontend
+  types with no hand copy. Payloads a controller assembles itself (`Reading` as
+  viewed, `AccountReading`, `UsageStats`, …) and client-only shapes are still
+  written by hand there — keep those in sync with the controller output.
 - **Routing/guards:** `src/router/index.ts`. Route `meta` flags drive guards:
   `admin` (requires `is_admin`), `userOnly` (requires login),
   `userGuest` (redirect away if logged in). Page titles come from `meta.title`.
@@ -238,7 +253,15 @@ little PHP per navigation):
   the per-style Pro packages, so there are no CDN requests.
 - **Styling:** Bulma utility classes + CSS custom properties (`--myst-*`) in
   `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own
-  variables). Theme is dark (`data-theme="dark"` on `<html>`).
+  variables). Theme is dark (`data-theme="dark"` on `<html>`). A translucent
+  palette colour is `color-mix(in srgb, var(--myst-gold) 12%, transparent)` —
+  never an `rgba()` copy of the token's channels. Bulma is a modular build
+  (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's
+  variables; a Bulma class that does nothing is probably a module that isn't
+  imported (see that file's header).
+- **Admin list pages** sit in `components/admin/AdminListPage.vue` (column width,
+  back-to-dashboard link, `PageHeader` with an `#actions` slot) and use
+  `AdminSearchField` for the search box; the view keeps its own tables.
 - **Interactive UI (Reka UI):** dialogs, menus, popovers, tooltips, comboboxes,
   selects, switches, segmented controls, number fields, disclosures, pagination,
   and toasts are Reka UI headless primitives wrapped in shared components

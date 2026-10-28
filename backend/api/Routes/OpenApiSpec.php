@@ -64,6 +64,21 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Admin · Users', description: 'Account administration.')]
 #[OA\Tag(name: 'Admin · Contacts', description: 'Submitted contact messages.')]
 #[OA\Tag(name: 'Admin · Card Reports', description: 'Cards users have reported, with the reasons they gave.')]
+// A spread's card slot. It has no Structure of its own (positions are stored as
+// JSON on the spread), so it is declared here, in the shape
+// Tarot\Data\NormalizesPositions stores: x/y are percentages of the canvas.
+#[OA\Schema(
+    schema: 'SpreadPosition',
+    description: 'One card slot in a spread layout.',
+    required: ['order', 'title', 'x', 'y', 'rotation'],
+    properties: [
+        new OA\Property(property: 'order', description: '1-based: the nth card drawn goes here.', type: 'integer'),
+        new OA\Property(property: 'title', description: 'The slot\'s label, e.g. "Past".', type: 'string', maxLength: 100),
+        new OA\Property(property: 'x', description: 'Card centre, % of the canvas width.', type: 'number', maximum: 100, minimum: 0),
+        new OA\Property(property: 'y', description: 'Card centre, % of the canvas height.', type: 'number', maximum: 100, minimum: 0),
+        new OA\Property(property: 'rotation', description: 'Degrees, 0–359.', type: 'integer', maximum: 359, minimum: 0),
+    ]
+)]
 final class OpenApiSpec
 {
 }

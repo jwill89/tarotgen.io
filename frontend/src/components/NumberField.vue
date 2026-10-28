@@ -58,7 +58,7 @@ withDefaults(
 }
 .myst-number:focus-within {
   border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .myst-number[data-disabled] {
   opacity: 0.55;
@@ -116,7 +116,7 @@ withDefaults(
 .myst-number__btn:focus-visible {
   outline: none;
   color: var(--myst-gold-bright);
-  box-shadow: inset 0 0 0 2px rgba(201, 162, 75, 0.4);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--myst-gold) 40%, transparent);
 }
 .myst-number__btn[data-disabled] {
   opacity: 0.4;

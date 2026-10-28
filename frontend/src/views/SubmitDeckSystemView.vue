@@ -11,11 +11,12 @@ import {
   type DeckCardListEditorApi,
 } from '@/components/deckCards'
 import { useUser } from '@/composables/useUser'
+import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
-import { endpoints } from '@/api/endpoints'
 import type { DeckSystemCard } from '@/types'
 
 const { isLoggedIn } = useUser()
+const { submitDeckSystem } = useSubmissions()
 const toasts = useToasts()
 
 const name = ref('')
@@ -55,29 +56,19 @@ async function submitSystem() {
   }
 
   submitting.value = true
-  try {
-    const res = await fetch('/api' + endpoints.deckSystems.list, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: name.value.trim(),
-        short_name: shortName.value.trim(),
-        total_cards: totalCards.value,
-        cards: cards.value,
-      }),
-    })
+  const res = await submitDeckSystem({
+    name: name.value.trim(),
+    short_name: shortName.value.trim(),
+    total_cards: totalCards.value,
+    cards: cards.value,
+  })
+  submitting.value = false
 
-    if (res.ok) {
-      submitted.value = true
-      toasts.success('Deck system submitted successfully!')
-    } else {
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      errorMsg.value = data.error || 'Failed to submit deck system. Please try again.'
-    }
-  } catch {
-    errorMsg.value = 'Network error. Please check your connection and try again.'
-  } finally {
-    submitting.value = false
+  if (res.ok) {
+    submitted.value = true
+    toasts.success('Deck system submitted successfully!')
+  } else {
+    errorMsg.value = res.error
   }
 }
 </script>

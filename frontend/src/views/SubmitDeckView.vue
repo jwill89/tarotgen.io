@@ -4,11 +4,14 @@ import PageHeader from '@/components/PageHeader.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import { ref, computed, onMounted } from 'vue'
 import { useUser } from '@/composables/useUser'
+import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
+import { apiFetch } from '@/composables/apiClient'
 import { endpoints } from '@/api/endpoints'
 import type { DeckSystem } from '@/types'
 
 const { isLoggedIn } = useUser()
+const { submitDeck: sendDeck } = useSubmissions()
 const toasts = useToasts()
 
 const name = ref('')
@@ -29,17 +32,15 @@ const deckSystemOptions = computed(() =>
 )
 
 async function fetchDeckSystems() {
-  try {
-    const res = await fetch('/api' + endpoints.deckSystems.list)
-    if (res.ok) {
-      deckSystems.value = await res.json()
-      if (deckSystems.value.length > 0 && deckSystemId.value === null) {
-        const rws = deckSystems.value.find((s) => s.short_name === 'RWS')
-        deckSystemId.value = rws ? rws.deck_system_id : deckSystems.value[0].deck_system_id
-      }
-    }
-  } catch {
-    // Silently fail
+  const systems = await apiFetch<DeckSystem[]>(endpoints.deckSystems.list)
+  if (!systems) {
+    errorMsg.value = "Couldn't load the deck systems. Please reload the page."
+    return
+  }
+  deckSystems.value = systems
+  if (systems.length > 0 && deckSystemId.value === null) {
+    const rws = systems.find((s) => s.short_name === 'RWS')
+    deckSystemId.value = rws ? rws.deck_system_id : systems[0].deck_system_id
   }
 }
 
@@ -59,30 +60,20 @@ async function submitDeck() {
   }
 
   submitting.value = true
-  try {
-    const res = await fetch('/api' + endpoints.decks.list, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name: name.value.trim(),
-        artist: artist.value.trim(),
-        purchase_url: purchaseUrl.value.trim(),
-        deck_system_id: deckSystemId.value,
-        additional_cards: additionalCards.value,
-      }),
-    })
+  const res = await sendDeck({
+    name: name.value.trim(),
+    artist: artist.value.trim(),
+    purchase_url: purchaseUrl.value.trim(),
+    deck_system_id: deckSystemId.value,
+    additional_cards: additionalCards.value,
+  })
+  submitting.value = false
 
-    if (res.ok) {
-      submitted.value = true
-      toasts.success('Deck submitted! It will be reviewed by an admin.')
-    } else {
-      const data = (await res.json().catch(() => ({}))) as { error?: string }
-      errorMsg.value = data.error || 'Failed to submit deck. Please try again.'
-    }
-  } catch {
-    errorMsg.value = 'Network error. Please check your connection and try again.'
-  } finally {
-    submitting.value = false
+  if (res.ok) {
+    submitted.value = true
+    toasts.success('Deck submitted! It will be reviewed by an admin.')
+  } else {
+    errorMsg.value = res.error
   }
 }
 </script>

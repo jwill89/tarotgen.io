@@ -1,7 +1,7 @@
 import { ref, computed, watch } from 'vue'
 import { session } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
-import { apiRequest } from './apiClient'
+import { apiRequest, sendJson } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 import type { User } from '@/types'
 
@@ -23,13 +23,6 @@ watch(
   },
   { deep: true },
 )
-
-const JSON_HEADERS = { 'Content-Type': 'application/json' }
-
-/** Build the options for a JSON POST. */
-function jsonPost(body: unknown): RequestInit {
-  return { method: 'POST', headers: JSON_HEADERS, body: JSON.stringify(body) }
-}
 
 export interface RegisterResult {
   ok: boolean
@@ -74,7 +67,7 @@ export function useUser() {
   ): Promise<RegisterResult> {
     const res = await apiRequest<RegisterResponse>(
       endpoints.auth.register,
-      jsonPost({ email, display_name: displayName, password }),
+      sendJson('POST', { email, display_name: displayName, password }),
       'Registration failed.',
     )
 
@@ -97,7 +90,7 @@ export function useUser() {
   ): Promise<{ ok: boolean; message?: string; error?: string }> {
     const res = await apiRequest<MessageResponse>(
       endpoints.auth.activate,
-      jsonPost({ token }),
+      sendJson('POST', { token }),
       'Activation failed.',
     )
     return res.ok
@@ -110,7 +103,7 @@ export function useUser() {
   ): Promise<{ ok: boolean; message?: string; resetLink?: string }> {
     const res = await apiRequest<ForgotResponse>(
       endpoints.auth.forgotPassword,
-      jsonPost({ email }),
+      sendJson('POST', { email }),
       'Request failed.',
     )
     return res.ok
@@ -128,7 +121,7 @@ export function useUser() {
   ): Promise<{ ok: boolean; message?: string; error?: string }> {
     const res = await apiRequest<MessageResponse>(
       endpoints.auth.resetPassword,
-      jsonPost({ token, password }),
+      sendJson('POST', { token, password }),
       'Reset failed.',
     )
     return res.ok
@@ -144,7 +137,12 @@ export function useUser() {
   ): Promise<{ ok: boolean; error?: string }> {
     const res = await apiRequest<LoginResponse>(
       endpoints.auth.login,
-      jsonPost({ email, password, remember_me: rememberMe, turnstile_token: turnstileToken }),
+      sendJson('POST', {
+        email,
+        password,
+        remember_me: rememberMe,
+        turnstile_token: turnstileToken,
+      }),
       'Login failed.',
     )
 

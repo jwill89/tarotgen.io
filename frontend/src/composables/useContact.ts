@@ -1,5 +1,5 @@
 import { endpoints } from '@/api/endpoints'
-import { apiRequest } from './apiClient'
+import { apiRequest, sendJson } from './apiClient'
 
 export interface ContactMessage {
   name: string
@@ -22,15 +22,11 @@ export function useContact() {
   async function sendMessage(msg: ContactMessage): Promise<ContactResult> {
     const res = await apiRequest(
       endpoints.contacts,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: msg.name.trim(),
-          email: msg.email.trim(),
-          message: msg.message.trim(),
-        }),
-      },
+      sendJson('POST', {
+        name: msg.name.trim(),
+        email: msg.email.trim(),
+        message: msg.message.trim(),
+      }),
       SEND_FAILED,
     )
 

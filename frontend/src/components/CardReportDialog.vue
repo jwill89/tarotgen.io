@@ -233,12 +233,12 @@ async function submit(): Promise<void> {
 
 .report-reason:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 .report-reason[data-state='checked'] {
   border-color: var(--myst-hair-gold);
-  background: rgba(201, 162, 75, 0.07);
+  background: color-mix(in srgb, var(--myst-gold) 7%, transparent);
 }
 
 /* Optically centred on the label's first line. */

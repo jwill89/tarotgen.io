@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
@@ -8,7 +10,6 @@ import { useDataTable } from '@/composables/useDataTable'
 import { useToasts } from '@/composables/useToasts'
 import BaseModal from '@/components/BaseModal.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import NumberField from '@/components/NumberField.vue'
@@ -198,200 +199,175 @@ onMounted(() => {
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage title="Manage Decks" subtitle="Add, edit, or remove tarot decks.">
+    <template #actions>
+      <button
+        class="button is-link"
+        :class="{ 'is-loading': generatingAll }"
+        @click="generateAllImages"
+      >
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
+        <span>Generate All Web Images</span>
+      </button>
+      <button class="button is-primary" @click="openAdd">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
+        <span>Add Deck</span>
+      </button>
+    </template>
 
-          <PageHeader title="Manage Decks" subtitle="Add, edit, or remove tarot decks.">
-            <button
-              class="button is-link"
-              :class="{ 'is-loading': generatingAll }"
-              @click="generateAllImages"
-            >
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
-              <span>Generate All Web Images</span>
-            </button>
-            <button class="button is-primary" @click="openAdd">
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
-              <span>Add Deck</span>
-            </button>
-          </PageHeader>
-
-          <!-- Submitted (Pending) Decks -->
-          <div v-if="pendingDecks.length > 0" class="mb-6">
-            <h2 class="title is-4">
-              Submitted Decks <span class="tag is-warning ml-2">{{ pendingDecks.length }}</span>
-            </h2>
-            <p class="subtitle is-6">Decks submitted by users, awaiting approval.</p>
-            <div class="settings-panel">
-              <div class="table-container">
-                <table class="table is-fullwidth is-hoverable is-striped">
-                  <thead>
-                    <tr>
-                      <th>ID</th>
-                      <th>Name</th>
-                      <th>Artist</th>
-                      <th>System</th>
-                      <th>Submitted By</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr v-for="deck in pendingDecks" :key="deck.deck_id">
-                      <td>{{ deck.deck_id }}</td>
-                      <td>{{ deck.name }}</td>
-                      <td>{{ deck.artist }}</td>
-                      <td>{{ deck.system_short_name || systemName(deck.deck_system_id) }}</td>
-                      <td>{{ deck.submitted_by ?? '—' }}</td>
-                      <td>
-                        <div class="row-actions">
-                          <IconButton
-                            :icon="byPrefixAndName.fas['check']"
-                            label="Approve"
-                            intent="success"
-                            @click="approveDeck(deck)"
-                          />
-                          <IconButton
-                            :icon="byPrefixAndName.fas['pen-to-square']"
-                            label="Edit"
-                            @click="openEdit(deck)"
-                          />
-                          <IconButton
-                            :icon="byPrefixAndName.fas['trash']"
-                            label="Delete"
-                            intent="danger"
-                            @click="deleteDeck(deck)"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-
-          <!-- Approved Decks -->
-          <h2 class="title is-4">Approved Decks</h2>
-
-          <div class="field">
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search decks by name, artist, or ID..."
-              />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
-            </div>
-          </div>
-
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped">
-                <thead>
-                  <tr>
-                    <SortableTh
-                      label="ID"
-                      sort-key="deck_id"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
+    <!-- Submitted (Pending) Decks -->
+    <div v-if="pendingDecks.length > 0" class="mb-6">
+      <h2 class="title is-4">
+        Submitted Decks <span class="tag is-warning ml-2">{{ pendingDecks.length }}</span>
+      </h2>
+      <p class="subtitle is-6">Decks submitted by users, awaiting approval.</p>
+      <div class="settings-panel">
+        <div class="table-container">
+          <table class="table is-fullwidth is-hoverable is-striped">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Artist</th>
+                <th>System</th>
+                <th>Submitted By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="deck in pendingDecks" :key="deck.deck_id">
+                <td>{{ deck.deck_id }}</td>
+                <td>{{ deck.name }}</td>
+                <td>{{ deck.artist }}</td>
+                <td>{{ deck.system_short_name || systemName(deck.deck_system_id) }}</td>
+                <td>{{ deck.submitted_by ?? '—' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <IconButton
+                      :icon="byPrefixAndName.fas['check']"
+                      label="Approve"
+                      intent="success"
+                      @click="approveDeck(deck)"
                     />
-                    <SortableTh
-                      label="Name"
-                      sort-key="name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
+                    <IconButton
+                      :icon="byPrefixAndName.fas['pen-to-square']"
+                      label="Edit"
+                      @click="openEdit(deck)"
                     />
-                    <SortableTh
-                      label="Artist"
-                      sort-key="artist"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
+                    <IconButton
+                      :icon="byPrefixAndName.fas['trash']"
+                      label="Delete"
+                      intent="danger"
+                      @click="deleteDeck(deck)"
                     />
-                    <th>System</th>
-                    <SortableTh
-                      label="Cards"
-                      sort-key="total_cards"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="deck in visibleDecks" :key="deck.deck_id">
-                    <td>{{ deck.deck_id }}</td>
-                    <td>{{ deck.name }}</td>
-                    <td>{{ deck.artist }}</td>
-                    <td>
-                      <Tooltip :text="systemFullName(deck.deck_system_id)">
-                        <span class="data-chip">{{
-                          deck.system_short_name || systemName(deck.deck_system_id)
-                        }}</span>
-                      </Tooltip>
-                    </td>
-                    <td>
-                      {{ deck.system_total_cards
-                      }}{{ deck.additional_cards ? ' + ' + deck.additional_cards : '' }}
-                    </td>
-                    <td>
-                      <span v-if="deck.usable" class="status-tag is-on">Usable</span>
-                      <span v-else class="status-tag is-off">Not usable</span>
-                    </td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          :icon="
-                            deck.usable
-                              ? byPrefixAndName.fas['eye-slash']
-                              : byPrefixAndName.fas['eye']
-                          "
-                          :label="deck.usable ? 'Mark as not usable' : 'Mark as usable'"
-                          :intent="deck.usable ? 'warning' : 'success'"
-                          @click="toggleUsable(deck)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['pen-to-square']"
-                          label="Edit"
-                          @click="openEdit(deck)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['images']"
-                          label="Generate web images"
-                          intent="gold"
-                          :loading="imagesBusyId === deck.deck_id"
-                          @click="generateImages(deck)"
-                        />
-                        <IconButton
-                          :icon="byPrefixAndName.fas['trash']"
-                          label="Delete"
-                          intent="danger"
-                          @click="deleteDeck(deck)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
-  </section>
+
+    <!-- Approved Decks -->
+    <h2 class="title is-4">Approved Decks</h2>
+
+    <AdminSearchField v-model="search" placeholder="Search decks by name, artist, or ID..." />
+
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped">
+          <thead>
+            <tr>
+              <SortableTh
+                label="ID"
+                sort-key="deck_id"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Name"
+                sort-key="name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Artist"
+                sort-key="artist"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>System</th>
+              <SortableTh
+                label="Cards"
+                sort-key="total_cards"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="deck in visibleDecks" :key="deck.deck_id">
+              <td>{{ deck.deck_id }}</td>
+              <td>{{ deck.name }}</td>
+              <td>{{ deck.artist }}</td>
+              <td>
+                <Tooltip :text="systemFullName(deck.deck_system_id)">
+                  <span class="data-chip">{{
+                    deck.system_short_name || systemName(deck.deck_system_id)
+                  }}</span>
+                </Tooltip>
+              </td>
+              <td>
+                {{ deck.system_total_cards
+                }}{{ deck.additional_cards ? ' + ' + deck.additional_cards : '' }}
+              </td>
+              <td>
+                <span v-if="deck.usable" class="status-tag is-on">Usable</span>
+                <span v-else class="status-tag is-off">Not usable</span>
+              </td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    :icon="
+                      deck.usable ? byPrefixAndName.fas['eye-slash'] : byPrefixAndName.fas['eye']
+                    "
+                    :label="deck.usable ? 'Mark as not usable' : 'Mark as usable'"
+                    :intent="deck.usable ? 'warning' : 'success'"
+                    @click="toggleUsable(deck)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['pen-to-square']"
+                    label="Edit"
+                    @click="openEdit(deck)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['images']"
+                    label="Generate web images"
+                    intent="gold"
+                    :loading="imagesBusyId === deck.deck_id"
+                    @click="generateImages(deck)"
+                  />
+                  <IconButton
+                    :icon="byPrefixAndName.fas['trash']"
+                    label="Delete"
+                    intent="danger"
+                    @click="deleteDeck(deck)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </AdminListPage>
 
   <!-- Add/Edit Modal -->
   <BaseModal

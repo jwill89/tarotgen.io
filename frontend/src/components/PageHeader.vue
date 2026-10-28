@@ -64,7 +64,7 @@ defineProps<{
     90deg,
     var(--myst-gold) 0%,
     var(--myst-gold) 30%,
-    rgba(201, 162, 75, 0.5) 62%,
+    color-mix(in srgb, var(--myst-gold) 50%, transparent) 62%,
     transparent 100%
   );
 }

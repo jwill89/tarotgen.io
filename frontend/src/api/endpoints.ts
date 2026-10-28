@@ -13,9 +13,8 @@
  *    INCLUDING `/admin` where applicable (e.g. `/readings/generate`,
  *    `/auth/login`). Use these with:
  *      - `apiFetch` / `apiRequest`     → pass the value directly (the client
- *                                         prepends `/api` for you).
- *      - raw `fetch(...)`              → prepend `/api` yourself:
- *                                         `fetch('/api' + endpoints.xxx)`.
+ *                                         prepends `/api` for you). A raw
+ *                                         `fetch(...)` is a lint error.
  *      - `window.location.href = ...`  → prepend `/api` (OAuth redirects).
  *
  * 2. `endpoints.admin.*` — the path relative to `/api/admin` (e.g. `/decks`,

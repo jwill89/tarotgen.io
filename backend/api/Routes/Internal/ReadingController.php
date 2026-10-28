@@ -257,7 +257,7 @@ class ReadingController extends AbstractController
             content: new OA\JsonContent(
                 required: ['positions'],
                 properties: [
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
                     new OA\Property(property: 'spread_name', type: 'string'),
                 ]
             )

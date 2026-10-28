@@ -207,7 +207,7 @@ async function copyRepoUrl(): Promise<void> {
   background: linear-gradient(
     90deg,
     var(--myst-hair-gold) 0%,
-    rgba(201, 162, 75, 0.15) 55%,
+    color-mix(in srgb, var(--myst-gold) 15%, transparent) 55%,
     transparent 100%
   );
 }

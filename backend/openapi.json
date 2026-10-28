@@ -370,7 +370,7 @@
                                     "positions": {
                                         "type": "array",
                                         "items": {
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/SpreadPosition"
                                         }
                                     }
                                 },
@@ -735,13 +735,376 @@
                 ]
             }
         },
+        "/admin/card-reports": {
+            "get": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "List reported cards with their reasons (open first; pass ?show_resolved=1 for all)",
+                "operationId": "6e0c556fc66e7c4b7beca2037b5a2211",
+                "parameters": [
+                    {
+                        "name": "show_resolved",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of card reports",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/CardReport"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/card-reports/{report_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "Mark a card report resolved / reopened",
+                "operationId": "aca620abc6a0ca6158ff8d80669f3b2a",
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "resolved": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/changelog": {
+            "get": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "List all changelog entries",
+                "operationId": "7d7f486fcabcec3e810fb64934dec6e6",
+                "responses": {
+                    "200": {
+                        "description": "Array of changelog entries",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ChangelogEntry"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Create a changelog entry",
+                "operationId": "4eaeb8f6c930f755bd6b36858dbb4fc7",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "title"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created changelog entry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChangelogEntry"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create changelog entry"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/changelog/{entry_id}": {
+            "put": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Update a changelog entry",
+                "operationId": "b582f34acfcf9dc67374021d8b8aac31",
+                "parameters": [
+                    {
+                        "name": "entry_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "title": {
+                                        "type": "string"
+                                    },
+                                    "body": {
+                                        "type": "string"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated changelog entry",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ChangelogEntry"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Changelog entry not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Changelog"
+                ],
+                "summary": "Delete a changelog entry",
+                "operationId": "396a17e5e338c91c5907ba8d0b3eced4",
+                "parameters": [
+                    {
+                        "name": "entry_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/contacts": {
+            "get": {
+                "tags": [
+                    "Admin · Contacts"
+                ],
+                "summary": "List submitted contact messages",
+                "operationId": "eef9538e7e3898dcfab09dc289df7c83",
+                "parameters": [
+                    {
+                        "name": "show_read",
+                        "in": "query",
+                        "description": "Set to \"1\" to include already-read messages",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "0",
+                                "1"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Array of contacts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Contact"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/contacts/{contact_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Contacts"
+                ],
+                "summary": "Partially update a contact message",
+                "description": "Partial update of a contact message. Currently the only editable field is\nthe `is_read` flag (previously the dedicated POST …/read action).",
+                "operationId": "27b7c177d701145299a73bc3fbf3c122",
+                "parameters": [
+                    {
+                        "name": "contact_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "is_read": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid contact ID"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/admin/stats": {
             "get": {
                 "tags": [
                     "Admin · Dashboard"
                 ],
                 "summary": "Usage statistics",
-                "operationId": "564908295a8037f98024862589d858d2",
+                "operationId": "3f2bc50e21648c3797f12aaad373927b",
                 "responses": {
                     "200": {
                         "description": "Usage statistics",
@@ -768,7 +1131,7 @@
                 ],
                 "summary": "Dashboard counts + stats",
                 "description": "One-shot dashboard payload: entity counts (cheap COUNT(*) queries) plus the\nusage stats overview — so the dashboard loads with a single request.",
-                "operationId": "6bdc81aacff8514be8da0e7db3684755",
+                "operationId": "256deec34ea1c936c21e112f82d961de",
                 "responses": {
                     "200": {
                         "description": "Dashboard counts + stats",
@@ -794,7 +1157,7 @@
                     "Admin · Dashboard"
                 ],
                 "summary": "Verify the admin session",
-                "operationId": "eaf153d9a18290f970305d4b73952233",
+                "operationId": "e52148b0b360f8626366cc3bf1aeab78",
                 "responses": {
                     "200": {
                         "description": "Admin session is valid"
@@ -813,7 +1176,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "List all approved decks",
-                "operationId": "c83fae3240884db64da34d8e9cf31946",
+                "operationId": "2f7295154cece420116d5ccaad3a19cd",
                 "responses": {
                     "200": {
                         "description": "Array of decks",
@@ -840,7 +1203,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Create a deck",
-                "operationId": "728d1da9a243acef05d922e937a5e1c3",
+                "operationId": "de0845c214823b930ea47d45dbc5dfc0",
                 "requestBody": {
                     "required": true,
                     "content": {
@@ -899,7 +1262,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "List decks awaiting approval",
-                "operationId": "e980978d904bf888f10d25839a8490c1",
+                "operationId": "9ec94e2bffce4c1db50a57712635feef",
                 "responses": {
                     "200": {
                         "description": "Array of pending decks",
@@ -928,7 +1291,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Approve a pending deck",
-                "operationId": "9d2c5430d3b9c94e310a0cfa96f2493b",
+                "operationId": "465a97db21b84ad7a13ac4bcf7c72916",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -967,7 +1330,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Generate missing or stale web images (display WebP + thumbnail) for a deck",
-                "operationId": "db77b928753550089034abbdd42a8004",
+                "operationId": "b0192ee1caf0072c74615f0fe93f11fa",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1020,7 +1383,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Generate missing or stale web images for all decks",
-                "operationId": "81bd8d0d326c79305144f6102f47ca88",
+                "operationId": "b3b3dff2f559f731b3614ca3dc57273a",
                 "responses": {
                     "200": {
                         "description": "Per-card totals across decks: generated, skipped (already current), failed",
@@ -1060,7 +1423,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Delete a deck",
-                "operationId": "4c8136b9b48d42032d27f875751e9440",
+                "operationId": "9f94e20d57ab652eaf81e54730ea4172",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1090,7 +1453,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Partially update a deck",
-                "operationId": "ab525eb2a3711e22471e1c59424a3e43",
+                "operationId": "4bdc6a28cb2f94ef001f1ee46851cf50",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1151,7 +1514,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "List a deck's special cards",
-                "operationId": "a45eaf2d7ac519112f22a2ed3bdba167",
+                "operationId": "93ee4271f079631c8c3e65bf3c836623",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1188,7 +1551,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Add a special card to a deck",
-                "operationId": "d77766c800e30b26b89c34f2c338967f",
+                "operationId": "fb2158382dd7bc35fabf5c06d1ff1dca",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1248,7 +1611,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Update a special card",
-                "operationId": "97e1632326a8023eacc56141af719117",
+                "operationId": "cb7e66d7ba07034011c1b6f69b226aeb",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1308,7 +1671,7 @@
                     "Admin · Decks"
                 ],
                 "summary": "Delete a special card",
-                "operationId": "bcfc1b17250534379b5cf4dae1a20ade",
+                "operationId": "5d6b97cc98eafcbf9ce16f1cd449b0ef",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -1342,971 +1705,13 @@
                 ]
             }
         },
-        "/admin/spreads": {
-            "get": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "List all public spreads",
-                "operationId": "29bc23aeb92d01a27e93bc5910402b4b",
-                "responses": {
-                    "200": {
-                        "description": "Array of spreads",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Spread"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "Create a public spread",
-                "operationId": "d5e4220b8f0d3496598708944c8561f7",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "positions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Created spread",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Spread"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create spread"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/spreads/{spread_id}": {
-            "put": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "Update a public spread",
-                "operationId": "901464b751af0be1d7bd0bcfafbeba06",
-                "parameters": [
-                    {
-                        "name": "spread_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "positions": {
-                                        "type": "array",
-                                        "items": {
-                                            "type": "object"
-                                        }
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated spread",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Spread"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Spread not found or no valid fields"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "Delete a public spread",
-                "operationId": "ab089dbb64f24606cc78b790c2a791a9",
-                "parameters": [
-                    {
-                        "name": "spread_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/pending-spreads": {
-            "get": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "List pending spread submissions",
-                "operationId": "2895eca3438911f3fc425b5a4902e524",
-                "responses": {
-                    "200": {
-                        "description": "Pending spread submissions",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/pending-spreads/{pending_id}/approve": {
-            "post": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "Approve a pending spread submission",
-                "operationId": "0a0af8c29cdc8bd35ccfbd611a6be954",
-                "parameters": [
-                    {
-                        "name": "pending_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "201": {
-                        "description": "Approved spread",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Spread"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to approve spread"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/pending-spreads/{pending_id}": {
-            "delete": {
-                "tags": [
-                    "Admin · Spreads"
-                ],
-                "summary": "Reject a pending spread submission",
-                "operationId": "e41c7ee10ef064de515a00e869bb6e50",
-                "parameters": [
-                    {
-                        "name": "pending_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Rejected"
-                    },
-                    "500": {
-                        "description": "Failed to reject spread"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/changelog": {
-            "get": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "List all changelog entries",
-                "operationId": "0757fbeac3b799a788522ce6e9b09f25",
-                "responses": {
-                    "200": {
-                        "description": "Array of changelog entries",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/ChangelogEntry"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Create a changelog entry",
-                "operationId": "6e9f0a5446d11c32eab08f177e1619a8",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "title"
-                                ],
-                                "properties": {
-                                    "title": {
-                                        "type": "string"
-                                    },
-                                    "body": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "Created changelog entry",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChangelogEntry"
-                                }
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Failed to create changelog entry"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/changelog/{entry_id}": {
-            "put": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Update a changelog entry",
-                "operationId": "9bcd6e838f9130f77f5719876ce31f66",
-                "parameters": [
-                    {
-                        "name": "entry_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "title": {
-                                        "type": "string"
-                                    },
-                                    "body": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated changelog entry",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChangelogEntry"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Changelog entry not found or no valid fields"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Delete a changelog entry",
-                "operationId": "1eb64d0db94b4934c1a9ca7fe126de12",
-                "parameters": [
-                    {
-                        "name": "entry_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/users": {
-            "get": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "List all user accounts",
-                "operationId": "cdea4e075c6c798dde424a3e4a759589",
-                "responses": {
-                    "200": {
-                        "description": "Array of users",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/User"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/users/{user_id}/activate": {
-            "post": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "Activate a user account",
-                "operationId": "4216f498546950d5001341d596a66b43",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Activated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "User not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/users/{user_id}": {
-            "delete": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "Delete a user account",
-                "operationId": "5aa20650a21fca3d5ad0bacb93eca0e5",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    },
-                    "404": {
-                        "description": "User not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "patch": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "Partially update a user account",
-                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
-                "operationId": "1ef503cc872e0d9800bd34f8a842043e",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "is_admin": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated user",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/User"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "User not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/users/{user_id}/resend-activation": {
-            "post": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "Resend a user activation email",
-                "operationId": "b05396913af62a2069929bee0ccf151e",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Activation resent",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Could not resend activation"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/contacts": {
-            "get": {
-                "tags": [
-                    "Admin · Contacts"
-                ],
-                "summary": "List submitted contact messages",
-                "operationId": "86b2ef376508d0f3371743442a3e7c14",
-                "parameters": [
-                    {
-                        "name": "show_read",
-                        "in": "query",
-                        "description": "Set to \"1\" to include already-read messages",
-                        "required": false,
-                        "schema": {
-                            "type": "string",
-                            "enum": [
-                                "0",
-                                "1"
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Array of contacts",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/Contact"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/contacts/{contact_id}": {
-            "patch": {
-                "tags": [
-                    "Admin · Contacts"
-                ],
-                "summary": "Partially update a contact message",
-                "description": "Partial update of a contact message. Currently the only editable field is\nthe `is_read` flag (previously the dedicated POST …/read action).",
-                "operationId": "669cf3fd1c418c672661ad1e5665be88",
-                "parameters": [
-                    {
-                        "name": "contact_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "is_read": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid contact ID"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/card-reports": {
-            "get": {
-                "tags": [
-                    "Admin · Card Reports"
-                ],
-                "summary": "List reported cards with their reasons (open first; pass ?show_resolved=1 for all)",
-                "operationId": "47c6f9a250e71454f6aa7b427865ff1e",
-                "parameters": [
-                    {
-                        "name": "show_resolved",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Array of card reports",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/CardReport"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/card-reports/{report_id}": {
-            "patch": {
-                "tags": [
-                    "Admin · Card Reports"
-                ],
-                "summary": "Mark a card report resolved / reopened",
-                "operationId": "037d49bac3021d8eae5c8d48a210bb17",
-                "parameters": [
-                    {
-                        "name": "report_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "resolved": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "success": {
-                                            "type": "boolean"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid report ID"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/readings": {
-            "get": {
-                "tags": [
-                    "Admin · Readings"
-                ],
-                "summary": "List readings (paginated)",
-                "operationId": "35423e051e7b9c0f5b0a7bf063c8a467",
-                "parameters": [
-                    {
-                        "name": "limit",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    },
-                    {
-                        "name": "offset",
-                        "in": "query",
-                        "required": false,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Paginated readings",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/readings/{reading_id}": {
-            "delete": {
-                "tags": [
-                    "Admin · Readings"
-                ],
-                "summary": "Delete a single reading",
-                "operationId": "48bda4292e30898944c6415da0fe7eb3",
-                "parameters": [
-                    {
-                        "name": "reading_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    },
-                    "404": {
-                        "description": "Reading not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/readings/all": {
-            "delete": {
-                "tags": [
-                    "Admin · Readings"
-                ],
-                "summary": "Purge guest readings older than a given age",
-                "description": "Bulk delete: purge guest readings older than the given age. The window is\nan allow-listed number of days passed as the `older_than_days` query param.",
-                "operationId": "8b280a4dd7b0681169fb771ad4a4808c",
-                "parameters": [
-                    {
-                        "name": "older_than_days",
-                        "in": "query",
-                        "description": "Allow-listed retention window in days",
-                        "required": true,
-                        "schema": {
-                            "type": "integer",
-                            "enum": [
-                                7,
-                                14,
-                                30,
-                                60,
-                                90,
-                                180,
-                                365
-                            ]
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Number of deleted readings",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "deleted": {
-                                            "type": "integer"
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Invalid day range"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
         "/admin/deck-systems": {
             "get": {
                 "tags": [
                     "Admin · Deck Systems"
                 ],
                 "summary": "List all approved deck systems",
-                "operationId": "5372c3f2201596bfed8d42a49a826eb4",
+                "operationId": "1b397ce811d76b1c0d895c851f4265a4",
                 "responses": {
                     "200": {
                         "description": "Array of deck systems",
@@ -2335,7 +1740,7 @@
                     "Admin · Deck Systems"
                 ],
                 "summary": "List deck systems awaiting approval",
-                "operationId": "e0094b772a5746f947cb919f018990db",
+                "operationId": "f01ab42e393a54fefe6066fefd316307",
                 "responses": {
                     "200": {
                         "description": "Array of pending deck systems",
@@ -2364,7 +1769,7 @@
                     "Admin · Deck Systems"
                 ],
                 "summary": "Get a single deck system with its cards",
-                "operationId": "084845af38d9f1ae0b44d21bd4c0874d",
+                "operationId": "5419bb32a3c73df9bf97b606267507bd",
                 "parameters": [
                     {
                         "name": "id",
@@ -2401,7 +1806,7 @@
                     "Admin · Deck Systems"
                 ],
                 "summary": "Update a deck system and its cards",
-                "operationId": "b0ac6a3c1f1eb92be7294d1a3e59b5eb",
+                "operationId": "5d182ff6cf51641633b25a5c93cf5e83",
                 "parameters": [
                     {
                         "name": "id",
@@ -2465,7 +1870,7 @@
                     "Admin · Deck Systems"
                 ],
                 "summary": "Delete a deck system",
-                "operationId": "71104af0988b8d21fbbe29b0aa69ac87",
+                "operationId": "9c4242e0baf6dc468f8045272a13c445",
                 "parameters": [
                     {
                         "name": "id",
@@ -2497,7 +1902,7 @@
                     "Admin · Deck Systems"
                 ],
                 "summary": "Approve a pending deck system",
-                "operationId": "d34ce25954ce6ae467918b54163ab929",
+                "operationId": "329855c57333235a38e922fb0962d170",
                 "parameters": [
                     {
                         "name": "id",
@@ -2521,6 +1926,601 @@
                     },
                     "404": {
                         "description": "Deck system not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings": {
+            "get": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "List readings (paginated)",
+                "operationId": "9e0bb3a981e8ca6879d80533c99ad472",
+                "parameters": [
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated readings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings/{reading_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "Delete a single reading",
+                "operationId": "050a05baa3ec2d177b7b0a1cf941768c",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "Reading not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/readings/all": {
+            "delete": {
+                "tags": [
+                    "Admin · Readings"
+                ],
+                "summary": "Purge guest readings older than a given age",
+                "description": "Bulk delete: purge guest readings older than the given age. The window is\nan allow-listed number of days passed as the `older_than_days` query param.",
+                "operationId": "2fb51741383f5cd8552779ce6b6f95e7",
+                "parameters": [
+                    {
+                        "name": "older_than_days",
+                        "in": "query",
+                        "description": "Allow-listed retention window in days",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "enum": [
+                                7,
+                                14,
+                                30,
+                                60,
+                                90,
+                                180,
+                                365
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Number of deleted readings",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "deleted": {
+                                            "type": "integer"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid day range"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spreads": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "List all public spreads",
+                "operationId": "51b4f44cde05d0ef9d3ee6a5d109f70d",
+                "responses": {
+                    "200": {
+                        "description": "Array of spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/Spread"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Create a public spread",
+                "operationId": "bab7ac919cfe6bfc9b13325fca16b156",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/SpreadPosition"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Created spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to create spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spreads/{spread_id}": {
+            "put": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Update a public spread",
+                "operationId": "cd4508c20a4678781e41fe0efc685565",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "positions": {
+                                        "type": "array",
+                                        "items": {
+                                            "$ref": "#/components/schemas/SpreadPosition"
+                                        }
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Spread not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Delete a public spread",
+                "operationId": "9ab1e82b1250724d073d386a152b1478",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "List pending spread submissions",
+                "operationId": "4f2f950c3ae14d555f3d77f8bfaa39a6",
+                "responses": {
+                    "200": {
+                        "description": "Pending spread submissions",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads/{pending_id}/approve": {
+            "post": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Approve a pending spread submission",
+                "operationId": "70fe65f64903c889246687eed303c0ab",
+                "parameters": [
+                    {
+                        "name": "pending_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Approved spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Failed to approve spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/pending-spreads/{pending_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Reject a pending spread submission",
+                "operationId": "0c7dc94f1f9c2088d290bc88b4277531",
+                "parameters": [
+                    {
+                        "name": "pending_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Rejected"
+                    },
+                    "500": {
+                        "description": "Failed to reject spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "List all user accounts",
+                "operationId": "60c3d74a84bb58273ce602095e47a547",
+                "responses": {
+                    "200": {
+                        "description": "Array of users",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}/activate": {
+            "post": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Activate a user account",
+                "operationId": "3746a41506ffbd63b413871199c88082",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}": {
+            "delete": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Delete a user account",
+                "operationId": "2f285a84747ba2bd307c9ccde339c3a5",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Partially update a user account",
+                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
+                "operationId": "5b441e2758c8a9fc3e812694cf86a4e4",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "is_admin": {
+                                        "type": "boolean"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/users/{user_id}/resend-activation": {
+            "post": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Resend a user activation email",
+                "operationId": "ca61ce4c8906e4332ceab32e21be2e60",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Activation resent",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Could not resend activation"
                     }
                 },
                 "security": [
@@ -3905,7 +3905,7 @@
                                     "positions": {
                                         "type": "array",
                                         "items": {
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/SpreadPosition"
                                         }
                                     },
                                     "spread_name": {
@@ -4091,7 +4091,7 @@
                                     "positions": {
                                         "type": "array",
                                         "items": {
-                                            "type": "object"
+                                            "$ref": "#/components/schemas/SpreadPosition"
                                         }
                                     }
                                 },
@@ -4445,8 +4445,61 @@
     },
     "components": {
         "schemas": {
+            "SpreadPosition": {
+                "description": "One card slot in a spread layout.",
+                "required": [
+                    "order",
+                    "title",
+                    "x",
+                    "y",
+                    "rotation"
+                ],
+                "properties": {
+                    "order": {
+                        "description": "1-based: the nth card drawn goes here.",
+                        "type": "integer"
+                    },
+                    "title": {
+                        "description": "The slot's label, e.g. \"Past\".",
+                        "type": "string",
+                        "maxLength": 100
+                    },
+                    "x": {
+                        "description": "Card centre, % of the canvas width.",
+                        "type": "number",
+                        "maximum": 100,
+                        "minimum": 0
+                    },
+                    "y": {
+                        "description": "Card centre, % of the canvas height.",
+                        "type": "number",
+                        "maximum": 100,
+                        "minimum": 0
+                    },
+                    "rotation": {
+                        "description": "Degrees, 0–359.",
+                        "type": "integer",
+                        "maximum": 359,
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
             "CardReport": {
                 "description": "A card users have reported as having a problem with its image.",
+                "required": [
+                    "report_id",
+                    "deck_id",
+                    "deck_name",
+                    "card_id",
+                    "card_name",
+                    "report_count",
+                    "resolved_at",
+                    "first_reported_at",
+                    "last_reported_at",
+                    "round",
+                    "submissions"
+                ],
                 "properties": {
                     "report_id": {
                         "type": "integer"
@@ -4508,6 +4561,14 @@
             },
             "CardReportSubmission": {
                 "description": "One user's report of a card, with their reason.",
+                "required": [
+                    "submission_id",
+                    "report_id",
+                    "round",
+                    "reason",
+                    "details",
+                    "submitted_at"
+                ],
                 "properties": {
                     "submission_id": {
                         "type": "integer"
@@ -4534,6 +4595,12 @@
             },
             "ChangelogEntry": {
                 "description": "A changelog entry.",
+                "required": [
+                    "entry_id",
+                    "title",
+                    "body",
+                    "entry_date"
+                ],
                 "properties": {
                     "entry_id": {
                         "type": "integer"
@@ -4552,6 +4619,15 @@
             },
             "Contact": {
                 "description": "A contact-form submission.",
+                "required": [
+                    "contact_id",
+                    "user_id",
+                    "name",
+                    "email",
+                    "message",
+                    "is_read",
+                    "submitted_at"
+                ],
                 "properties": {
                     "contact_id": {
                         "type": "integer"
@@ -4582,6 +4658,21 @@
             },
             "Deck": {
                 "description": "A tarot deck.",
+                "required": [
+                    "deck_id",
+                    "deck_system_id",
+                    "name",
+                    "artist",
+                    "purchase_url",
+                    "additional_cards",
+                    "card_aspect_w",
+                    "card_aspect_h",
+                    "approved",
+                    "usable",
+                    "submitted_by",
+                    "system_short_name",
+                    "system_total_cards"
+                ],
                 "properties": {
                     "deck_id": {
                         "type": "integer"
@@ -4634,6 +4725,14 @@
             },
             "DeckSystem": {
                 "description": "A tarot deck system (a family of decks sharing a card structure).",
+                "required": [
+                    "deck_system_id",
+                    "name",
+                    "short_name",
+                    "total_cards",
+                    "approved",
+                    "submitted_by"
+                ],
                 "properties": {
                     "deck_system_id": {
                         "type": "integer"
@@ -4661,6 +4760,17 @@
             },
             "DeckSystemCard": {
                 "description": "A card definition within a deck system.",
+                "required": [
+                    "deck_system_id",
+                    "card_id",
+                    "name",
+                    "keywords",
+                    "meaning",
+                    "advice",
+                    "reversed_keywords",
+                    "reversed_meaning",
+                    "reversed_advice"
+                ],
                 "properties": {
                     "deck_system_id": {
                         "type": "integer"
@@ -4712,6 +4822,16 @@
             },
             "PendingSpread": {
                 "description": "A user-submitted spread awaiting moderation.",
+                "required": [
+                    "pending_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions",
+                    "submitter",
+                    "user_id",
+                    "submitted_at"
+                ],
                 "properties": {
                     "pending_id": {
                         "type": "integer"
@@ -4729,7 +4849,7 @@
                         "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "type": "array",
                         "items": {
-                            "type": "object"
+                            "$ref": "#/components/schemas/SpreadPosition"
                         }
                     },
                     "submitter": {
@@ -4750,6 +4870,16 @@
             },
             "PluginToken": {
                 "description": "A linked-plugin personal access token (no secret value exposed).",
+                "required": [
+                    "id",
+                    "user_id",
+                    "label",
+                    "scope",
+                    "created_at",
+                    "last_used_at",
+                    "expires_at",
+                    "revoked_at"
+                ],
                 "properties": {
                     "id": {
                         "type": "integer"
@@ -4789,6 +4919,17 @@
             },
             "Reading": {
                 "description": "A saved tarot reading.",
+                "required": [
+                    "reading_id",
+                    "reading_info",
+                    "reading_time",
+                    "user_id",
+                    "hide_user",
+                    "reading_name",
+                    "reading_notes",
+                    "is_final",
+                    "password_protected"
+                ],
                 "properties": {
                     "reading_id": {
                         "type": "string"
@@ -4834,6 +4975,17 @@
             },
             "SpecialCard": {
                 "description": "A deck-specific special (custom) card.",
+                "required": [
+                    "deck_id",
+                    "card_id",
+                    "name",
+                    "keywords",
+                    "meaning",
+                    "advice",
+                    "keywords_reversed",
+                    "meaning_reversed",
+                    "advice_reversed"
+                ],
                 "properties": {
                     "deck_id": {
                         "type": "integer"
@@ -4885,6 +5037,13 @@
             },
             "Spread": {
                 "description": "A predefined tarot spread layout.",
+                "required": [
+                    "spread_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions"
+                ],
                 "properties": {
                     "spread_id": {
                         "type": "integer"
@@ -4902,7 +5061,7 @@
                         "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "type": "array",
                         "items": {
-                            "type": "object"
+                            "$ref": "#/components/schemas/SpreadPosition"
                         }
                     }
                 },
@@ -4910,6 +5069,18 @@
             },
             "User": {
                 "description": "A user account in its safe shape (no secrets or hashes).",
+                "required": [
+                    "user_id",
+                    "email",
+                    "display_name",
+                    "is_active",
+                    "is_admin",
+                    "registered_at",
+                    "last_login_at",
+                    "google_linked",
+                    "password_login_disabled",
+                    "has_passkeys"
+                ],
                 "properties": {
                     "user_id": {
                         "type": "integer"
@@ -4949,6 +5120,16 @@
             },
             "UserSpread": {
                 "description": "A user-created custom spread.",
+                "required": [
+                    "user_spread_id",
+                    "user_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions",
+                    "created_at",
+                    "updated_at"
+                ],
                 "properties": {
                     "user_spread_id": {
                         "type": "integer"
@@ -4968,7 +5149,7 @@
                     "positions": {
                         "type": "array",
                         "items": {
-                            "type": "object"
+                            "$ref": "#/components/schemas/SpreadPosition"
                         }
                     },
                     "created_at": {

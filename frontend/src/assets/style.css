@@ -247,7 +247,7 @@ body {
 }
 
 .lightbox-caption {
-  color: #ddd;
+  color: var(--myst-text);
   font-size: 1rem;
   font-weight: bold;
   margin-top: 10px;
@@ -255,13 +255,14 @@ body {
 }
 
 .lightbox-counter {
-  color: #999;
+  color: var(--myst-text-dim);
   font-size: 0.85rem;
   margin-top: 4px;
 }
 
 .lightbox-reversed-tag {
-  color: #f4a261;
+  /* The same colour the reading page gives "(Reversed)". */
+  color: var(--myst-warning);
   font-style: italic;
   font-weight: normal;
   font-size: 0.85rem;
@@ -321,7 +322,7 @@ body {
 }
 
 .lightbox-hint {
-  color: #888;
+  color: var(--myst-text-dim);
   font-size: 0.78rem;
   margin-top: 8px;
 }
@@ -412,7 +413,7 @@ body {
 
 .spread-description .content strong,
 .spread-details-body strong {
-  color: #ffffff;
+  color: var(--myst-text-strong);
 }
 
 .spread-description .content a,
@@ -469,7 +470,7 @@ body {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   background-color: var(--myst-surface-3);
-  color: #ffffff;
+  color: var(--myst-text-strong);
   border: none;
   cursor: pointer;
   font-size: 1rem;
@@ -632,7 +633,7 @@ body {
 
 /* Always-visible details list beside the spread canvas */
 .spread-detail-list-title {
-  color: #ffffff;
+  color: var(--myst-text-strong);
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 0.6rem;
@@ -818,7 +819,7 @@ body {
   height: 1.75rem;
   padding: 0;
   background-color: var(--myst-surface-3);
-  border: 1px solid #4a4f63;
+  border: 1px solid var(--myst-border-strong);
   border-radius: 999px;
   cursor: pointer;
   transition:
@@ -863,37 +864,6 @@ body {
 
 .toggle-state.is-on {
   color: var(--myst-gold);
-}
-
-/* Variant for the bright-yellow warning notification (non-light): the default
-   gold "on" state blends into the background, so use high-contrast dark tones
-   instead. The is-light variant uses a dark surface, so the default toggle
-   styles work fine there. */
-.notification.is-warning:not(.is-light) .toggle-track {
-  background-color: #3a3f52;
-  border-color: #23262f;
-}
-
-.notification.is-warning:not(.is-light) .toggle-thumb {
-  background-color: #f5f5f5;
-}
-
-.notification.is-warning:not(.is-light) .toggle-track[data-state='checked'] {
-  background-color: #23262f;
-  border-color: #23262f;
-}
-
-.notification.is-warning:not(.is-light) .toggle-track[data-state='checked'] .toggle-thumb {
-  background-color: var(--myst-gold);
-}
-
-.notification.is-warning:not(.is-light) .toggle-state,
-.notification.is-warning:not(.is-light) .toggle-state.is-on {
-  color: #23262f;
-}
-
-.notification.is-warning:not(.is-light) .toggle-track:focus-visible {
-  outline-color: #23262f;
 }
 
 /* Compact variant — sized to sit inline with small toolbar buttons. */
@@ -961,7 +931,7 @@ body {
 }
 
 .changelog-title {
-  color: #fff;
+  color: var(--myst-text-strong);
   font-size: 1.25rem;
   font-weight: 700;
   margin: 0.1rem 0 0;
@@ -998,7 +968,11 @@ html {
   background-image:
     radial-gradient(1200px 620px at 15% -10%, rgba(255, 255, 255, 0.05), transparent 60%),
     radial-gradient(1000px 700px at 110% 6%, rgba(255, 255, 255, 0.035), transparent 55%),
-    radial-gradient(900px 820px at 50% 120%, rgba(201, 162, 75, 0.06), transparent 60%);
+    radial-gradient(
+      900px 820px at 50% 120%,
+      color-mix(in srgb, var(--myst-gold) 6%, transparent),
+      transparent 60%
+    );
   background-attachment: fixed;
 }
 
@@ -1140,7 +1114,7 @@ body {
 
 .myst-iconbtn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 .myst-iconbtn:disabled {
@@ -1154,27 +1128,27 @@ body {
 }
 
 .myst-iconbtn.is-info:hover {
-  background: rgba(74, 159, 209, 0.12);
+  background: color-mix(in srgb, var(--myst-info) 12%, transparent);
   color: var(--myst-info);
 }
 
 .myst-iconbtn.is-success:hover {
-  background: rgba(68, 168, 120, 0.12);
+  background: color-mix(in srgb, var(--myst-success) 12%, transparent);
   color: var(--myst-success);
 }
 
 .myst-iconbtn.is-warning:hover {
-  background: rgba(221, 161, 58, 0.12);
+  background: color-mix(in srgb, var(--myst-warning) 12%, transparent);
   color: var(--myst-warning);
 }
 
 .myst-iconbtn.is-danger:hover {
-  background: rgba(217, 90, 114, 0.12);
+  background: color-mix(in srgb, var(--myst-danger) 12%, transparent);
   color: var(--myst-danger);
 }
 
 .myst-iconbtn.is-gold:hover {
-  background: rgba(201, 162, 75, 0.12);
+  background: color-mix(in srgb, var(--myst-gold) 12%, transparent);
   color: var(--myst-gold-bright);
 }
 
@@ -1215,7 +1189,7 @@ body {
   font-weight: 600;
   letter-spacing: 0.02em;
   color: var(--myst-gold-bright);
-  background: rgba(201, 162, 75, 0.1);
+  background: color-mix(in srgb, var(--myst-gold) 10%, transparent);
   white-space: nowrap;
 }
 
@@ -1355,7 +1329,7 @@ body {
 .myst-select:focus-visible {
   outline: none;
   border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .myst-select[data-placeholder] {
   color: var(--myst-text-dim);
@@ -1492,7 +1466,7 @@ body {
 }
 .myst-menu-item--danger[data-highlighted],
 .myst-menu-item--danger:hover {
-  background: rgba(217, 90, 114, 0.12);
+  background: color-mix(in srgb, var(--myst-danger) 12%, transparent);
   color: var(--myst-danger);
 }
 .myst-menu-sep {
@@ -1605,7 +1579,7 @@ body {
 }
 .myst-dialog-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 /* reading-code dialog form */
@@ -1633,7 +1607,7 @@ body {
 .code-dialog-form .code-dialog-input:focus {
   outline: none;
   border-color: var(--myst-hair-gold);
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.12);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 12%, transparent);
 }
 .btn-view {
   display: inline-flex;
@@ -1665,7 +1639,7 @@ body {
 }
 .btn-view:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(67, 179, 167, 0.4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-aqua) 40%, transparent);
 }
 
 /* ── BaseModal on Reka Dialog (portaled; header/body/footer layout) ───────── */
@@ -1753,7 +1727,7 @@ body {
 }
 .myst-modal-close:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.25);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 .myst-modal-body {
   flex: 1 1 auto;

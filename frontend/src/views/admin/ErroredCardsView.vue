@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
@@ -6,7 +8,6 @@ import { endpoints } from '@/api/endpoints'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import BaseModal from '@/components/BaseModal.vue'
-import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { formatDateTime } from '@/utils/datetime'
@@ -109,167 +110,137 @@ onMounted(fetchReports)
 </script>
 
 <template>
-  <section class="section">
-    <div class="container">
-      <div class="columns is-centered">
-        <div class="column is-11-desktop is-12-tablet">
-          <router-link :to="{ name: 'admin-dashboard' }" class="button is-small is-ghost mb-4">
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-left']" /></span>
-            <span>Back to Dashboard</span>
-          </router-link>
+  <AdminListPage
+    title="Errored Cards"
+    subtitle="Cards users have reported, and what they say is wrong with each image."
+  >
+    <template #actions>
+      <button class="button" :class="showResolved ? 'is-link' : ''" @click="toggleShowResolved">
+        <span class="icon"
+          ><FontAwesomeIcon
+            :icon="showResolved ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']"
+        /></span>
+        <span>{{ showResolved ? 'Showing Resolved' : 'Show Resolved' }}</span>
+      </button>
+    </template>
 
-          <PageHeader
-            title="Errored Cards"
-            subtitle="Cards users have reported, and what they say is wrong with each image."
-          >
-            <button
-              class="button"
-              :class="showResolved ? 'is-link' : ''"
-              @click="toggleShowResolved"
-            >
-              <span class="icon"
-                ><FontAwesomeIcon
-                  :icon="
-                    showResolved ? byPrefixAndName.fas['eye'] : byPrefixAndName.fas['eye-slash']
-                  "
-              /></span>
-              <span>{{ showResolved ? 'Showing Resolved' : 'Show Resolved' }}</span>
-            </button>
-          </PageHeader>
+    <AdminSearchField v-model="search" placeholder="Search by deck, card, or reason..." />
 
-          <div class="field">
-            <div class="control has-icons-left">
-              <input
-                v-model="search"
-                class="input"
-                type="text"
-                placeholder="Search by deck, card, or reason..."
+    <div class="settings-panel">
+      <div class="table-container">
+        <table class="table is-fullwidth is-hoverable is-striped is-vcentered">
+          <thead>
+            <tr>
+              <th>Card</th>
+              <SortableTh
+                label="Deck"
+                sort-key="deck_name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
               />
-              <span class="icon is-small is-left"
-                ><FontAwesomeIcon :icon="byPrefixAndName.fas['magnifying-glass']"
-              /></span>
-            </div>
-          </div>
-
-          <div class="settings-panel">
-            <div class="table-container">
-              <table class="table is-fullwidth is-hoverable is-striped is-vcentered">
-                <thead>
-                  <tr>
-                    <th>Card</th>
-                    <SortableTh
-                      label="Deck"
-                      sort-key="deck_name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Name"
-                      sort-key="card_name"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Reason</th>
-                    <SortableTh
-                      label="Reports"
-                      sort-key="report_count"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <SortableTh
-                      label="Last Reported"
-                      sort-key="last_reported_at"
-                      :active-key="sortKey"
-                      :dir="sortDir"
-                      @sort="toggleSort"
-                    />
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in tableRows"
-                    :key="row.report.report_id"
-                    :class="{ 'has-text-grey': row.report.resolved_at !== null }"
+              <SortableTh
+                label="Name"
+                sort-key="card_name"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Reason</th>
+              <SortableTh
+                label="Reports"
+                sort-key="report_count"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <SortableTh
+                label="Last Reported"
+                sort-key="last_reported_at"
+                :active-key="sortKey"
+                :dir="sortDir"
+                @sort="toggleSort"
+              />
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              v-for="row in tableRows"
+              :key="row.report.report_id"
+              :class="{ 'has-text-grey': row.report.resolved_at !== null }"
+            >
+              <td>
+                <Tooltip text="Open full-size scan">
+                  <a
+                    :href="cardFull(row.report)"
+                    target="_blank"
+                    rel="noopener"
+                    aria-label="Open full-size scan"
                   >
-                    <td>
-                      <Tooltip text="Open full-size scan">
-                        <a
-                          :href="cardFull(row.report)"
-                          target="_blank"
-                          rel="noopener"
-                          aria-label="Open full-size scan"
-                        >
-                          <img
-                            :src="cardThumb(row.report)"
-                            :alt="row.report.card_name"
-                            style="height: 64px; width: auto; border-radius: 4px"
-                          />
-                        </a>
-                      </Tooltip>
-                    </td>
-                    <td>{{ deckLabel(row.report) }}</td>
-                    <td>
-                      {{ row.report.card_name || '—' }}
-                      <span class="has-text-grey is-size-7">#{{ row.report.card_id }}</span>
-                    </td>
-                    <td>
-                      <template v-if="row.reasons.length">
-                        <div class="reason-chips">
-                          <span v-for="r in row.reasons" :key="r.reason" class="data-chip">
-                            {{ r.label }}<template v-if="r.count > 1"> ×{{ r.count }}</template>
-                          </span>
-                        </div>
-                        <p v-if="row.latestDetails" class="reason-snippet">
-                          “{{ row.latestDetails }}”
-                        </p>
-                      </template>
-                      <span v-else class="has-text-grey is-size-7">No reason given</span>
-                    </td>
-                    <td>
-                      <span
-                        class="tag is-rounded"
-                        :class="row.report.report_count > 1 ? 'is-danger' : 'is-warning'"
-                      >
-                        {{ row.report.report_count }}
-                      </span>
-                    </td>
-                    <td>{{ formatDateTime(row.report.last_reported_at) }}</td>
-                    <td>
-                      <div class="row-actions">
-                        <IconButton
-                          :icon="byPrefixAndName.fas['eye']"
-                          label="View reports"
-                          @click="viewing = row.report"
-                        />
-                        <IconButton
-                          :icon="
-                            row.report.resolved_at
-                              ? byPrefixAndName.fas['rotate-left']
-                              : byPrefixAndName.fas['check']
-                          "
-                          :label="row.report.resolved_at ? 'Reopen' : 'Resolve'"
-                          :intent="row.report.resolved_at ? 'warning' : 'success'"
-                          :loading="busyId === row.report.report_id"
-                          @click="toggleResolved(row.report)"
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-          <p v-if="reports.length === 0" class="has-text-grey">
-            No reported cards{{ showResolved ? '' : ' (open)' }}.
-          </p>
-        </div>
+                    <img
+                      :src="cardThumb(row.report)"
+                      :alt="row.report.card_name"
+                      style="height: 64px; width: auto; border-radius: 4px"
+                      loading="lazy"
+                    />
+                  </a>
+                </Tooltip>
+              </td>
+              <td>{{ deckLabel(row.report) }}</td>
+              <td>
+                {{ row.report.card_name || '—' }}
+                <span class="has-text-grey is-size-7">#{{ row.report.card_id }}</span>
+              </td>
+              <td>
+                <template v-if="row.reasons.length">
+                  <div class="reason-chips">
+                    <span v-for="r in row.reasons" :key="r.reason" class="data-chip">
+                      {{ r.label }}<template v-if="r.count > 1"> ×{{ r.count }}</template>
+                    </span>
+                  </div>
+                  <p v-if="row.latestDetails" class="reason-snippet">“{{ row.latestDetails }}”</p>
+                </template>
+                <span v-else class="has-text-grey is-size-7">No reason given</span>
+              </td>
+              <td>
+                <span
+                  class="tag is-rounded"
+                  :class="row.report.report_count > 1 ? 'is-danger' : 'is-warning'"
+                >
+                  {{ row.report.report_count }}
+                </span>
+              </td>
+              <td>{{ formatDateTime(row.report.last_reported_at) }}</td>
+              <td>
+                <div class="row-actions">
+                  <IconButton
+                    :icon="byPrefixAndName.fas['eye']"
+                    label="View reports"
+                    @click="viewing = row.report"
+                  />
+                  <IconButton
+                    :icon="
+                      row.report.resolved_at
+                        ? byPrefixAndName.fas['rotate-left']
+                        : byPrefixAndName.fas['check']
+                    "
+                    :label="row.report.resolved_at ? 'Reopen' : 'Resolve'"
+                    :intent="row.report.resolved_at ? 'warning' : 'success'"
+                    :loading="busyId === row.report.report_id"
+                    @click="toggleResolved(row.report)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
-  </section>
+    <p v-if="reports.length === 0" class="has-text-grey">
+      No reported cards{{ showResolved ? '' : ' (open)' }}.
+    </p>
+  </AdminListPage>
 
   <BaseModal
     :active="viewing !== null"

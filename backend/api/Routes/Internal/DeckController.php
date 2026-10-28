@@ -57,7 +57,7 @@ class DeckController extends AbstractController
         $status = 200;
 
         // Public responses omit submitted_by: it's a user id, needed only by the
-        // admin deck list (AdminController), not by anyone browsing decks.
+        // admin deck list (AdminDeckController), not by anyone browsing decks.
         if ($deck_id !== null) {
             $deck = $this->decks->get((int)$deck_id);
             if ($deck instanceof Deck) {

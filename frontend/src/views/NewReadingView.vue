@@ -11,8 +11,7 @@ import { useSpreads } from '@/composables/useSpreads'
 import { useSpreadLayout } from '@/composables/useSpreadLayout'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
-import { readApiError } from '@/composables/useApi'
-import { endpoints } from '@/api/endpoints'
+import { useReadings } from '@/composables/useReadings'
 import { renderMarkdown } from '@/utils/markdown'
 import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
@@ -33,6 +32,7 @@ const { fetchFavoriteDecks } = useFavoriteDecks()
 const { spreadOptions, fetchSpreads } = useSpreads()
 const toasts = useToasts()
 const { record: recordReading } = useRecentReadings()
+const { generate: generateReading } = useReadings()
 
 const isLoading = ref(false)
 const ownerOptions = useTemplateRef<InstanceType<typeof ReadingOwnerOptions>>('ownerOptions')
@@ -255,63 +255,53 @@ function resetForm() {
 }
 
 async function submitNewReading() {
+  const body = new URLSearchParams({
+    deck_id: String(form.deckId),
+    number_of_cards: String(form.numberOfCards),
+    use_reversals: String(form.useReversals),
+    use_additional_cards: String(form.useAdditionalCards),
+  })
+
+  if (form.spreadId !== null) {
+    body.set('spread_id', String(form.spreadId))
+    body.set('position_titles', JSON.stringify(positionTitles.value))
+  } else if (form.userSpreadId !== null) {
+    body.set('user_spread_id', String(form.userSpreadId))
+    body.set('position_titles', JSON.stringify(positionTitles.value))
+  }
+
+  const opts = ownerOptions.value?.collect()
+  if (opts) {
+    if (opts.reading_name) body.set('reading_name', opts.reading_name)
+    body.set('hide_user', String(opts.hide_user))
+    if (opts.password) body.set('password', opts.password)
+  }
+
   isLoading.value = true
-  try {
-    const body = new URLSearchParams({
-      deck_id: String(form.deckId),
-      number_of_cards: String(form.numberOfCards),
-      use_reversals: String(form.useReversals),
-      use_additional_cards: String(form.useAdditionalCards),
-    })
+  const res = await generateReading(body)
+  isLoading.value = false
 
-    if (form.spreadId !== null) {
-      body.set('spread_id', String(form.spreadId))
-      body.set('position_titles', JSON.stringify(positionTitles.value))
-    } else if (form.userSpreadId !== null) {
-      body.set('user_spread_id', String(form.userSpreadId))
-      body.set('position_titles', JSON.stringify(positionTitles.value))
-    }
+  if (!res.ok) {
+    toasts.error(res.error, { detail: res })
+    return
+  }
 
-    const opts = ownerOptions.value?.collect()
-    if (opts) {
-      if (opts.reading_name) body.set('reading_name', opts.reading_name)
-      body.set('hide_user', String(opts.hide_user))
-      if (opts.password) body.set('password', opts.password)
-    }
+  recordReading({
+    id: res.data.reading_id,
+    deckName: selectedDeck.value?.name ?? 'Tarot',
+    summary: selectedSpread.value
+      ? selectedSpread.value.name
+      : String(form.numberOfCards) + (form.numberOfCards === 1 ? ' card' : ' cards'),
+    at: res.data.reading_time ?? new Date().toISOString(),
+  })
 
-    const res = await fetch('/api' + endpoints.readings.generate, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    })
-
-    if (!res.ok) {
-      toasts.error(await readApiError(res, 'There was an error generating your reading.'))
-      return
-    }
-
-    const data = await res.json()
-    recordReading({
-      id: data.reading_id,
-      deckName: selectedDeck.value?.name ?? 'Tarot',
-      summary: selectedSpread.value
-        ? selectedSpread.value.name
-        : String(form.numberOfCards) + (form.numberOfCards === 1 ? ' card' : ' cards'),
-      at: data.reading_time ?? new Date().toISOString(),
-    })
-
-    // Free Draw With Placement: redirect to the placement editor instead.
-    if (!selectedSpreadOption.value && form.freeDrawMode === 'placement') {
-      toasts.success('Cards drawn! Now arrange your spread.')
-      void router.push({ name: 'free-draw-placement', params: { id: data.reading_id } })
-    } else {
-      toasts.success('Your reading is ready!')
-      void router.push({ name: 'reading', params: { id: data.reading_id } })
-    }
-  } catch (e) {
-    toasts.error('Network error. Please check your connection and try again.', { detail: e })
-  } finally {
-    isLoading.value = false
+  // Free Draw With Placement: redirect to the placement editor instead.
+  if (!selectedSpreadOption.value && form.freeDrawMode === 'placement') {
+    toasts.success('Cards drawn! Now arrange your spread.')
+    void router.push({ name: 'free-draw-placement', params: { id: res.data.reading_id } })
+  } else {
+    toasts.success('Your reading is ready!')
+    void router.push({ name: 'reading', params: { id: res.data.reading_id } })
   }
 }
 </script>

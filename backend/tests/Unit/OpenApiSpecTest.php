@@ -8,6 +8,7 @@ use OpenApi\Analysers\ReflectionAnalyser;
 use OpenApi\Generator;
 use OpenApi\SourceFinder;
 use PHPUnit\Framework\TestCase;
+use Routes\RequireStructureProperties;
 
 /**
  * Guards that the committed backend/openapi.json stays in sync with the
@@ -37,10 +38,11 @@ final class OpenApiSpecTest extends TestCase
             new DocBlockAnnotationFactory(),
         ]);
 
-        $openapi = new Generator()
+        $generator = new Generator()
             ->setVersion('3.1.0')
-            ->setAnalyser($analyser)
-            ->generate(new SourceFinder([$backend . '/api', $backend . '/includes']));
+            ->setAnalyser($analyser);
+        $generator->getProcessorPipeline()->add(new RequireStructureProperties());
+        $openapi = $generator->generate(new SourceFinder([$backend . '/api', $backend . '/includes']));
 
         $generated = json_decode($openapi->toJson(), true);
         $committed = json_decode((string)file_get_contents($specPath), true);

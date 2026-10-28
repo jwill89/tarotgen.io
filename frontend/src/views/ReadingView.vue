@@ -10,8 +10,7 @@ import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useReadingExport } from '@/composables/useReadingExport'
-import { readApiError } from '@/composables/useApi'
-import { endpoints } from '@/api/endpoints'
+import { useReadings } from '@/composables/useReadings'
 import { renderMarkdown } from '@/utils/markdown'
 import { formatDateTime } from '@/utils/datetime'
 import { cardAspectStyle } from '@/utils/cardAspect'
@@ -33,6 +32,7 @@ const toasts = useToasts()
 const { confirm } = useConfirm()
 const { record: recordReading } = useRecentReadings()
 const { exporting, exportReading } = useReadingExport()
+const { get: getReading, unlock: unlockReading, drawMore, finalize } = useReadings()
 const showExportModal = ref(false)
 
 const reading = ref<Reading | null>(null)
@@ -123,35 +123,28 @@ async function submitDrawMore() {
   if (!reading.value) return
   const id = reading.value.reading_id
   drawing.value = true
-  try {
-    const body = new URLSearchParams({
+  const res = await drawMore(
+    id,
+    new URLSearchParams({
       count: String(Math.min(Math.max(1, drawForm.count), Math.max(1, maxDrawMore.value))),
       use_reversals: String(drawForm.useReversals),
       use_additional_cards: String(drawForm.useAdditionalCards),
-    })
-    const res = await fetch('/api' + endpoints.readings.draw(encodeURIComponent(id)), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: body.toString(),
-    })
-    if (!res.ok) {
-      toasts.error(await readApiError(res, 'Could not draw more cards.'))
-      return
-    }
-    const data: Reading = await res.json()
-    showDrawMore.value = false
-    if (data.reading_info.spread) {
-      // Spread reading: send the owner to the editor to place the new cards.
-      toasts.success('Cards drawn! Now place them on your spread.')
-      void router.push({ name: 'free-draw-placement', params: { id } })
-    } else {
-      applyReading(data)
-      toasts.success('Added new cards to your reading.')
-    }
-  } catch (e) {
-    toasts.error('Network error. Please try again.', { detail: e })
-  } finally {
-    drawing.value = false
+    }),
+  )
+  drawing.value = false
+
+  if (!res.ok) {
+    toasts.error(res.error, { detail: res })
+    return
+  }
+  showDrawMore.value = false
+  if (res.data.reading_info.spread) {
+    // Spread reading: send the owner to the editor to place the new cards.
+    toasts.success('Cards drawn! Now place them on your spread.')
+    void router.push({ name: 'free-draw-placement', params: { id } })
+  } else {
+    applyReading(res.data)
+    toasts.success('Added new cards to your reading.')
   }
 }
 
@@ -165,21 +158,13 @@ async function markFinal() {
     danger: true,
   })
   if (!ok) return
-  const id = reading.value.reading_id
-  try {
-    const res = await fetch('/api' + endpoints.readings.finalize(encodeURIComponent(id)), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-    })
-    if (!res.ok) {
-      toasts.error(await readApiError(res, 'Could not finalize the reading.'))
-      return
-    }
-    applyReading((await res.json()) as Reading)
-    toasts.success('Reading marked as final.')
-  } catch (e) {
-    toasts.error('Network error. Please try again.', { detail: e })
+  const res = await finalize(reading.value.reading_id)
+  if (!res.ok) {
+    toasts.error(res.error, { detail: res })
+    return
   }
+  applyReading(res.data)
+  toasts.success('Reading marked as final.')
 }
 
 const spreadDescriptionHtml = computed(() =>
@@ -361,22 +346,21 @@ async function fetchReading(id: string) {
   readingNotes.value = null
   readerName.value = 'Guest'
   try {
-    const res = await fetch('/api' + endpoints.readings.byId(encodeURIComponent(id)))
+    const res = await getReading(id)
     if (!res.ok) {
       notFound.value = true
-      toasts.error("We couldn't find a reading with that code.")
+      // Offline or rate-limited is not "no such reading": say what happened.
+      toasts.error(res.status === 404 ? "We couldn't find a reading with that code." : res.error, {
+        detail: res,
+      })
       return
     }
-    const data: Reading = await res.json()
-    if (data.locked) {
+    if (res.data.locked) {
       locked.value = true
-      readingName.value = data.reading_name ?? null
+      readingName.value = res.data.reading_name ?? null
       return
     }
-    applyReading(data)
-  } catch (e) {
-    notFound.value = true
-    toasts.error('Network error while loading the reading.', { detail: e })
+    applyReading(res.data)
   } finally {
     isLoading.value = false
   }
@@ -387,23 +371,13 @@ async function unlock() {
   if (typeof id !== 'string' || !id) return
   unlocking.value = true
   unlockError.value = ''
-  try {
-    const res = await fetch('/api' + endpoints.readings.unlock(encodeURIComponent(id)), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: unlockPassword.value }),
-    })
-    const data = await res.json().catch(() => ({}))
-    if (res.ok && !data.locked) {
-      applyReading(data as Reading)
-    } else {
-      unlockError.value = (data as { error?: string }).error || 'Incorrect password.'
-    }
-  } catch (e) {
-    unlockError.value = 'Network error. Please try again.'
-    toasts.error('Network error while unlocking the reading.', { detail: e })
-  } finally {
-    unlocking.value = false
+  const res = await unlockReading(id, unlockPassword.value)
+  unlocking.value = false
+
+  if (res.ok && !res.data.locked) {
+    applyReading(res.data)
+  } else {
+    unlockError.value = res.ok ? 'Incorrect password.' : res.error
   }
 }
 

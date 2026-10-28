@@ -15,7 +15,15 @@ use Slim\Exception\HttpNotFoundException;
 use Slim\Factory\AppFactory;
 use Slim\Routing\RouteCollectorProxy;
 use Routes\Internal\{AccountController,
-    AdminController,
+    AdminCardReportController,
+    AdminChangelogController,
+    AdminContactController,
+    AdminDashboardController,
+    AdminDeckController,
+    AdminDeckSystemController,
+    AdminReadingController,
+    AdminSpreadController,
+    AdminUserController,
     ApiDocsController,
     CardReportController,
     ChangelogController,
@@ -217,71 +225,71 @@ return function (ContainerInterface $container, bool $is_production): App {
 
     // ── Admin Routes (require a logged-in, active, is_admin user account) ─────────
     $app->group('/admin', function (RouteCollectorProxy $group) {
-        $group->get('/auth-check[/]', AdminController::class . ':checkAuth');
+        $group->get('/auth-check[/]', AdminDashboardController::class . ':checkAuth');
 
         // Dashboard usage stats + one-shot summary (counts + stats)
-        $group->get('/stats[/]', AdminController::class . ':getStats');
-        $group->get('/summary[/]', AdminController::class . ':getSummary');
+        $group->get('/stats[/]', AdminDashboardController::class . ':getStats');
+        $group->get('/summary[/]', AdminDashboardController::class . ':getSummary');
 
         // Decks. Static routes registered before the {deck_id} placeholder.
-        $group->get('/decks[/]', AdminController::class . ':getDecks');
-        $group->get('/decks/pending[/]', AdminController::class . ':getPendingDecks');
-        $group->post('/decks[/]', AdminController::class . ':createDeck');
-        $group->post('/decks/images[/]', AdminController::class . ':generateAllImages');
+        $group->get('/decks[/]', AdminDeckController::class . ':getDecks');
+        $group->get('/decks/pending[/]', AdminDeckController::class . ':getPendingDecks');
+        $group->post('/decks[/]', AdminDeckController::class . ':createDeck');
+        $group->post('/decks/images[/]', AdminDeckController::class . ':generateAllImages');
         // Special cards, nested under their deck.
-        $group->get('/decks/{deck_id}/special-cards[/]', AdminController::class . ':getSpecialCards');
-        $group->post('/decks/{deck_id}/special-cards[/]', AdminController::class . ':createSpecialCard');
-        $group->put('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':updateSpecialCard');
-        $group->delete('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':deleteSpecialCard');
-        $group->post('/decks/{deck_id}/approve[/]', AdminController::class . ':approveDeck');
-        $group->post('/decks/{deck_id}/images[/]', AdminController::class . ':generateDeckImages');
-        $group->patch('/decks/{deck_id}[/]', AdminController::class . ':updateDeck');
-        $group->delete('/decks/{deck_id}[/]', AdminController::class . ':deleteDeck');
+        $group->get('/decks/{deck_id}/special-cards[/]', AdminDeckController::class . ':getSpecialCards');
+        $group->post('/decks/{deck_id}/special-cards[/]', AdminDeckController::class . ':createSpecialCard');
+        $group->put('/decks/{deck_id}/special-cards/{card_id}[/]', AdminDeckController::class . ':updateSpecialCard');
+        $group->delete('/decks/{deck_id}/special-cards/{card_id}[/]', AdminDeckController::class . ':deleteSpecialCard');
+        $group->post('/decks/{deck_id}/approve[/]', AdminDeckController::class . ':approveDeck');
+        $group->post('/decks/{deck_id}/images[/]', AdminDeckController::class . ':generateDeckImages');
+        $group->patch('/decks/{deck_id}[/]', AdminDeckController::class . ':updateDeck');
+        $group->delete('/decks/{deck_id}[/]', AdminDeckController::class . ':deleteDeck');
 
         // Deck Systems
-        $group->get('/deck-systems[/]', AdminController::class . ':getDeckSystems');
-        $group->get('/deck-systems/pending[/]', AdminController::class . ':getPendingDeckSystems');
-        $group->get('/deck-systems/{id}[/]', AdminController::class . ':getDeckSystem');
-        $group->post('/deck-systems/{id}/approve[/]', AdminController::class . ':approveDeckSystem');
-        $group->put('/deck-systems/{id}[/]', AdminController::class . ':updateDeckSystem');
-        $group->delete('/deck-systems/{id}[/]', AdminController::class . ':deleteDeckSystem');
+        $group->get('/deck-systems[/]', AdminDeckSystemController::class . ':getDeckSystems');
+        $group->get('/deck-systems/pending[/]', AdminDeckSystemController::class . ':getPendingDeckSystems');
+        $group->get('/deck-systems/{id}[/]', AdminDeckSystemController::class . ':getDeckSystem');
+        $group->post('/deck-systems/{id}/approve[/]', AdminDeckSystemController::class . ':approveDeckSystem');
+        $group->put('/deck-systems/{id}[/]', AdminDeckSystemController::class . ':updateDeckSystem');
+        $group->delete('/deck-systems/{id}[/]', AdminDeckSystemController::class . ':deleteDeckSystem');
 
         // Spreads
-        $group->get('/spreads[/]', AdminController::class . ':getSpreads');
-        $group->post('/spreads[/]', AdminController::class . ':createSpread');
-        $group->put('/spreads/{spread_id}[/]', AdminController::class . ':updateSpread');
-        $group->delete('/spreads/{spread_id}[/]', AdminController::class . ':deleteSpread');
+        $group->get('/spreads[/]', AdminSpreadController::class . ':getSpreads');
+        $group->post('/spreads[/]', AdminSpreadController::class . ':createSpread');
+        $group->put('/spreads/{spread_id}[/]', AdminSpreadController::class . ':updateSpread');
+        $group->delete('/spreads/{spread_id}[/]', AdminSpreadController::class . ':deleteSpread');
 
         // Pending Spreads (user submissions awaiting approval)
-        $group->get('/pending-spreads[/]', AdminController::class . ':getPendingSpreads');
-        $group->post('/pending-spreads/{pending_id}/approve[/]', AdminController::class . ':approvePendingSpread');
-        $group->delete('/pending-spreads/{pending_id}[/]', AdminController::class . ':rejectPendingSpread');
+        $group->get('/pending-spreads[/]', AdminSpreadController::class . ':getPendingSpreads');
+        $group->post('/pending-spreads/{pending_id}/approve[/]', AdminSpreadController::class . ':approvePendingSpread');
+        $group->delete('/pending-spreads/{pending_id}[/]', AdminSpreadController::class . ':rejectPendingSpread');
 
         // Readings. Bulk delete ("/all") registered before the {reading_id} placeholder.
-        $group->get('/readings[/]', AdminController::class . ':getReadings');
-        $group->delete('/readings/all[/]', AdminController::class . ':cleanReadings');
-        $group->delete('/readings/{reading_id}[/]', AdminController::class . ':deleteReading');
+        $group->get('/readings[/]', AdminReadingController::class . ':getReadings');
+        $group->delete('/readings/all[/]', AdminReadingController::class . ':cleanReadings');
+        $group->delete('/readings/{reading_id}[/]', AdminReadingController::class . ':deleteReading');
 
         // Changelog
-        $group->get('/changelog[/]', AdminController::class . ':getChangelog');
-        $group->post('/changelog[/]', AdminController::class . ':createChangelogEntry');
-        $group->put('/changelog/{entry_id}[/]', AdminController::class . ':updateChangelogEntry');
-        $group->delete('/changelog/{entry_id}[/]', AdminController::class . ':deleteChangelogEntry');
+        $group->get('/changelog[/]', AdminChangelogController::class . ':getChangelog');
+        $group->post('/changelog[/]', AdminChangelogController::class . ':createChangelogEntry');
+        $group->put('/changelog/{entry_id}[/]', AdminChangelogController::class . ':updateChangelogEntry');
+        $group->delete('/changelog/{entry_id}[/]', AdminChangelogController::class . ':deleteChangelogEntry');
 
         // Users (management)
-        $group->get('/users[/]', AdminController::class . ':getUsers');
-        $group->post('/users/{user_id}/activate[/]', AdminController::class . ':activateUser');
-        $group->post('/users/{user_id}/resend-activation[/]', AdminController::class . ':resendActivation');
-        $group->patch('/users/{user_id}[/]', AdminController::class . ':updateUser');
-        $group->delete('/users/{user_id}[/]', AdminController::class . ':deleteUser');
+        $group->get('/users[/]', AdminUserController::class . ':getUsers');
+        $group->post('/users/{user_id}/activate[/]', AdminUserController::class . ':activateUser');
+        $group->post('/users/{user_id}/resend-activation[/]', AdminUserController::class . ':resendActivation');
+        $group->patch('/users/{user_id}[/]', AdminUserController::class . ':updateUser');
+        $group->delete('/users/{user_id}[/]', AdminUserController::class . ':deleteUser');
 
         // Contacts (submitted via public contact form)
-        $group->get('/contacts[/]', AdminController::class . ':getContacts');
-        $group->patch('/contacts/{contact_id}[/]', AdminController::class . ':updateContact');
+        $group->get('/contacts[/]', AdminContactController::class . ':getContacts');
+        $group->patch('/contacts/{contact_id}[/]', AdminContactController::class . ':updateContact');
 
         // Card reports (image problems + reasons, submitted from the card lightbox)
-        $group->get('/card-reports[/]', AdminController::class . ':getCardReports');
-        $group->patch('/card-reports/{report_id}[/]', AdminController::class . ':updateCardReport');
+        $group->get('/card-reports[/]', AdminCardReportController::class . ':getCardReports');
+        $group->patch('/card-reports/{report_id}[/]', AdminCardReportController::class . ':updateCardReport');
     })->add(AdminAuth::class);
 
     return $app;

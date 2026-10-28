@@ -87,7 +87,7 @@ class SpreadController extends AbstractController
                 properties: [
                     new OA\Property(property: 'name', type: 'string'),
                     new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(type: 'object')),
+                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
                 ]
             )
         ),

@@ -113,6 +113,23 @@ export async function apiRequest<T>(
 }
 
 /**
+ * Options for a request with a JSON body:
+ * `apiRequest(path, sendJson('PATCH', { name }))`.
+ */
+export function sendJson(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', body: unknown): RequestInit {
+  return { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }
+}
+
+/** Options for a POST with a form-encoded body (reading generate and draw send these). */
+export function sendForm(body: URLSearchParams): RequestInit {
+  return {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString(),
+  }
+}
+
+/**
  * Generic fetch helper for public API calls. Returns the parsed body on success
  * or `null` on any failure. Use {@link apiRequest} when you need to tell failures
  * apart or surface the server's message.

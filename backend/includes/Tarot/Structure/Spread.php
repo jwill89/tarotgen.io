@@ -28,6 +28,6 @@ class Spread extends AbstractStructure
      *
      * @var list<array<string,mixed>>
      */
-    #[OA\Property(type: 'array', items: new OA\Items(type: 'object'))]
+    #[OA\Property(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition'))]
     public private(set) array $positions = [];
 }

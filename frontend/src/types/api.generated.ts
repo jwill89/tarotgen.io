@@ -240,15 +240,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/stats": {
+    "/admin/card-reports": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Usage statistics */
-        get: operations["564908295a8037f98024862589d858d2"];
+        /** List reported cards with their reasons (open first; pass ?show_resolved=1 for all) */
+        get: operations["6e0c556fc66e7c4b7beca2037b5a2211"];
         put?: never;
         post?: never;
         delete?: never;
@@ -257,131 +257,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Dashboard counts + stats
-         * @description One-shot dashboard payload: entity counts (cheap COUNT(*) queries) plus the
-         *     usage stats overview — so the dashboard loads with a single request.
-         */
-        get: operations["6bdc81aacff8514be8da0e7db3684755"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/auth-check": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Verify the admin session */
-        get: operations["eaf153d9a18290f970305d4b73952233"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all approved decks */
-        get: operations["c83fae3240884db64da34d8e9cf31946"];
-        put?: never;
-        /** Create a deck */
-        post: operations["728d1da9a243acef05d922e937a5e1c3"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List decks awaiting approval */
-        get: operations["e980978d904bf888f10d25839a8490c1"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/{deck_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve a pending deck */
-        post: operations["9d2c5430d3b9c94e310a0cfa96f2493b"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/{deck_id}/images": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate missing or stale web images (display WebP + thumbnail) for a deck */
-        post: operations["db77b928753550089034abbdd42a8004"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/images": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate missing or stale web images for all decks */
-        post: operations["81bd8d0d326c79305144f6102f47ca88"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/{deck_id}": {
+    "/admin/card-reports/{report_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -391,135 +267,11 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a deck */
-        delete: operations["4c8136b9b48d42032d27f875751e9440"];
-        options?: never;
-        head?: never;
-        /** Partially update a deck */
-        patch: operations["ab525eb2a3711e22471e1c59424a3e43"];
-        trace?: never;
-    };
-    "/admin/decks/{deck_id}/special-cards": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List a deck's special cards */
-        get: operations["a45eaf2d7ac519112f22a2ed3bdba167"];
-        put?: never;
-        /** Add a special card to a deck */
-        post: operations["d77766c800e30b26b89c34f2c338967f"];
         delete?: never;
         options?: never;
         head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/decks/{deck_id}/special-cards/{card_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a special card */
-        put: operations["97e1632326a8023eacc56141af719117"];
-        post?: never;
-        /** Delete a special card */
-        delete: operations["bcfc1b17250534379b5cf4dae1a20ade"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/spreads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all public spreads */
-        get: operations["29bc23aeb92d01a27e93bc5910402b4b"];
-        put?: never;
-        /** Create a public spread */
-        post: operations["d5e4220b8f0d3496598708944c8561f7"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/spreads/{spread_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a public spread */
-        put: operations["901464b751af0be1d7bd0bcfafbeba06"];
-        post?: never;
-        /** Delete a public spread */
-        delete: operations["ab089dbb64f24606cc78b790c2a791a9"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/pending-spreads": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List pending spread submissions */
-        get: operations["2895eca3438911f3fc425b5a4902e524"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/pending-spreads/{pending_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Approve a pending spread submission */
-        post: operations["0a0af8c29cdc8bd35ccfbd611a6be954"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/pending-spreads/{pending_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Reject a pending spread submission */
-        delete: operations["e41c7ee10ef064de515a00e869bb6e50"];
-        options?: never;
-        head?: never;
-        patch?: never;
+        /** Mark a card report resolved / reopened */
+        patch: operations["aca620abc6a0ca6158ff8d80669f3b2a"];
         trace?: never;
     };
     "/admin/changelog": {
@@ -530,10 +282,10 @@ export interface paths {
             cookie?: never;
         };
         /** List all changelog entries */
-        get: operations["0757fbeac3b799a788522ce6e9b09f25"];
+        get: operations["7d7f486fcabcec3e810fb64934dec6e6"];
         put?: never;
         /** Create a changelog entry */
-        post: operations["6e9f0a5446d11c32eab08f177e1619a8"];
+        post: operations["4eaeb8f6c930f755bd6b36858dbb4fc7"];
         delete?: never;
         options?: never;
         head?: never;
@@ -549,83 +301,10 @@ export interface paths {
         };
         get?: never;
         /** Update a changelog entry */
-        put: operations["9bcd6e838f9130f77f5719876ce31f66"];
+        put: operations["b582f34acfcf9dc67374021d8b8aac31"];
         post?: never;
         /** Delete a changelog entry */
-        delete: operations["1eb64d0db94b4934c1a9ca7fe126de12"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all user accounts */
-        get: operations["cdea4e075c6c798dde424a3e4a759589"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{user_id}/activate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Activate a user account */
-        post: operations["4216f498546950d5001341d596a66b43"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/users/{user_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /** Delete a user account */
-        delete: operations["5aa20650a21fca3d5ad0bacb93eca0e5"];
-        options?: never;
-        head?: never;
-        /**
-         * Partially update a user account
-         * @description Partial update of an account. Currently the only editable field is the
-         *     `is_admin` flag (previously the dedicated POST …/admin action).
-         */
-        patch: operations["1ef503cc872e0d9800bd34f8a842043e"];
-        trace?: never;
-    };
-    "/admin/users/{user_id}/resend-activation": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Resend a user activation email */
-        post: operations["b05396913af62a2069929bee0ccf151e"];
-        delete?: never;
+        delete: operations["396a17e5e338c91c5907ba8d0b3eced4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -639,7 +318,7 @@ export interface paths {
             cookie?: never;
         };
         /** List submitted contact messages */
-        get: operations["86b2ef376508d0f3371743442a3e7c14"];
+        get: operations["eef9538e7e3898dcfab09dc289df7c83"];
         put?: never;
         post?: never;
         delete?: never;
@@ -666,18 +345,18 @@ export interface paths {
          * @description Partial update of a contact message. Currently the only editable field is
          *     the `is_read` flag (previously the dedicated POST …/read action).
          */
-        patch: operations["669cf3fd1c418c672661ad1e5665be88"];
+        patch: operations["27b7c177d701145299a73bc3fbf3c122"];
         trace?: never;
     };
-    "/admin/card-reports": {
+    "/admin/stats": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List reported cards with their reasons (open first; pass ?show_resolved=1 for all) */
-        get: operations["47c6f9a250e71454f6aa7b427865ff1e"];
+        /** Usage statistics */
+        get: operations["3f2bc50e21648c3797f12aaad373927b"];
         put?: never;
         post?: never;
         delete?: never;
@@ -686,7 +365,131 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/card-reports/{report_id}": {
+    "/admin/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard counts + stats
+         * @description One-shot dashboard payload: entity counts (cheap COUNT(*) queries) plus the
+         *     usage stats overview — so the dashboard loads with a single request.
+         */
+        get: operations["256deec34ea1c936c21e112f82d961de"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/auth-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify the admin session */
+        get: operations["e52148b0b360f8626366cc3bf1aeab78"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all approved decks */
+        get: operations["2f7295154cece420116d5ccaad3a19cd"];
+        put?: never;
+        /** Create a deck */
+        post: operations["de0845c214823b930ea47d45dbc5dfc0"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List decks awaiting approval */
+        get: operations["9ec94e2bffce4c1db50a57712635feef"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/{deck_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a pending deck */
+        post: operations["465a97db21b84ad7a13ac4bcf7c72916"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/{deck_id}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate missing or stale web images (display WebP + thumbnail) for a deck */
+        post: operations["b0192ee1caf0072c74615f0fe93f11fa"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate missing or stale web images for all decks */
+        post: operations["b3b3dff2f559f731b3614ca3dc57273a"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/{deck_id}": {
         parameters: {
             query?: never;
             header?: never;
@@ -696,11 +499,118 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /** Delete a deck */
+        delete: operations["9f94e20d57ab652eaf81e54730ea4172"];
+        options?: never;
+        head?: never;
+        /** Partially update a deck */
+        patch: operations["4bdc6a28cb2f94ef001f1ee46851cf50"];
+        trace?: never;
+    };
+    "/admin/decks/{deck_id}/special-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List a deck's special cards */
+        get: operations["93ee4271f079631c8c3e65bf3c836623"];
+        put?: never;
+        /** Add a special card to a deck */
+        post: operations["fb2158382dd7bc35fabf5c06d1ff1dca"];
         delete?: never;
         options?: never;
         head?: never;
-        /** Mark a card report resolved / reopened */
-        patch: operations["037d49bac3021d8eae5c8d48a210bb17"];
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/decks/{deck_id}/special-cards/{card_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a special card */
+        put: operations["cb7e66d7ba07034011c1b6f69b226aeb"];
+        post?: never;
+        /** Delete a special card */
+        delete: operations["5d6b97cc98eafcbf9ce16f1cd449b0ef"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/deck-systems": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all approved deck systems */
+        get: operations["1b397ce811d76b1c0d895c851f4265a4"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/deck-systems/pending": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List deck systems awaiting approval */
+        get: operations["f01ab42e393a54fefe6066fefd316307"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/deck-systems/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get a single deck system with its cards */
+        get: operations["5419bb32a3c73df9bf97b606267507bd"];
+        /** Update a deck system and its cards */
+        put: operations["5d182ff6cf51641633b25a5c93cf5e83"];
+        post?: never;
+        /** Delete a deck system */
+        delete: operations["9c4242e0baf6dc468f8045272a13c445"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/deck-systems/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a pending deck system */
+        post: operations["329855c57333235a38e922fb0962d170"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/readings": {
@@ -711,7 +621,7 @@ export interface paths {
             cookie?: never;
         };
         /** List readings (paginated) */
-        get: operations["35423e051e7b9c0f5b0a7bf063c8a467"];
+        get: operations["9e0bb3a981e8ca6879d80533c99ad472"];
         put?: never;
         post?: never;
         delete?: never;
@@ -731,7 +641,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Delete a single reading */
-        delete: operations["48bda4292e30898944c6415da0fe7eb3"];
+        delete: operations["050a05baa3ec2d177b7b0a1cf941768c"];
         options?: never;
         head?: never;
         patch?: never;
@@ -752,21 +662,57 @@ export interface paths {
          * @description Bulk delete: purge guest readings older than the given age. The window is
          *     an allow-listed number of days passed as the `older_than_days` query param.
          */
-        delete: operations["8b280a4dd7b0681169fb771ad4a4808c"];
+        delete: operations["2fb51741383f5cd8552779ce6b6f95e7"];
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/deck-systems": {
+    "/admin/spreads": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** List all approved deck systems */
-        get: operations["5372c3f2201596bfed8d42a49a826eb4"];
+        /** List all public spreads */
+        get: operations["51b4f44cde05d0ef9d3ee6a5d109f70d"];
+        put?: never;
+        /** Create a public spread */
+        post: operations["bab7ac919cfe6bfc9b13325fca16b156"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/spreads/{spread_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Update a public spread */
+        put: operations["cd4508c20a4678781e41fe0efc685565"];
+        post?: never;
+        /** Delete a public spread */
+        delete: operations["9ab1e82b1250724d073d386a152b1478"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pending-spreads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List pending spread submissions */
+        get: operations["4f2f950c3ae14d555f3d77f8bfaa39a6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -775,43 +721,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/deck-systems/pending": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List deck systems awaiting approval */
-        get: operations["e0094b772a5746f947cb919f018990db"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/deck-systems/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get a single deck system with its cards */
-        get: operations["084845af38d9f1ae0b44d21bd4c0874d"];
-        /** Update a deck system and its cards */
-        put: operations["b0ac6a3c1f1eb92be7294d1a3e59b5eb"];
-        post?: never;
-        /** Delete a deck system */
-        delete: operations["71104af0988b8d21fbbe29b0aa69ac87"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/deck-systems/{id}/approve": {
+    "/admin/pending-spreads/{pending_id}/approve": {
         parameters: {
             query?: never;
             header?: never;
@@ -820,8 +730,98 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Approve a pending deck system */
-        post: operations["d34ce25954ce6ae467918b54163ab929"];
+        /** Approve a pending spread submission */
+        post: operations["70fe65f64903c889246687eed303c0ab"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/pending-spreads/{pending_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Reject a pending spread submission */
+        delete: operations["0c7dc94f1f9c2088d290bc88b4277531"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List all user accounts */
+        get: operations["60c3d74a84bb58273ce602095e47a547"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{user_id}/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Activate a user account */
+        post: operations["3746a41506ffbd63b413871199c88082"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a user account */
+        delete: operations["2f285a84747ba2bd307c9ccde339c3a5"];
+        options?: never;
+        head?: never;
+        /**
+         * Partially update a user account
+         * @description Partial update of an account. Currently the only editable field is the
+         *     `is_admin` flag (previously the dedicated POST …/admin action).
+         */
+        patch: operations["5b441e2758c8a9fc3e812694cf86a4e4"];
+        trace?: never;
+    };
+    "/admin/users/{user_id}/resend-activation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Resend a user activation email */
+        post: operations["ca61ce4c8906e4332ceab32e21be2e60"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1592,24 +1592,37 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description One card slot in a spread layout. */
+        SpreadPosition: {
+            /** @description 1-based: the nth card drawn goes here. */
+            order: number;
+            /** @description The slot's label, e.g. "Past". */
+            title: string;
+            /** @description Card centre, % of the canvas width. */
+            x: number;
+            /** @description Card centre, % of the canvas height. */
+            y: number;
+            /** @description Degrees, 0–359. */
+            rotation: number;
+        };
         /** @description A card users have reported as having a problem with its image. */
         CardReport: {
-            report_id?: number;
-            deck_id?: number;
+            report_id: number;
+            deck_id: number;
             /** @description Resolved deck name (from the decks table). */
-            deck_name?: string;
-            card_id?: number;
-            card_name?: string;
+            deck_name: string;
+            card_id: number;
+            card_name: string;
             /** @description How many times this card has been reported. */
-            report_count?: number;
+            report_count: number;
             /** @description When an admin marked it handled; null = open. */
-            resolved_at?: string | null;
-            first_reported_at?: string;
-            last_reported_at?: string;
+            resolved_at: string | null;
+            first_reported_at: string;
+            last_reported_at: string;
             /** @description Goes up each time the card is reported again after being resolved. */
-            round?: number;
+            round: number;
             /** @description Each reason given, newest first. Older reports may have none. */
-            submissions?: components["schemas"]["CardReportSubmission"][];
+            submissions: components["schemas"]["CardReportSubmission"][];
         };
         /**
          * @description What is wrong with a reported card.
@@ -1618,162 +1631,162 @@ export interface components {
         CardReportReason: "artefact" | "cropping" | "quality" | "wrong_card" | "other";
         /** @description One user's report of a card, with their reason. */
         CardReportSubmission: {
-            submission_id?: number;
-            report_id?: number;
+            submission_id: number;
+            report_id: number;
             /** @description The card's round when this was submitted (see CardReport.round). */
-            round?: number;
-            reason?: components["schemas"]["CardReportReason"];
+            round: number;
+            reason: components["schemas"]["CardReportReason"];
             /** @description What the reporter wrote; may be empty. */
-            details?: string;
-            submitted_at?: string;
+            details: string;
+            submitted_at: string;
         };
         /** @description A changelog entry. */
         ChangelogEntry: {
-            entry_id?: number;
-            title?: string;
-            body?: string;
-            entry_date?: string;
+            entry_id: number;
+            title: string;
+            body: string;
+            entry_date: string;
         };
         /** @description A contact-form submission. */
         Contact: {
-            contact_id?: number;
-            user_id?: number | null;
-            name?: string;
-            email?: string;
-            message?: string;
-            is_read?: number;
-            submitted_at?: string;
+            contact_id: number;
+            user_id: number | null;
+            name: string;
+            email: string;
+            message: string;
+            is_read: number;
+            submitted_at: string;
         };
         /** @description A tarot deck. */
         Deck: {
-            deck_id?: number;
-            deck_system_id?: number;
-            name?: string;
-            artist?: string;
-            purchase_url?: string;
-            additional_cards?: number;
+            deck_id: number;
+            deck_system_id: number;
+            name: string;
+            artist: string;
+            purchase_url: string;
+            additional_cards: number;
             /** Format: float */
-            card_aspect_w?: number;
+            card_aspect_w: number;
             /** Format: float */
-            card_aspect_h?: number;
-            approved?: boolean;
-            usable?: boolean;
-            submitted_by?: number | null;
+            card_aspect_h: number;
+            approved: boolean;
+            usable: boolean;
+            submitted_by: number | null;
             /** @description Populated by JOIN queries — the deck system's short name. */
-            system_short_name?: string;
+            system_short_name: string;
             /** @description Populated by JOIN queries — the deck system's total cards. */
-            system_total_cards?: number;
+            system_total_cards: number;
         };
         /** @description A tarot deck system (a family of decks sharing a card structure). */
         DeckSystem: {
-            deck_system_id?: number;
-            name?: string;
-            short_name?: string;
-            total_cards?: number;
-            approved?: boolean;
-            submitted_by?: number | null;
+            deck_system_id: number;
+            name: string;
+            short_name: string;
+            total_cards: number;
+            approved: boolean;
+            submitted_by: number | null;
         };
         /** @description A card definition within a deck system. */
         DeckSystemCard: {
-            deck_system_id?: number;
-            card_id?: number;
-            name?: string;
-            keywords?: string | null;
-            meaning?: string | null;
-            advice?: string | null;
-            reversed_keywords?: string | null;
-            reversed_meaning?: string | null;
-            reversed_advice?: string | null;
+            deck_system_id: number;
+            card_id: number;
+            name: string;
+            keywords: string | null;
+            meaning: string | null;
+            advice: string | null;
+            reversed_keywords: string | null;
+            reversed_meaning: string | null;
+            reversed_advice: string | null;
         };
         /** @description A user-submitted spread awaiting moderation. */
         PendingSpread: {
-            pending_id?: number;
-            name?: string;
-            description?: string;
-            card_count?: number;
+            pending_id: number;
+            name: string;
+            description: string;
+            card_count: number;
             /**
              * @description Array of position objects, each shaped:
              *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
              */
-            positions?: Record<string, never>[];
+            positions: components["schemas"]["SpreadPosition"][];
             /** @description Resolved submitter label: the linked account's display name, or "Guest". */
-            submitter?: string;
-            user_id?: number | null;
-            submitted_at?: string;
+            submitter: string;
+            user_id: number | null;
+            submitted_at: string;
         };
         /** @description A linked-plugin personal access token (no secret value exposed). */
         PluginToken: {
-            id?: number;
-            user_id?: number;
-            label?: string;
-            scope?: string;
-            created_at?: string;
-            last_used_at?: string | null;
-            expires_at?: string | null;
-            revoked_at?: string | null;
+            id: number;
+            user_id: number;
+            label: string;
+            scope: string;
+            created_at: string;
+            last_used_at: string | null;
+            expires_at: string | null;
+            revoked_at: string | null;
         };
         /** @description A saved tarot reading. */
         Reading: {
-            reading_id?: string;
+            reading_id: string;
             /** @description Serialized to a nested JSON object in the response (see jsonSerialize). */
-            reading_info?: Record<string, never>;
-            reading_time?: string;
-            user_id?: number | null;
-            hide_user?: boolean;
-            reading_name?: string | null;
-            reading_notes?: string | null;
+            reading_info: Record<string, never>;
+            reading_time: string;
+            user_id: number | null;
+            hide_user: boolean;
+            reading_name: string | null;
+            reading_notes: string | null;
             /** @description One-way lock: when true the owner can no longer draw additional cards. */
-            is_final?: boolean;
+            is_final: boolean;
             /** @description Derived flag — true when a view password is set. The hash itself is never exposed. */
-            password_protected?: boolean;
+            password_protected: boolean;
         };
         /** @description A deck-specific special (custom) card. */
         SpecialCard: {
-            deck_id?: number;
-            card_id?: number;
-            name?: string;
-            keywords?: string | null;
-            meaning?: string | null;
-            advice?: string | null;
-            keywords_reversed?: string | null;
-            meaning_reversed?: string | null;
-            advice_reversed?: string | null;
+            deck_id: number;
+            card_id: number;
+            name: string;
+            keywords: string | null;
+            meaning: string | null;
+            advice: string | null;
+            keywords_reversed: string | null;
+            meaning_reversed: string | null;
+            advice_reversed: string | null;
         };
         /** @description A predefined tarot spread layout. */
         Spread: {
-            spread_id?: number;
-            name?: string;
-            description?: string;
-            card_count?: number;
+            spread_id: number;
+            name: string;
+            description: string;
+            card_count: number;
             /**
              * @description Array of position objects, each shaped:
              *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
              */
-            positions?: Record<string, never>[];
+            positions: components["schemas"]["SpreadPosition"][];
         };
         /** @description A user account in its safe shape (no secrets or hashes). */
         User: {
-            user_id?: number;
-            email?: string;
-            display_name?: string;
-            is_active?: boolean;
-            is_admin?: boolean;
-            registered_at?: string;
-            last_login_at?: string | null;
-            google_linked?: boolean;
-            password_login_disabled?: boolean;
-            has_passkeys?: boolean;
+            user_id: number;
+            email: string;
+            display_name: string;
+            is_active: boolean;
+            is_admin: boolean;
+            registered_at: string;
+            last_login_at: string | null;
+            google_linked: boolean;
+            password_login_disabled: boolean;
+            has_passkeys: boolean;
         };
         /** @description A user-created custom spread. */
         UserSpread: {
-            user_spread_id?: number;
-            user_id?: number;
-            name?: string;
-            description?: string;
-            card_count?: number;
-            positions?: Record<string, never>[];
-            created_at?: string;
-            updated_at?: string;
+            user_spread_id: number;
+            user_id: number;
+            name: string;
+            description: string;
+            card_count: number;
+            positions: components["schemas"]["SpreadPosition"][];
+            created_at: string;
+            updated_at: string;
         };
     };
     responses: never;
@@ -2023,7 +2036,7 @@ export interface operations {
             content: {
                 "application/json": {
                     name: string;
-                    positions: Record<string, never>[];
+                    positions: components["schemas"]["SpreadPosition"][];
                 };
             };
         };
@@ -2292,7 +2305,236 @@ export interface operations {
             };
         };
     };
-    "564908295a8037f98024862589d858d2": {
+    "6e0c556fc66e7c4b7beca2037b5a2211": {
+        parameters: {
+            query?: {
+                show_resolved?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of card reports */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardReport"][];
+                };
+            };
+        };
+    };
+    aca620abc6a0ca6158ff8d80669f3b2a: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    resolved?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid report ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "7d7f486fcabcec3e810fb64934dec6e6": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of changelog entries */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangelogEntry"][];
+                };
+            };
+        };
+    };
+    "4eaeb8f6c930f755bd6b36858dbb4fc7": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title: string;
+                    body?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Created changelog entry */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangelogEntry"];
+                };
+            };
+            /** @description Failed to create changelog entry */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    b582f34acfcf9dc67374021d8b8aac31: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    title?: string;
+                    body?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated changelog entry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChangelogEntry"];
+                };
+            };
+            /** @description Changelog entry not found or no valid fields */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "396a17e5e338c91c5907ba8d0b3eced4": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    eef9538e7e3898dcfab09dc289df7c83: {
+        parameters: {
+            query?: {
+                /** @description Set to "1" to include already-read messages */
+                show_read?: "0" | "1";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of contacts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contact"][];
+                };
+            };
+        };
+    };
+    "27b7c177d701145299a73bc3fbf3c122": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    is_read?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description Invalid contact ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "3f2bc50e21648c3797f12aaad373927b": {
         parameters: {
             query?: never;
             header?: never;
@@ -2312,7 +2554,7 @@ export interface operations {
             };
         };
     };
-    "6bdc81aacff8514be8da0e7db3684755": {
+    "256deec34ea1c936c21e112f82d961de": {
         parameters: {
             query?: never;
             header?: never;
@@ -2332,7 +2574,7 @@ export interface operations {
             };
         };
     };
-    eaf153d9a18290f970305d4b73952233: {
+    e52148b0b360f8626366cc3bf1aeab78: {
         parameters: {
             query?: never;
             header?: never;
@@ -2350,7 +2592,7 @@ export interface operations {
             };
         };
     };
-    c83fae3240884db64da34d8e9cf31946: {
+    "2f7295154cece420116d5ccaad3a19cd": {
         parameters: {
             query?: never;
             header?: never;
@@ -2370,7 +2612,7 @@ export interface operations {
             };
         };
     };
-    "728d1da9a243acef05d922e937a5e1c3": {
+    de0845c214823b930ea47d45dbc5dfc0: {
         parameters: {
             query?: never;
             header?: never;
@@ -2407,7 +2649,7 @@ export interface operations {
             };
         };
     };
-    e980978d904bf888f10d25839a8490c1: {
+    "9ec94e2bffce4c1db50a57712635feef": {
         parameters: {
             query?: never;
             header?: never;
@@ -2427,7 +2669,7 @@ export interface operations {
             };
         };
     };
-    "9d2c5430d3b9c94e310a0cfa96f2493b": {
+    "465a97db21b84ad7a13ac4bcf7c72916": {
         parameters: {
             query?: never;
             header?: never;
@@ -2456,7 +2698,7 @@ export interface operations {
             };
         };
     };
-    db77b928753550089034abbdd42a8004: {
+    b0192ee1caf0072c74615f0fe93f11fa: {
         parameters: {
             query?: never;
             header?: never;
@@ -2490,7 +2732,7 @@ export interface operations {
             };
         };
     };
-    "81bd8d0d326c79305144f6102f47ca88": {
+    b3b3dff2f559f731b3614ca3dc57273a: {
         parameters: {
             query?: never;
             header?: never;
@@ -2515,7 +2757,7 @@ export interface operations {
             };
         };
     };
-    "4c8136b9b48d42032d27f875751e9440": {
+    "9f94e20d57ab652eaf81e54730ea4172": {
         parameters: {
             query?: never;
             header?: never;
@@ -2542,7 +2784,7 @@ export interface operations {
             };
         };
     };
-    ab525eb2a3711e22471e1c59424a3e43: {
+    "4bdc6a28cb2f94ef001f1ee46851cf50": {
         parameters: {
             query?: never;
             header?: never;
@@ -2580,7 +2822,7 @@ export interface operations {
             };
         };
     };
-    a45eaf2d7ac519112f22a2ed3bdba167: {
+    "93ee4271f079631c8c3e65bf3c836623": {
         parameters: {
             query?: never;
             header?: never;
@@ -2602,7 +2844,7 @@ export interface operations {
             };
         };
     };
-    d77766c800e30b26b89c34f2c338967f: {
+    fb2158382dd7bc35fabf5c06d1ff1dca: {
         parameters: {
             query?: never;
             header?: never;
@@ -2638,7 +2880,7 @@ export interface operations {
             };
         };
     };
-    "97e1632326a8023eacc56141af719117": {
+    cb7e66d7ba07034011c1b6f69b226aeb: {
         parameters: {
             query?: never;
             header?: never;
@@ -2674,7 +2916,7 @@ export interface operations {
             };
         };
     };
-    bcfc1b17250534379b5cf4dae1a20ade: {
+    "5d6b97cc98eafcbf9ce16f1cd449b0ef": {
         parameters: {
             query?: never;
             header?: never;
@@ -2702,646 +2944,7 @@ export interface operations {
             };
         };
     };
-    "29bc23aeb92d01a27e93bc5910402b4b": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of spreads */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Spread"][];
-                };
-            };
-        };
-    };
-    d5e4220b8f0d3496598708944c8561f7: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    name: string;
-                    positions?: Record<string, never>[];
-                };
-            };
-        };
-        responses: {
-            /** @description Created spread */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Spread"];
-                };
-            };
-            /** @description Failed to create spread */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "901464b751af0be1d7bd0bcfafbeba06": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                spread_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    name?: string;
-                    positions?: Record<string, never>[];
-                };
-            };
-        };
-        responses: {
-            /** @description Updated spread */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Spread"];
-                };
-            };
-            /** @description Spread not found or no valid fields */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    ab089dbb64f24606cc78b790c2a791a9: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                spread_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "2895eca3438911f3fc425b5a4902e524": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Pending spread submissions */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>[];
-                };
-            };
-        };
-    };
-    "0a0af8c29cdc8bd35ccfbd611a6be954": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pending_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Approved spread */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Spread"];
-                };
-            };
-            /** @description Failed to approve spread */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    e41c7ee10ef064de515a00e869bb6e50: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                pending_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Rejected */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Failed to reject spread */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "0757fbeac3b799a788522ce6e9b09f25": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of changelog entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"][];
-                };
-            };
-        };
-    };
-    "6e9f0a5446d11c32eab08f177e1619a8": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    title: string;
-                    body?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Created changelog entry */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"];
-                };
-            };
-            /** @description Failed to create changelog entry */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "9bcd6e838f9130f77f5719876ce31f66": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    title?: string;
-                    body?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated changelog entry */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"];
-                };
-            };
-            /** @description Changelog entry not found or no valid fields */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "1eb64d0db94b4934c1a9ca7fe126de12": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    cdea4e075c6c798dde424a3e4a759589: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of users */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"][];
-                };
-            };
-        };
-    };
-    "4216f498546950d5001341d596a66b43": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Activated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success?: boolean;
-                    };
-                };
-            };
-            /** @description User not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "5aa20650a21fca3d5ad0bacb93eca0e5": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description User not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "1ef503cc872e0d9800bd34f8a842043e": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    is_admin?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated user */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["User"];
-                };
-            };
-            /** @description User not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    b05396913af62a2069929bee0ccf151e: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                user_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Activation resent */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-            /** @description Could not resend activation */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "86b2ef376508d0f3371743442a3e7c14": {
-        parameters: {
-            query?: {
-                /** @description Set to "1" to include already-read messages */
-                show_read?: "0" | "1";
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of contacts */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Contact"][];
-                };
-            };
-        };
-    };
-    "669cf3fd1c418c672661ad1e5665be88": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    is_read?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success?: boolean;
-                    };
-                };
-            };
-            /** @description Invalid contact ID */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "47c6f9a250e71454f6aa7b427865ff1e": {
-        parameters: {
-            query?: {
-                show_resolved?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of card reports */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CardReport"][];
-                };
-            };
-        };
-    };
-    "037d49bac3021d8eae5c8d48a210bb17": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                report_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    resolved?: boolean;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        success?: boolean;
-                    };
-                };
-            };
-            /** @description Invalid report ID */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "35423e051e7b9c0f5b0a7bf063c8a467": {
-        parameters: {
-            query?: {
-                limit?: number;
-                offset?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Paginated readings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": Record<string, never>;
-                };
-            };
-        };
-    };
-    "48bda4292e30898944c6415da0fe7eb3": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                reading_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Reading not found */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "8b280a4dd7b0681169fb771ad4a4808c": {
-        parameters: {
-            query: {
-                /** @description Allow-listed retention window in days */
-                older_than_days: 7 | 14 | 30 | 60 | 90 | 180 | 365;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Number of deleted readings */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        deleted?: number;
-                    };
-                };
-            };
-            /** @description Invalid day range */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "5372c3f2201596bfed8d42a49a826eb4": {
+    "1b397ce811d76b1c0d895c851f4265a4": {
         parameters: {
             query?: never;
             header?: never;
@@ -3361,7 +2964,7 @@ export interface operations {
             };
         };
     };
-    e0094b772a5746f947cb919f018990db: {
+    f01ab42e393a54fefe6066fefd316307: {
         parameters: {
             query?: never;
             header?: never;
@@ -3381,7 +2984,7 @@ export interface operations {
             };
         };
     };
-    "084845af38d9f1ae0b44d21bd4c0874d": {
+    "5419bb32a3c73df9bf97b606267507bd": {
         parameters: {
             query?: never;
             header?: never;
@@ -3410,7 +3013,7 @@ export interface operations {
             };
         };
     };
-    b0ac6a3c1f1eb92be7294d1a3e59b5eb: {
+    "5d182ff6cf51641633b25a5c93cf5e83": {
         parameters: {
             query?: never;
             header?: never;
@@ -3448,7 +3051,7 @@ export interface operations {
             };
         };
     };
-    "71104af0988b8d21fbbe29b0aa69ac87": {
+    "9c4242e0baf6dc468f8045272a13c445": {
         parameters: {
             query?: never;
             header?: never;
@@ -3475,7 +3078,7 @@ export interface operations {
             };
         };
     };
-    d34ce25954ce6ae467918b54163ab929: {
+    "329855c57333235a38e922fb0962d170": {
         parameters: {
             query?: never;
             header?: never;
@@ -3497,6 +3100,416 @@ export interface operations {
             };
             /** @description Deck system not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "9e0bb3a981e8ca6879d80533c99ad472": {
+        parameters: {
+            query?: {
+                limit?: number;
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Paginated readings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+        };
+    };
+    "050a05baa3ec2d177b7b0a1cf941768c": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reading_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Reading not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "2fb51741383f5cd8552779ce6b6f95e7": {
+        parameters: {
+            query: {
+                /** @description Allow-listed retention window in days */
+                older_than_days: 7 | 14 | 30 | 60 | 90 | 180 | 365;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Number of deleted readings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        deleted?: number;
+                    };
+                };
+            };
+            /** @description Invalid day range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "51b4f44cde05d0ef9d3ee6a5d109f70d": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of spreads */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spread"][];
+                };
+            };
+        };
+    };
+    bab7ac919cfe6bfc9b13325fca16b156: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name: string;
+                    positions?: components["schemas"]["SpreadPosition"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Created spread */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spread"];
+                };
+            };
+            /** @description Failed to create spread */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    cd4508c20a4678781e41fe0efc685565: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    name?: string;
+                    positions?: components["schemas"]["SpreadPosition"][];
+                };
+            };
+        };
+        responses: {
+            /** @description Updated spread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spread"];
+                };
+            };
+            /** @description Spread not found or no valid fields */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "9ab1e82b1250724d073d386a152b1478": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "4f2f950c3ae14d555f3d77f8bfaa39a6": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending spread submissions */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>[];
+                };
+            };
+        };
+    };
+    "70fe65f64903c889246687eed303c0ab": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pending_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Approved spread */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spread"];
+                };
+            };
+            /** @description Failed to approve spread */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "0c7dc94f1f9c2088d290bc88b4277531": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pending_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Rejected */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Failed to reject spread */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "60c3d74a84bb58273ce602095e47a547": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of users */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"][];
+                };
+            };
+        };
+    };
+    "3746a41506ffbd63b413871199c88082": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success?: boolean;
+                    };
+                };
+            };
+            /** @description User not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "2f285a84747ba2bd307c9ccde339c3a5": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Deleted */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "5b441e2758c8a9fc3e812694cf86a4e4": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    is_admin?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description Updated user */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            /** @description User not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ca61ce4c8906e4332ceab32e21be2e60: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                user_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Activation resent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": Record<string, never>;
+                };
+            };
+            /** @description Could not resend activation */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4597,7 +4610,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    positions: Record<string, never>[];
+                    positions: components["schemas"]["SpreadPosition"][];
                     spread_name?: string;
                 };
             };
@@ -4767,7 +4780,7 @@ export interface operations {
                 "application/json": {
                     name: string;
                     description?: string;
-                    positions: Record<string, never>[];
+                    positions: components["schemas"]["SpreadPosition"][];
                 };
             };
         };

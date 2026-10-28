@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace Tarot\Tests\Http;
 
 use PHPUnit\Framework\Attributes\CoversClass;
-use Routes\Internal\AdminController;
+use Routes\Internal\AdminChangelogController;
 use Routes\Internal\ChangelogController;
 
 /**
  * One admin resource end to end: an admin writes a changelog entry, the public
  * changelog shows it, and only an admin can change it.
  */
-#[CoversClass(AdminController::class)]
+#[CoversClass(AdminChangelogController::class)]
 #[CoversClass(ChangelogController::class)]
 final class AdminChangelogTest extends HttpTestCase
 {

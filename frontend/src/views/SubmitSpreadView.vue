@@ -4,8 +4,8 @@ import { ref, useTemplateRef } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { useUserSpreads } from '@/composables/useUserSpreads'
+import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
-import { endpoints } from '@/api/endpoints'
 import type { SpreadPosition } from '@/types'
 import SpreadEditor from '@/components/admin/SpreadEditor.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -15,6 +15,7 @@ const router = useRouter()
 const editorRef = useTemplateRef<InstanceType<typeof SpreadEditor>>('editorRef')
 const { currentUser, isLoggedIn } = useUser()
 const { createUserSpread } = useUserSpreads()
+const { submitSpread: sendSpread } = useSubmissions()
 const toasts = useToasts()
 
 const submitted = ref(false)
@@ -31,40 +32,25 @@ async function submitSpread(payload: {
   card_count: number
   positions: SpreadPosition[]
 }) {
-  try {
-    if (saveMode.value === 'personal') {
-      const spread = await createUserSpread(payload)
-      if (!spread) {
-        editorRef.value?.setError('Failed to save the spread. Please try again.')
-        return
-      }
-      toasts.success('Spread saved to your personal collection!')
-      void router.push({ name: 'account-spreads' })
+  if (saveMode.value === 'personal') {
+    const spread = await createUserSpread(payload)
+    if (!spread) {
+      editorRef.value?.setError('Failed to save the spread. Please try again.')
       return
     }
-
-    const res = await fetch('/api' + endpoints.spreads.list, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    })
-
-    if (res.status === 429) {
-      editorRef.value?.setError(
-        'You have submitted too many spreads recently. Please try again later.',
-      )
-      return
-    }
-
-    if (!res.ok) {
-      editorRef.value?.setError('Failed to submit the spread. Please try again.')
-      return
-    }
-
-    submitted.value = true
-  } catch {
-    editorRef.value?.setError('Failed to submit the spread. Please try again.')
+    toasts.success('Spread saved to your personal collection!')
+    void router.push({ name: 'account-spreads' })
+    return
   }
+
+  // The server's message covers the rate limit too.
+  const res = await sendSpread(payload)
+  if (!res.ok) {
+    editorRef.value?.setError(res.error)
+    return
+  }
+
+  submitted.value = true
 }
 
 function submitAnother() {

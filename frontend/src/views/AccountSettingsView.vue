@@ -15,7 +15,12 @@ import type { PluginToken } from '@/types'
 
 const router = useRouter()
 const route = useRoute()
-const { changeDisplayName, changePassword, deleteAccount } = useAccount()
+const {
+  changeDisplayName,
+  changePassword,
+  deleteAccount,
+  unlinkGoogle: unlinkGoogleAccount,
+} = useAccount()
 const { currentUser, fetchMe } = useUser()
 const { confirm } = useConfirm()
 const toasts = useToasts()
@@ -149,20 +154,14 @@ function linkGoogle() {
 async function unlinkGoogle() {
   googleError.value = ''
   unlinking.value = true
-  try {
-    const res = await fetch('/api' + endpoints.authGoogle.unlink, { method: 'POST' })
-    const data = await res.json()
-    if (res.ok) {
-      toasts.success('Google account unlinked.')
-      await fetchMe()
-    } else {
-      googleError.value = data.error ?? 'Could not unlink Google account.'
-    }
-  } catch {
-    googleError.value = 'Network error. Please try again.'
-  } finally {
-    unlinking.value = false
+  const res = await unlinkGoogleAccount()
+  if (res.ok) {
+    toasts.success('Google account unlinked.')
+    await fetchMe()
+  } else {
+    googleError.value = res.error ?? 'Could not unlink Google account.'
   }
+  unlinking.value = false
 }
 
 // ── Passkey management ──────────────────────────────────────────
