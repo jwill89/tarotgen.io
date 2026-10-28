@@ -47,6 +47,25 @@ final class ReadingDataTest extends TestCase
         return $r;
     }
 
+    public function testCleanGuestOlderThanDeletesOnlyOldGuestReadings(): void
+    {
+        // The nightly retention job (scripts/retention.php, AUDIT §1.7) relies on
+        // this: guest readings past the window go; account readings never do.
+        $insert = $this->pdo->prepare(
+            "INSERT INTO readings (reading_id, reading_info, reading_time, user_id)
+             VALUES (:id, '{}', datetime('now', :age), :uid)"
+        );
+        $insert->execute([':id' => 'old-guest', ':age' => '-366 days', ':uid' => null]);
+        $insert->execute([':id' => 'recent-guest', ':age' => '-364 days', ':uid' => null]);
+        $insert->execute([':id' => 'old-owned', ':age' => '-900 days', ':uid' => 7]);
+
+        $this->assertSame(1, $this->data->cleanGuestOlderThan(365));
+
+        $this->assertNull($this->data->retrieve('old-guest'));
+        $this->assertNotNull($this->data->retrieve('recent-guest'));
+        $this->assertNotNull($this->data->retrieve('old-owned'));
+    }
+
     public function testStoreAndRetrieveNeverExposesTheHashButFlagsProtection(): void
     {
         $r = $this->make('r1', 7);

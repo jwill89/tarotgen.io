@@ -259,8 +259,9 @@ rm -rf '$remoteNew'
 # vendor/ (regenerated on the droplet), and the server-only db/, .env, assets/.
 # openapi.json is the committed API spec served at /api/openapi.json and rendered
 # by Scalar at /api/docs — it must ship even though swagger-php (which generates
-# it) is a dev-only dependency not installed in production.
-$BackendPayload = @('api', 'includes', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
+# it) is a dev-only dependency not installed in production. scripts/ ships because
+# cron runs scripts/retention.php (AUDIT §1.7); .htaccess keeps it off the web.
+$BackendPayload = @('api', 'includes', 'scripts', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
 
 function Deploy-Backend {
     $remoteStageRoot = "$WebRoot/.deploy.new"

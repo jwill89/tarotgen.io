@@ -272,6 +272,26 @@ five-entry baseline; strict TS + typed ESLint.
     readings** (oldest dates from 2025-03-16) and breaks their share links;
     publish the privacy-page text before the first run.
   - **Verify:** script output count; cron entry on the droplet; privacy page text.
+  - **Implemented 2026-10-28 (awaiting deploy + droplet install):**
+    `backend/scripts/retention.php` → `ReadingRepository::cleanGuest(365)`, with
+    `--dry-run` (same DELETE in a rolled-back transaction) and
+    `PRAGMA optimize=0x10002` after (closes §2.7's ANALYZE note). Cron: chained
+    onto the 03:17 backup with `&&`, so nothing is deleted without a fresh backup;
+    output to `journalctl -t tarotgen-retention`. `scripts/` added to the
+    backend deploy payload so cron never runs a hand-copied, drifting file (the
+    repo's `scripts/` is a superset of what prod had). Privacy policy §8 now states
+    the window, the signed-in exemption and the 14-day backup tail; "Last
+    updated" bumped. **Account holders are exempt** (owner's decision): the DELETE
+    is `user_id IS NULL` only, and every creation path (`ReadingService::persist`
+    via `ReadingController::currentUserId`) sets `user_id` for a session *or* a
+    linked plugin's bearer token. Readings an account holder makes while signed
+    out can't be attributed and count as guest readings — the policy says so.
+    New `ReadingDataTest::testCleanGuestOlderThanDeletesOnlyOldGuestReadings`
+    (366-day guest goes; 364-day guest and 900-day owned stay). Locally: dry
+    run on dev reports 210 and deletes nothing; a real run on a copy deletes
+    those 210, leaves all 5 owned, analyses 17 tables; re-run deletes 0.
+  - **Order on the droplet:** deploy frontend (policy live) + backend (ships
+    the script) → dry run as www-data → install the cron line.
 
 - [ ] **1.8 Small leaks / decisions to record.** [low] [S]
   - Public `GET /decks` and `/deck-systems` return `submitted_by` user ids
@@ -379,6 +399,7 @@ five-entry baseline; strict TS + typed ESLint.
     the table is next migrated.
   - Mixed timestamp sources — §1.4.
   - No `ANALYZE`/`PRAGMA optimize` ever runs; fold into the retention cron (§1.7).
+    **Done in §1.7** (`scripts/retention.php` runs `PRAGMA optimize=0x10002` nightly).
 
 ---
 

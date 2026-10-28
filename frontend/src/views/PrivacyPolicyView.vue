@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-8-desktop is-10-tablet">
-          <PageHeader title="Privacy Policy" subtitle="Last updated: June 2, 2025" />
+          <PageHeader title="Privacy Policy" subtitle="Last updated: October 28, 2026" />
 
           <div class="settings-panel">
             <div class="content">
@@ -93,9 +93,21 @@ import PageHeader from '@/components/PageHeader.vue'
 
               <h2 class="title is-4">8. Data Retention</h2>
               <p>
-                We retain your account data for as long as your account is active. If you delete
-                your account, all associated personal data and readings will be permanently removed
-                from our systems within 30 days.
+                We retain your account data, and the readings saved to your account, for as long as
+                your account is active; you can delete any of those readings at any time. If you
+                delete your account, all associated personal data and readings will be permanently
+                removed from our systems within 30 days.
+              </p>
+              <p>
+                Readings made while you are signed in belong to your account and are never deleted
+                by this rule. Readings made without signing in — including any you make while signed
+                out — are not linked to anyone, so they are kept for
+                <strong>one year</strong> from the day they were created. After that they are
+                permanently deleted and their share links stop working.
+              </p>
+              <p>
+                Deleted data can remain in our database backups for up to 14 days, after which the
+                backups that contain it are deleted.
               </p>
 
               <h2 class="title is-4">9. Children's Privacy</h2>

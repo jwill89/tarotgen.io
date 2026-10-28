@@ -330,6 +330,15 @@ endings). Check runs with `journalctl -t tarotgen-backup`. Restore: stop writes,
 stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
 `sudo tarotgen-backup`.
 
+**Retention.** Only if that backup succeeds, the same cron line runs
+`backend/scripts/retention.php` as www-data (`scripts/` ships with `-Target
+backend`): it deletes **guest** readings (`user_id IS NULL`) older than 365 days —
+readings made while signed in, on the site or via a linked plugin, are never
+touched — then runs `PRAGMA optimize`. The window is stated on the privacy page
+(`PrivacyPolicyView.vue`, "Data Retention"); change both together. Check runs with
+`journalctl -t tarotgen-retention`; preview with `runuser -u www-data -- php
+scripts/retention.php --dry-run`.
+
 ---
 
 ## 7. Database

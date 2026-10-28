@@ -7,4 +7,7 @@ TAROT_DATA_DIR=/var/lib/tarotgen
 
 # 03:17 UTC nightly: online backup of the database, newest 14 kept
 # (/var/backups/tarotgen/nightly). Output goes to syslog: journalctl -t tarotgen-backup
-17 3 * * * root /usr/local/sbin/tarotgen-backup >/dev/null 2>&1
+# Then, only if that backup succeeded, data retention (AUDIT.md §1.7): guest
+# readings older than a year are deleted, as the privacy policy states, and the
+# planner statistics refreshed. Output: journalctl -t tarotgen-retention
+17 3 * * * root /usr/local/sbin/tarotgen-backup >/dev/null 2>&1 && runuser -u www-data -- php /var/www/tarotgen.io/scripts/retention.php 2>&1 | logger -t tarotgen-retention
