@@ -354,6 +354,15 @@ five-entry baseline; strict TS + typed ESLint.
     (30 days; images change only on a re-scan). On re-scan, purge the CF cache
     for that path or bump a `?v=` in `cardImageUrls` (§4.1).
   - **Verify:** `curl -sI https://tarotgen.io/assets/decks/1/Card_0001.png | grep -i cache`.
+  - **Implemented 2026-10-28 (awaiting deploy):** `/assets/*` 2xx responses get
+    `public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800`
+    (Cloudflare 30 days, browsers 1 day; `Header set` without `always`, so
+    errors are never edge-cached). Also fixed: a **missing** file under
+    `/assets/` fell through to the SPA as 200-HTML, which Cloudflare caches by
+    extension (`.png`) — it now 404s like `/plugin/` (matching `dev-router.php`).
+    Prod census: all 28 decks complete (2,228 full PNGs, avg 2.2 MB, 5 GB), so
+    no live page relied on that fallthrough. **After replacing a card image,
+    purge its URL in Cloudflare.**
 
 - [ ] **3.2 Lightbox serves raw PNG; only thumbnails are WebP.** [high] [M]
   - **Where:** `ThumbnailService` writes `thumbs/*.webp` only; `imgUrl` in

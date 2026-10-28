@@ -23,6 +23,15 @@
     # about never, and a month keeps them off the critical path for repeat visits.
     SetEnvIf Request_URI "^/fonts/" TG_FONT
     Header always set Cache-Control "public, max-age=2592000" env=TG_FONT
+
+    # Card scans and the other /assets/ images keep their URL when replaced, so
+    # they can't be immutable — but they change only on a re-scan, and a full
+    # card is ~5 MB of PNG. Cloudflare may hold them 30 days (s-maxage), browsers
+    # a day. After replacing an image, purge its URL in Cloudflare; browsers pick
+    # it up within 24 h. `set` without `always` applies to successful responses
+    # only, so a missing image is never pinned at the edge for a month.
+    SetEnvIf Request_URI "^/assets/" TG_ASSET
+    Header set Cache-Control "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800" env=TG_ASSET
 </IfModule>
 
 RewriteEngine On
@@ -50,15 +59,15 @@ RewriteRule ^(.*)$ dist/$1 [L]
 # injected server-side (the SPA still hydrates as normal for visitors).
 RewriteRule ^reading/[A-Za-z0-9]+/?$ og.php [L]
 
-# Dalamud custom repo (/plugin/*): a missing file here MUST 404, never fall
-# through to the SPA shell below. Existing files were already served by the -f
-# rule above, so anything under /plugin/ reaching this point is genuinely
-# missing. Returning 200-HTML instead would make Dalamud download the app shell
-# in place of the plugin zip ("Download failed") — and because these URLs end in
-# .zip/.png, Cloudflare CACHES that 200-HTML for hours (max-age=14400), breaking
-# installs for everyone routed through that edge. A 404 is not long-cached and
-# self-heals once the deploy's file swap completes.
-RewriteCond %{REQUEST_URI} ^/plugin/
+# Static file trees (/plugin/*, /assets/*): a missing file here MUST 404, never
+# fall through to the SPA shell below. Existing files were already served by the
+# -f rule above, so anything reaching this point is genuinely missing. Returning
+# 200-HTML instead would make Dalamud download the app shell in place of the
+# plugin zip ("Download failed"), and hand <img> tags an HTML page for a card
+# scan — and because these URLs end in .zip/.png/.webp, Cloudflare CACHES that
+# 200-HTML for hours (max-age=14400), so the real file stays hidden behind it
+# after upload. A 404 is not long-cached and self-heals once the file exists.
+RewriteCond %{REQUEST_URI} ^/(plugin|assets)/
 RewriteRule ^ - [R=404,L]
 
 # SPA fallback — serve the built app
