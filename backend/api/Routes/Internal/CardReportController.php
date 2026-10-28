@@ -7,13 +7,16 @@ use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardReportRepository;
+use Tarot\Structure\CardReportReason;
+use Tarot\Utility\Input;
 use Tarot\Utility\RateLimiter;
 
 /**
- * Public endpoint for reporting a card scan that has artefacts/issues and should
- * be re-scanned. Reporting a card that already has an open report just bumps its
- * counter. Two rate limits keep this from being abused: an overall per-IP cap,
- * and a per-IP-per-card cooldown so one person can't inflate a card's count.
+ * Public endpoint for reporting a problem with a card's image, with the reason
+ * (and optional details) the admins need to fix it. Reporting a card that
+ * already has an open report bumps its counter. Two rate limits keep this from
+ * being abused: an overall per-IP cap, and a per-IP-per-card cooldown so one
+ * person can't inflate a card's count.
  */
 class CardReportController extends AbstractController
 {
@@ -25,13 +28,16 @@ class CardReportController extends AbstractController
 
     private const int WINDOW_SECONDS = 3600;
 
+    /** Longest description a reporter can attach; longer input is truncated. */
+    private const int DETAILS_MAX_LENGTH = 500;
+
     public function __construct(private readonly CardReportRepository $reports)
     {
     }
 
     #[OA\Post(
         path: '/card-reports',
-        summary: 'Report a card scan as needing a re-scan (rate-limited)',
+        summary: "Report a problem with a card's image (rate-limited)",
         tags: ['Cards'],
         requestBody: new OA\RequestBody(
             required: true,
@@ -41,6 +47,18 @@ class CardReportController extends AbstractController
                     new OA\Property(property: 'deck_id', type: 'integer'),
                     new OA\Property(property: 'card_id', type: 'integer'),
                     new OA\Property(property: 'card_name', type: 'string'),
+                    new OA\Property(
+                        property: 'reason',
+                        ref: CardReportReason::class,
+                        description: 'Sent by the site and current plugin builds. Older plugin builds omit it; '
+                            . 'their reports only bump the counter.'
+                    ),
+                    new OA\Property(
+                        property: 'details',
+                        type: 'string',
+                        maxLength: self::DETAILS_MAX_LENGTH,
+                        description: 'What is wrong, in the reporter\'s words. Required when reason is `other`.'
+                    ),
                 ]
             )
         ),
@@ -55,7 +73,10 @@ class CardReportController extends AbstractController
                 description: 'Already reported this card recently (counter not bumped)',
                 content: new OA\JsonContent(properties: [new OA\Property(property: 'status', type: 'string')])
             ),
-            new OA\Response(response: 400, description: 'Missing/invalid deck or card id'),
+            new OA\Response(
+                response: 400,
+                description: 'Missing/invalid deck or card id, unknown reason, or `other` without details'
+            ),
             new OA\Response(response: 429, description: 'Too many reports from this IP'),
         ]
     )]
@@ -71,13 +92,26 @@ class CardReportController extends AbstractController
             );
         }
 
-        $body     = $this->parsedBody($request);
-        $deckId   = (int)($body['deck_id'] ?? 0);
-        $cardId   = (int)($body['card_id'] ?? -1);
-        $cardName = mb_substr(trim((string)($body['card_name'] ?? '')), 0, 120);
+        $body      = $this->parsedBody($request);
+        $deckId    = (int)($body['deck_id'] ?? 0);
+        $cardId    = (int)($body['card_id'] ?? -1);
+        $cardName  = Input::string($body['card_name'] ?? null, 120);
+        $reasonKey = Input::string($body['reason'] ?? null, 32);
+        $reason    = CardReportReason::tryFrom($reasonKey);
+        $details   = Input::string($body['details'] ?? null, self::DETAILS_MAX_LENGTH);
 
         if ($deckId < 1 || $cardId < 0) {
             return $response->withJson(['error' => 'A valid deck and card are required.'], 400);
+        }
+
+        // No reason at all is an older plugin build, accepted as a bare count bump;
+        // a reason we don't recognise is a client bug worth surfacing.
+        if ($reasonKey !== '' && $reason === null) {
+            return $response->withJson(['error' => "Please choose what's wrong with this card."], 400);
+        }
+
+        if ($reason === CardReportReason::Other && $details === '') {
+            return $response->withJson(['error' => "Please describe what's wrong with this card."], 400);
         }
 
         // Per-card cooldown: if this IP already reported this exact card in the
@@ -88,7 +122,7 @@ class CardReportController extends AbstractController
             return $response->withJson(['status' => 'already_reported']);
         }
 
-        $this->reports->report($deckId, $cardId, $cardName);
+        $this->reports->report($deckId, $cardId, $cardName, $reason, $details);
 
         $perCard->hit($cardKey);
         $overall->hit($ip);

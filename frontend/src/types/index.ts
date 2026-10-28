@@ -219,7 +219,21 @@ export interface Contact {
   submitted_at: string
 }
 
-/** A reported card scan needing a re-scan (admin panel). */
+/** What a reporter says is wrong with a card (mirrors the backend CardReportReason enum). */
+export type CardReportReason = 'artefact' | 'cropping' | 'quality' | 'wrong_card' | 'other'
+
+/** One user's report of a card, with the reason they gave (admin panel). */
+export interface CardReportSubmission {
+  submission_id: number
+  report_id: number
+  /** The card's round when this was submitted; compare with CardReport.round. */
+  round: number
+  reason: CardReportReason
+  details: string
+  submitted_at: string
+}
+
+/** A card users have reported as having a problem with its image (admin panel). */
 export interface CardReport {
   report_id: number
   deck_id: number
@@ -230,4 +244,8 @@ export interface CardReport {
   resolved_at: string | null
   first_reported_at: string
   last_reported_at: string
+  /** Goes up each time the card is reported again after an admin resolved it. */
+  round: number
+  /** Each reason given, newest first. Reports from before reasons existed have none. */
+  submissions: CardReportSubmission[]
 }

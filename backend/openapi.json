@@ -2021,7 +2021,7 @@
                 "tags": [
                     "Admin · Card Reports"
                 ],
-                "summary": "List reported card scans (open first; pass ?show_resolved=1 for all)",
+                "summary": "List reported cards with their reasons (open first; pass ?show_resolved=1 for all)",
                 "operationId": "47c6f9a250e71454f6aa7b427865ff1e",
                 "parameters": [
                     {
@@ -2480,7 +2480,7 @@
                 "tags": [
                     "Cards"
                 ],
-                "summary": "Report a card scan as needing a re-scan (rate-limited)",
+                "summary": "Report a problem with a card's image (rate-limited)",
                 "operationId": "7121e0ef3d6914631c4b1b46a5d6a143",
                 "requestBody": {
                     "required": true,
@@ -2500,6 +2500,15 @@
                                     },
                                     "card_name": {
                                         "type": "string"
+                                    },
+                                    "reason": {
+                                        "$ref": "#/components/schemas/CardReportReason",
+                                        "description": "Sent by the site and current plugin builds. Older plugin builds omit it; their reports only bump the counter."
+                                    },
+                                    "details": {
+                                        "description": "What is wrong, in the reporter's words. Required when reason is `other`.",
+                                        "type": "string",
+                                        "maxLength": 500
                                     }
                                 },
                                 "type": "object"
@@ -2539,7 +2548,7 @@
                         }
                     },
                     "400": {
-                        "description": "Missing/invalid deck or card id"
+                        "description": "Missing/invalid deck or card id, unknown reason, or `other` without details"
                     },
                     "429": {
                         "description": "Too many reports from this IP"
@@ -4382,7 +4391,7 @@
     "components": {
         "schemas": {
             "CardReport": {
-                "description": "A report that a card scan needs re-scanning.",
+                "description": "A card users have reported as having a problem with its image.",
                 "properties": {
                     "report_id": {
                         "type": "integer"
@@ -4415,6 +4424,54 @@
                         "type": "string"
                     },
                     "last_reported_at": {
+                        "type": "string"
+                    },
+                    "round": {
+                        "description": "Goes up each time the card is reported again after being resolved.",
+                        "type": "integer"
+                    },
+                    "submissions": {
+                        "description": "Each reason given, newest first. Older reports may have none.",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/CardReportSubmission"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CardReportReason": {
+                "description": "What is wrong with a reported card.",
+                "type": "string",
+                "enum": [
+                    "artefact",
+                    "cropping",
+                    "quality",
+                    "wrong_card",
+                    "other"
+                ]
+            },
+            "CardReportSubmission": {
+                "description": "One user's report of a card, with their reason.",
+                "properties": {
+                    "submission_id": {
+                        "type": "integer"
+                    },
+                    "report_id": {
+                        "type": "integer"
+                    },
+                    "round": {
+                        "description": "The card's round when this was submitted (see CardReport.round).",
+                        "type": "integer"
+                    },
+                    "reason": {
+                        "$ref": "#/components/schemas/CardReportReason"
+                    },
+                    "details": {
+                        "description": "What the reporter wrote; may be empty.",
+                        "type": "string"
+                    },
+                    "submitted_at": {
                         "type": "string"
                     }
                 },
@@ -4911,7 +4968,7 @@
         },
         {
             "name": "Cards",
-            "description": "Card-level actions (e.g. reporting a scan issue)."
+            "description": "Card-level actions (e.g. reporting a problem with a card's image)."
         },
         {
             "name": "Contact",
@@ -4971,7 +5028,7 @@
         },
         {
             "name": "Admin · Card Reports",
-            "description": "Reported card scans needing a re-scan."
+            "description": "Cards users have reported, with the reasons they gave."
         }
     ]
 }

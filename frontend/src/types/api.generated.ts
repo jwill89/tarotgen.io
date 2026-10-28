@@ -673,7 +673,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List reported card scans (open first; pass ?show_resolved=1 for all) */
+        /** List reported cards with their reasons (open first; pass ?show_resolved=1 for all) */
         get: operations["47c6f9a250e71454f6aa7b427865ff1e"];
         put?: never;
         post?: never;
@@ -834,7 +834,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Report a card scan as needing a re-scan (rate-limited) */
+        /** Report a problem with a card's image (rate-limited) */
         post: operations["7121e0ef3d6914631c4b1b46a5d6a143"];
         delete?: never;
         options?: never;
@@ -1589,7 +1589,7 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
-        /** @description A report that a card scan needs re-scanning. */
+        /** @description A card users have reported as having a problem with its image. */
         CardReport: {
             report_id?: number;
             deck_id?: number;
@@ -1603,6 +1603,26 @@ export interface components {
             resolved_at?: string | null;
             first_reported_at?: string;
             last_reported_at?: string;
+            /** @description Goes up each time the card is reported again after being resolved. */
+            round?: number;
+            /** @description Each reason given, newest first. Older reports may have none. */
+            submissions?: components["schemas"]["CardReportSubmission"][];
+        };
+        /**
+         * @description What is wrong with a reported card.
+         * @enum {string}
+         */
+        CardReportReason: "artefact" | "cropping" | "quality" | "wrong_card" | "other";
+        /** @description One user's report of a card, with their reason. */
+        CardReportSubmission: {
+            submission_id?: number;
+            report_id?: number;
+            /** @description The card's round when this was submitted (see CardReport.round). */
+            round?: number;
+            reason?: components["schemas"]["CardReportReason"];
+            /** @description What the reporter wrote; may be empty. */
+            details?: string;
+            submitted_at?: string;
         };
         /** @description A changelog entry. */
         ChangelogEntry: {
@@ -3478,6 +3498,10 @@ export interface operations {
                     deck_id: number;
                     card_id: number;
                     card_name?: string;
+                    /** @description Sent by the site and current plugin builds. Older plugin builds omit it; their reports only bump the counter. */
+                    reason?: components["schemas"]["CardReportReason"];
+                    /** @description What is wrong, in the reporter's words. Required when reason is `other`. */
+                    details?: string;
                 };
             };
         };
@@ -3504,7 +3528,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description Missing/invalid deck or card id */
+            /** @description Missing/invalid deck or card id, unknown reason, or `other` without details */
             400: {
                 headers: {
                     [name: string]: unknown;

@@ -54,7 +54,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
 #[OA\Tag(name: 'Spreads', description: 'Public spread layouts and user submissions.')]
 #[OA\Tag(name: 'Readings', description: 'Generating, viewing, and modifying readings.')]
-#[OA\Tag(name: 'Cards', description: 'Card-level actions (e.g. reporting a scan issue).')]
+#[OA\Tag(name: 'Cards', description: "Card-level actions (e.g. reporting a problem with a card's image).")]
 #[OA\Tag(name: 'Contact', description: 'Public contact-form submissions.')]
 #[OA\Tag(name: 'Changelog', description: 'Public changelog entries.')]
 #[OA\Tag(name: 'Authentication', description: 'Registration, sign-in/out, and session.')]
@@ -69,7 +69,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Admin · Changelog', description: 'Changelog entry CRUD.')]
 #[OA\Tag(name: 'Admin · Users', description: 'Account administration.')]
 #[OA\Tag(name: 'Admin · Contacts', description: 'Submitted contact messages.')]
-#[OA\Tag(name: 'Admin · Card Reports', description: 'Reported card scans needing a re-scan.')]
+#[OA\Tag(name: 'Admin · Card Reports', description: 'Cards users have reported, with the reasons they gave.')]
 final class OpenApiSpec
 {
 }

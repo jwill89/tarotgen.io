@@ -27,11 +27,17 @@ const props = withDefaults(
     maxWidth?: string
     /** Allow closing by clicking the backdrop (default true). */
     closeOnBackdrop?: boolean
+    /**
+     * Stack above the card lightbox, which itself sits over ordinary modals — for
+     * a dialog opened from inside it (e.g. the card report form).
+     */
+    overLightbox?: boolean
   }>(),
   {
     title: '',
     maxWidth: '30rem',
     closeOnBackdrop: true,
+    overLightbox: false,
   },
 )
 
@@ -52,9 +58,10 @@ function onInteractOutside(e: Event): void {
 <template>
   <DialogRoot :open="active" @update:open="onOpenChange">
     <DialogPortal>
-      <DialogOverlay class="myst-modal-overlay" />
+      <DialogOverlay class="myst-modal-overlay" :class="{ 'is-over-lightbox': overLightbox }" />
       <DialogContent
         class="myst-modal"
+        :class="{ 'is-over-lightbox': overLightbox }"
         :style="{ maxWidth }"
         :aria-describedby="undefined"
         @pointer-down-outside="onInteractOutside"

@@ -11,8 +11,8 @@ import {
   VisuallyHidden,
 } from 'reka-ui'
 import Tooltip from '@/components/Tooltip.vue'
-import { useToasts } from '@/composables/useToasts'
-import { endpoints } from '@/api/endpoints'
+import CardReportDialog from '@/components/CardReportDialog.vue'
+import { useCardReports } from '@/composables/useCardReports'
 import type { ReadingCard } from '@/types'
 
 const props = defineProps<{
@@ -22,7 +22,7 @@ const props = defineProps<{
   deckId: number
 }>()
 
-const { success: toastSuccess, error: toastError } = useToasts()
+const { hasReported } = useCardReports()
 
 const emit = defineEmits<{ close: [] }>()
 
@@ -60,49 +60,25 @@ const isReversed = computed(() => {
 
 const showReversed = computed(() => isReversed.value && !flipped.value)
 
-/* ── Report a card scan issue ──────────────────────────── */
-const reportedCards = ref<Set<number>>(new Set())
-const reportingCard = ref(false)
-
+/* ── Report a problem with the card ────────────────────── */
 const currentCard = computed(() =>
   index.value >= 0 ? (props.cards[index.value] as ReadingCard | undefined) : undefined,
 )
 const alreadyReported = computed(() =>
-  currentCard.value ? reportedCards.value.has(currentCard.value.card_id) : false,
+  currentCard.value ? hasReported(props.deckId, currentCard.value.card_id) : false,
+)
+const reportTooltip = computed(() =>
+  alreadyReported.value
+    ? "You've reported this card. Thanks!"
+    : "Report a problem with this card's image",
 )
 
-async function reportCard() {
-  const card = currentCard.value
-  if (!card || reportingCard.value || reportedCards.value.has(card.card_id)) return
+// The card the report form is open for — held separately from `index` so the
+// form keeps describing the card it was opened on.
+const reportTarget = ref<ReadingCard | null>(null)
 
-  reportingCard.value = true
-  try {
-    const res = await fetch('/api' + endpoints.cardReports, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        deck_id: props.deckId,
-        card_id: card.card_id,
-        card_name: card.card_name,
-      }),
-    })
-
-    if (res.status === 429) {
-      toastError('You have reported too many cards recently. Please try again later.')
-      return
-    }
-    if (!res.ok) {
-      toastError('Could not submit your report. Please try again.')
-      return
-    }
-
-    reportedCards.value = new Set(reportedCards.value).add(card.card_id)
-    toastSuccess('Thanks! This card has been reported for re-scanning.')
-  } catch {
-    toastError('Could not submit your report. Please try again.')
-  } finally {
-    reportingCard.value = false
-  }
+function openReport(): void {
+  if (currentCard.value && !alreadyReported.value) reportTarget.value = currentCard.value
 }
 
 const isZoomed = computed(() => zoom.value > MIN_ZOOM + 0.001)
@@ -324,6 +300,9 @@ watch(index, () => resetZoom())
 // Escape is Reka's (DismissableLayer is layer-stack aware, so the topmost layer
 // wins); everything below is lightbox-specific and stays hand-rolled.
 function onKeydown(e: KeyboardEvent) {
+  // While the report form is open, keys belong to it: arrows move between its
+  // reasons, and "-" or "0" are just text in its details box.
+  if (reportTarget.value) return
   if (e.key === 'ArrowLeft') prev()
   else if (e.key === 'ArrowRight') next()
   else if (e.key === '+' || e.key === '=') zoomInBtn()
@@ -465,17 +444,12 @@ onUnmounted(() => {
               <span>{{ flipped ? 'View Reversed' : 'View Upright' }}</span>
             </button>
 
-            <Tooltip
-              v-if="index > -1"
-              :text="
-                alreadyReported ? 'Reported' : 'Report a scan artefact or issue with this card'
-              "
-            >
+            <Tooltip v-if="index > -1" :text="reportTooltip">
               <button
                 class="button is-small is-rounded lightbox-report-btn"
                 :class="{ 'is-success': alreadyReported }"
-                :disabled="reportingCard || alreadyReported"
-                @click="reportCard"
+                :disabled="alreadyReported"
+                @click="openReport"
               >
                 <span class="icon is-small"
                   ><FontAwesomeIcon
@@ -485,7 +459,7 @@ onUnmounted(() => {
                         : byPrefixAndName.fas['triangle-exclamation']
                     "
                 /></span>
-                <span>{{ alreadyReported ? 'Reported' : 'Report scan issue' }}</span>
+                <span>{{ alreadyReported ? 'Reported' : 'Report a problem' }}</span>
               </button>
             </Tooltip>
           </div>
@@ -508,4 +482,11 @@ onUnmounted(() => {
       </DialogOverlay>
     </DialogPortal>
   </DialogRoot>
+
+  <CardReportDialog
+    v-if="reportTarget"
+    :deck-id="deckId"
+    :card="reportTarget"
+    @close="reportTarget = null"
+  />
 </template>

@@ -99,15 +99,17 @@ public sealed class TarotApiClient : IDisposable
             ct);
 
     /// <summary>
-    /// Report a card scan as having artefacts/issues. Returns the server status
+    /// Report a problem with a card's image, with a <see cref="CardReportReason"/>
+    /// key and optional details (required for "other"). Returns the server status
     /// ("reported" or "already_reported"); throws <see cref="TarotApiException"/>
-    /// when rate-limited (429).
+    /// when the server rejects it (validation, or rate-limited with a 429).
     /// </summary>
-    public async Task<string?> ReportCardAsync(int deckId, int cardId, string cardName, CancellationToken ct = default)
+    public async Task<string?> ReportCardAsync(
+        int deckId, int cardId, string cardName, string reason, string details, CancellationToken ct = default)
     {
         var ack = await PostJsonAsync<object, CardReportAck>(
             "/card-reports",
-            new { DeckId = deckId, CardId = cardId, CardName = cardName },
+            new { DeckId = deckId, CardId = cardId, CardName = cardName, Reason = reason, Details = details },
             ct).ConfigureAwait(false);
         return ack?.Status;
     }

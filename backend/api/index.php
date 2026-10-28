@@ -205,7 +205,7 @@ $app->group('/contacts', function (RouteCollectorProxy $group) {
     $group->post('[/]', ContactController::class . ':submit');
 });
 
-// ── Card scan-error reports (public submission from the card lightbox) ────────
+// ── Card reports: image problems + reason (public submission from the lightbox) ─
 $app->group('/card-reports', function (RouteCollectorProxy $group) {
     $group->post('[/]', CardReportController::class . ':report');
 });
@@ -312,7 +312,7 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->get('/contacts[/]', AdminController::class . ':getContacts');
     $group->patch('/contacts/{contact_id}[/]', AdminController::class . ':updateContact');
 
-    // Card scan-error reports (submitted from the card lightbox)
+    // Card reports (image problems + reasons, submitted from the card lightbox)
     $group->get('/card-reports[/]', AdminController::class . ':getCardReports');
     $group->patch('/card-reports/{report_id}[/]', AdminController::class . ':updateCardReport');
 })->add(AdminAuth::class);

@@ -4,6 +4,7 @@ namespace Tarot\Repository;
 
 use Tarot\Data\CardReportData;
 use Tarot\Structure\CardReport;
+use Tarot\Structure\CardReportReason;
 
 readonly class CardReportRepository
 {
@@ -11,9 +12,15 @@ readonly class CardReportRepository
     {
     }
 
-    public function report(int $deckId, int $cardId, string $cardName): void
-    {
-        $this->data->report($deckId, $cardId, $cardName);
+    /** A null $reason records a report from a client that predates reasons. */
+    public function report(
+        int $deckId,
+        int $cardId,
+        string $cardName,
+        ?CardReportReason $reason,
+        string $details
+    ): void {
+        $this->data->report($deckId, $cardId, $cardName, $reason?->value, $details);
     }
 
     /** @return list<CardReport> */

@@ -3,8 +3,8 @@
 A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for **Final Fantasy XIV** that talks to the
 [TarotGen.io](https://tarotgen.io) REST API: draw a tarot reading in-game (pick a public spread or a
 free draw), view any reading by its share code, optionally link a TarotGen account to lock and track
-readings, push a reading to another plugin user with a chatless in-game prompt, and report a card scan
-that needs re-scanning.
+readings, push a reading to another plugin user with a chatless in-game prompt, and report a problem
+with a card's image.
 
 It is a **separate, self-contained C# subproject** in the TarotGen repo, built and packaged
 independently by [DalamudPackager](https://github.com/goatcorp/DalamudPackager). The site's
@@ -19,7 +19,7 @@ channel (`-Target plugin`).
 - **View a reading** by its share code / URL, including password-protected readings (guest enters the password).
 - **Optional account** — link a TarotGen account to lock/finalize a reading, sort deck/spread pickers by your favorites, and track generated readings ("My Readings"). Guests never have to link.
 - **Send a reading** to another plugin user as a **chatless push** — they get a passive in-game *"‹You› wants to share a Tarot reading"* prompt with **View**/**Dismiss**/**Block** (no chat, no clipboard). Recipients choose a consent tier (party members / friends / party or friends / anyone) or turn receiving off; party covers cross-world and Party-Finder parties, and one install can link several characters.
-- **Report a card scan issue** from the card lightbox, so scans with artefacts can be flagged for re-scanning.
+- **Report a problem with a card's image** from the card lightbox — pick what's wrong (scan artefact, cropping, image quality, wrong card, or something else) and optionally describe it, so the site admins know what to fix.
 
 **Out of scope** (lives on the website): admin, account/profile management, changelog viewing, PNG
 export, echoing readings to game chat, the drag/rotate placement editor, custom spreads, drawing

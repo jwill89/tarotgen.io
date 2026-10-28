@@ -1,0 +1,37 @@
+<?php
+
+namespace Tarot\Structure;
+
+use OpenApi\Attributes as OA;
+
+/**
+ * One person's report of a card: the reason they picked and anything they wrote
+ * about it. Belongs to the card's {@see CardReport}.
+ *
+ * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
+ */
+#[OA\Schema(description: "One user's report of a card, with their reason.")]
+class CardReportSubmission extends AbstractStructure
+{
+    #[OA\Property(type: 'integer')]
+    public private(set) int $submission_id = 0;
+
+    #[OA\Property(type: 'integer')]
+    public private(set) int $report_id = 0;
+
+    #[OA\Property(
+        type: 'integer',
+        description: "The card's round when this was submitted (see CardReport.round)."
+    )]
+    public private(set) int $round = 1;
+
+    // The raw CardReportReason value: PDO hydrates rows as strings, not enums.
+    #[OA\Property(ref: CardReportReason::class)]
+    public private(set) string $reason = '';
+
+    #[OA\Property(type: 'string', description: 'What the reporter wrote; may be empty.')]
+    public private(set) string $details = '';
+
+    #[OA\Property(type: 'string')]
+    public private(set) string $submitted_at = '';
+}

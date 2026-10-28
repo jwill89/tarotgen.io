@@ -25,7 +25,22 @@ A full visual overhaul and the infrastructure cleanups that came with it. The
 app moves from the old mystical-purple theme to an **elevated celestial
 minimalism** look, its interactive UI is now built on **Reka UI** headless
 primitives, and several long-standing rough edges (FontAwesome bandwidth, a
-slow authenticated page load, dead theme code) are resolved.
+slow authenticated page load, dead theme code) are resolved. Card reports now
+carry a reason, so admins know what each reported card needs.
+
+### Added
+
+- **Reasons on card reports.** Reporting a card from the lightbox now opens a
+  short form: pick what's wrong (*scan artefact*, *cropped or crooked*, *poor
+  image quality*, *wrong card*, or *something else*) and optionally describe it;
+  a description is required for *something else*. The admin **Errored Cards**
+  page shows each card's reasons at a glance, plus a **View reports** dialog with
+  every report's reason, details, and date. Reasons are grouped by round: when a
+  card an admin resolved is reported again, the earlier reasons are shown as
+  already resolved, so only the new problem reads as current. The FFXIV plugin
+  (0.6.0) has the same form; older plugin builds can still report, without a
+  reason. **Run `php db/migrate_card_report_submissions.php` before deploying the
+  backend** (it adds `card_report_submissions` and `card_reports.round`).
 
 ### Changed
 

@@ -38,11 +38,17 @@ public sealed class ReadingPanel
     private bool lightboxShowReversed;
     private bool openLightboxRequest;
 
-    // Card scan-error reporting (from the lightbox). Keyed by (deckId, cardId);
+    // Card problem reporting (from the lightbox). Keyed by (deckId, cardId);
     // ConcurrentDictionary so the background report task and Draw don't race.
     private readonly ConcurrentDictionary<(int, int), byte> reportedCards = new();
     private volatile bool reportingCard;
     private string? reportCardStatus;
+
+    // The lightbox's report form: which reason is picked (an index into
+    // CardReportReason.All, -1 = none yet) and what the user has written.
+    private bool reportFormOpen;
+    private int reportReason = -1;
+    private string reportDetails = "";
 
     public ReadingPanel(TarotApiClient api, CardTextureCache textures)
     {
@@ -368,13 +374,18 @@ public sealed class ReadingPanel
         this.lightbox = new LightboxCard(deckId, card.CardId, card.CardName, card.Reversed, positionTitle);
         this.lightboxShowReversed = card.Reversed;
         this.reportCardStatus = null;
+        this.reportFormOpen = false;
+        this.reportReason = -1;
+        this.reportDetails = "";
         this.openLightboxRequest = true;
     }
 
     private void DrawLightbox()
     {
         var vp = ImGui.GetMainViewport();
-        ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+        // Re-centred every frame (the popup can't be moved anyway) so it stays on
+        // screen as the report form grows and shrinks it.
+        ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Always, new Vector2(0.5f, 0.5f));
 
         using var popup = ImRaii.Popup("##cardLightbox", ImGuiWindowFlags.NoMove | ImGuiWindowFlags.AlwaysAutoResize);
         if (!popup)
@@ -389,11 +400,16 @@ public sealed class ReadingPanel
             return;
         }
 
+        // Once the report goes through the card counts as reported, which hides the form.
+        bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
+        bool showReportForm = this.reportFormOpen && !reported;
+
         var tex = this.textures.GetCard(lb.DeckId, lb.CardId);
         if (tex != null)
         {
             var nat = tex.Size;
-            float maxH = vp.WorkSize.Y * 0.82f;
+            // Give the report form room below the card while it's open.
+            float maxH = vp.WorkSize.Y * (showReportForm ? 0.5f : 0.82f);
             float maxW = vp.WorkSize.X * 0.9f;
             float scale = Math.Min(maxH / Math.Max(1f, nat.Y), maxW / Math.Max(1f, nat.X));
             var display = new Vector2(nat.X * scale, nat.Y * scale);
@@ -426,15 +442,65 @@ public sealed class ReadingPanel
             ImGui.CloseCurrentPopup();
 
         ImGui.SameLine();
-        bool reported = this.reportedCards.ContainsKey((lb.DeckId, lb.CardId));
         using (ImRaii.Disabled(this.reportingCard || reported))
         {
-            if (Ui.Button(reported ? "Reported" : "Report scan issue"))
-                StartReportCard(lb.DeckId, lb.CardId, lb.Name);
+            if (Ui.Button(reported ? "Reported" : "Report a problem"))
+                this.reportFormOpen = !this.reportFormOpen;
         }
+
+        if (showReportForm)
+            DrawReportForm(lb);
 
         if (!string.IsNullOrEmpty(this.reportCardStatus))
             ImGui.TextDisabled(this.reportCardStatus);
+    }
+
+    /// <summary>
+    /// What's wrong with the card, and where: the reason tells the admins what kind
+    /// of fix it needs (a re-scan, a re-crop, a different image), the details where
+    /// to look. "Something else" needs details, since it says nothing on its own.
+    /// </summary>
+    private void DrawReportForm(LightboxCard lb)
+    {
+        float scale = ImGuiHelpers.GlobalScale;
+        float width = Math.Max(ImGui.GetContentRegionAvail().X, 340f * scale);
+
+        ImGui.Spacing();
+        ImGui.Separator();
+        Ui.Label("What's wrong?");
+        for (int i = 0; i < CardReportReason.All.Count; i++)
+        {
+            var option = CardReportReason.All[i];
+            if (ImGui.RadioButton($"{option.Label}##reason{i}", this.reportReason == i))
+                this.reportReason = i;
+            ImGui.SameLine();
+            Ui.Help(option.Hint);
+        }
+
+        var chosen = this.reportReason >= 0 ? CardReportReason.All[this.reportReason] : null;
+
+        ImGui.Spacing();
+        Ui.Label(chosen?.RequiresDetails == true ? "Details (required)" : "Details (optional)");
+        Ui.Help(chosen?.Prompt ?? "Anything that helps us find the problem");
+        // ImGui caps the buffer in UTF-8 bytes, so non-ASCII text stops a little short
+        // of the server's character limit — never past it.
+        ImGui.InputTextMultiline(
+            "##reportDetails",
+            ref this.reportDetails,
+            CardReportReason.MaxDetailsLength,
+            new Vector2(width, ImGui.GetTextLineHeight() * 4.5f));
+        ImGui.TextDisabled($"{this.reportDetails.Length} / {CardReportReason.MaxDetailsLength}");
+
+        bool canSend = chosen != null && (!chosen.RequiresDetails || !string.IsNullOrWhiteSpace(this.reportDetails));
+        using (ImRaii.Disabled(this.reportingCard || !canSend))
+        {
+            if (Ui.PrimaryButton("Send report") && chosen != null)
+                StartReportCard(lb.DeckId, lb.CardId, lb.Name, chosen.Key, this.reportDetails.Trim());
+        }
+
+        ImGui.SameLine();
+        if (Ui.Button("Cancel"))
+            this.reportFormOpen = false;
     }
 
     // ── Async actions ─────────────────────────────────────────────────────────
@@ -490,20 +556,21 @@ public sealed class ReadingPanel
         });
     }
 
-    private void StartReportCard(int deckId, int cardId, string cardName)
+    private void StartReportCard(int deckId, int cardId, string cardName, string reason, string details)
     {
         this.reportingCard = true;
-        this.reportCardStatus = "Reporting…";
+        this.reportCardStatus = "Sending report…";
         _ = Task.Run(async () =>
         {
             try
             {
-                var status = await this.api.ReportCardAsync(deckId, cardId, cardName, this.api.Token)
+                var status = await this.api.ReportCardAsync(deckId, cardId, cardName, reason, details, this.api.Token)
                     .ConfigureAwait(false);
+                // Marking the card reported is what hides the form (see DrawLightbox).
                 this.reportedCards[(deckId, cardId)] = 0;
                 this.reportCardStatus = status == "already_reported"
                     ? "You've already reported this card recently. Thanks!"
-                    : "Thanks! This card has been reported for re-scanning.";
+                    : "Thanks! Your report has been sent.";
             }
             catch (TarotApiException ex)
             {

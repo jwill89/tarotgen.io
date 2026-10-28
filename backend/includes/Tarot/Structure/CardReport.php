@@ -5,14 +5,15 @@ namespace Tarot\Structure;
 use OpenApi\Attributes as OA;
 
 /**
- * A user-submitted report that a specific card scan has an artefact/issue and
- * should be re-scanned. One row per (deck, card); {@see $report_count} tracks how
- * many times it has been reported. {@see $deck_name} is resolved from the decks
- * table for the admin listing and is not a stored column.
+ * A card users have reported as having a problem with its image. One row per
+ * (deck, card); {@see $report_count} tracks how many times it has been reported,
+ * and {@see $submissions} holds the reason each reporter gave. {@see $deck_name}
+ * is resolved from the decks table for the admin listing and is not a stored
+ * column.
  *
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
  */
-#[OA\Schema(description: 'A report that a card scan needs re-scanning.')]
+#[OA\Schema(description: 'A card users have reported as having a problem with its image.')]
 class CardReport extends AbstractStructure
 {
     #[OA\Property(type: 'integer')]
@@ -41,6 +42,31 @@ class CardReport extends AbstractStructure
 
     #[OA\Property(type: 'string')]
     public private(set) string $last_reported_at = '';
+
+    /**
+     * Starts at 1 and goes up each time the card is reported again after an admin
+     * resolved it, so the reasons for the current problem can be told apart from
+     * those that were already dealt with.
+     */
+    #[OA\Property(
+        type: 'integer',
+        description: 'Goes up each time the card is reported again after being resolved.'
+    )]
+    public private(set) int $round = 1;
+
+    /**
+     * Every reason given for this card, newest first. Reports made before reasons
+     * were collected (or by an older plugin build) have no entry, so this can hold
+     * fewer items than {@see $report_count}.
+     *
+     * @var list<CardReportSubmission>
+     */
+    #[OA\Property(
+        type: 'array',
+        items: new OA\Items(ref: CardReportSubmission::class),
+        description: 'Each reason given, newest first. Older reports may have none.'
+    )]
+    public private(set) array $submissions = [];
 
     /** Whether an admin has marked this report handled. */
     public function isResolved(): bool

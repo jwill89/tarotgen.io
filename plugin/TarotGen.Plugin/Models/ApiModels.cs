@@ -130,3 +130,31 @@ public sealed class CardReportAck
 {
     public string? Status { get; set; }
 }
+
+/// <summary>
+/// A reason a card can be reported for. <see cref="Key"/> is the API value (the
+/// backend's CardReportReason enum); the label, hint, and prompt are this plugin's
+/// copy, matching the website's report form.
+/// </summary>
+public sealed record CardReportReason(string Key, string Label, string Hint, string Prompt)
+{
+    /// <summary>The server keeps at most this many characters of details.</summary>
+    public const int MaxDetailsLength = 500;
+
+    public static readonly IReadOnlyList<CardReportReason> All =
+    [
+        new("artefact", "Scan artefact", "Dust, scratches, glare, or smudges on the image.",
+            "Where is it? e.g. a dust speck near the top-left corner"),
+        new("cropping", "Cropped or crooked", "Edges cut off, a tilted scan, or uneven borders.",
+            "Which edge? e.g. the bottom border is cut off"),
+        new("quality", "Poor image quality", "Blurry, low resolution, too dark, or washed out.",
+            "What looks off? e.g. the whole card is blurry"),
+        new("wrong_card", "Wrong card", "The image doesn't match the card's name.",
+            "Which card does the image show instead?"),
+        new("other", "Something else", "Tell us what you noticed below.",
+            "Describe what's wrong with this card"),
+    ];
+
+    /// <summary>"Something else" says nothing on its own, so the server requires details for it.</summary>
+    public bool RequiresDetails => this.Key == "other";
+}

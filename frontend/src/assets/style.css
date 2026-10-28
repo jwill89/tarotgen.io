@@ -1705,6 +1705,14 @@ body {
 .myst-modal[data-state='open'] {
   animation: myst-dialog-in 0.2s ease;
 }
+/* A dialog opened from inside the lightbox (e.g. the card report form) must
+   clear .lightbox-overlay (10600) yet stay under selects/menus (10650). */
+.myst-modal-overlay.is-over-lightbox {
+  z-index: 10610;
+}
+.myst-modal.is-over-lightbox {
+  z-index: 10611;
+}
 .myst-modal-head {
   flex: none;
   display: flex;

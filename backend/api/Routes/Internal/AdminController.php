@@ -1104,11 +1104,11 @@ class AdminController extends AbstractController
         return $response->withJson(['success' => true]);
     }
 
-    // ── Card reports (scan issues submitted from the card lightbox) ──
+    // ── Card reports (image problems reported from the card lightbox) ──
 
     #[OA\Get(
         path: '/admin/card-reports',
-        summary: 'List reported card scans (open first; pass ?show_resolved=1 for all)',
+        summary: 'List reported cards with their reasons (open first; pass ?show_resolved=1 for all)',
         tags: ['Admin · Card Reports'],
         security: [['sessionCookie' => []]],
         parameters: [
