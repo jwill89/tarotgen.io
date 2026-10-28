@@ -24,7 +24,18 @@ body {
   padding-right: 0 !important;
 }
 
-.app-wrapper > section {
+/* The <main> landmark grows to keep the footer at the bottom of a short page,
+   and the view's root <section> fills it, as it did when it was the wrapper's
+   own child. Focus lands here from the skip link; no ring for a whole page. */
+.app-wrapper > main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.app-wrapper > main:focus {
+  outline: none;
+}
+.app-wrapper > main > section {
   flex: 1;
 }
 

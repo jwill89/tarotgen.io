@@ -12,8 +12,8 @@ namespace TarotGen.Plugin;
 
 /// <summary>
 /// Composition root. Wires services + windows, registers /tarot, and tears
-/// everything down symmetrically on unload. P0 (anonymous) scope: generate and
-/// view readings; account linking (P1) is additive.
+/// everything down symmetrically on unload. Everything works anonymously; linking
+/// an account only adds to it (locking, favorites, My Readings).
 /// </summary>
 public sealed class Plugin : IDalamudPlugin
 {

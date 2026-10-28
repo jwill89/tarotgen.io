@@ -1,0 +1,29 @@
+# Editor defaults for the whole repo. Line endings are also enforced by
+# .gitattributes; Prettier reads this file for anything prettier.config.js
+# leaves unset, so the frontend sizes here match what it already writes.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+# Frontend sources, npm's JSON and CI workflows: 2 spaces (Prettier's width).
+[*.{ts,mts,cts,js,mjs,cjs,vue,css,scss,html,json,yml,yaml}]
+indent_size = 2
+
+# composer.json and the generated openapi.json are 4-space JSON.
+[backend/**.json]
+indent_size = 4
+
+[*.md]
+indent_size = 2
+
+# schema.sql keeps each CREATE exactly as SQLite stores it (AUDIT §2), tabs
+# included, so it can be compared with a live database's sqlite_master.
+[backend/db/schema.sql]
+indent_style = unset
+indent_size = unset

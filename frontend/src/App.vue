@@ -95,11 +95,19 @@ async function doUserLogout() {
   await userLogout()
   void router.push({ name: 'home' })
 }
+
+// The skip link moves focus itself rather than following its #main-content href,
+// which would put a hash in the URL for the router to act on.
+const mainContent = ref<HTMLElement | null>(null)
+function skipToContent() {
+  mainContent.value?.focus()
+}
 </script>
 
 <template>
   <TooltipProvider :delay-duration="300">
     <div class="app-wrapper">
+      <a class="skip-link" href="#main-content" @click.prevent="skipToContent">Skip to content</a>
       <StarField />
 
       <nav class="site-nav" aria-label="main navigation">
@@ -288,7 +296,9 @@ async function doUserLogout() {
         </div>
       </nav>
 
-      <router-view />
+      <main id="main-content" ref="mainContent" tabindex="-1">
+        <router-view />
+      </main>
 
       <ConfirmDialog />
       <ToastContainer />
@@ -330,6 +340,27 @@ async function doUserLogout() {
   --hair-gold: var(--myst-hair-gold);
   --font-display: var(--myst-heading-font);
   --font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Off-screen until a keyboard user tabs to it: the first stop on every page. */
+.skip-link {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  z-index: 60;
+  padding: 8px 15px;
+  border: 1px solid var(--myst-gold);
+  border-radius: 9px;
+  background: var(--myst-chrome);
+  color: var(--myst-gold-bright);
+  font-size: 14px;
+  text-decoration: none;
+  transform: translateY(calc(-100% - 24px));
+}
+.skip-link:focus-visible {
+  transform: none;
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 /* ============ NAV (solid chrome) ============ */

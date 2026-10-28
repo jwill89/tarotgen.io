@@ -74,9 +74,21 @@ final class RequestPipelineTest extends HttpTestCase
         }
     }
 
-    public function testUnknownRoutesAndMethodsAreJsonErrors(): void
+    public function testUnknownRoutesAndMethodsAnswerInTheApiErrorShape(): void
     {
-        $this->assertJsonResponse(404, $this->get('/no-such-route'));
-        $this->assertJsonResponse(405, $this->request('PATCH', '/config'));
+        $notFound = $this->assertJsonResponse(404, $this->get('/no-such-route'));
+        $this->assertSame('Not found.', $notFound['error'] ?? null);
+        $this->assertArrayNotHasKey('message', $notFound, "Slim's own shape");
+
+        $response = $this->request('PATCH', '/config');
+        $notAllowed = $this->assertJsonResponse(405, $response);
+        $this->assertSame('Method not allowed. Must be one of: GET', $notAllowed['error'] ?? null);
+        $this->assertSame('GET', $response->getHeaderLine('Allow'));
+    }
+
+    public function testErrorsAreJsonEvenWhenTheRequestAsksForHtml(): void
+    {
+        $body = $this->assertJsonResponse(404, $this->get('/no-such-route', ['Accept' => 'text/html']));
+        $this->assertSame('Not found.', $body['error'] ?? null);
     }
 }

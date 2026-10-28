@@ -17,7 +17,8 @@ namespace TarotGen.Plugin.Services;
 /// Drives the browser account-link flow: OAuth-style authorization code + PKCE
 /// over an RFC 8252 loopback redirect. Opens the site's /authorize page in the
 /// user's browser, catches the redirect on a local listener, and exchanges the
-/// code for a token via POST /api/plugin/token. See plugin/docs/auth.md.
+/// code for a token via POST /api/plugin/token. See plugin/README.md, "How it
+/// authenticates".
 /// </summary>
 public sealed class LinkService
 {

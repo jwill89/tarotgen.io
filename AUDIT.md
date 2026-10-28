@@ -40,7 +40,7 @@ verification are listed at the end so nobody re-chases them.
 | 2 | Database | 7 | 0 | — (all migrations run on prod 2026-10-28) |
 | 3 | Performance | 5 | 0 | — |
 | 4 | Duplication | 7 | 0 | — |
-| 5 | Standards | 4 | 5 | §5.1 `"*"` constraints, §5.3 metadata, §5.4 plugin/AGENTS doc lines, §5.6 a11y, §5.9 Slim error shape |
+| 5 | Standards | 9 | 0 | — (`eslint-plugin-vuejs-accessibility` is tracked in §6.1) |
 | 6 | Tooling | 0 | 5 | Stylelint, Knip, coverage, PHPStan extensions, plugin CI, Dependabot (a few sub-items already done — see each) |
 | 7 | Dependencies | 1 | 3 | In-range updates, the swagger-php 7 / vitest 5 / happy-dom 21 majors, plugin packages; TypeScript 7 waits for Vue |
 | 8 | Tests | 2 | 5 | More HTTP tests, Data classes, 7 composables, component tests, Playwright, coverage |
@@ -1018,12 +1018,20 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
 
 ## 5. Standards and consistency
 
-- [ ] **5.1 `composer.json` has `"*"` version constraints** on `slim/slim`,
+- [x] **5.1 `composer.json` has `"*"` version constraints** on `slim/slim`,
   `slim/http`, `slim/psr7`, `php-di/slim-bridge`, `friendsofphp/php-cs-fixer`,
   `squizlabs/php_codesniffer`. [medium] [S] Pin to the installed majors
   (`composer show -D` for current versions) with caret ranges.
   - *Status 2026-10-28:* `squizlabs/php_codesniffer` is gone (§5.2); the other
     five still read `"*"`.
+  - **DONE 2026-10-28:** caret ranges floored at the installed versions —
+    `slim/slim ^4.15`, `slim/http ^1.4`, `slim/psr7 ^1.8`, `php-di/slim-bridge
+    ^3.4`, `friendsofphp/php-cs-fixer ^3.95`. Also declared `php-di/php-di ^7.1`:
+    `index.php` and `HttpTestCase` build the container with it directly, though
+    it only arrived through `slim-bridge`. `composer update --lock` changed only
+    the lock's content-hash (no package moved); `composer validate` passes. The
+    next backend deploy runs `composer install` on the droplet once, because the
+    hash changed; it installs the same versions.
 
 - [x] **5.2 php-cs-fixer has no config file.** [medium] [S]
   `composer lint` runs phpcs (PSR-12, warnings ignored); `composer lint:fix`
@@ -1048,11 +1056,22 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     `squizlabs/php_codesniffer` removed; cache gitignored. Lost: phpcs's 120-char
     line warning, which was already set not to fail anything.
 
-- [ ] **5.3 Missing project metadata.** [low] [S] `engines` in
+- [x] **5.3 Missing project metadata.** [low] [S] `engines` in
   `frontend/package.json` + `.nvmrc` (CI pins Node 24); root `.editorconfig`;
   `plugin/.editorconfig`.
+  - **DONE 2026-10-28:** `frontend/.nvmrc` (`24`) is now the one place the Node
+    version lives: CI's `setup-node` reads it (`node-version-file`) instead of
+    its own `'24'`, and `engines.node` is `>=24`. Root `.editorconfig` records
+    what the files already do: UTF-8, LF, final newline, no trailing whitespace
+    (no tracked file has any), 4 spaces, 2 for frontend sources / npm JSON /
+    YAML / Markdown, 4 for `backend/**.json`, and `schema.sql` left alone (it
+    keeps SQLite's own text, tabs included). Prettier reads `.editorconfig` for
+    what its config leaves unset; it now resolves `tabWidth 2` / `useTabs false`
+    / `endOfLine lf` (its defaults anyway) and `format:check` is unchanged.
+    `plugin/.editorconfig`: only conventions all 13 C# files follow
+    (file-scoped namespaces, Allman braces), 2-space project files, tabbed `.sln`.
 
-- [ ] **5.4 Documentation drift (the spun-off docs task landed nothing).** [low] [S]
+- [x] **5.4 Documentation drift (the spun-off docs task landed nothing).** [low] [S]
   - `AGENTS.md`: §3 says `eslint.config.js` (it is `eslint.config.ts`, consuming
     the `frontend/eslint-config` submodule); the §3 tree comment says PHPStan
     "level 6" while §6 says level 8 (8 is right); §12 still describes
@@ -1072,6 +1091,23 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     (line ~21) and the client token / relay (~78–82); `TarotGen.Plugin.json`
     still says "Optional account linking (later)"; `Configuration.cs` still
     points at the missing `docs/auth.md`.
+  - **DONE 2026-10-28:**
+    - AGENTS.md §3: the tree shows `eslint.config.ts` and the `eslint-config/`
+      submodule.
+    - `plugin/README.md`: the share-relay feature, its client token and
+      consent-tier text are gone. The auth section describes the one account
+      token, and no longer calls the account routes read-only (locking a reading
+      writes). "Publishing" names `scripts/deploy.config.ps1`; it said
+      `deploy.local.ps1`, a file the script never read.
+    - The manifest describes linking as shipped.
+    - Two missing `docs/auth.md` links (`Configuration.cs`, and one more in
+      `LinkService.cs`) and Plugin.cs's "P0/P1" scope note now point at the
+      README.
+
+    Plugin builds with 0 warnings. A repo-wide search finds the relay only in
+    AGENTS §12's note that it was removed, and in the dead `.claude/worktrees/`
+    copies (§0 housekeeping). The new manifest text goes out with the next
+    `-Target plugin` deploy (Dalamud reads it from `repo.json`; no version bump).
 
 - [x] **5.5 `contactForm.spec.ts` tests a re-implementation, not the code.** [low] [S]
   The spec defines its own `submitContact()` with its own fetch logic and tests
@@ -1083,9 +1119,21 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     request shape incl. trimming, server message, 429, body-less 500, network
     error. Submitted for real on dev → success panel.
 
-- [ ] **5.6 Accessibility basics.** [low] [S] No `<main>` landmark anywhere in
+- [x] **5.6 Accessibility basics.** [low] [S] No `<main>` landmark anywhere in
   `src/`, no skip link. Add both in `App.vue`; add
   `eslint-plugin-vuejs-accessibility` (§6.1). Reka already covers the widgets.
+  - **DONE 2026-10-28** (the lint plugin stays with §6.1): `App.vue` wraps the
+    router view in `<main id="main-content" tabindex="-1">`. "Skip to content"
+    is the first focusable element, hidden off-screen until it has keyboard
+    focus. It focuses `<main>` itself instead of following its href, so no hash
+    lands in the URL for the router to act on. The old `.app-wrapper > section
+    { flex: 1 }` now sits on `<main>` (grows, flex column) and its section. All
+    17 parameterless public pages measured identical before and after (page
+    height, section box, footer position; short pages still fill the viewport).
+    Keyboard-checked on dev: Tab shows the link, Enter puts focus on `<main>`
+    with the URL unchanged, and the next Tab is the first link in the page
+    content, past the nav. Pages that autofocus a field (login) skip the link,
+    as they skip the nav.
 
 - [x] **5.7 Error-swallowing composables.** [low] [S] `useDecks.ts:32` and
   friends (`useSpreads`, `useFavorite*`) catch and drop failures. Return an
@@ -1112,7 +1160,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     colour only, so the modal scroll-lock widths are untouched). Computed on dev:
     `colorScheme` = `dark`, scrollbar `rgba(255,255,255,.16) transparent`.
 
-- [ ] **5.9 Slim's own errors don't use the `{ error }` shape.** [low] [S]
+- [x] **5.9 Slim's own errors don't use the `{ error }` shape.** [low] [S]
   Found by the §8.1 tests. A route or method that doesn't exist answers
   `{"message": "404 Not Found"}` / `"405 Method Not Allowed"` (plus an
   `exception` array outside production), or an HTML page when the request
@@ -1121,6 +1169,20 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
   `messageFromBody()` reads only `error` and falls back to its own text. Fix: a
   JSON error renderer for the default handler that emits `{ error }` (detail
   only outside production), then tighten `RequestPipelineTest`'s 404/405 test.
+  - **DONE 2026-10-28:** `Routes\JsonErrorRenderer` is registered on Slim's
+    default error handler, and `forceContentType('application/json')` makes it
+    the only renderer, whatever the request's `Accept`. A Slim `HttpException`
+    keeps its client message ("Not found.", "Method not allowed. Must be one
+    of: GET"; the `Allow` header still goes out). Any other exception says only
+    "Something went wrong on our side. Please try again.", because its own
+    message can carry paths or SQL. Outside production the exception chain
+    follows under `exception`.
+
+    `RequestPipelineTest` now checks the body and `Allow`, plus a 404 for an
+    `Accept: text/html` request. Both of its tests fail with the wiring removed
+    (no `error` key; an HTML page). `JsonErrorRendererTest` covers the
+    production no-leak case. 309 tests, PHPStan, php-cs-fixer pass;
+    curl-checked on dev.
 
 ---
 
@@ -1416,19 +1478,18 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
    first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
    branches, stash.
-2. **Small fixes (each S):** §5.9 Slim error shape, §5.1 version constraints,
-   §5.4 the leftover plugin/AGENTS doc lines, §5.3 metadata, §5.6 `<main>` +
-   skip link.
-3. **Tests:** §8.1's next targets (account ownership, reading flows, plugin
-   PKCE, the other admin controllers), §8.2, §8.4's remainder, then §8.3
-   component tests and §8.6 Playwright; §8.7 coverage with §6.1/§6.2.
-4. **Tooling that stops regressions:** §6.1 Stylelint (enforces §4.6) + Knip,
-   §6.2 PHPStan extensions, §6.3 plugin CI build, §6.4 Dependabot.
-5. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
+2. **Tooling that stops regressions (owner's order: tooling, dependencies, then
+   tests):** §6.1 Stylelint (enforces §4.6) + Knip +
+   `eslint-plugin-vuejs-accessibility`, §6.2 PHPStan extensions, §6.3 plugin CI
+   build, §6.4 Dependabot.
+3. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
    vitest 5, happy-dom 21) one at a time; TypeScript 7 waits for Vue (owner);
    §7.4 plugin packages.
-6. **Features:** §9.1 → §9.4 first.
-
+4. **Tests, on the updated stack (PHPUnit too, if a newer one is out):** §8.1's
+   next targets (account ownership, reading flows, plugin PKCE, the other admin
+   controllers), §8.2, §8.4's remainder, then §8.3 component tests and §8.6
+   Playwright; §8.7 coverage with §6.1/§6.2.
+5. **Features:** §9.1 → §9.4 first.
 ---
 
 ## Appendix A — Claims that did not survive verification

@@ -3,8 +3,7 @@
 A [Dalamud](https://github.com/goatcorp/Dalamud) plugin for **Final Fantasy XIV** that talks to the
 [TarotGen.io](https://tarotgen.io) REST API: draw a tarot reading in-game (pick a public spread or a
 free draw), view any reading by its share code, optionally link a TarotGen account to lock and track
-readings, push a reading to another plugin user with a chatless in-game prompt, and report a problem
-with a card's image.
+readings, and report a problem with a card's image.
 
 It is a **separate, self-contained C# subproject** in the TarotGen repo, built and packaged
 independently by [DalamudPackager](https://github.com/goatcorp/DalamudPackager). The site's
@@ -18,7 +17,6 @@ channel (`-Target plugin`).
 - **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. Anonymous.
 - **View a reading** by its share code / URL, including password-protected readings (guest enters the password).
 - **Optional account** — link a TarotGen account to lock/finalize a reading, sort deck/spread pickers by your favorites, and track generated readings ("My Readings"). Guests never have to link.
-- **Send a reading** to another plugin user as a **chatless push** — they get a passive in-game *"‹You› wants to share a Tarot reading"* prompt with **View**/**Dismiss**/**Block** (no chat, no clipboard). Recipients choose a consent tier (party members / friends / party or friends / anyone) or turn receiving off; party covers cross-world and Party-Finder parties, and one install can link several characters.
 - **Report a problem with a card's image** from the card lightbox — pick what's wrong (scan artefact, cropping, image quality, wrong card, or something else) and optionally describe it, so the site admins know what to fix.
 
 **Out of scope** (lives on the website): admin, account/profile management, changelog viewing, PNG
@@ -59,7 +57,8 @@ The plugin is published to a self-hosted **custom Dalamud repo**. In-game:
 
 ## Publishing
 
-From the repo root (needs the deploy settings in `scripts/deploy.local.ps1`):
+From the repo root (needs the deploy settings in `scripts/deploy.config.ps1`; copy
+`scripts/deploy.config.example.ps1`):
 
 ```powershell
 .\scripts\deploy.ps1 -Target plugin
@@ -70,17 +69,14 @@ pluginmaster) to `https://tarotgen.io/plugin/`.
 
 ## How it authenticates
 
-The plugin is a native `HttpClient`, so it uses **Bearer tokens** rather than the site's session
-cookie. Linking or connecting opens the site's `/authorize` page in the browser and hands a token back
-to a local loopback listener (OAuth-style **loopback + PKCE**, no copy-paste):
+The plugin is a native `HttpClient`, so it uses a **Bearer token** rather than the site's session
+cookie. Drawing and viewing readings need no token at all. Linking an account opens the site's
+`/authorize` page in the browser and hands an **account token** back to a local loopback listener
+(OAuth-style **loopback + PKCE**, no copy-paste); the plugin then uses it for the account routes it
+needs: locking a reading, favorites, and My Readings.
 
-- an **account token** for the read-only account routes it may reach (locking, favorites, My Readings), and
-- a per-install **client token** for the chatless share relay.
-
-Both are **DPAPI-encrypted** at rest (plaintext fallback under Wine) and are individually revocable —
-account tokens from the site's *Connected Apps* screen. The relay never stores a plaintext roster of
-players (recipient `Character@World` is kept only as a keyed hash), and consent tiers + a block list +
-rate limits guard against unwanted shares.
+The token is **DPAPI-encrypted** at rest (plaintext fallback under Wine) and can be revoked at any time
+from the site's *Connected Apps* screen.
 
 ## Backend it talks to
 

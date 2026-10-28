@@ -6,8 +6,9 @@ namespace TarotGen.Plugin;
 
 /// <summary>
 /// Persisted plugin settings. Stored by Dalamud as plaintext JSON under
-/// %AppData%\XIVLauncher\pluginConfigs\TarotGen.Plugin.json. Account tokens
-/// (added in P1) will be DPAPI-encrypted before landing here — see docs/auth.md.
+/// %AppData%\XIVLauncher\pluginConfigs\TarotGen.Plugin.json, which is why the
+/// account token is DPAPI-encrypted (TokenStore) before it lands here. The link
+/// flow is described in plugin/README.md, "How it authenticates".
 /// </summary>
 [Serializable]
 public sealed class Configuration : IPluginConfiguration
@@ -28,7 +29,7 @@ public sealed class Configuration : IPluginConfiguration
     public bool UseAdditionalCards { get; set; }
     public int FreeDrawCount { get; set; } = 3;
 
-    // Account link (P1). The token is DPAPI-encrypted at rest where available;
+    // Account link. The token is DPAPI-encrypted at rest where available;
     // TokenIsEncrypted records which path was used so it decrypts correctly.
     public string? EncryptedToken { get; set; }
     public bool TokenIsEncrypted { get; set; }

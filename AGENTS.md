@@ -57,7 +57,8 @@ flattens both into the live server's single flat web root.
 │   ├── index.html          # SPA entry HTML (Vite).
 │   ├── package.json        # Frontend scripts & deps.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
-│   ├── eslint.config.js    # ESLint flat config (Vue 3 + TS).
+│   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/eslint-config + project rules.
+│   ├── eslint-config/      # Git submodule holding that shared config (`git submodule update --init`).
 │   ├── tsconfig*.json       # TS project config.
 │   ├── .npmrc              # FontAwesome Pro registry token (gitignored).
 │   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/.
