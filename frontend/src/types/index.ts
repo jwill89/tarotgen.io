@@ -16,6 +16,7 @@ export type PluginToken = Schemas['PluginToken']
 export type Deck = Schemas['Deck']
 export type DeckSystem = Schemas['DeckSystem']
 export type DeckSystemCard = Schemas['DeckSystemCard']
+export type DeckSystemWithCards = Schemas['DeckSystemWithCards']
 export type SpecialCard = Schemas['SpecialCard']
 export type SpreadPosition = Schemas['SpreadPosition']
 export type Spread = Schemas['Spread']
@@ -38,10 +39,6 @@ export type AccountReading = Schemas['Reading']
 export type ReadingSummary = Schemas['ReadingSummary']
 export type ReadingInfo = Schemas['ReadingInfo']
 export type DrawCard = Schemas['DrawCard']
-
-export interface DeckSystemWithCards extends DeckSystem {
-  cards: DeckSystemCard[]
-}
 
 /** A selectable card within a deck (id + display name) for the custom reading picker. */
 export interface DeckCard {

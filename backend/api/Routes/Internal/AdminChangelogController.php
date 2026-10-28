@@ -2,11 +2,11 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ChangelogRepository;
+use OpenApi\Spec as OAS;
 
 /**
  * The changelog entries shown on the public changelog page.
@@ -18,18 +18,18 @@ class AdminChangelogController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/changelog',
         summary: 'List all changelog entries',
         tags: ['Admin · Changelog'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of changelog entries',
-                content: new OA\JsonContent(
+                content: new OAS\MediaType\Json(
                     type: 'array',
-                    items: new OA\Items(ref: '#/components/schemas/ChangelogEntry')
+                    items: new OAS\Schema\Items(ref: '#/components/schemas/ChangelogEntry')
                 )
             ),
         ]
@@ -39,28 +39,28 @@ class AdminChangelogController extends AbstractController
         return $response->withJson($this->changelog->get());
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/changelog',
         summary: 'Create a changelog entry',
         tags: ['Admin · Changelog'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['title'],
                 properties: [
-                    new OA\Property(property: 'title', type: 'string'),
-                    new OA\Property(property: 'body', type: 'string'),
+                    new OAS\Property(property: 'title', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'body', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Created changelog entry',
-                content: new OA\JsonContent(ref: '#/components/schemas/ChangelogEntry')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ChangelogEntry')
             ),
-            new OA\Response(response: 500, description: 'Failed to create changelog entry'),
+            new OAS\Response(response: 500, description: 'Failed to create changelog entry'),
         ]
     )]
     public function createChangelogEntry(Request $request, Response $response): Response|ResponseInterface
@@ -78,30 +78,30 @@ class AdminChangelogController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Put(
+    #[OAS\Operation\Put(
         path: '/admin/changelog/{entry_id}',
         summary: 'Update a changelog entry',
         tags: ['Admin · Changelog'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'entry_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'entry_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'title', type: 'string'),
-                    new OA\Property(property: 'body', type: 'string'),
+                    new OAS\Property(property: 'title', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'body', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated changelog entry',
-                content: new OA\JsonContent(ref: '#/components/schemas/ChangelogEntry')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ChangelogEntry')
             ),
-            new OA\Response(response: 404, description: 'Changelog entry not found or no valid fields'),
+            new OAS\Response(response: 404, description: 'Changelog entry not found or no valid fields'),
         ]
     )]
     public function updateChangelogEntry(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -121,16 +121,16 @@ class AdminChangelogController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/changelog/{entry_id}',
         summary: 'Delete a changelog entry',
         tags: ['Admin · Changelog'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'entry_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'entry_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 204, description: 'Deleted'),
         ]
     )]
     public function deleteChangelogEntry(Request $request, Response $response, array $args): Response|ResponseInterface

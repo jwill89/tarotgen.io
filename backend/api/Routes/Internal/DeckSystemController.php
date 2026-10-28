@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -10,6 +9,7 @@ use Tarot\Repository\DeckSystemRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Structure\DeckSystem;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 class DeckSystemController extends AbstractController
 {
@@ -19,15 +19,15 @@ class DeckSystemController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/deck-systems',
         summary: 'List all approved deck systems',
         tags: ['Deck Systems'],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of deck systems',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/DeckSystem'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DeckSystem'))
             ),
         ]
     )]
@@ -51,20 +51,20 @@ class DeckSystemController extends AbstractController
      *
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/deck-systems/{id}',
         summary: 'A single deck system with its cards',
         tags: ['Deck Systems'],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The deck system plus its cards array',
-                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystemWithCards')
             ),
-            new OA\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 404, description: 'Deck system not found'),
         ]
     )]
     public function getSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -85,35 +85,34 @@ class DeckSystemController extends AbstractController
             ->withHeader('Cache-Control', 'public, max-age=300');
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/deck-systems',
         summary: 'Submit a new deck system (requires a signed-in user; admins are auto-approved)',
         tags: ['Deck Systems'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name', 'short_name', 'cards'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'short_name', type: 'string'),
-                    new OA\Property(property: 'total_cards', type: 'integer'),
-                    new OA\Property(
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'short_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'total_cards', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(
                         property: 'cards',
-                        type: 'array',
-                        items: new OA\Items(properties: [new OA\Property(property: 'name', type: 'string')])
+                        schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(properties: [new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string'))]))
                     ),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'The created deck system',
-                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
-            new OA\Response(response: 400, description: 'Validation failure'),
-            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 400, description: 'Validation failure'),
+            new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
     )]
     /**

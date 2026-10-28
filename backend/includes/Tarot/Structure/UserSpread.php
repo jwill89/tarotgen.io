@@ -2,38 +2,38 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
  */
-#[OA\Schema(description: 'A user-created custom spread.')]
+#[OAS\Schema(description: 'A user-created custom spread.')]
 class UserSpread extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $user_spread_id = 0;
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $user_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $name = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $description = '';
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $card_count = 1;
 
     /** @var list<array<string,mixed>> */
-    #[OA\Property(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition')))]
     public private(set) array $positions = [] {
         set(array|string $value) => self::jsonList($value);
     }
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $created_at = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $updated_at = '';
 }

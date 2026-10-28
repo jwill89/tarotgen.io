@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -16,6 +15,7 @@ use Tarot\Structure\Reading;
 use Tarot\Utility\Input;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 class ReadingController extends AbstractController
 {
@@ -37,24 +37,24 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/readings/{reading_id}',
         summary: 'Fetch a reading (password-protected readings return a locked stub to non-owners)',
         tags: ['Readings'],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The reading, or — when it has a password this requester has not given — the locked stub',
-                content: new OA\JsonContent(oneOf: [
-                    new OA\Schema(ref: '#/components/schemas/ReadingView'),
-                    new OA\Schema(ref: '#/components/schemas/LockedReading'),
-                ])
+                content: new OAS\MediaType\Json(schema: new OAS\Schema(oneOf: [
+                    new OAS\Schema(ref: '#/components/schemas/ReadingView'),
+                    new OAS\Schema(ref: '#/components/schemas/LockedReading'),
+                ]))
             ),
-            new OA\Response(response: 404, description: 'InvalidReadingID'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 404, description: 'InvalidReadingID'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function getReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -97,29 +97,29 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/readings/{reading_id}/unlock',
         summary: 'Unlock a password-protected reading for this session',
         tags: ['Readings'],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['password'],
-                properties: [new OA\Property(property: 'password', type: 'string')]
+                properties: [new OAS\Property(property: 'password', schema: new OAS\Schema(type: 'string'))]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The unlocked reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OA\Response(response: 401, description: 'Incorrect password'),
-            new OA\Response(response: 404, description: 'InvalidReadingID'),
-            new OA\Response(response: 429, description: 'Too many password attempts'),
+            new OAS\Response(response: 401, description: 'Incorrect password'),
+            new OAS\Response(response: 404, description: 'InvalidReadingID'),
+            new OAS\Response(response: 429, description: 'Too many password attempts'),
         ]
     )]
     public function unlockReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -167,23 +167,23 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/readings/generate',
         summary: 'Generate a random reading from a draw spec',
         tags: ['Readings'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
             description: 'Draw spec: deck, spread or card count, and options',
-            content: new OA\JsonContent(type: 'object')
+            content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'The created reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OA\Response(response: 400, description: 'Invalid draw spec'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 400, description: 'Invalid draw spec'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -213,21 +213,21 @@ class ReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/readings',
         summary: 'Create a custom reading from explicitly chosen cards/positions',
         tags: ['Readings'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(type: 'object')
+            content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'The created reading, as stored (not the viewer payload the other reading commands return)',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OA\Response(response: 400, description: 'Invalid input'),
+            new OAS\Response(response: 400, description: 'Invalid input'),
         ]
     )]
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -248,36 +248,36 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
-    #[OA\Put(
+    #[OAS\Operation\Put(
         path: '/readings/{reading_id}/placement',
         summary: 'Save spread/placement positions onto an existing reading',
         tags: ['Readings'],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['positions'],
                 properties: [
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
-                    new OA\Property(property: 'spread_name', type: 'string'),
+                    new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
+                    new OAS\Property(property: 'spread_name', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Saved',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'success', type: 'boolean'),
-                    new OA\Property(property: 'reading_id', type: 'string'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                    new OAS\Property(property: 'reading_id', schema: new OAS\Schema(type: 'string')),
                 ])
             ),
-            new OA\Response(response: 400, description: 'Position count mismatch or invalid data'),
-            new OA\Response(response: 403, description: 'Not the owner'),
-            new OA\Response(response: 404, description: 'Reading not found'),
-            new OA\Response(response: 409, description: 'Reading is final'),
+            new OAS\Response(response: 400, description: 'Position count mismatch or invalid data'),
+            new OAS\Response(response: 403, description: 'Not the owner'),
+            new OAS\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 409, description: 'Reading is final'),
         ]
     )]
     public function updatePlacement(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -377,24 +377,24 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/readings/{reading_id}/draw',
         summary: 'Draw additional cards into a non-final, non-custom reading you own',
         tags: ['Readings'],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
-        requestBody: new OA\RequestBody(content: new OA\JsonContent(type: 'object')),
+        requestBody: new OAS\RequestBody(content: new OAS\MediaType\Json(type: 'object')),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The updated reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OA\Response(response: 400, description: 'Custom readings cannot draw'),
-            new OA\Response(response: 403, description: 'Not the owner'),
-            new OA\Response(response: 404, description: 'Reading not found'),
-            new OA\Response(response: 409, description: 'Reading is final'),
+            new OAS\Response(response: 400, description: 'Custom readings cannot draw'),
+            new OAS\Response(response: 403, description: 'Not the owner'),
+            new OAS\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 409, description: 'Reading is final'),
         ]
     )]
     public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -451,21 +451,21 @@ class ReadingController extends AbstractController
      * @param array<string,string> $args
      * @throws JsonException
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/readings/{reading_id}/finalize',
         summary: 'Permanently lock a reading against further draws (owner-only, one-way)',
         tags: ['Readings'],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The finalized reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OA\Response(response: 403, description: 'Not the owner'),
-            new OA\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 403, description: 'Not the owner'),
+            new OAS\Response(response: 404, description: 'Reading not found'),
         ]
     )]
     public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -537,7 +537,7 @@ class ReadingController extends AbstractController
         }
 
         $owner = $this->users->findById($reading->user_id);
-        return $owner !== null ? $owner->display_name : 'Guest';
+        return $owner->display_name ?? 'Guest';
     }
 
     private function currentUserId(Request $request): ?int

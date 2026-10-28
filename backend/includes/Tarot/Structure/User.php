@@ -2,7 +2,7 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * A user account, in its *safe* shape: the password hash is deliberately not a
@@ -13,36 +13,36 @@ use OpenApi\Attributes as OA;
  * (e.g. $user->user_id), while writes are private — PDO's FETCH_CLASS and the
  * array constructor still hydrate rows, but callers cannot mutate the entity.
  */
-#[OA\Schema(description: 'A user account in its safe shape (no secrets or hashes).')]
+#[OAS\Schema(description: 'A user account in its safe shape (no secrets or hashes).')]
 class User extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $user_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $email = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $display_name = '';
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $is_active = false;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $is_admin = false;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $registered_at = '';
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $last_login_at = null;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $google_linked = false;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $password_login_disabled = false;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $has_passkeys = false;
 }

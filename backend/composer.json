@@ -34,7 +34,10 @@
         "phpunit/phpunit": "^13.0",
         "rector/rector": "^2.6",
         "roave/security-advisories": "dev-latest",
-        "zircote/swagger-php": "^6.0"
+        "zircote/swagger-php": "^7.0"
+    },
+    "conflict": {
+        "phpstan/phpstan": ">2.3.3"
     },
     "autoload": {
         "psr-4": {
@@ -65,7 +68,7 @@
             "composer-require-checker check composer.json --config-file=composer-require-checker.json"
         ],
         "dev": "php -S localhost:80 dev-router.php",
-        "docs": "openapi api includes --version 3.1.0 --format json --add-processor \"Routes\\RequireStructureProperties\" --output openapi.json",
+        "docs": "@php bin/openapi.php",
         "lint": "php-cs-fixer check --show-progress=none",
         "lint:fix": "php-cs-fixer fix",
         "rector": "rector process",

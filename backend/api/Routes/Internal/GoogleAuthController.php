@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Random\RandomException;
 use Slim\Http\ServerRequest as Request;
@@ -10,6 +9,7 @@ use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\GoogleOAuthService;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 /**
  * Google OAuth2 endpoints:
@@ -29,22 +29,22 @@ class GoogleAuthController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/auth/google',
         summary: "Redirect to Google's consent screen",
         tags: ['Authentication'],
         parameters: [
-            new OA\Parameter(
+            new OAS\Parameter(
                 name: 'intent',
                 in: 'query',
                 required: false,
-                schema: new OA\Schema(type: 'string', enum: ['login', 'register', 'link'])
+                schema: new OAS\Schema(type: 'string', enum: ['login', 'register', 'link'])
             ),
         ],
         responses: [
-            new OA\Response(response: 302, description: 'Redirect to Google'),
-            new OA\Response(response: 401, description: 'The link intent requires a session'),
-            new OA\Response(response: 503, description: 'Google OAuth is not configured'),
+            new OAS\Response(response: 302, description: 'Redirect to Google'),
+            new OAS\Response(response: 401, description: 'The link intent requires a session'),
+            new OAS\Response(response: 503, description: 'Google OAuth is not configured'),
         ]
     )]
     /**
@@ -78,15 +78,15 @@ class GoogleAuthController extends AbstractController
         return $response->withRedirect($url, 302);
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/auth/google/callback',
         summary: 'OAuth callback — redirects back into the SPA on success/failure',
         tags: ['Authentication'],
         parameters: [
-            new OA\Parameter(name: 'code', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
-            new OA\Parameter(name: 'state', in: 'query', required: false, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'code', in: 'query', required: false, schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'state', in: 'query', required: false, schema: new OAS\Schema(type: 'string')),
         ],
-        responses: [new OA\Response(response: 302, description: 'Redirect into the SPA')]
+        responses: [new OAS\Response(response: 302, description: 'Redirect into the SPA')]
     )]
     /**
      * Handle the OAuth callback from Google.
@@ -153,22 +153,22 @@ class GoogleAuthController extends AbstractController
         };
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/google/unlink',
         summary: 'Unlink Google from the current account',
         tags: ['Authentication'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Unlinked',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'success', type: 'boolean'),
-                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                    new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OA\Response(response: 400, description: 'Account has no password set'),
-            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 400, description: 'Account has no password set'),
+            new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
     )]
     /**

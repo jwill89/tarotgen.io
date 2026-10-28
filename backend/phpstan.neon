@@ -15,6 +15,7 @@ parameters:
     paths:
         - includes/Tarot
         - api
+        - bin
         # tests/Unit predates this and isn't clean yet; the HTTP tests are.
         - tests/Http
     # phpstan-strict-rules, phpstan-deprecation-rules and phpstan-phpunit load

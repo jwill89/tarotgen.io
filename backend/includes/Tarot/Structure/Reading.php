@@ -2,7 +2,7 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * Properties use asymmetric visibility (PHP 8.4): reads are public
@@ -10,37 +10,37 @@ use OpenApi\Attributes as OA;
  * and the array constructor still hydrate rows, while external code cannot mutate
  * the entity — only the Data/Service layer builds one up via the setters.
  */
-#[OA\Schema(description: 'A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead.')]
+#[OAS\Schema(description: 'A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead.')]
 class Reading extends AbstractStructure
 {
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $reading_id = '';
 
     /** Stored as a JSON string; jsonSerialize() sends it as the object itself. */
-    #[OA\Property(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.')]
+    #[OAS\Property(schema: new OAS\Schema(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.'))]
     public private(set) string $reading_info = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $reading_time = '';
 
-    #[OA\Property(type: 'integer', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer', nullable: true))]
     public private(set) ?int $user_id = null;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $hide_user = false;
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $reading_name = null;
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $reading_notes = null;
 
     /** One-way lock: when true the owner can no longer draw additional cards. */
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $is_final = false;
 
     /** Derived flag — true when a view password is set. The hash itself is never exposed. */
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $password_protected = false;
 
     public function setReadingId(string $reading_id): self

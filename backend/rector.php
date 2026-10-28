@@ -10,6 +10,7 @@ use Rector\Php81\Rector\Array_\ArrayToFirstClassCallableRector;
 return RectorConfig::configure()
     ->withPaths([
         __DIR__ . '/api',
+        __DIR__ . '/bin',
         __DIR__ . '/includes',
         __DIR__ . '/scripts',
         __DIR__ . '/tests',

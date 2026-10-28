@@ -2,11 +2,11 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Service\StatsService;
+use OpenApi\Spec as OAS;
 
 /**
  * The admin dashboard: usage stats, entity counts, and the session check the
@@ -19,16 +19,16 @@ class AdminDashboardController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/stats',
         summary: 'Usage statistics',
         tags: ['Admin · Dashboard'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Usage statistics',
-                content: new OA\JsonContent(type: 'object')
+                content: new OAS\MediaType\Json(type: 'object')
             ),
         ]
     )]
@@ -41,16 +41,16 @@ class AdminDashboardController extends AbstractController
      * One-shot dashboard payload: entity counts (cheap COUNT(*) queries) plus the
      * usage stats overview — so the dashboard loads with a single request.
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/summary',
         summary: 'Dashboard counts + stats',
         tags: ['Admin · Dashboard'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Dashboard counts + stats',
-                content: new OA\JsonContent(type: 'object')
+                content: new OAS\MediaType\Json(type: 'object')
             ),
         ]
     )]
@@ -66,13 +66,13 @@ class AdminDashboardController extends AbstractController
     // Admin access is gated by AdminAuth (an active is_admin user account);
     // logging in/out is handled by the regular auth endpoints (/api/auth/*).
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/auth-check',
         summary: 'Verify the admin session',
         tags: ['Admin · Dashboard'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(response: 200, description: 'Admin session is valid'),
+            new OAS\Response(response: 200, description: 'Admin session is valid'),
         ]
     )]
     public function checkAuth(Request $request, Response $response): Response|ResponseInterface

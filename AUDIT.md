@@ -31,7 +31,7 @@ verification are listed at the end so nobody re-chases them.
 
 ## Status (2026-10-28, end of day)
 
-**32 items done, 36 open — 12 of the open ones are §9 product features.**
+**35 items done, 33 open — 12 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
@@ -42,14 +42,14 @@ verification are listed at the end so nobody re-chases them.
 | 4 | Duplication | 7 | 0 | — |
 | 5 | Standards | 9 | 0 | — (`eslint-plugin-vuejs-accessibility` is tracked in §6.1) |
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
-| 7 | Dependencies | 1 | 3 | In-range updates, the swagger-php 7 / vitest 5 / happy-dom 21 majors, plugin packages; TypeScript 7 waits for Vue |
+| 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
 | 8 | Tests | 2 | 5 | More HTTP tests, Data classes, 7 composables, component tests, Playwright, coverage |
 | 9 | Product | 0 | 12 | All |
 
-**Edited but not yet committed/deployed** (as of this writing): the reading-
-endpoint API docs + `ReadingPayloadsTest` (§4.4 follow-up), the real
-`type-check` with its 14 type and 29 lint fixes (§4.4), and removing the two
-Bulma leftovers from the home cards (§3.3). Needs a frontend and a backend deploy.
+**Edited but not yet committed/deployed** (as of this writing): all of §7.2–7.4.
+Needs a backend deploy (`composer.lock` changed, so it runs `composer install`;
+`openapi.json`) and a frontend deploy (the combobox search fix, regenerated
+types). The plugin change waits for its next release.
 
 ## Decisions and production facts (2026-10-28)
 
@@ -1405,7 +1405,7 @@ plugin is never compiled in CI, and no bot watches dependencies.
     present; Apache's `libapache2-mod-php8.5` and the CLI are both 8.5.12 with no
     pending php/apache/openssl/sqlite upgrades. One runtime update was still
     warranted — see §7.2 (`slim/slim` 4.15.3).
-- [ ] **7.2 Composer, direct:** `zircote/swagger-php` 6.6.0 → 6.20.0 (14 minors
+- [x] **7.2 Composer, direct:** `zircote/swagger-php` 6.6.0 → 6.20.0 (14 minors
   behind — regenerate and diff `openapi.json` after), `phpstan/phpstan`
   2.2.8 → 2.3.3, `phpunit/phpunit` 13.3.1 → 13.4.5, `php-cs-fixer`
   3.95.20 → 3.95.27, `slim/slim` 4.15.2 → 4.15.3. [low] [S]
@@ -1424,7 +1424,41 @@ plugin is never compiled in CI, and no bot watches dependencies.
     3.95.20 → 3.95.27, phpstan 2.2.8 → 2.3.3, phpunit 13.3.1 → 13.4.5 (all
     dev-only); `zircote/swagger-php` 6.6.0 now has a **7.0** major out — plan it
     with a spec diff, since it generates `openapi.json`.
-- [ ] **7.3 npm:** 20 packages behind. Minors: `vue` 3.5.44, `vue-router` 5.4.0,
+  - **DONE 2026-10-28 (the rest):** `composer update` in range — php-cs-fixer
+    3.95.27, phpunit 13.4.5, phpstan-phpunit 2.1.1, strict-rules 2.1.0, rector
+    2.8.2; runtime `laravel/serializable-closure` 2.1.0 and `symfony/polyfill-*`
+    (ship on the next backend deploy, which runs `composer install` because the
+    lock changed). **PHPStan held at 2.3.3** by a `conflict`: 2.3.4's phar bundles
+    a phpdoc-parser Rector 2.8.2 crashes on (AGENTS.md §6; drop it when a Rector
+    release passes with 2.3.4).
+  - **swagger-php 7.0 — DONE 2026-10-28.** On 6.20 the spec came out identical;
+    7.0 needed real work, each step diffed against the committed spec:
+    - Every `OA\…` attribute moved to the 7.0 spec attributes (`OpenApi\Spec as
+      OAS`; Rector's swagger-php set did the rewrite); `schema:` /
+      `securityScheme:` keys became `component:`.
+    - The CLI's `--add-processor` is gone: `composer docs` is now `bin/openapi.php`,
+      and it and `OpenApiSpecTest` share `Routes\OpenApiSpec::builder()`.
+      `RequireStructureProperties` is an augmenter now (v7 ignored the old
+      processor, which silently dropped every `required` list).
+    - The default (hybrid) pipeline turned all 95 property initializers into
+      `default`s — placeholders for hydration, not values the API fills in — so
+      the build removes the `Properties` augmenter. Result: no `default`s, every
+      `required` list as before.
+    - It also drops schemas nothing references, which exposed three endpoints
+      documented as less than they send: `GET /deck-systems/{id}` and
+      `GET /admin/deck-systems/{id}` said `DeckSystem` but send its `cards`
+      (new shared `DeckSystemWithCards`; the frontend's hand-written copy now comes
+      from the spec), and `GET /admin/pending-spreads` said `object[]` (now
+      `PendingSpread[]`). Covered by the new `CatalogPayloadsTest`;
+      `assertDocumented()` learned `allOf`.
+    - That test then caught a standing spec error: the public deck and
+      deck-system endpoints strip `submitted_by`, but the spec marked it required
+      (so the frontend type promised it). It's now optional with "Admin views
+      only" (`x: ['admin-only' => true]` tells the augmenter).
+    - `composer-require-checker.json` lists the new symbols.
+    - Full chain green: normalize, deps:check, audit, docs, lint, rector:check,
+      312 tests, PHPStan (with `bin/` now analysed, linted and Rector-checked).
+- [x] **7.3 npm:** 20 packages behind. Minors: `vue` 3.5.44, `vue-router` 5.4.0,
   `vite` 8.3.5, `reka-ui` 2.11.0, `@tiptap/*` 3.32.0, `dompurify` 3.4.17,
   `marked` 18.1.2, `eslint` 10.13.0, `vue-tsc` 3.3.13, `@vitejs/plugin-vue`
   6.0.10, `sass-embedded` 1.106.1, `jsdom` 30.1.3, `prettier` 3.9.10.
@@ -1463,15 +1497,54 @@ plugin is never compiled in CI, and no bot watches dependencies.
     `eslint` 10.13.0, `reka-ui` 2.11.0, `marked` 18.1.2, `prettier` 3.9.10,
     `sass-embedded` 1.106.1, `jsdom` 30.1.3. Majors — `typescript` 7 (owner:
     stay on 6 until Vue supports TS 7.1), `vitest` 5, `happy-dom` 21.
+  - **DONE 2026-10-28 (the rest):** `npm update` in range (`@tiptap/*` 3.32.1,
+    `reka-ui` 2.11.0, `eslint` 10.13.0, `typescript-eslint` 8.72.1, `marked`
+    18.1.2, `prettier` 3.9.10, `sass-embedded` 1.107.0, `jsdom` 30.1.3), then the
+    majors together: **`vitest` + `@vitest/coverage-v8` 5.0.5, `happy-dom` 21.0.4**
+    (fixes the last advisory: **`npm audit` now 0, dev included**). Vitest 5's
+    breaking changes were checked against the specs (nested `vi.mock`,
+    `toThrow('')`, unawaited `resolves`, window assignments, coverage globs): none
+    applied.
+    - typescript-eslint 8.72 found two things: a meaningless `void` in a spec (now
+      a real assertion), and `scrollBehavior` deprecated in vue-router 5.4. Its
+      replacement, `ScrollRestoration`, is in `vue-router/experimental` ("might
+      have breaking changes"), needs a layout (or every page) to call it, and would
+      change Back from "jump to top" to "where you were". **Deferred, owner's
+      call**: kept with a one-line disable in `router/index.ts` saying why.
+    - Coverage under Vitest 5 counted lines at 9.99%, under the 10% floor. Rather
+      than lower the floor, `utils/deck.ts` and `utils/seo.ts` got specs (now
+      11.0 / 7.0 / 12.6 / 10.5%).
+    - **Found in the browser check: deck and spread search never filtered.** Both
+      comboboxes bound `v-model:search-term` on `ComboboxRoot`, an API Reka v2 no
+      longer has (checked on 2.10.3 as well, so it predates this update), so
+      typing showed every deck and Enter took the first. They now track the term
+      from the input's own `input` events (the input's text is the selection's
+      name until the user types). The spread list hides "No Spread (Free Draw)"
+      during a search that doesn't name it, so Enter picks the first matching
+      spread and "No spreads found." can show. Verified on dev: filtering,
+      Enter, reopen shows all, Escape restores the name, empty state. A §8.3
+      component test should pin this down.
+    - TipTap 3.32.1 rechecked on the contact form (type, select, Bold →
+      `<strong>`). type-check, lint, lint:css, knip, format:check, 178 tests,
+      build all pass.
+    - **TypeScript 7 still held** (`~6.0.0`): vue-tsc 3.3.13 checks through
+      TypeScript's JS API, which TS 7.0 (the Go port) doesn't have; its TS 7
+      changelog entries are about its own build. TS 7.1 (that API) is in beta.
+      Dependabot already ignores TypeScript majors.
   - **SQLite on prod is 3.45.1 and stays there on 24.04:** PHP (packages.sury.org)
     links the distro `libsqlite3`, and noble only gets 3.45.1 security patches.
     26.04 LTS (offered to the droplet) ships 3.46.1 — enough for `PRAGMA
     optimize`'s check-every-table bit, little else. Not a reason to upgrade the
     OS; §1.7 uses plain `ANALYZE` instead. A self-built lib in `/usr/local/lib`
     would shadow the distro one for every program and lose apt security updates.
-- [ ] **7.4 Plugin:** `Dalamud.NET.Sdk` 15.0.0, `System.Security.Cryptography.ProtectedData`
+- [x] **7.4 Plugin:** `Dalamud.NET.Sdk` 15.0.0, `System.Security.Cryptography.ProtectedData`
   10.0.11 — **unverified** (NuGet was not reachable from the audit sandbox).
   `dotnet list package --outdated` from a networked shell.
+  - **DONE 2026-10-28:** `ProtectedData` 10.0.11 → 10.0.14. `Dalamud.NET.Sdk`
+    15.0.0 is the newest on NuGet. `DotNet.ReproducibleBuilds` (1.2.39; 2.0.5
+    out) comes from the SDK, so it moves when the SDK does. No vulnerable
+    packages (transitive included); Release build clean with warnings as errors.
+    The plugin `<Version>` is unchanged: bump it with the next plugin release.
 
 ---
 
@@ -1542,6 +1615,9 @@ measured anywhere (`coverage: none` in CI).
   Add `@vue/test-utils` and start with the interactive components:
   `CardReportDialog`, `LightboxOverlay` (keyboard + report gating),
   `DeckComboBox`, `ConfirmDialog`, `ToggleSwitch`, `SegmentedControl`.
+  - The combobox search went unnoticed from the Reka migration until §7.3's
+    browser check; a test that types into `DeckComboBox` / `SpreadComboBox` and
+    reads the options would have failed from day one.
 - [ ] **8.4 Untested composables:** `useAccount`, `useChangelog`,
   `useFavoriteDecks`, `useFavoriteSpreads`, `usePanZoom`, `usePasskeys`
   (272 lines; mock `navigator.credentials`), `usePluginLink`,
@@ -1550,8 +1626,8 @@ measured anywhere (`coverage: none` in CI).
   - *Status 2026-10-28:* now covered — `useAccount`, `useFavoriteDecks`,
     `usePasskeys`, `useUserSpreads` (plus the new `useContact`, `useReadings`,
     `useSubmissions`). **Still untested:** `useChangelog`, `useFavoriteSpreads`,
-    `usePanZoom`, `usePluginLink`, `useReadingExport`, `useSpreads`,
-    `utils/seo.ts`.
+    `usePanZoom`, `usePluginLink`, `useReadingExport`, `useSpreads`.
+    (`utils/seo.ts` and `utils/deck.ts` got specs in §7.3.)
 - [x] **8.5 Replace `contactForm.spec.ts`** (§5.5). [low] [S]
 - [ ] **8.6 One Playwright smoke run in CI:** home → new draw → reading →
   lightbox → report a problem → (seeded admin) Errored Cards shows it. [medium] [M]
@@ -1617,9 +1693,9 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
    first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
    branches, stash; add the two Dependabot secrets (§6.4).
-2. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
-   vitest 5, happy-dom 21) one at a time; TypeScript 7 waits for Vue (owner);
-   §7.4 plugin packages.
+2. ~~**Dependencies:**~~ done 2026-10-28 (§7). TypeScript 7 waits for vue-tsc
+   (owner); `scrollBehavior` → `ScrollRestoration` waits for it to leave
+   `vue-router/experimental` (owner's call, §7.3).
 3. **Tests, on the updated stack (PHPUnit too, if a newer one is out):** §8.1's
    next targets (account ownership, reading flows, plugin PKCE, the other admin
    controllers), §8.2, §8.4's remainder, then §8.3 component tests and §8.6

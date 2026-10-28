@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -13,6 +12,7 @@ use Tarot\Service\TurnstileService;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Input;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 /**
  * Public account endpoints: register, activate, login, logout, and "me".
@@ -42,25 +42,25 @@ class UserController extends AbstractController
     ) {
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/register',
         summary: 'Create an account (inactive until email activation). Rate-limited: 5/IP/hour.',
         tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['email', 'display_name', 'password'],
                 properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email'),
-                    new OA\Property(property: 'display_name', type: 'string'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password', minLength: 12),
+                    new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email')),
+                    new OAS\Property(property: 'display_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'password', schema: new OAS\Schema(type: 'string', format: 'password', minLength: 12)),
                 ]
             )
         ),
         responses: [
-            new OA\Response(response: 201, description: 'Account created'),
-            new OA\Response(response: 422, description: 'Validation/uniqueness failure'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 201, description: 'Account created'),
+            new OAS\Response(response: 422, description: 'Validation/uniqueness failure'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function register(Request $request, Response $response): Response|ResponseInterface
@@ -102,17 +102,17 @@ class UserController extends AbstractController
         return $response->withJson($payload, 201);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/activate',
         summary: 'Activate an account from the emailed token',
         tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(required: ['token'], properties: [new OA\Property(property: 'token', type: 'string')])
+            content: new OAS\MediaType\Json(required: ['token'], properties: [new OAS\Property(property: 'token', schema: new OAS\Schema(type: 'string'))])
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Account activated'),
-            new OA\Response(response: 400, description: 'Invalid/expired token'),
+            new OAS\Response(response: 200, description: 'Account activated'),
+            new OAS\Response(response: 400, description: 'Invalid/expired token'),
         ]
     )]
     public function activate(Request $request, Response $response): Response|ResponseInterface
@@ -132,17 +132,17 @@ class UserController extends AbstractController
         ], 400);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/forgot-password',
         summary: 'Begin a password reset (always answers 200 — no account enumeration). Rate-limited: 5/IP/hour.',
         tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(required: ['email'], properties: [new OA\Property(property: 'email', type: 'string', format: 'email')])
+            content: new OAS\MediaType\Json(required: ['email'], properties: [new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email'))])
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Identical response whether or not the account exists'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 200, description: 'Identical response whether or not the account exists'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function forgotPassword(Request $request, Response $response): Response|ResponseInterface
@@ -179,24 +179,24 @@ class UserController extends AbstractController
         return $response->withJson($payload);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/reset-password',
         summary: 'Complete a password reset',
         tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['token', 'password'],
                 properties: [
-                    new OA\Property(property: 'token', type: 'string'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password'),
+                    new OAS\Property(property: 'token', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'password', schema: new OAS\Schema(type: 'string', format: 'password')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(response: 200, description: 'Password updated; account marked active'),
-            new OA\Response(response: 400, description: 'Invalid/expired token'),
-            new OA\Response(response: 422, description: 'New password too weak (token not consumed)'),
+            new OAS\Response(response: 200, description: 'Password updated; account marked active'),
+            new OAS\Response(response: 400, description: 'Invalid/expired token'),
+            new OAS\Response(response: 422, description: 'New password too weak (token not consumed)'),
         ]
     )]
     public function resetPassword(Request $request, Response $response): Response|ResponseInterface
@@ -221,35 +221,35 @@ class UserController extends AbstractController
         ]);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/login',
         summary: 'Password sign-in. Rate-limited: 10 failed attempts/IP/15 min.',
         tags: ['Authentication'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['email', 'password'],
                 properties: [
-                    new OA\Property(property: 'email', type: 'string', format: 'email'),
-                    new OA\Property(property: 'password', type: 'string', format: 'password'),
-                    new OA\Property(property: 'remember_me', type: 'boolean'),
-                    new OA\Property(property: 'turnstile_token', type: 'string', description: 'Required when Turnstile is configured'),
+                    new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email')),
+                    new OAS\Property(property: 'password', schema: new OAS\Schema(type: 'string', format: 'password')),
+                    new OAS\Property(property: 'remember_me', schema: new OAS\Schema(type: 'boolean')),
+                    new OAS\Property(property: 'turnstile_token', schema: new OAS\Schema(type: 'string', description: 'Required when Turnstile is configured')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Signed in; sets the session cookie',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'success', type: 'boolean'),
-                    new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                    new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OA\Response(response: 400, description: 'Captcha failed'),
-            new OA\Response(response: 401, description: 'Invalid credentials'),
-            new OA\Response(response: 403, description: 'Inactive or password-login disabled'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 400, description: 'Captcha failed'),
+            new OAS\Response(response: 401, description: 'Invalid credentials'),
+            new OAS\Response(response: 403, description: 'Inactive or password-login disabled'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function login(Request $request, Response $response): Response|ResponseInterface
@@ -312,11 +312,11 @@ class UserController extends AbstractController
         return $response->withJson(['success' => true, 'user' => $result['user']]);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/auth/logout',
         summary: 'Clear the session',
         tags: ['Authentication'],
-        responses: [new OA\Response(response: 200, description: 'Signed out')]
+        responses: [new OAS\Response(response: 200, description: 'Signed out')]
     )]
     public function logout(Request $request, Response $response): Response|ResponseInterface
     {
@@ -328,18 +328,18 @@ class UserController extends AbstractController
         return $response->withJson(['success' => true]);
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/auth/me',
         summary: 'The current signed-in user',
         tags: ['Authentication'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The current user',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'user', ref: '#/components/schemas/User')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User'))])
             ),
-            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
     )]
     public function me(Request $request, Response $response): Response|ResponseInterface

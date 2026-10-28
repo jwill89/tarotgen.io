@@ -2,13 +2,13 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\FavoriteSpreadRepository;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadRepository;
+use OpenApi\Spec as OAS;
 
 /**
  * Public spreads, and the user submissions waiting to become one.
@@ -22,16 +22,16 @@ class AdminSpreadController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/spreads',
         summary: 'List all public spreads',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of spreads',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Spread'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Spread'))
             ),
         ]
     )]
@@ -40,28 +40,28 @@ class AdminSpreadController extends AbstractController
         return $response->withJson($this->spreads->get());
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/spreads',
         summary: 'Create a public spread',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Created spread',
-                content: new OA\JsonContent(ref: '#/components/schemas/Spread')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OA\Response(response: 500, description: 'Failed to create spread'),
+            new OAS\Response(response: 500, description: 'Failed to create spread'),
         ]
     )]
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
@@ -79,30 +79,30 @@ class AdminSpreadController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Put(
+    #[OAS\Operation\Put(
         path: '/admin/spreads/{spread_id}',
         summary: 'Update a public spread',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated spread',
-                content: new OA\JsonContent(ref: '#/components/schemas/Spread')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OA\Response(response: 404, description: 'Spread not found or no valid fields'),
+            new OAS\Response(response: 404, description: 'Spread not found or no valid fields'),
         ]
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -122,16 +122,16 @@ class AdminSpreadController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/spreads/{spread_id}',
         summary: 'Delete a public spread',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 204, description: 'Deleted'),
         ]
     )]
     public function deleteSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -152,16 +152,16 @@ class AdminSpreadController extends AbstractController
 
     // ── Pending Spreads (user submissions) ──────────────────────
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/pending-spreads',
         summary: 'List pending spread submissions',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Pending spread submissions',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(type: 'object'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/PendingSpread'))
             ),
         ]
     )]
@@ -173,21 +173,21 @@ class AdminSpreadController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/pending-spreads/{pending_id}/approve',
         summary: 'Approve a pending spread submission',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'pending_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'pending_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Approved spread',
-                content: new OA\JsonContent(ref: '#/components/schemas/Spread')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OA\Response(response: 500, description: 'Failed to approve spread'),
+            new OAS\Response(response: 500, description: 'Failed to approve spread'),
         ]
     )]
     public function approvePendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -206,17 +206,17 @@ class AdminSpreadController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/pending-spreads/{pending_id}',
         summary: 'Reject a pending spread submission',
         tags: ['Admin · Spreads'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'pending_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'pending_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Rejected'),
-            new OA\Response(response: 500, description: 'Failed to reject spread'),
+            new OAS\Response(response: 204, description: 'Rejected'),
+            new OAS\Response(response: 500, description: 'Failed to reject spread'),
         ]
     )]
     public function rejectPendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface

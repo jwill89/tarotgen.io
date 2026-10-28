@@ -2,13 +2,10 @@
 
 namespace Tarot\Tests\Unit;
 
-use OpenApi\Analysers\AttributeAnnotationFactory;
-use OpenApi\Analysers\DocBlockAnnotationFactory;
-use OpenApi\Analysers\ReflectionAnalyser;
-use OpenApi\Generator;
-use OpenApi\SourceFinder;
+use OpenApi\Builder;
+use OpenApi\Loggers\CollectingLogger;
 use PHPUnit\Framework\TestCase;
-use Routes\RequireStructureProperties;
+use Routes\OpenApiSpec;
 
 /**
  * Guards that the committed backend/openapi.json stays in sync with the
@@ -22,7 +19,7 @@ final class OpenApiSpecTest extends TestCase
 {
     public function testCommittedSpecMatchesTheAttributes(): void
     {
-        if (!class_exists(Generator::class)) {
+        if (!class_exists(Builder::class)) {
             self::markTestSkipped('zircote/swagger-php is not installed.');
         }
 
@@ -31,20 +28,12 @@ final class OpenApiSpecTest extends TestCase
 
         self::assertFileExists($specPath, 'openapi.json is missing — run `composer docs`.');
 
-        // Regenerate exactly as `composer docs` does (see composer.json + bin/openapi):
-        // scan api/ + includes/ for OpenAPI 3.1 attributes.
-        $analyser = new ReflectionAnalyser([
-            new AttributeAnnotationFactory(),
-            new DocBlockAnnotationFactory(),
-        ]);
+        // The same build `composer docs` runs (bin/openapi.php).
+        $log = new CollectingLogger();
+        $result = OpenApiSpec::builder($backend)->setLogger($log)->build();
+        self::assertTrue($result->isValid(), implode("\n", array_column($log->entries(), 'message')));
 
-        $generator = new Generator()
-            ->setVersion('3.1.0')
-            ->setAnalyser($analyser);
-        $generator->getProcessorPipeline()->add(new RequireStructureProperties());
-        $openapi = $generator->generate(new SourceFinder([$backend . '/api', $backend . '/includes']));
-
-        $generated = json_decode($openapi->toJson(), true);
+        $generated = json_decode($result->toJson(), true);
         $committed = json_decode((string)file_get_contents($specPath), true);
 
         self::assertSame(

@@ -2,13 +2,13 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\DeckRepository;
 use Tarot\Repository\SpecialCardRepository;
 use Tarot\Service\CardImageService;
+use OpenApi\Spec as OAS;
 
 /**
  * Decks: the approved list and pending submissions, create/approve/edit/delete,
@@ -24,16 +24,16 @@ class AdminDeckController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/decks',
         summary: 'List all approved decks',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of decks',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Deck'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Deck'))
             ),
         ]
     )]
@@ -42,16 +42,16 @@ class AdminDeckController extends AbstractController
         return $response->withJson($this->decks->getApproved());
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/decks/pending',
         summary: 'List decks awaiting approval',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of pending decks',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Deck'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Deck'))
             ),
         ]
     )]
@@ -60,31 +60,31 @@ class AdminDeckController extends AbstractController
         return $response->withJson($this->decks->getPending());
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/decks',
         summary: 'Create a deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'artist', type: 'string'),
-                    new OA\Property(property: 'purchase_url', type: 'string'),
-                    new OA\Property(property: 'deck_system_id', type: 'integer'),
-                    new OA\Property(property: 'additional_cards', type: 'integer'),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'artist', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'purchase_url', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'deck_system_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'additional_cards', schema: new OAS\Schema(type: 'integer')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Created deck',
-                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OA\Response(response: 500, description: 'Failed to create deck'),
+            new OAS\Response(response: 500, description: 'Failed to create deck'),
         ]
     )]
     public function createDeck(Request $request, Response $response): Response|ResponseInterface
@@ -105,21 +105,21 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/decks/{deck_id}/approve',
         summary: 'Approve a pending deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Approved deck',
-                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OA\Response(response: 404, description: 'Deck not found'),
+            new OAS\Response(response: 404, description: 'Deck not found'),
         ]
     )]
     public function approveDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -140,26 +140,26 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/decks/{deck_id}/images',
         summary: 'Generate missing or stale web images (display WebP + thumbnail) for a deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Per-card counts: generated, skipped (already current), failed',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'deck_id', type: 'integer'),
-                    new OA\Property(property: 'generated', type: 'integer'),
-                    new OA\Property(property: 'skipped', type: 'integer'),
-                    new OA\Property(property: 'failed', type: 'integer'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'generated', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'skipped', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'failed', schema: new OAS\Schema(type: 'integer')),
                 ])
             ),
-            new OA\Response(response: 400, description: 'Invalid deck ID'),
+            new OAS\Response(response: 400, description: 'Invalid deck ID'),
         ]
     )]
     public function generateDeckImages(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -177,20 +177,20 @@ class AdminDeckController extends AbstractController
         return $response->withJson($this->cardImages->generateForDeck($deck_id));
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/decks/images',
         summary: 'Generate missing or stale web images for all decks',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Per-card totals across decks: generated, skipped (already current), failed',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'decks', type: 'integer'),
-                    new OA\Property(property: 'generated', type: 'integer'),
-                    new OA\Property(property: 'skipped', type: 'integer'),
-                    new OA\Property(property: 'failed', type: 'integer'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'decks', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'generated', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'skipped', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'failed', schema: new OAS\Schema(type: 'integer')),
                 ])
             ),
         ]
@@ -211,32 +211,32 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Patch(
+    #[OAS\Operation\Patch(
         path: '/admin/decks/{deck_id}',
         summary: 'Partially update a deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
             description: 'Partial set of deck fields to update',
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'artist', type: 'string'),
-                    new OA\Property(property: 'usable', type: 'boolean'),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'artist', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'usable', schema: new OAS\Schema(type: 'boolean')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated deck',
-                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OA\Response(response: 404, description: 'Deck not found or no valid fields'),
+            new OAS\Response(response: 404, description: 'Deck not found or no valid fields'),
         ]
     )]
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -263,17 +263,17 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/decks/{deck_id}',
         summary: 'Delete a deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
-            new OA\Response(response: 500, description: 'Failed to delete deck'),
+            new OAS\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 500, description: 'Failed to delete deck'),
         ]
     )]
     public function deleteDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -294,19 +294,19 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/decks/{deck_id}/special-cards',
         summary: 'List a deck\'s special cards',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of special cards',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpecialCard'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpecialCard'))
             ),
         ]
     )]
@@ -320,31 +320,31 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/decks/{deck_id}/special-cards',
         summary: 'Add a special card to a deck',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['card_id'],
                 properties: [
-                    new OA\Property(property: 'card_id', type: 'integer'),
-                    new OA\Property(property: 'name', type: 'string'),
+                    new OAS\Property(property: 'card_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Created special card',
-                content: new OA\JsonContent(ref: '#/components/schemas/SpecialCard')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/SpecialCard')
             ),
-            new OA\Response(response: 500, description: 'Failed to create special card'),
+            new OAS\Response(response: 500, description: 'Failed to create special card'),
         ]
     )]
     public function createSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -364,30 +364,30 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Put(
+    #[OAS\Operation\Put(
         path: '/admin/decks/{deck_id}/special-cards/{card_id}',
         summary: 'Update a special card',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'card_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'card_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated special card',
-                content: new OA\JsonContent(ref: '#/components/schemas/SpecialCard')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/SpecialCard')
             ),
-            new OA\Response(response: 404, description: 'Special card not found'),
+            new OAS\Response(response: 404, description: 'Special card not found'),
         ]
     )]
     public function updateSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -408,18 +408,18 @@ class AdminDeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/decks/{deck_id}/special-cards/{card_id}',
         summary: 'Delete a special card',
         tags: ['Admin · Decks'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'card_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'card_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
-            new OA\Response(response: 500, description: 'Failed to delete special card'),
+            new OAS\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 500, description: 'Failed to delete special card'),
         ]
     )]
     public function deleteSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface

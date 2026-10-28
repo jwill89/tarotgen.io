@@ -2,12 +2,12 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\DeckSystemRepository;
 use Tarot\Structure\DeckSystem;
+use OpenApi\Spec as OAS;
 
 /**
  * Deck systems (the card lists decks follow): approved and pending, edit,
@@ -20,16 +20,16 @@ class AdminDeckSystemController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/deck-systems',
         summary: 'List all approved deck systems',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of deck systems',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/DeckSystem'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DeckSystem'))
             ),
         ]
     )]
@@ -38,16 +38,16 @@ class AdminDeckSystemController extends AbstractController
         return $response->withJson($this->deckSystems->getApproved());
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/deck-systems/pending',
         summary: 'List deck systems awaiting approval',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of pending deck systems',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/DeckSystem'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DeckSystem'))
             ),
         ]
     )]
@@ -59,21 +59,21 @@ class AdminDeckSystemController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/deck-systems/{id}',
         summary: 'Get a single deck system with its cards',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
-                description: 'Deck system',
-                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+                description: 'The deck system plus its cards array',
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystemWithCards')
             ),
-            new OA\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 404, description: 'Deck system not found'),
         ]
     )]
     public function getDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -96,21 +96,21 @@ class AdminDeckSystemController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/deck-systems/{id}/approve',
         summary: 'Approve a pending deck system',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Approved deck system',
-                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
-            new OA\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 404, description: 'Deck system not found'),
         ]
     )]
     public function approveDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -129,32 +129,32 @@ class AdminDeckSystemController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Put(
+    #[OAS\Operation\Put(
         path: '/admin/deck-systems/{id}',
         summary: 'Update a deck system and its cards',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'short_name', type: 'string'),
-                    new OA\Property(property: 'total_cards', type: 'integer'),
-                    new OA\Property(property: 'cards', type: 'array', items: new OA\Items(type: 'object')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'short_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'total_cards', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'cards', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(type: 'object'))),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated deck system',
-                content: new OA\JsonContent(ref: '#/components/schemas/DeckSystem')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
-            new OA\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 404, description: 'Deck system not found'),
         ]
     )]
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -203,17 +203,17 @@ class AdminDeckSystemController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/deck-systems/{id}',
         summary: 'Delete a deck system',
         tags: ['Admin · Deck Systems'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
-            new OA\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 404, description: 'Deck system not found'),
         ]
     )]
     public function deleteDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface

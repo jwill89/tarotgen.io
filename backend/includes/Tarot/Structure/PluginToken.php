@@ -2,7 +2,7 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * A personal access token linking a plugin install to a user account — the
@@ -12,31 +12,31 @@ use OpenApi\Attributes as OA;
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes
  * (hydrated by PDO / the Data layer).
  */
-#[OA\Schema(description: 'A linked-plugin personal access token (no secret value exposed).')]
+#[OAS\Schema(description: 'A linked-plugin personal access token (no secret value exposed).')]
 class PluginToken extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $id = 0;
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $user_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $label = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $scope = 'account';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $created_at = '';
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $last_used_at = null;
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $expires_at = null;
 
-    #[OA\Property(type: 'string', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $revoked_at = null;
 
     /** Whether this token is currently usable (not revoked). */

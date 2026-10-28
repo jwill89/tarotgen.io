@@ -24,7 +24,7 @@ return new PhpCsFixer\Config()
     ])
     ->setFinder(
         PhpCsFixer\Finder::create()
-            ->in([__DIR__ . '/api', __DIR__ . '/includes', __DIR__ . '/scripts', __DIR__ . '/tests'])
+            ->in([__DIR__ . '/api', __DIR__ . '/bin', __DIR__ . '/includes', __DIR__ . '/scripts', __DIR__ . '/tests'])
             ->append([__DIR__ . '/og.php', __DIR__ . '/dev-router.php', __FILE__])
     )
     ->setCacheFile(__DIR__ . '/.php-cs-fixer.cache');

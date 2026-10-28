@@ -2,7 +2,7 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * A card users have reported as having a problem with its image. One row per
@@ -13,34 +13,34 @@ use OpenApi\Attributes as OA;
  *
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
  */
-#[OA\Schema(description: 'A card users have reported as having a problem with its image.')]
+#[OAS\Schema(description: 'A card users have reported as having a problem with its image.')]
 class CardReport extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $report_id = 0;
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $deck_id = 0;
 
-    #[OA\Property(type: 'string', description: 'Resolved deck name (from the decks table).')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', description: 'Resolved deck name (from the decks table).'))]
     public private(set) string $deck_name = '';
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $card_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $card_name = '';
 
-    #[OA\Property(type: 'integer', description: 'How many times this card has been reported.')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer', description: 'How many times this card has been reported.'))]
     public private(set) int $report_count = 0;
 
-    #[OA\Property(type: 'string', nullable: true, description: 'When an admin marked it handled; null = open.')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true, description: 'When an admin marked it handled; null = open.'))]
     public private(set) ?string $resolved_at = null;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $first_reported_at = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $last_reported_at = '';
 
     /**
@@ -48,10 +48,7 @@ class CardReport extends AbstractStructure
      * resolved it, so the reasons for the current problem can be told apart from
      * those that were already dealt with.
      */
-    #[OA\Property(
-        type: 'integer',
-        description: 'Goes up each time the card is reported again after being resolved.'
-    )]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer', description: 'Goes up each time the card is reported again after being resolved.'))]
     public private(set) int $round = 1;
 
     /**
@@ -61,11 +58,7 @@ class CardReport extends AbstractStructure
      *
      * @var list<CardReportSubmission>
      */
-    #[OA\Property(
-        type: 'array',
-        items: new OA\Items(ref: CardReportSubmission::class),
-        description: 'Each reason given, newest first. Older reports may have none.'
-    )]
+    #[OAS\Property(schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: CardReportSubmission::class), description: 'Each reason given, newest first. Older reports may have none.'))]
     public private(set) array $submissions = [];
 
     /** Whether an admin has marked this report handled. */

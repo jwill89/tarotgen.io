@@ -42,12 +42,16 @@ const emit = defineEmits<{
 const { toggleFavorite } = useFavoriteSpreads()
 const { isLoggedIn } = useUser()
 
+// What the user has typed since the list opened. Reka keeps its own copy
+// internal (ComboboxRoot has no searchTerm model in v2), and the input's text
+// is the selection's name until they type, so it's taken from input events.
 const searchTerm = ref('')
 const freeDrawSelected = ref(props.modelValue === null)
 
 // Sentinel so "No Spread (Free Draw)" is a real, value-keyed Combobox choice.
 const FREE_DRAW_ID = '__free_draw__'
 const FREE_DRAW = { id: FREE_DRAW_ID } as unknown as SpreadOption
+const FREE_DRAW_LABEL = 'No Spread (Free Draw)'
 
 const selected = computed<SpreadOption | undefined>({
   get: () => props.modelValue ?? (freeDrawSelected.value ? FREE_DRAW : undefined),
@@ -69,6 +73,13 @@ const filtered = computed(() => {
   return props.options.filter((o) => o.name.toLowerCase().includes(q))
 })
 
+// Offered while browsing, and to a search that names it: otherwise, as the
+// first item, it's what Enter would pick after typing a spread's name.
+const showFreeDraw = computed(() => {
+  const q = searchTerm.value.toLowerCase().trim()
+  return !q || FREE_DRAW_LABEL.toLowerCase().includes(q)
+})
+
 const groupedOptions = computed(() => {
   const favs = filtered.value.filter((o) => o.isFavorite)
   const personal = filtered.value.filter((o) => o.type === 'personal' && !o.isFavorite)
@@ -82,11 +93,16 @@ const groupedOptions = computed(() => {
 
 function displayValue(val: SpreadOption | undefined): string {
   if (!val) return ''
-  return val.id === FREE_DRAW_ID ? 'No Spread (Free Draw)' : val.name
+  return val.id === FREE_DRAW_ID ? FREE_DRAW_LABEL : val.name
 }
 
+// Clear the search as the list closes, so it reopens showing every spread.
 function onOpenChange(open: boolean): void {
-  if (open) searchTerm.value = ''
+  if (!open) searchTerm.value = ''
+}
+
+function onInput(event: Event): void {
+  searchTerm.value = (event.target as HTMLInputElement).value
 }
 
 function selectFreeDraw(): void {
@@ -105,7 +121,6 @@ function onToggleFavorite(option: SpreadOption): void {
 <template>
   <ComboboxRoot
     v-model="selected"
-    v-model:search-term="searchTerm"
     by="id"
     :ignore-filter="true"
     :reset-search-term-on-blur="true"
@@ -124,6 +139,7 @@ function onToggleFavorite(option: SpreadOption): void {
         class="input"
         :display-value="displayValue"
         placeholder="Search spreads..."
+        @input="onInput"
       />
       <button
         v-if="modelValue"
@@ -142,8 +158,12 @@ function onToggleFavorite(option: SpreadOption): void {
     <ComboboxPortal>
       <ComboboxContent class="myst-combobox__content" position="popper" :side-offset="4">
         <ComboboxViewport class="myst-combobox__viewport">
-          <ComboboxItem :value="FREE_DRAW" class="myst-combobox__item myst-combobox__item--none">
-            No Spread (Free Draw)
+          <ComboboxItem
+            v-if="showFreeDraw"
+            :value="FREE_DRAW"
+            class="myst-combobox__item myst-combobox__item--none"
+          >
+            {{ FREE_DRAW_LABEL }}
           </ComboboxItem>
 
           <ComboboxEmpty class="myst-combobox__empty">No spreads found.</ComboboxEmpty>

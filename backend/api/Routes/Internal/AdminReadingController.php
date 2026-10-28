@@ -2,11 +2,11 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ReadingRepository;
+use OpenApi\Spec as OAS;
 
 /**
  * Stored readings: browsing, deleting one, and bulk-deleting old ones.
@@ -18,24 +18,24 @@ class AdminReadingController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/readings',
         summary: 'List readings (paginated)',
         tags: ['Admin · Readings'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'limit', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
-            new OA\Parameter(name: 'offset', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'limit', in: 'query', required: false, schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'offset', in: 'query', required: false, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Paginated readings',
-                content: new OA\JsonContent(
+                content: new OAS\MediaType\Json(
                     required: ['rows', 'total'],
                     properties: [
-                        new OA\Property(property: 'rows', type: 'array', items: new OA\Items(ref: '#/components/schemas/ReadingSummary')),
-                        new OA\Property(property: 'total', type: 'integer', description: 'Every stored reading, across all pages.'),
+                        new OAS\Property(property: 'rows', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/ReadingSummary'))),
+                        new OAS\Property(property: 'total', schema: new OAS\Schema(type: 'integer', description: 'Every stored reading, across all pages.')),
                     ],
                     type: 'object'
                 )
@@ -54,17 +54,17 @@ class AdminReadingController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/readings/{reading_id}',
         summary: 'Delete a single reading',
         tags: ['Admin · Readings'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OA\Schema(type: 'string')),
+            new OAS\Parameter(name: 'reading_id', in: 'path', required: true, schema: new OAS\Schema(type: 'string')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
-            new OA\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 404, description: 'Reading not found'),
         ]
     )]
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -88,29 +88,29 @@ class AdminReadingController extends AbstractController
      * Bulk delete: purge guest readings older than the given age. The window is
      * an allow-listed number of days passed as the `older_than_days` query param.
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/readings/all',
         summary: 'Purge guest readings older than a given age',
         tags: ['Admin · Readings'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(
+            new OAS\Parameter(
                 name: 'older_than_days',
                 in: 'query',
                 required: true,
                 description: 'Allow-listed retention window in days',
-                schema: new OA\Schema(type: 'integer', enum: [7, 14, 30, 60, 90, 180, 365])
+                schema: new OAS\Schema(type: 'integer', enum: [7, 14, 30, 60, 90, 180, 365])
             ),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Number of deleted readings',
-                content: new OA\JsonContent(
-                    properties: [new OA\Property(property: 'deleted', type: 'integer')]
+                content: new OAS\MediaType\Json(
+                    properties: [new OAS\Property(property: 'deleted', schema: new OAS\Schema(type: 'integer'))]
                 )
             ),
-            new OA\Response(response: 400, description: 'Invalid day range'),
+            new OAS\Response(response: 400, description: 'Invalid day range'),
         ]
     )]
     public function cleanReadings(Request $request, Response $response): Response|ResponseInterface

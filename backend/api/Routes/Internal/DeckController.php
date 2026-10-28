@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -10,6 +9,7 @@ use Tarot\Repository\DeckRepository;
 use Tarot\Service\CardNameResolver;
 use Tarot\Structure\Deck;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 class DeckController extends AbstractController
 {
@@ -22,32 +22,32 @@ class DeckController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/decks',
         summary: 'List usable decks',
         tags: ['Decks'],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of usable decks',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Deck'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Deck'))
             ),
         ]
     )]
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/decks/{deck_id}',
         summary: 'A single deck',
         tags: ['Decks'],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The deck',
-                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OA\Response(response: 404, description: 'InvalidDeckID'),
+            new OAS\Response(response: 404, description: 'InvalidDeckID'),
         ]
     )]
     public function getDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -91,26 +91,26 @@ class DeckController extends AbstractController
      *
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/decks/{deck_id}/cards',
         summary: 'List every card available in a deck (for the custom-reading picker)',
         tags: ['Decks'],
         parameters: [
-            new OA\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of {card_id, name}',
-                content: new OA\JsonContent(
+                content: new OAS\MediaType\Json(
                     type: 'array',
-                    items: new OA\Items(properties: [
-                        new OA\Property(property: 'card_id', type: 'integer'),
-                        new OA\Property(property: 'name', type: 'string'),
+                    items: new OAS\Schema\Items(properties: [
+                        new OAS\Property(property: 'card_id', schema: new OAS\Schema(type: 'integer')),
+                        new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                     ])
                 )
             ),
-            new OA\Response(response: 404, description: 'InvalidDeckID'),
+            new OAS\Response(response: 404, description: 'InvalidDeckID'),
         ]
     )]
     public function getDeckCards(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -138,32 +138,32 @@ class DeckController extends AbstractController
             ->withHeader('Cache-Control', 'public, max-age=300');
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/decks',
         summary: 'Submit a new deck for review (requires a signed-in user)',
         tags: ['Decks'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name', 'artist'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'artist', type: 'string'),
-                    new OA\Property(property: 'purchase_url', type: 'string'),
-                    new OA\Property(property: 'deck_system_id', type: 'integer'),
-                    new OA\Property(property: 'additional_cards', type: 'integer'),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'artist', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'purchase_url', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'deck_system_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'additional_cards', schema: new OAS\Schema(type: 'integer')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'The created (unapproved) deck',
-                content: new OA\JsonContent(ref: '#/components/schemas/Deck')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OA\Response(response: 400, description: 'Name and artist are required'),
-            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 400, description: 'Name and artist are required'),
+            new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
     )]
     /**

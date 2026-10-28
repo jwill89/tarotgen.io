@@ -73,37 +73,6 @@
             }
         },
         "/account/readings/{reading_id}": {
-            "delete": {
-                "tags": [
-                    "Account"
-                ],
-                "summary": "Delete one of the user's readings",
-                "description": "Delete one of the current user's readings.",
-                "operationId": "792ad97854ffdc3eb107f4dd771de15c",
-                "parameters": [
-                    {
-                        "name": "reading_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "string"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    },
-                    "404": {
-                        "description": "Reading not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
             "patch": {
                 "tags": [
                     "Account"
@@ -125,6 +94,7 @@
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "reading_name": {
                                         "type": [
@@ -147,8 +117,7 @@
                                     "remove_password": {
                                         "type": "boolean"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
                     }
@@ -179,40 +148,30 @@
                         "sessionCookie": []
                     }
                 ]
-            }
-        },
-        "/account": {
+            },
             "delete": {
                 "tags": [
                     "Account"
                 ],
-                "summary": "Delete the account after re-entering the password (cascades readings)",
-                "operationId": "f494bd5d0850bf24d66ae14b041e3bb3",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "password"
-                                ],
-                                "properties": {
-                                    "password": {
-                                        "type": "string",
-                                        "format": "password"
-                                    }
-                                },
-                                "type": "object"
-                            }
+                "summary": "Delete one of the user's readings",
+                "description": "Delete one of the current user's readings.",
+                "operationId": "792ad97854ffdc3eb107f4dd771de15c",
+                "parameters": [
+                    {
+                        "name": "reading_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "204": {
-                        "description": "Account deleted"
+                        "description": "Deleted"
                     },
-                    "403": {
-                        "description": "Wrong password"
+                    "404": {
+                        "description": "Reading not found"
                     }
                 },
                 "security": [
@@ -220,7 +179,9 @@
                         "sessionCookie": []
                     }
                 ]
-            },
+            }
+        },
+        "/account": {
             "patch": {
                 "tags": [
                     "Account"
@@ -232,12 +193,12 @@
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "display_name": {
                                         "type": "string"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
                     }
@@ -248,6 +209,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
@@ -255,14 +217,52 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
                     },
                     "422": {
                         "description": "Policy/uniqueness failure"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Delete the account after re-entering the password (cascades readings)",
+                "operationId": "f494bd5d0850bf24d66ae14b041e3bb3",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password"
+                                    }
+                                },
+                                "required": [
+                                    "password"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "204": {
+                        "description": "Account deleted"
+                    },
+                    "403": {
+                        "description": "Wrong password"
                     }
                 },
                 "security": [
@@ -280,14 +280,10 @@
                 "summary": "Change the account password",
                 "operationId": "70ac3d9471f6b7020edd89bfa6393c36",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "current_password",
-                                    "new_password"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "current_password": {
                                         "type": "string",
@@ -298,10 +294,14 @@
                                         "format": "password"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "current_password",
+                                    "new_password"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -355,14 +355,10 @@
                 "description": "Create a new personal spread.",
                 "operationId": "56f0901cbf14761ffc8d5a07d6ebab60",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name",
-                                    "positions"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -374,10 +370,14 @@
                                         }
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name",
+                                    "positions"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -551,14 +551,10 @@
                 "description": "Add a spread to the current user's favorites.",
                 "operationId": "1b7f1fc01290224b3a61a261509890ee",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "spread_type",
-                                    "spread_id"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "spread_type": {
                                         "type": "string",
@@ -571,10 +567,14 @@
                                         "type": "integer"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "spread_type",
+                                    "spread_id"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -671,22 +671,22 @@
                 "summary": "Add a favorite deck",
                 "operationId": "18ab45d4893bbf74ac64355b0909ff2e",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "deck_id"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "deck_id": {
                                         "type": "integer"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "deck_id"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -792,19 +792,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "resolved": {
                                         "type": "boolean"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -812,12 +812,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -868,13 +868,10 @@
                 "summary": "Create a changelog entry",
                 "operationId": "4eaeb8f6c930f755bd6b36858dbb4fc7",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "title"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "title": {
                                         "type": "string"
@@ -883,10 +880,13 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "title"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -928,10 +928,10 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "title": {
                                         "type": "string"
@@ -939,11 +939,11 @@
                                     "body": {
                                         "type": "string"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -1057,19 +1057,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "is_read": {
                                         "type": "boolean"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -1077,12 +1077,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -1205,13 +1205,10 @@
                 "summary": "Create a deck",
                 "operationId": "de0845c214823b930ea47d45dbc5dfc0",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -1229,10 +1226,13 @@
                                         "type": "integer"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -1347,6 +1347,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "deck_id": {
                                             "type": "integer"
@@ -1360,8 +1361,7 @@
                                         "failed": {
                                             "type": "integer"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -1390,6 +1390,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "decks": {
                                             "type": "integer"
@@ -1403,8 +1404,7 @@
                                         "failed": {
                                             "type": "integer"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -1418,6 +1418,65 @@
             }
         },
         "/admin/decks/{deck_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Decks"
+                ],
+                "summary": "Partially update a deck",
+                "operationId": "4bdc6a28cb2f94ef001f1ee46851cf50",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Partial set of deck fields to update",
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    },
+                                    "artist": {
+                                        "type": "string"
+                                    },
+                                    "usable": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated deck",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Deck"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Deck not found or no valid fields"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
             "delete": {
                 "tags": [
                     "Admin · Decks"
@@ -1440,65 +1499,6 @@
                     },
                     "500": {
                         "description": "Failed to delete deck"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "patch": {
-                "tags": [
-                    "Admin · Decks"
-                ],
-                "summary": "Partially update a deck",
-                "operationId": "4bdc6a28cb2f94ef001f1ee46851cf50",
-                "parameters": [
-                    {
-                        "name": "deck_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "description": "Partial set of deck fields to update",
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    },
-                                    "artist": {
-                                        "type": "string"
-                                    },
-                                    "usable": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated deck",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/Deck"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "Deck not found or no valid fields"
                     }
                 },
                 "security": [
@@ -1563,13 +1563,10 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "card_id"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "card_id": {
                                         "type": "integer"
@@ -1578,10 +1575,13 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "card_id"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -1631,19 +1631,19 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -1782,11 +1782,11 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Deck system",
+                        "description": "The deck system plus its cards array",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/DeckSystem"
+                                    "$ref": "#/components/schemas/DeckSystemWithCards"
                                 }
                             }
                         }
@@ -1818,10 +1818,10 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -1838,11 +1838,11 @@
                                             "type": "object"
                                         }
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -1966,10 +1966,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "required": [
-                                        "rows",
-                                        "total"
-                                    ],
+                                    "type": "object",
                                     "properties": {
                                         "rows": {
                                             "type": "array",
@@ -1978,11 +1975,14 @@
                                             }
                                         },
                                         "total": {
-                                            "description": "Every stored reading, across all pages.",
-                                            "type": "integer"
+                                            "type": "integer",
+                                            "description": "Every stored reading, across all pages."
                                         }
                                     },
-                                    "type": "object"
+                                    "required": [
+                                        "rows",
+                                        "total"
+                                    ]
                                 }
                             }
                         }
@@ -2061,12 +2061,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "deleted": {
                                             "type": "integer"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2117,13 +2117,10 @@
                 "summary": "Create a public spread",
                 "operationId": "bab7ac919cfe6bfc9b13325fca16b156",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -2135,10 +2132,13 @@
                                         }
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -2180,10 +2180,10 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -2194,11 +2194,11 @@
                                             "$ref": "#/components/schemas/SpreadPosition"
                                         }
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -2264,7 +2264,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "type": "object"
+                                        "$ref": "#/components/schemas/PendingSpread"
                                     }
                                 }
                             }
@@ -2401,12 +2401,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2423,6 +2423,59 @@
             }
         },
         "/admin/users/{user_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Users"
+                ],
+                "summary": "Partially update a user account",
+                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
+                "operationId": "5b441e2758c8a9fc3e812694cf86a4e4",
+                "parameters": [
+                    {
+                        "name": "user_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "is_admin": {
+                                        "type": "boolean"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Updated user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/User"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
             "delete": {
                 "tags": [
                     "Admin · Users"
@@ -2442,59 +2495,6 @@
                 "responses": {
                     "204": {
                         "description": "Deleted"
-                    },
-                    "404": {
-                        "description": "User not found"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "patch": {
-                "tags": [
-                    "Admin · Users"
-                ],
-                "summary": "Partially update a user account",
-                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
-                "operationId": "5b441e2758c8a9fc3e812694cf86a4e4",
-                "parameters": [
-                    {
-                        "name": "user_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "properties": {
-                                    "is_admin": {
-                                        "type": "boolean"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated user",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/User"
-                                }
-                            }
-                        }
                     },
                     "404": {
                         "description": "User not found"
@@ -2554,14 +2554,10 @@
                 "summary": "Report a problem with a card's image (rate-limited)",
                 "operationId": "7121e0ef3d6914631c4b1b46a5d6a143",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "deck_id",
-                                    "card_id"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "deck_id": {
                                         "type": "integer"
@@ -2577,15 +2573,19 @@
                                         "description": "Sent by the site and current plugin builds. Older plugin builds omit it; their reports only bump the counter."
                                     },
                                     "details": {
-                                        "description": "What is wrong, in the reporter's words. Required when reason is `other`.",
                                         "type": "string",
+                                        "description": "What is wrong, in the reporter's words. Required when reason is `other`.",
                                         "maxLength": 500
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "deck_id",
+                                    "card_id"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -2593,12 +2593,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "status": {
                                             "type": "string"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2608,12 +2608,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "status": {
                                             "type": "string"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2698,6 +2698,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "turnstile_sitekey": {
                                             "type": [
@@ -2705,8 +2706,7 @@
                                                 "null"
                                             ]
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2723,15 +2723,10 @@
                 "description": "Public endpoint: submit a contact form message.\nRate-limited per IP to prevent spam.",
                 "operationId": "b49307dba89fa7fec7b08d62c3bdb293",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name",
-                                    "email",
-                                    "message"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -2744,10 +2739,15 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name",
+                                    "email",
+                                    "message"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -2755,12 +2755,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -2805,14 +2805,10 @@
                 "description": "Submit a new deck (requires a logged-in user). The deck is created\nas unapproved (pending admin review).",
                 "operationId": "42cce4ae745ef2783978cb4dbb96c66e",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name",
-                                    "artist"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -2830,10 +2826,14 @@
                                         "type": "integer"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name",
+                                    "artist"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -2920,6 +2920,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
+                                        "type": "object",
                                         "properties": {
                                             "card_id": {
                                                 "type": "integer"
@@ -2927,8 +2928,7 @@
                                             "name": {
                                                 "type": "string"
                                             }
-                                        },
-                                        "type": "object"
+                                        }
                                     }
                                 }
                             }
@@ -2972,15 +2972,10 @@
                 "description": "Submit a new deck system (requires auth). If admin, auto-approved.",
                 "operationId": "403abaa11f580894f02adf2c494ec668",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name",
-                                    "short_name",
-                                    "cards"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -2994,19 +2989,24 @@
                                     "cards": {
                                         "type": "array",
                                         "items": {
+                                            "type": "object",
                                             "properties": {
                                                 "name": {
                                                     "type": "string"
                                                 }
-                                            },
-                                            "type": "object"
+                                            }
                                         }
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name",
+                                    "short_name",
+                                    "cards"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -3057,7 +3057,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/DeckSystem"
+                                    "$ref": "#/components/schemas/DeckSystemWithCards"
                                 }
                             }
                         }
@@ -3151,6 +3151,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
@@ -3158,8 +3159,7 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -3220,14 +3220,10 @@
                 "description": "Complete passkey registration: verify attestation and store credential.",
                 "operationId": "f1ab928d4d3d8324cb34b6f8d1f58ae6",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "clientDataJSON",
-                                    "attestationObject"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "clientDataJSON": {
                                         "type": "string"
@@ -3239,10 +3235,14 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "clientDataJSON",
+                                    "attestationObject"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -3274,13 +3274,13 @@
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "email": {
                                         "type": "string",
                                         "format": "email"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
                     }
@@ -3308,16 +3308,10 @@
                 "description": "Verify a passkey assertion and log the user in.",
                 "operationId": "417be337f1c619ab905aa2a49bb67b43",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "id",
-                                    "clientDataJSON",
-                                    "authenticatorData",
-                                    "signature"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "id": {
                                         "type": "string"
@@ -3332,10 +3326,16 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "id",
+                                    "clientDataJSON",
+                                    "authenticatorData",
+                                    "signature"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3343,6 +3343,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
@@ -3350,8 +3351,7 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -3402,6 +3402,61 @@
             }
         },
         "/auth/passkeys/{id}": {
+            "patch": {
+                "tags": [
+                    "Passkeys"
+                ],
+                "summary": "Rename a passkey",
+                "description": "Rename a passkey.",
+                "operationId": "5ead26b56432728e40d91991d9b5a3ce",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Renamed"
+                    },
+                    "401": {
+                        "description": "Not authenticated"
+                    },
+                    "404": {
+                        "description": "Passkey not found"
+                    },
+                    "422": {
+                        "description": "Name is required"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
             "delete": {
                 "tags": [
                     "Passkeys"
@@ -3438,61 +3493,6 @@
                         "sessionCookie": []
                     }
                 ]
-            },
-            "patch": {
-                "tags": [
-                    "Passkeys"
-                ],
-                "summary": "Rename a passkey",
-                "description": "Rename a passkey.",
-                "operationId": "5ead26b56432728e40d91991d9b5a3ce",
-                "parameters": [
-                    {
-                        "name": "id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "required": [
-                                    "name"
-                                ],
-                                "properties": {
-                                    "name": {
-                                        "type": "string"
-                                    }
-                                },
-                                "type": "object"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "Renamed"
-                    },
-                    "401": {
-                        "description": "Not authenticated"
-                    },
-                    "404": {
-                        "description": "Passkey not found"
-                    },
-                    "422": {
-                        "description": "Name is required"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
             }
         },
         "/auth/passkeys/password-login": {
@@ -3504,19 +3504,19 @@
                 "description": "Toggle password login enabled/disabled.",
                 "operationId": "70778fa07ca73639c4b6466288c18676",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
+                                "type": "object",
                                 "properties": {
                                     "disable": {
                                         "type": "boolean"
                                     }
-                                },
-                                "type": "object"
+                                }
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3544,14 +3544,10 @@
                 "summary": "Approve a plugin link and mint a PKCE authorization code (browser, session-authed)",
                 "operationId": "301fe6924d359eff76b20d5ba0753ac7",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "code_challenge",
-                                    "redirect_uri"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "code_challenge": {
                                         "type": "string"
@@ -3561,17 +3557,21 @@
                                         "default": "S256"
                                     },
                                     "redirect_uri": {
-                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback",
-                                        "type": "string"
+                                        "type": "string",
+                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback"
                                     },
                                     "state": {
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "code_challenge",
+                                    "redirect_uri"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3579,12 +3579,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "redirect_uri": {
                                             "type": "string"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -3611,14 +3611,10 @@
                 "summary": "Exchange a PKCE authorization code for a plugin Bearer token",
                 "operationId": "9cee09bafbc85842806ed3b5d8696f77",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "code",
-                                    "code_verifier"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "code": {
                                         "type": "string"
@@ -3627,10 +3623,14 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "code",
+                                    "code_verifier"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3638,6 +3638,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "token": {
                                             "type": "string"
@@ -3651,8 +3652,7 @@
                                         "display_name": {
                                             "type": "string"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -3786,22 +3786,22 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "password"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "password": {
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "password"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3835,14 +3835,14 @@
                 "operationId": "d8750b5a23fd03c315941e4facfd28ee",
                 "requestBody": {
                     "description": "Draw spec: deck, spread or card count, and options",
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -3872,14 +3872,14 @@
                 "summary": "Create a custom reading from explicitly chosen cards/positions",
                 "operationId": "3e30d906e6fde22906f101631e2f600d",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
                                 "type": "object"
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -3917,13 +3917,10 @@
                     }
                 ],
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "positions"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "positions": {
                                         "type": "array",
@@ -3935,10 +3932,13 @@
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "positions"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -3946,6 +3946,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
@@ -3953,8 +3954,7 @@
                                         "reading_id": {
                                             "type": "string"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -4096,14 +4096,10 @@
                 "description": "Public endpoint: accept a user-submitted spread into the pending queue.\nRate-limited per IP to prevent spam. Never exposes the stored row.",
                 "operationId": "c8dd5d463f67b61e59d160ecb62b0f24",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "name",
-                                    "positions"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "name": {
                                         "type": "string"
@@ -4118,10 +4114,14 @@
                                         }
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "name",
+                                    "positions"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -4129,12 +4129,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -4190,15 +4190,10 @@
                 "summary": "Create an account (inactive until email activation). Rate-limited: 5/IP/hour.",
                 "operationId": "ad99e4939452f71308786370a3ed004a",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "email",
-                                    "display_name",
-                                    "password"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "email": {
                                         "type": "string",
@@ -4213,10 +4208,15 @@
                                         "minLength": 12
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "email",
+                                    "display_name",
+                                    "password"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "201": {
@@ -4239,22 +4239,22 @@
                 "summary": "Activate an account from the emailed token",
                 "operationId": "d075a756fc5035127185002a45e641da",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "token"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "token": {
                                         "type": "string"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "token"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -4274,23 +4274,23 @@
                 "summary": "Begin a password reset (always answers 200 — no account enumeration). Rate-limited: 5/IP/hour.",
                 "operationId": "7503c8a7c06e754ba9f789130cba405a",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "email"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "email": {
                                         "type": "string",
                                         "format": "email"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "email"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -4310,14 +4310,10 @@
                 "summary": "Complete a password reset",
                 "operationId": "1fb4bc9555f6546ebf8546a28aa1c9d3",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "token",
-                                    "password"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "token": {
                                         "type": "string"
@@ -4327,10 +4323,14 @@
                                         "format": "password"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "token",
+                                    "password"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -4353,14 +4353,10 @@
                 "summary": "Password sign-in. Rate-limited: 10 failed attempts/IP/15 min.",
                 "operationId": "ba29841b2cc01b0ea43c8ad6b1b529b3",
                 "requestBody": {
-                    "required": true,
                     "content": {
                         "application/json": {
                             "schema": {
-                                "required": [
-                                    "email",
-                                    "password"
-                                ],
+                                "type": "object",
                                 "properties": {
                                     "email": {
                                         "type": "string",
@@ -4374,14 +4370,18 @@
                                         "type": "boolean"
                                     },
                                     "turnstile_token": {
-                                        "description": "Required when Turnstile is configured",
-                                        "type": "string"
+                                        "type": "string",
+                                        "description": "Required when Turnstile is configured"
                                     }
                                 },
-                                "type": "object"
+                                "required": [
+                                    "email",
+                                    "password"
+                                ]
                             }
                         }
-                    }
+                    },
+                    "required": true
                 },
                 "responses": {
                     "200": {
@@ -4389,6 +4389,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "success": {
                                             "type": "boolean"
@@ -4396,8 +4397,7 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -4444,12 +4444,12 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "type": "object",
                                     "properties": {
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    },
-                                    "type": "object"
+                                    }
                                 }
                             }
                         }
@@ -4469,112 +4469,109 @@
     "components": {
         "schemas": {
             "SpreadPosition": {
+                "type": "object",
                 "description": "One card slot in a spread layout.",
+                "properties": {
+                    "order": {
+                        "type": "integer",
+                        "description": "1-based: the nth card drawn goes here."
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "The slot's label, e.g. \"Past\".",
+                        "maxLength": 100
+                    },
+                    "x": {
+                        "type": "number",
+                        "description": "Card centre, % of the canvas width.",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "y": {
+                        "type": "number",
+                        "description": "Card centre, % of the canvas height.",
+                        "minimum": 0,
+                        "maximum": 100
+                    },
+                    "rotation": {
+                        "type": "integer",
+                        "description": "Degrees, 0–359.",
+                        "minimum": 0,
+                        "maximum": 359
+                    }
+                },
                 "required": [
                     "order",
                     "title",
                     "x",
                     "y",
                     "rotation"
-                ],
-                "properties": {
-                    "order": {
-                        "description": "1-based: the nth card drawn goes here.",
-                        "type": "integer"
-                    },
-                    "title": {
-                        "description": "The slot's label, e.g. \"Past\".",
-                        "type": "string",
-                        "maxLength": 100
-                    },
-                    "x": {
-                        "description": "Card centre, % of the canvas width.",
-                        "type": "number",
-                        "maximum": 100,
-                        "minimum": 0
-                    },
-                    "y": {
-                        "description": "Card centre, % of the canvas height.",
-                        "type": "number",
-                        "maximum": 100,
-                        "minimum": 0
-                    },
-                    "rotation": {
-                        "description": "Degrees, 0–359.",
-                        "type": "integer",
-                        "maximum": 359,
-                        "minimum": 0
-                    }
-                },
-                "type": "object"
+                ]
             },
             "DrawCard": {
+                "type": "object",
                 "description": "One drawn card, in draw order.",
+                "properties": {
+                    "card_id": {
+                        "type": "integer",
+                        "description": "The card's number in its deck; a deck's extra cards come after its system's cards."
+                    },
+                    "reversed": {
+                        "type": "boolean",
+                        "description": "Drawn upside down."
+                    },
+                    "card_name": {
+                        "type": "string",
+                        "description": "Absent when the deck has no name for the card (an extra card nobody has named yet)."
+                    }
+                },
                 "required": [
                     "card_id",
                     "reversed"
-                ],
-                "properties": {
-                    "card_id": {
-                        "description": "The card's number in its deck; a deck's extra cards come after its system's cards.",
-                        "type": "integer"
-                    },
-                    "reversed": {
-                        "description": "Drawn upside down.",
-                        "type": "boolean"
-                    },
-                    "card_name": {
-                        "description": "Absent when the deck has no name for the card (an extra card nobody has named yet).",
-                        "type": "string"
-                    }
-                },
-                "type": "object"
+                ]
             },
             "SpreadSnapshot": {
+                "type": "object",
                 "description": "The layout as it was when the reading was made, so a shared reading still renders after its spread is edited or deleted.",
-                "required": [
-                    "spread_id",
-                    "name",
-                    "description",
-                    "positions"
-                ],
                 "properties": {
                     "spread_id": {
-                        "description": "The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.",
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement."
                     },
                     "name": {
-                        "description": "The spread's name.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "The spread's name."
                     },
                     "description": {
-                        "description": "Markdown; may be empty.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "Markdown; may be empty."
                     },
                     "positions": {
-                        "description": "One per drawn card.",
                         "type": "array",
+                        "description": "One per drawn card.",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
                     }
                 },
-                "type": "object"
+                "required": [
+                    "spread_id",
+                    "name",
+                    "description",
+                    "positions"
+                ]
             },
             "ReadingInfo": {
+                "type": "object",
                 "description": "What was drawn, from which deck, in which layout.",
-                "required": [
-                    "deck_id",
-                    "draw"
-                ],
                 "properties": {
                     "deck_id": {
-                        "description": "The deck the cards were drawn from.",
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "The deck the cards were drawn from."
                     },
                     "origin": {
-                        "description": "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.",
                         "type": "string",
+                        "description": "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.",
                         "enum": [
                             "generated",
                             "custom"
@@ -4585,17 +4582,72 @@
                         "description": "Absent for a free draw that was never placed."
                     },
                     "draw": {
-                        "description": "The cards, in draw order.",
                         "type": "array",
+                        "description": "The cards, in draw order.",
                         "items": {
                             "$ref": "#/components/schemas/DrawCard"
                         }
                     }
                 },
-                "type": "object"
+                "required": [
+                    "deck_id",
+                    "draw"
+                ]
             },
             "ReadingView": {
+                "type": "object",
                 "description": "A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return.",
+                "properties": {
+                    "reading_id": {
+                        "type": "string",
+                        "description": "The code in the reading link."
+                    },
+                    "reading_info": {
+                        "$ref": "#/components/schemas/ReadingInfo",
+                        "description": "What was drawn."
+                    },
+                    "reading_time": {
+                        "type": "string",
+                        "description": "When it was made, UTC (\"Y-m-d H:i:s\")."
+                    },
+                    "reading_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The owner's title for it, if any."
+                    },
+                    "reading_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The owner's notes (Markdown), if any."
+                    },
+                    "reader": {
+                        "type": "string",
+                        "description": "\"Guest\", or the owner's display name unless they chose to hide it."
+                    },
+                    "is_owner": {
+                        "type": "boolean",
+                        "description": "Whether the requester owns it."
+                    },
+                    "is_final": {
+                        "type": "boolean",
+                        "description": "Locked for good against further draws."
+                    },
+                    "can_draw_more": {
+                        "type": "boolean",
+                        "description": "The requester may draw more cards into it: their own, not final, not custom."
+                    },
+                    "locked": {
+                        "type": "boolean",
+                        "description": "Always false here; see LockedReading.",
+                        "enum": [
+                            false
+                        ]
+                    }
+                },
                 "required": [
                     "reading_id",
                     "reading_info",
@@ -4607,86 +4659,104 @@
                     "is_final",
                     "can_draw_more",
                     "locked"
-                ],
-                "properties": {
-                    "reading_id": {
-                        "description": "The code in the reading link.",
-                        "type": "string"
-                    },
-                    "reading_info": {
-                        "$ref": "#/components/schemas/ReadingInfo",
-                        "description": "What was drawn."
-                    },
-                    "reading_time": {
-                        "description": "When it was made, UTC (\"Y-m-d H:i:s\").",
-                        "type": "string"
-                    },
-                    "reading_name": {
-                        "description": "The owner's title for it, if any.",
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "reading_notes": {
-                        "description": "The owner's notes (Markdown), if any.",
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "reader": {
-                        "description": "\"Guest\", or the owner's display name unless they chose to hide it.",
-                        "type": "string"
-                    },
-                    "is_owner": {
-                        "description": "Whether the requester owns it.",
-                        "type": "boolean"
-                    },
-                    "is_final": {
-                        "description": "Locked for good against further draws.",
-                        "type": "boolean"
-                    },
-                    "can_draw_more": {
-                        "description": "The requester may draw more cards into it: their own, not final, not custom.",
-                        "type": "boolean"
-                    },
-                    "locked": {
-                        "description": "Always false here; see LockedReading.",
-                        "type": "boolean",
-                        "enum": [
-                            false
-                        ]
-                    }
-                },
-                "type": "object"
+                ]
             },
             "LockedReading": {
+                "type": "object",
                 "description": "Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock).",
-                "required": [
-                    "locked",
-                    "reading_name"
-                ],
                 "properties": {
                     "locked": {
-                        "description": "Always true here.",
                         "type": "boolean",
+                        "description": "Always true here.",
                         "enum": [
                             true
                         ]
                     },
                     "reading_name": {
-                        "description": "The owner's title for it, if any — the only thing shown before unlocking.",
                         "type": [
                             "string",
                             "null"
-                        ]
+                        ],
+                        "description": "The owner's title for it, if any — the only thing shown before unlocking."
                     }
                 },
-                "type": "object"
+                "required": [
+                    "locked",
+                    "reading_name"
+                ]
+            },
+            "DeckSystemWithCards": {
+                "description": "A deck system with its card definitions: what viewing one returns (public and admin).",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/DeckSystem"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "cards": {
+                                "type": "array",
+                                "description": "The named cards, in card order.",
+                                "items": {
+                                    "$ref": "#/components/schemas/DeckSystemCard"
+                                }
+                            }
+                        },
+                        "required": [
+                            "cards"
+                        ]
+                    }
+                ]
             },
             "CardReport": {
+                "type": "object",
                 "description": "A card users have reported as having a problem with its image.",
+                "properties": {
+                    "report_id": {
+                        "type": "integer"
+                    },
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_name": {
+                        "type": "string",
+                        "description": "Resolved deck name (from the decks table)."
+                    },
+                    "card_id": {
+                        "type": "integer"
+                    },
+                    "card_name": {
+                        "type": "string"
+                    },
+                    "report_count": {
+                        "type": "integer",
+                        "description": "How many times this card has been reported."
+                    },
+                    "resolved_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "When an admin marked it handled; null = open."
+                    },
+                    "first_reported_at": {
+                        "type": "string"
+                    },
+                    "last_reported_at": {
+                        "type": "string"
+                    },
+                    "round": {
+                        "type": "integer",
+                        "description": "Goes up each time the card is reported again after being resolved."
+                    },
+                    "submissions": {
+                        "type": "array",
+                        "description": "Each reason given, newest first. Older reports may have none.",
+                        "items": {
+                            "$ref": "#/components/schemas/CardReportSubmission"
+                        }
+                    }
+                },
                 "required": [
                     "report_id",
                     "deck_id",
@@ -4699,58 +4769,11 @@
                     "last_reported_at",
                     "round",
                     "submissions"
-                ],
-                "properties": {
-                    "report_id": {
-                        "type": "integer"
-                    },
-                    "deck_id": {
-                        "type": "integer"
-                    },
-                    "deck_name": {
-                        "description": "Resolved deck name (from the decks table).",
-                        "type": "string"
-                    },
-                    "card_id": {
-                        "type": "integer"
-                    },
-                    "card_name": {
-                        "type": "string"
-                    },
-                    "report_count": {
-                        "description": "How many times this card has been reported.",
-                        "type": "integer"
-                    },
-                    "resolved_at": {
-                        "description": "When an admin marked it handled; null = open.",
-                        "type": [
-                            "string",
-                            "null"
-                        ]
-                    },
-                    "first_reported_at": {
-                        "type": "string"
-                    },
-                    "last_reported_at": {
-                        "type": "string"
-                    },
-                    "round": {
-                        "description": "Goes up each time the card is reported again after being resolved.",
-                        "type": "integer"
-                    },
-                    "submissions": {
-                        "description": "Each reason given, newest first. Older reports may have none.",
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/CardReportSubmission"
-                        }
-                    }
-                },
-                "type": "object"
+                ]
             },
             "CardReportReason": {
-                "description": "What is wrong with a reported card.",
                 "type": "string",
+                "description": "What is wrong with a reported card.",
                 "enum": [
                     "artefact",
                     "cropping",
@@ -4760,15 +4783,8 @@
                 ]
             },
             "CardReportSubmission": {
+                "type": "object",
                 "description": "One user's report of a card, with their reason.",
-                "required": [
-                    "submission_id",
-                    "report_id",
-                    "round",
-                    "reason",
-                    "details",
-                    "submitted_at"
-                ],
                 "properties": {
                     "submission_id": {
                         "type": "integer"
@@ -4777,30 +4793,32 @@
                         "type": "integer"
                     },
                     "round": {
-                        "description": "The card's round when this was submitted (see CardReport.round).",
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "The card's round when this was submitted (see CardReport.round)."
                     },
                     "reason": {
                         "$ref": "#/components/schemas/CardReportReason"
                     },
                     "details": {
-                        "description": "What the reporter wrote; may be empty.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "What the reporter wrote; may be empty."
                     },
                     "submitted_at": {
                         "type": "string"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "submission_id",
+                    "report_id",
+                    "round",
+                    "reason",
+                    "details",
+                    "submitted_at"
+                ]
             },
             "ChangelogEntry": {
+                "type": "object",
                 "description": "A changelog entry.",
-                "required": [
-                    "entry_id",
-                    "title",
-                    "body",
-                    "entry_date"
-                ],
                 "properties": {
                     "entry_id": {
                         "type": "integer"
@@ -4815,19 +4833,16 @@
                         "type": "string"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "entry_id",
+                    "title",
+                    "body",
+                    "entry_date"
+                ]
             },
             "Contact": {
+                "type": "object",
                 "description": "A contact-form submission.",
-                "required": [
-                    "contact_id",
-                    "user_id",
-                    "name",
-                    "email",
-                    "message",
-                    "is_read",
-                    "submitted_at"
-                ],
                 "properties": {
                     "contact_id": {
                         "type": "integer"
@@ -4854,25 +4869,19 @@
                         "type": "string"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "contact_id",
+                    "user_id",
+                    "name",
+                    "email",
+                    "message",
+                    "is_read",
+                    "submitted_at"
+                ]
             },
             "Deck": {
+                "type": "object",
                 "description": "A tarot deck.",
-                "required": [
-                    "deck_id",
-                    "deck_system_id",
-                    "name",
-                    "artist",
-                    "purchase_url",
-                    "additional_cards",
-                    "card_aspect_w",
-                    "card_aspect_h",
-                    "approved",
-                    "usable",
-                    "submitted_by",
-                    "system_short_name",
-                    "system_total_cards"
-                ],
                 "properties": {
                     "deck_id": {
                         "type": "integer"
@@ -4910,29 +4919,36 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "The account that submitted it. Admin views only."
                     },
                     "system_short_name": {
-                        "description": "Populated by JOIN queries — the deck system's short name.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "Populated by JOIN queries — the deck system's short name."
                     },
                     "system_total_cards": {
-                        "description": "Populated by JOIN queries — the deck system's total cards.",
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "Populated by JOIN queries — the deck system's total cards."
                     }
                 },
-                "type": "object"
-            },
-            "DeckSystem": {
-                "description": "A tarot deck system (a family of decks sharing a card structure).",
                 "required": [
+                    "deck_id",
                     "deck_system_id",
                     "name",
-                    "short_name",
-                    "total_cards",
+                    "artist",
+                    "purchase_url",
+                    "additional_cards",
+                    "card_aspect_w",
+                    "card_aspect_h",
                     "approved",
-                    "submitted_by"
-                ],
+                    "usable",
+                    "system_short_name",
+                    "system_total_cards"
+                ]
+            },
+            "DeckSystem": {
+                "type": "object",
+                "description": "A tarot deck system (a family of decks sharing a card structure).",
                 "properties": {
                     "deck_system_id": {
                         "type": "integer"
@@ -4953,24 +4969,21 @@
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "The account that submitted it. Admin views only."
                     }
                 },
-                "type": "object"
-            },
-            "DeckSystemCard": {
-                "description": "A card definition within a deck system.",
                 "required": [
                     "deck_system_id",
-                    "card_id",
                     "name",
-                    "keywords",
-                    "meaning",
-                    "advice",
-                    "reversed_keywords",
-                    "reversed_meaning",
-                    "reversed_advice"
-                ],
+                    "short_name",
+                    "total_cards",
+                    "approved"
+                ]
+            },
+            "DeckSystemCard": {
+                "type": "object",
+                "description": "A card definition within a deck system.",
                 "properties": {
                     "deck_system_id": {
                         "type": "integer"
@@ -5018,46 +5031,50 @@
                         ]
                     }
                 },
-                "type": "object"
+                "required": [
+                    "deck_system_id",
+                    "card_id",
+                    "name",
+                    "keywords",
+                    "meaning",
+                    "advice",
+                    "reversed_keywords",
+                    "reversed_meaning",
+                    "reversed_advice"
+                ]
             },
             "FavoriteSpread": {
+                "type": "object",
                 "description": "A favourited spread: which table it lives in, and its id there.",
-                "required": [
-                    "spread_type",
-                    "spread_id"
-                ],
                 "properties": {
                     "spread_type": {
-                        "description": "`public` for an official spread, `personal` for a custom one.",
                         "type": "string",
+                        "description": "`public` for an official spread, `personal` for a custom one.",
                         "enum": [
                             "public",
                             "personal"
                         ]
                     },
                     "spread_id": {
-                        "description": "The spread_id or user_spread_id, according to spread_type.",
-                        "type": "integer"
+                        "type": "integer",
+                        "description": "The spread_id or user_spread_id, according to spread_type."
                     }
                 },
-                "type": "object"
+                "required": [
+                    "spread_type",
+                    "spread_id"
+                ]
             },
             "Passkey": {
+                "type": "object",
                 "description": "A passkey registered to the signed-in user's account.",
-                "required": [
-                    "passkey_id",
-                    "credential_id",
-                    "name",
-                    "created_at",
-                    "last_used_at"
-                ],
                 "properties": {
                     "passkey_id": {
                         "type": "integer"
                     },
                     "credential_id": {
-                        "description": "The WebAuthn credential id, base64url-encoded.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "The WebAuthn credential id, base64url-encoded."
                     },
                     "name": {
                         "type": "string"
@@ -5072,20 +5089,17 @@
                         ]
                     }
                 },
-                "type": "object"
+                "required": [
+                    "passkey_id",
+                    "credential_id",
+                    "name",
+                    "created_at",
+                    "last_used_at"
+                ]
             },
             "PendingSpread": {
+                "type": "object",
                 "description": "A user-submitted spread awaiting moderation.",
-                "required": [
-                    "pending_id",
-                    "name",
-                    "description",
-                    "card_count",
-                    "positions",
-                    "submitter",
-                    "user_id",
-                    "submitted_at"
-                ],
                 "properties": {
                     "pending_id": {
                         "type": "integer"
@@ -5100,15 +5114,15 @@
                         "type": "integer"
                     },
                     "positions": {
-                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "type": "array",
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
                     },
                     "submitter": {
-                        "description": "Resolved submitter label: the linked account's display name, or \"Guest\".",
-                        "type": "string"
+                        "type": "string",
+                        "description": "Resolved submitter label: the linked account's display name, or \"Guest\"."
                     },
                     "user_id": {
                         "type": [
@@ -5120,20 +5134,20 @@
                         "type": "string"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "pending_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions",
+                    "submitter",
+                    "user_id",
+                    "submitted_at"
+                ]
             },
             "PluginToken": {
+                "type": "object",
                 "description": "A linked-plugin personal access token (no secret value exposed).",
-                "required": [
-                    "id",
-                    "user_id",
-                    "label",
-                    "scope",
-                    "created_at",
-                    "last_used_at",
-                    "expires_at",
-                    "revoked_at"
-                ],
                 "properties": {
                     "id": {
                         "type": "integer"
@@ -5169,21 +5183,20 @@
                         ]
                     }
                 },
-                "type": "object"
+                "required": [
+                    "id",
+                    "user_id",
+                    "label",
+                    "scope",
+                    "created_at",
+                    "last_used_at",
+                    "expires_at",
+                    "revoked_at"
+                ]
             },
             "Reading": {
+                "type": "object",
                 "description": "A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead.",
-                "required": [
-                    "reading_id",
-                    "reading_info",
-                    "reading_time",
-                    "user_id",
-                    "hide_user",
-                    "reading_name",
-                    "reading_notes",
-                    "is_final",
-                    "password_protected"
-                ],
                 "properties": {
                     "reading_id": {
                         "type": "string"
@@ -5217,27 +5230,29 @@
                         ]
                     },
                     "is_final": {
-                        "description": "One-way lock: when true the owner can no longer draw additional cards.",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "description": "One-way lock: when true the owner can no longer draw additional cards."
                     },
                     "password_protected": {
-                        "description": "Derived flag — true when a view password is set. The hash itself is never exposed.",
-                        "type": "boolean"
+                        "type": "boolean",
+                        "description": "Derived flag — true when a view password is set. The hash itself is never exposed."
                     }
                 },
-                "type": "object"
-            },
-            "ReadingSummary": {
-                "description": "A reading as the admin readings list shows it.",
                 "required": [
                     "reading_id",
+                    "reading_info",
                     "reading_time",
                     "user_id",
-                    "display_name",
-                    "deck_id",
-                    "deck_name",
-                    "spread_name"
-                ],
+                    "hide_user",
+                    "reading_name",
+                    "reading_notes",
+                    "is_final",
+                    "password_protected"
+                ]
+            },
+            "ReadingSummary": {
+                "type": "object",
+                "description": "A reading as the admin readings list shows it.",
                 "properties": {
                     "reading_id": {
                         "type": "string"
@@ -5246,43 +5261,41 @@
                         "type": "string"
                     },
                     "user_id": {
-                        "description": "The owner, or null for a guest reading.",
                         "type": [
                             "integer",
                             "null"
-                        ]
+                        ],
+                        "description": "The owner, or null for a guest reading."
                     },
                     "display_name": {
-                        "description": "The owner's display name, or `Guest`.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "The owner's display name, or `Guest`."
                     },
                     "deck_id": {
                         "type": "integer"
                     },
                     "deck_name": {
-                        "description": "The deck's name, or `Deck #<id>` once the deck is gone.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "The deck's name, or `Deck #<id>` once the deck is gone."
                     },
                     "spread_name": {
-                        "description": "The spread name, or empty for a free draw.",
-                        "type": "string"
+                        "type": "string",
+                        "description": "The spread name, or empty for a free draw."
                     }
                 },
-                "type": "object"
+                "required": [
+                    "reading_id",
+                    "reading_time",
+                    "user_id",
+                    "display_name",
+                    "deck_id",
+                    "deck_name",
+                    "spread_name"
+                ]
             },
             "SpecialCard": {
+                "type": "object",
                 "description": "A deck-specific special (custom) card.",
-                "required": [
-                    "deck_id",
-                    "card_id",
-                    "name",
-                    "keywords",
-                    "meaning",
-                    "advice",
-                    "keywords_reversed",
-                    "meaning_reversed",
-                    "advice_reversed"
-                ],
                 "properties": {
                     "deck_id": {
                         "type": "integer"
@@ -5330,17 +5343,21 @@
                         ]
                     }
                 },
-                "type": "object"
+                "required": [
+                    "deck_id",
+                    "card_id",
+                    "name",
+                    "keywords",
+                    "meaning",
+                    "advice",
+                    "keywords_reversed",
+                    "meaning_reversed",
+                    "advice_reversed"
+                ]
             },
             "Spread": {
+                "type": "object",
                 "description": "A predefined tarot spread layout.",
-                "required": [
-                    "spread_id",
-                    "name",
-                    "description",
-                    "card_count",
-                    "positions"
-                ],
                 "properties": {
                     "spread_id": {
                         "type": "integer"
@@ -5355,29 +5372,24 @@
                         "type": "integer"
                     },
                     "positions": {
-                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "type": "array",
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
                     }
                 },
-                "type": "object"
+                "required": [
+                    "spread_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions"
+                ]
             },
             "User": {
+                "type": "object",
                 "description": "A user account in its safe shape (no secrets or hashes).",
-                "required": [
-                    "user_id",
-                    "email",
-                    "display_name",
-                    "is_active",
-                    "is_admin",
-                    "registered_at",
-                    "last_login_at",
-                    "google_linked",
-                    "password_login_disabled",
-                    "has_passkeys"
-                ],
                 "properties": {
                     "user_id": {
                         "type": "integer"
@@ -5413,20 +5425,22 @@
                         "type": "boolean"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "user_id",
+                    "email",
+                    "display_name",
+                    "is_active",
+                    "is_admin",
+                    "registered_at",
+                    "last_login_at",
+                    "google_linked",
+                    "password_login_disabled",
+                    "has_passkeys"
+                ]
             },
             "UserSpread": {
+                "type": "object",
                 "description": "A user-created custom spread.",
-                "required": [
-                    "user_spread_id",
-                    "user_id",
-                    "name",
-                    "description",
-                    "card_count",
-                    "positions",
-                    "created_at",
-                    "updated_at"
-                ],
                 "properties": {
                     "user_spread_id": {
                         "type": "integer"
@@ -5456,7 +5470,16 @@
                         "type": "string"
                     }
                 },
-                "type": "object"
+                "required": [
+                    "user_spread_id",
+                    "user_id",
+                    "name",
+                    "description",
+                    "card_count",
+                    "positions",
+                    "created_at",
+                    "updated_at"
+                ]
             }
         },
         "securitySchemes": {

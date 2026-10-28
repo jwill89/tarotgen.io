@@ -2,24 +2,24 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
  */
-#[OA\Schema(description: 'A user-submitted spread awaiting moderation.')]
+#[OAS\Schema(description: 'A user-submitted spread awaiting moderation.')]
 class PendingSpread extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $pending_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $name = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $description = '';
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $card_count = 1;
 
     /**
@@ -28,18 +28,18 @@ class PendingSpread extends AbstractStructure
      *
      * @var list<array<string,mixed>>
      */
-    #[OA\Property(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition'))]
+    #[OAS\Property(schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition')))]
     public private(set) array $positions = [] {
         set(array|string $value) => self::jsonList($value);
     }
 
     /** Resolved submitter label: the linked account's display name, or "Guest". */
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $submitter = '';
 
-    #[OA\Property(type: 'integer', nullable: true)]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer', nullable: true))]
     public private(set) ?int $user_id = null;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $submitted_at = '';
 }

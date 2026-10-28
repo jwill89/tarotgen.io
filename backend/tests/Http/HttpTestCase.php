@@ -263,8 +263,8 @@ abstract class HttpTestCase extends TestCase
 
     /**
      * The payload matches what the committed openapi.json documents for this
-     * response: a schema $ref (one of them, for a oneOf), an array of one, or an
-     * inline object — nested schemas included.
+     * response: a schema $ref (one of them, for a oneOf), an array of one, an
+     * allOf, or an inline object — nested schemas included.
      *
      * @param array<mixed> $payload
      */
@@ -301,6 +301,24 @@ abstract class HttpTestCase extends TestCase
             if (!is_array($schema)) {
                 return ["no schema {$ref}"];
             }
+        }
+
+        if (isset($schema['allOf'])) {
+            // Every member applies at once, so check against them merged: alone,
+            // each would call the others' fields undocumented.
+            $merged = ['properties' => [], 'required' => []];
+            foreach ($schema['allOf'] as $member) {
+                if (isset($member['$ref'])) {
+                    $ref = (string)$member['$ref'];
+                    $member = self::spec()['components']['schemas'][basename($ref)] ?? null;
+                    if (!is_array($member)) {
+                        return ["no schema {$ref}"];
+                    }
+                }
+                $merged['properties'] += $member['properties'] ?? [];
+                $merged['required'] = [...$merged['required'], ...$member['required'] ?? []];
+            }
+            $schema = $merged;
         }
 
         if (($schema['type'] ?? null) === 'array') {

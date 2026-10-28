@@ -2,11 +2,11 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Service\TurnstileService;
+use OpenApi\Spec as OAS;
 
 /**
  * Public, non-secret configuration the SPA needs at runtime. Only values that
@@ -20,17 +20,17 @@ class ConfigController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/config',
         summary: 'Public runtime configuration',
         tags: ['Config'],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Non-secret config the SPA needs before rendering',
-                content: new OA\JsonContent(
+                content: new OAS\MediaType\Json(
                     properties: [
-                        new OA\Property(property: 'turnstile_sitekey', type: 'string', nullable: true),
+                        new OAS\Property(property: 'turnstile_sitekey', schema: new OAS\Schema(type: 'string', nullable: true)),
                     ]
                 )
             ),

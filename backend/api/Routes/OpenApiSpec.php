@@ -2,7 +2,10 @@
 
 namespace Routes;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Augmenter\Properties;
+use OpenApi\Builder;
+use OpenApi\Spec as OAS;
+use OpenApi\Utils\Pipeline;
 
 /**
  * Root OpenAPI document metadata: API info, the same-origin server, the session
@@ -13,7 +16,7 @@ use OpenApi\Attributes as OA;
  * `GET /api/docs` renders. Per-operation attributes live on the controllers; the
  * response/request schemas are the `#[OA\Schema]`-annotated Structure classes.
  */
-#[OA\Info(
+#[OAS\Info(
     version: '1.0.0',
     title: 'TarotGen.io API',
     description: <<<'MD'
@@ -29,117 +32,151 @@ use OpenApi\Attributes as OA;
           there are no API keys or bearer tokens for first-party calls.
         MD
 )]
-#[OA\Server(url: '/api', description: 'Same-origin API base path')]
-#[OA\SecurityScheme(
-    securityScheme: 'sessionCookie',
+#[OAS\Server(url: '/api', description: 'Same-origin API base path')]
+#[OAS\Security\Scheme(
+    component: 'sessionCookie',
     type: 'apiKey',
     in: 'cookie',
     name: 'PHPSESSID',
     description: 'Session cookie issued on sign-in. Sent automatically by the browser.'
 )]
-#[OA\SecurityScheme(
-    securityScheme: 'pluginToken',
+#[OAS\Security\Scheme(
+    component: 'pluginToken',
     type: 'http',
     scheme: 'bearer',
     description: 'Personal access token issued to a linked Dalamud plugin (Authorization: Bearer …).'
 )]
-#[OA\Tag(name: 'Config', description: 'Public runtime configuration.')]
-#[OA\Tag(name: 'Decks', description: 'Tarot decks: public browsing and user submissions.')]
-#[OA\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
-#[OA\Tag(name: 'Spreads', description: 'Public spread layouts and user submissions.')]
-#[OA\Tag(name: 'Readings', description: 'Generating, viewing, and modifying readings.')]
-#[OA\Tag(name: 'Cards', description: "Card-level actions (e.g. reporting a problem with a card's image).")]
-#[OA\Tag(name: 'Contact', description: 'Public contact-form submissions.')]
-#[OA\Tag(name: 'Changelog', description: 'Public changelog entries.')]
-#[OA\Tag(name: 'Authentication', description: 'Registration, sign-in/out, and session.')]
-#[OA\Tag(name: 'Passkeys', description: 'WebAuthn passkey registration and login.')]
-#[OA\Tag(name: 'Account', description: "The signed-in user's self-service area.")]
-#[OA\Tag(name: 'Plugin', description: 'Dalamud plugin account linking (OAuth PKCE) and token management.')]
-#[OA\Tag(name: 'Admin · Dashboard', description: 'Admin session check and usage stats.')]
-#[OA\Tag(name: 'Admin · Decks', description: 'Deck moderation and special cards.')]
-#[OA\Tag(name: 'Admin · Deck Systems', description: 'Deck-system moderation.')]
-#[OA\Tag(name: 'Admin · Spreads', description: 'Public-spread CRUD and the pending queue.')]
-#[OA\Tag(name: 'Admin · Readings', description: 'Reading listing and retention cleanup.')]
-#[OA\Tag(name: 'Admin · Changelog', description: 'Changelog entry CRUD.')]
-#[OA\Tag(name: 'Admin · Users', description: 'Account administration.')]
-#[OA\Tag(name: 'Admin · Contacts', description: 'Submitted contact messages.')]
-#[OA\Tag(name: 'Admin · Card Reports', description: 'Cards users have reported, with the reasons they gave.')]
+#[OAS\Tag(name: 'Config', description: 'Public runtime configuration.')]
+#[OAS\Tag(name: 'Decks', description: 'Tarot decks: public browsing and user submissions.')]
+#[OAS\Tag(name: 'Deck Systems', description: 'Card systems (e.g. Rider–Waite) a deck can follow.')]
+#[OAS\Tag(name: 'Spreads', description: 'Public spread layouts and user submissions.')]
+#[OAS\Tag(name: 'Readings', description: 'Generating, viewing, and modifying readings.')]
+#[OAS\Tag(name: 'Cards', description: "Card-level actions (e.g. reporting a problem with a card's image).")]
+#[OAS\Tag(name: 'Contact', description: 'Public contact-form submissions.')]
+#[OAS\Tag(name: 'Changelog', description: 'Public changelog entries.')]
+#[OAS\Tag(name: 'Authentication', description: 'Registration, sign-in/out, and session.')]
+#[OAS\Tag(name: 'Passkeys', description: 'WebAuthn passkey registration and login.')]
+#[OAS\Tag(name: 'Account', description: "The signed-in user's self-service area.")]
+#[OAS\Tag(name: 'Plugin', description: 'Dalamud plugin account linking (OAuth PKCE) and token management.')]
+#[OAS\Tag(name: 'Admin · Dashboard', description: 'Admin session check and usage stats.')]
+#[OAS\Tag(name: 'Admin · Decks', description: 'Deck moderation and special cards.')]
+#[OAS\Tag(name: 'Admin · Deck Systems', description: 'Deck-system moderation.')]
+#[OAS\Tag(name: 'Admin · Spreads', description: 'Public-spread CRUD and the pending queue.')]
+#[OAS\Tag(name: 'Admin · Readings', description: 'Reading listing and retention cleanup.')]
+#[OAS\Tag(name: 'Admin · Changelog', description: 'Changelog entry CRUD.')]
+#[OAS\Tag(name: 'Admin · Users', description: 'Account administration.')]
+#[OAS\Tag(name: 'Admin · Contacts', description: 'Submitted contact messages.')]
+#[OAS\Tag(name: 'Admin · Card Reports', description: 'Cards users have reported, with the reasons they gave.')]
 // A spread's card slot. It has no Structure of its own (positions are stored as
 // JSON on the spread), so it is declared here, in the shape
 // Tarot\Data\NormalizesPositions stores: x/y are percentages of the canvas.
-#[OA\Schema(
-    schema: 'SpreadPosition',
+#[OAS\Schema(
+    component: 'SpreadPosition',
     description: 'One card slot in a spread layout.',
     required: ['order', 'title', 'x', 'y', 'rotation'],
     properties: [
-        new OA\Property(property: 'order', description: '1-based: the nth card drawn goes here.', type: 'integer'),
-        new OA\Property(property: 'title', description: 'The slot\'s label, e.g. "Past".', type: 'string', maxLength: 100),
-        new OA\Property(property: 'x', description: 'Card centre, % of the canvas width.', type: 'number', maximum: 100, minimum: 0),
-        new OA\Property(property: 'y', description: 'Card centre, % of the canvas height.', type: 'number', maximum: 100, minimum: 0),
-        new OA\Property(property: 'rotation', description: 'Degrees, 0–359.', type: 'integer', maximum: 359, minimum: 0),
+        new OAS\Property(property: 'order', schema: new OAS\Schema(description: '1-based: the nth card drawn goes here.', type: 'integer')),
+        new OAS\Property(property: 'title', schema: new OAS\Schema(description: 'The slot\'s label, e.g. "Past".', type: 'string', maxLength: 100)),
+        new OAS\Property(property: 'x', schema: new OAS\Schema(description: 'Card centre, % of the canvas width.', type: 'number', maximum: 100, minimum: 0)),
+        new OAS\Property(property: 'y', schema: new OAS\Schema(description: 'Card centre, % of the canvas height.', type: 'number', maximum: 100, minimum: 0)),
+        new OAS\Property(property: 'rotation', schema: new OAS\Schema(description: 'Degrees, 0–359.', type: 'integer', maximum: 359, minimum: 0)),
     ]
 )]
 // What a reading holds (its reading_info JSON) and the two shapes the reading
 // endpoints answer with. None has a Structure: reading_info is stored as JSON, and
 // ReadingController builds the payloads (accessiblePayload, the locked stub).
-#[OA\Schema(
-    schema: 'DrawCard',
+#[OAS\Schema(
+    component: 'DrawCard',
     description: 'One drawn card, in draw order.',
     required: ['card_id', 'reversed'],
     properties: [
-        new OA\Property(property: 'card_id', description: "The card's number in its deck; a deck's extra cards come after its system's cards.", type: 'integer'),
-        new OA\Property(property: 'reversed', description: 'Drawn upside down.', type: 'boolean'),
-        new OA\Property(property: 'card_name', description: 'Absent when the deck has no name for the card (an extra card nobody has named yet).', type: 'string'),
+        new OAS\Property(property: 'card_id', schema: new OAS\Schema(description: "The card's number in its deck; a deck's extra cards come after its system's cards.", type: 'integer')),
+        new OAS\Property(property: 'reversed', schema: new OAS\Schema(description: 'Drawn upside down.', type: 'boolean')),
+        new OAS\Property(property: 'card_name', schema: new OAS\Schema(description: 'Absent when the deck has no name for the card (an extra card nobody has named yet).', type: 'string')),
     ]
 )]
-#[OA\Schema(
-    schema: 'SpreadSnapshot',
+#[OAS\Schema(
+    component: 'SpreadSnapshot',
     description: "The layout as it was when the reading was made, so a shared reading still renders after its spread is edited or deleted.",
     required: ['spread_id', 'name', 'description', 'positions'],
     properties: [
-        new OA\Property(property: 'spread_id', description: 'The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.', type: 'integer'),
-        new OA\Property(property: 'name', description: "The spread's name.", type: 'string'),
-        new OA\Property(property: 'description', description: 'Markdown; may be empty.', type: 'string'),
-        new OA\Property(property: 'positions', description: 'One per drawn card.', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
+        new OAS\Property(property: 'spread_id', schema: new OAS\Schema(description: 'The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.', type: 'integer')),
+        new OAS\Property(property: 'name', schema: new OAS\Schema(description: "The spread's name.", type: 'string')),
+        new OAS\Property(property: 'description', schema: new OAS\Schema(description: 'Markdown; may be empty.', type: 'string')),
+        new OAS\Property(property: 'positions', schema: new OAS\Schema(description: 'One per drawn card.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
     ]
 )]
-#[OA\Schema(
-    schema: 'ReadingInfo',
+#[OAS\Schema(
+    component: 'ReadingInfo',
     description: 'What was drawn, from which deck, in which layout.',
     required: ['deck_id', 'draw'],
     properties: [
-        new OA\Property(property: 'deck_id', description: 'The deck the cards were drawn from.', type: 'integer'),
-        new OA\Property(property: 'origin', description: "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.", type: 'string', enum: ['generated', 'custom']),
-        new OA\Property(property: 'spread', ref: '#/components/schemas/SpreadSnapshot', description: 'Absent for a free draw that was never placed.'),
-        new OA\Property(property: 'draw', description: 'The cards, in draw order.', type: 'array', items: new OA\Items(ref: '#/components/schemas/DrawCard')),
+        new OAS\Property(property: 'deck_id', schema: new OAS\Schema(description: 'The deck the cards were drawn from.', type: 'integer')),
+        new OAS\Property(property: 'origin', schema: new OAS\Schema(description: "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.", type: 'string', enum: ['generated', 'custom'])),
+        new OAS\Property(property: 'spread', schema: new OAS\Schema(ref: '#/components/schemas/SpreadSnapshot', description: 'Absent for a free draw that was never placed.')),
+        new OAS\Property(property: 'draw', schema: new OAS\Schema(description: 'The cards, in draw order.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DrawCard'))),
     ]
 )]
-#[OA\Schema(
-    schema: 'ReadingView',
+#[OAS\Schema(
+    component: 'ReadingView',
     description: 'A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return.',
     required: ['reading_id', 'reading_info', 'reading_time', 'reading_name', 'reading_notes', 'reader', 'is_owner', 'is_final', 'can_draw_more', 'locked'],
     properties: [
-        new OA\Property(property: 'reading_id', description: 'The code in the reading link.', type: 'string'),
-        new OA\Property(property: 'reading_info', ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.'),
-        new OA\Property(property: 'reading_time', description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string'),
-        new OA\Property(property: 'reading_name', description: "The owner's title for it, if any.", type: 'string', nullable: true),
-        new OA\Property(property: 'reading_notes', description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true),
-        new OA\Property(property: 'reader', description: '"Guest", or the owner\'s display name unless they chose to hide it.', type: 'string'),
-        new OA\Property(property: 'is_owner', description: 'Whether the requester owns it.', type: 'boolean'),
-        new OA\Property(property: 'is_final', description: 'Locked for good against further draws.', type: 'boolean'),
-        new OA\Property(property: 'can_draw_more', description: 'The requester may draw more cards into it: their own, not final, not custom.', type: 'boolean'),
-        new OA\Property(property: 'locked', description: 'Always false here; see LockedReading.', type: 'boolean', enum: [false]),
+        new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
+        new OAS\Property(property: 'reading_info', schema: new OAS\Schema(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.')),
+        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'reader', schema: new OAS\Schema(description: '"Guest", or the owner\'s display name unless they chose to hide it.', type: 'string')),
+        new OAS\Property(property: 'is_owner', schema: new OAS\Schema(description: 'Whether the requester owns it.', type: 'boolean')),
+        new OAS\Property(property: 'is_final', schema: new OAS\Schema(description: 'Locked for good against further draws.', type: 'boolean')),
+        new OAS\Property(property: 'can_draw_more', schema: new OAS\Schema(description: 'The requester may draw more cards into it: their own, not final, not custom.', type: 'boolean')),
+        new OAS\Property(property: 'locked', schema: new OAS\Schema(description: 'Always false here; see LockedReading.', type: 'boolean', enum: [false])),
     ]
 )]
-#[OA\Schema(
-    schema: 'LockedReading',
+#[OAS\Schema(
+    component: 'LockedReading',
     description: "Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock).",
     required: ['locked', 'reading_name'],
     properties: [
-        new OA\Property(property: 'locked', description: 'Always true here.', type: 'boolean', enum: [true]),
-        new OA\Property(property: 'reading_name', description: "The owner's title for it, if any — the only thing shown before unlocking.", type: 'string', nullable: true),
+        new OAS\Property(property: 'locked', schema: new OAS\Schema(description: 'Always true here.', type: 'boolean', enum: [true])),
+        new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any — the only thing shown before unlocking.", type: 'string', nullable: true)),
+    ]
+)]
+#[OAS\Schema(
+    component: 'DeckSystemWithCards',
+    description: 'A deck system with its card definitions: what viewing one returns (public and admin).',
+    allOf: [
+        new OAS\Schema(ref: '#/components/schemas/DeckSystem'),
+        new OAS\Schema(
+            type: 'object',
+            required: ['cards'],
+            properties: [
+                new OAS\Property(property: 'cards', schema: new OAS\Schema(description: 'The named cards, in card order.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DeckSystemCard'))),
+            ]
+        ),
     ]
 )]
 final class OpenApiSpec
 {
+    /**
+     * The API document as `composer docs` writes it to openapi.json and
+     * OpenApiSpecTest compares it: the attributes in api/ and includes/, as
+     * OpenAPI 3.1, with every Structure property required. The caller attaches
+     * its logger (setLogger) and runs build().
+     */
+    public static function builder(string $backendDir): Builder
+    {
+        return new Builder()
+            ->setVersion('3.1.0')
+            ->addSource([$backendDir . '/api', $backendDir . '/includes'])
+            ->withAugmenters(static function (Pipeline $augmenters): void {
+                // No `default` from a property's initializer: that's a placeholder
+                // for hydration, not a value the API fills in when a field is
+                // absent (it always sends every field). Its `required` inference
+                // goes with it; RequireStructureProperties covers the Structures.
+                $augmenters->remove(Properties::class);
+                $augmenters->add(new RequireStructureProperties());
+            });
+    }
 }

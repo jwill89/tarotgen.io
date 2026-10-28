@@ -2,7 +2,7 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * What a reporter says is wrong with a card. The values are the API contract:
@@ -10,7 +10,7 @@ use OpenApi\Attributes as OA;
  * submissions keep the raw value — so add a case (and its label in both
  * clients) rather than renaming one, which would orphan existing reports.
  */
-#[OA\Schema(type: 'string', description: 'What is wrong with a reported card.')]
+#[OAS\Schema(type: 'string', description: 'What is wrong with a reported card.')]
 enum CardReportReason: string
 {
     /** Dust, scratches, glare, or smudges picked up by the scan. */

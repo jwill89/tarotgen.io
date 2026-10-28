@@ -1675,6 +1675,11 @@ export interface components {
             /** @description The owner's title for it, if any — the only thing shown before unlocking. */
             reading_name: string | null;
         };
+        /** @description A deck system with its card definitions: what viewing one returns (public and admin). */
+        DeckSystemWithCards: components["schemas"]["DeckSystem"] & {
+            /** @description The named cards, in card order. */
+            cards: components["schemas"]["DeckSystemCard"][];
+        };
         /** @description A card users have reported as having a problem with its image. */
         CardReport: {
             report_id: number;
@@ -1741,7 +1746,8 @@ export interface components {
             card_aspect_h: number;
             approved: boolean;
             usable: boolean;
-            submitted_by: number | null;
+            /** @description The account that submitted it. Admin views only. */
+            submitted_by?: number | null;
             /** @description Populated by JOIN queries — the deck system's short name. */
             system_short_name: string;
             /** @description Populated by JOIN queries — the deck system's total cards. */
@@ -1754,7 +1760,8 @@ export interface components {
             short_name: string;
             total_cards: number;
             approved: boolean;
-            submitted_by: number | null;
+            /** @description The account that submitted it. Admin views only. */
+            submitted_by?: number | null;
         };
         /** @description A card definition within a deck system. */
         DeckSystemCard: {
@@ -3098,13 +3105,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Deck system */
+            /** @description The deck system plus its cards array */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckSystem"];
+                    "application/json": components["schemas"]["DeckSystemWithCards"];
                 };
             };
             /** @description Deck system not found */
@@ -3421,7 +3428,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["PendingSpread"][];
                 };
             };
         };
@@ -4006,7 +4013,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DeckSystem"];
+                    "application/json": components["schemas"]["DeckSystemWithCards"];
                 };
             };
             /** @description Deck system not found */

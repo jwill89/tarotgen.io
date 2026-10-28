@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -12,6 +11,7 @@ use Tarot\Structure\CardReportReason;
 use Tarot\Structure\Deck;
 use Tarot\Utility\Input;
 use Tarot\Utility\RateLimiter;
+use OpenApi\Spec as OAS;
 
 /**
  * Public endpoint for reporting a problem with a card's image, with the reason
@@ -39,49 +39,46 @@ class CardReportController extends AbstractController
     ) {
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/card-reports',
         summary: "Report a problem with a card's image (rate-limited)",
         tags: ['Cards'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['deck_id', 'card_id'],
                 properties: [
-                    new OA\Property(property: 'deck_id', type: 'integer'),
-                    new OA\Property(property: 'card_id', type: 'integer'),
-                    new OA\Property(property: 'card_name', type: 'string'),
-                    new OA\Property(
+                    new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'card_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'card_name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(
                         property: 'reason',
-                        ref: CardReportReason::class,
-                        description: 'Sent by the site and current plugin builds. Older plugin builds omit it; '
-                            . 'their reports only bump the counter.'
+                        schema: new OAS\Schema(ref: CardReportReason::class, description: 'Sent by the site and current plugin builds. Older plugin builds omit it; '
+                            . 'their reports only bump the counter.')
                     ),
-                    new OA\Property(
+                    new OAS\Property(
                         property: 'details',
-                        type: 'string',
-                        maxLength: self::DETAILS_MAX_LENGTH,
-                        description: 'What is wrong, in the reporter\'s words. Required when reason is `other`.'
+                        schema: new OAS\Schema(type: 'string', maxLength: self::DETAILS_MAX_LENGTH, description: 'What is wrong, in the reporter\'s words. Required when reason is `other`.')
                     ),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Report recorded',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'status', type: 'string')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
             ),
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Already reported this card recently (counter not bumped)',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'status', type: 'string')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
             ),
-            new OA\Response(
+            new OAS\Response(
                 response: 400,
                 description: 'Missing/invalid deck or card id, unknown reason, or `other` without details'
             ),
-            new OA\Response(response: 429, description: 'Too many reports from this IP'),
+            new OAS\Response(response: 429, description: 'Too many reports from this IP'),
         ]
     )]
     public function report(Request $request, Response $response): Response|ResponseInterface

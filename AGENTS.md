@@ -99,6 +99,7 @@ flattens both into the live server's single flat web root.
 │   ├── includes/Tarot/     # Domain code (PSR-4 `Tarot\`): Config, Database, Data,
 │   │                       #   Repository, Service, Structure, Exception, Utility.
 │   ├── tests/{Unit,Http}/  # PHPUnit tests (namespace `Tarot\Tests\`) — see §8.
+│   ├── bin/openapi.php     # `composer docs`: builds openapi.json (dev-only, not deployed).
 │   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, *.py).
 │   ├── db/                 # SQLite DB + one-off migration scripts (gitignored).
 │   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
@@ -170,18 +171,27 @@ toggle, `DELETE` removes (→`204`). Non-CRUD state transitions are
 endpoints stay action-oriented under `/auth/*`.
 
 ### API docs (OpenAPI + Scalar)
-Endpoints are documented with **swagger-php** attributes (`#[OA\...]`) on the
-controllers, plus `#[OA\Schema]` on the `Structure` classes. `composer docs`
-regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's served raw at
-`GET /api/openapi.json` and rendered by **Scalar** at `GET /api/docs` (both public,
-served by `ApiDocsController`). `OpenApiSpecTest` fails if the committed spec drifts from
-the attributes — so **after changing a route or a response shape, run `composer docs`
-and commit `openapi.json`** (and `npm run gen:types` for the frontend types). Global
-metadata (info, server, security scheme, tags, and the shared `SpreadPosition` schema)
-lives in `api/Routes/OpenApiSpec.php`. `composer docs` also runs
-`Routes\RequireStructureProperties`, which marks every property of a `Tarot\Structure`
-schema required (their `jsonSerialize()` always sends all of them); OpenApiSpecTest
-adds the same processor.
+Endpoints are documented with **swagger-php 7** spec attributes
+(`use OpenApi\Spec as OAS`; `#[OAS\Operation\Get(...)]`, `new OAS\MediaType\Json(...)`)
+on the controllers, plus `#[OAS\Schema]` on the `Structure` classes. `composer docs`
+(`bin/openapi.php`) regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's
+served raw at `GET /api/openapi.json` and rendered by **Scalar** at `GET /api/docs` (both
+public, served by `ApiDocsController`). `OpenApiSpecTest` fails if the committed spec
+drifts from the attributes — so **after changing a route or a response shape, run
+`composer docs` and commit `openapi.json`** (and `npm run gen:types` for the frontend
+types). `Routes\OpenApiSpec` holds the global metadata (info, server, security schemes,
+tags), the shared schemas no Structure owns (`SpreadPosition`, the reading payloads,
+`DeckSystemWithCards`), and `builder()`, the one build both `composer docs` and the test
+run. That build drops swagger-php's `Properties` augmenter (it turned every property
+initializer into a `default`) and adds `Routes\RequireStructureProperties`, which marks
+every property of a `Tarot\Structure` schema required (their `jsonSerialize()` always
+sends all of them) — except one marked `x: ['admin-only' => true]`, a field the public
+endpoints strip with `jsonSerializeWithout()` (`submitted_by`).
+**A schema nothing references is dropped** (swagger-php's `Cleanup` augmenter), from
+`openapi.json` and from the generated types: point the endpoint that sends a Structure
+at it (`ref: '#/components/schemas/…'`), never at a bare `type: 'object'`.
+`HttpTestCase::assertDocumented()` checks a real response against the committed spec
+(`$ref`, `oneOf`, `allOf`, arrays, nested refs).
 The Scalar bundle is pinned to one version with Subresource Integrity, and `/api/docs`
 sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` on `ApiDocsController`); to
 upgrade, change the version and recompute the sha384 of that exact file.
@@ -351,6 +361,12 @@ vendor\bin\phpunit     # run PHPUnit directly
 > and `phpstan-phpunit`, loaded by `phpstan/extension-installer`. A baseline
 > (`phpstan-baseline.neon`, one entry) holds a pre-existing finding, so
 > `composer stan` fails only on *new* issues.
+>
+> **`composer.json`'s `conflict` holds `phpstan/phpstan` at 2.3.3** (2026-10-28):
+> PHPStan 2.3.4's phar bundles a newer phpdoc-parser (with `FullyQualifiedNameNode`)
+> than Rector 2.8.2 bundles (2.3.11), and Rector then crashes on every file with
+> a `callable` docblock type. Drop the conflict once a Rector release supports
+> PHPStan 2.3.4 (`composer rector:check` passes with it).
 > The Data/Repository/Structure layers and controller route `$args` are fully
 > annotated (`array<string,mixed>`, `list<Structure>`, `array<string,string>`,
 > etc.), so keep new array params/returns typed. Regenerate the baseline with
@@ -365,10 +381,12 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 `/api` on port 80 (e.g. Apache) works too.
 
 > **swagger-php is dev-only on purpose.** PHP never loads an attribute's class
-> unless something reads the attribute, and only `composer docs` does, so
-> production runs without the package. `composer-require-checker.json`
-> whitelists its symbols by name (the tool matches exactly); a new `OA\*`
-> attribute type fails `composer deps:check` until it is added there.
+> unless something reads the attribute, and only `composer docs` (and
+> OpenApiSpecTest) do, so production runs without the package; nothing at runtime
+> calls `OpenApiSpec::builder()` or loads `RequireStructureProperties`, and
+> deploy.ps1 doesn't ship `bin/`. `composer-require-checker.json` whitelists its
+> symbols by name (the tool matches exactly); a new `OAS\*` attribute type fails
+> `composer deps:check` until it is added there.
 
 > **Gotcha — don't `import` files under `/assets` in Vue.** `/assets` is proxied
 > to the PHP host, so referencing e.g. the brand logo as `<img src="/assets/...">`

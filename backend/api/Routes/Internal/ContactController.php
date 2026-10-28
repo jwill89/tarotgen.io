@@ -2,13 +2,13 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ContactRepository;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 class ContactController extends AbstractController
 {
@@ -21,29 +21,29 @@ class ContactController extends AbstractController
     ) {
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/contacts',
         summary: 'Submit a contact-form message (rate-limited: 5/IP/hour)',
         tags: ['Contact'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name', 'email', 'message'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'email', type: 'string', format: 'email'),
-                    new OA\Property(property: 'message', type: 'string'),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email')),
+                    new OAS\Property(property: 'message', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Submitted',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'success', type: 'boolean')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OA\Response(response: 400, description: 'Missing/invalid fields'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 400, description: 'Missing/invalid fields'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     /**

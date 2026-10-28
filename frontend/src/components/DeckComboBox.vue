@@ -39,6 +39,9 @@ const emit = defineEmits<{
 const { isFavorite, toggleFavorite } = useFavoriteDecks()
 const { isLoggedIn } = useUser()
 
+// What the user has typed since the list opened. Reka keeps its own copy
+// internal (ComboboxRoot has no searchTerm model in v2), and the input's text
+// is the selection's name until they type, so it's taken from input events.
 const searchTerm = ref('')
 
 // Reka's v-model holds the selected deck_id; mirror it to the parent's modelValue.
@@ -85,9 +88,13 @@ function displayValue(id: number | null): string {
   return d ? d.name : ''
 }
 
-// Clear the search when the list opens so all decks show (not just the selection).
+// Clear the search as the list closes, so it reopens showing every deck.
 function onOpenChange(open: boolean): void {
-  if (open) searchTerm.value = ''
+  if (!open) searchTerm.value = ''
+}
+
+function onInput(event: Event): void {
+  searchTerm.value = (event.target as HTMLInputElement).value
 }
 
 function onToggleFavorite(deck: Deck): void {
@@ -98,7 +105,6 @@ function onToggleFavorite(deck: Deck): void {
 <template>
   <ComboboxRoot
     v-model="selected"
-    v-model:search-term="searchTerm"
     :ignore-filter="true"
     :reset-search-term-on-blur="true"
     class="myst-combobox"
@@ -113,6 +119,7 @@ function onToggleFavorite(deck: Deck): void {
         class="input"
         :display-value="displayValue"
         placeholder="Search decks..."
+        @input="onInput"
       />
       <ComboboxTrigger class="myst-combobox__trigger" aria-label="Toggle decks">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']" />

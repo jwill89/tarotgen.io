@@ -60,7 +60,7 @@ describe('useDataTable — sort', () => {
   })
 
   it('does not mutate the source array', () => {
-    void table('id', 'asc').rows.value // touch the computed to force the sort
+    expect(table('id', 'asc').rows.value.map((r) => r.id)).toEqual([1, 2, 3])
     expect(rows.map((r) => r.id)).toEqual([3, 1, 2]) // original order intact
   })
 })

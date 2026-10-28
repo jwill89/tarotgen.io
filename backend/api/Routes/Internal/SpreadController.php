@@ -2,7 +2,6 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
@@ -11,6 +10,7 @@ use Tarot\Repository\SpreadRepository;
 use Tarot\Structure\Spread;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 class SpreadController extends AbstractController
 {
@@ -27,32 +27,32 @@ class SpreadController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/spreads',
         summary: 'List all public spreads',
         tags: ['Spreads'],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of spreads',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Spread'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Spread'))
             ),
         ]
     )]
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/spreads/{spread_id}',
         summary: 'A single public spread',
         tags: ['Spreads'],
         parameters: [
-            new OA\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The spread',
-                content: new OA\JsonContent(ref: '#/components/schemas/Spread')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OA\Response(response: 404, description: 'InvalidSpreadID'),
+            new OAS\Response(response: 404, description: 'InvalidSpreadID'),
         ]
     )]
     public function getSpread(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -76,29 +76,29 @@ class SpreadController extends AbstractController
         return $response;
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/spreads',
         summary: 'Submit a spread into the moderation queue (rate-limited: 5/IP/hour)',
         tags: ['Spreads'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['name', 'positions'],
                 properties: [
-                    new OA\Property(property: 'name', type: 'string'),
-                    new OA\Property(property: 'description', type: 'string'),
-                    new OA\Property(property: 'positions', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'description', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 201,
                 description: 'Accepted into the pending queue',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'success', type: 'boolean')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OA\Response(response: 400, description: 'Validation failure'),
-            new OA\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 400, description: 'Validation failure'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     /**

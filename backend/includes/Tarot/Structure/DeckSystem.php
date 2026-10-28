@@ -2,29 +2,30 @@
 
 namespace Tarot\Structure;
 
-use OpenApi\Attributes as OA;
+use OpenApi\Spec as OAS;
 
 /**
  * Properties use asymmetric visibility (PHP 8.4): public reads, private writes.
  */
-#[OA\Schema(description: 'A tarot deck system (a family of decks sharing a card structure).')]
+#[OAS\Schema(description: 'A tarot deck system (a family of decks sharing a card structure).')]
 class DeckSystem extends AbstractStructure
 {
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $deck_system_id = 0;
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $name = '';
 
-    #[OA\Property(type: 'string')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'string'))]
     public private(set) string $short_name = '';
 
-    #[OA\Property(type: 'integer')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer'))]
     public private(set) int $total_cards = 78;
 
-    #[OA\Property(type: 'boolean')]
+    #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $approved = true;
 
-    #[OA\Property(type: 'integer', nullable: true)]
+    /** The submitter's user id: the public endpoints strip it (jsonSerializeWithout), so it isn't required. */
+    #[OAS\Property(schema: new OAS\Schema(type: 'integer', nullable: true, description: 'The account that submitted it. Admin views only.'), x: ['admin-only' => true])]
     public private(set) ?int $submitted_by = null;
 }

@@ -2,13 +2,13 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
 use Tarot\Utility\Session;
+use OpenApi\Spec as OAS;
 
 /**
  * The Dalamud plugin account-linking endpoints (OAuth-style, PKCE public client).
@@ -26,31 +26,31 @@ class PluginAuthController extends AbstractController
     ) {
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/plugin/authorize',
         summary: 'Approve a plugin link and mint a PKCE authorization code (browser, session-authed)',
         tags: ['Plugin'],
-        security: [['sessionCookie' => []]],
-        requestBody: new OA\RequestBody(
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['code_challenge', 'redirect_uri'],
                 properties: [
-                    new OA\Property(property: 'code_challenge', type: 'string'),
-                    new OA\Property(property: 'code_challenge_method', type: 'string', default: 'S256'),
-                    new OA\Property(property: 'redirect_uri', type: 'string', description: 'Loopback URI, e.g. http://127.0.0.1:<port>/callback'),
-                    new OA\Property(property: 'state', type: 'string'),
+                    new OAS\Property(property: 'code_challenge', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'code_challenge_method', schema: new OAS\Schema(type: 'string', default: 'S256')),
+                    new OAS\Property(property: 'redirect_uri', schema: new OAS\Schema(type: 'string', description: 'Loopback URI, e.g. http://127.0.0.1:<port>/callback')),
+                    new OAS\Property(property: 'state', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Loopback redirect target carrying the authorization code',
-                content: new OA\JsonContent(properties: [new OA\Property(property: 'redirect_uri', type: 'string')])
+                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'redirect_uri', schema: new OAS\Schema(type: 'string'))])
             ),
-            new OA\Response(response: 400, description: 'Invalid challenge or non-loopback redirect_uri'),
-            new OA\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 400, description: 'Invalid challenge or non-loopback redirect_uri'),
+            new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
     )]
     public function authorize(Request $request, Response $response): Response|ResponseInterface
@@ -85,32 +85,32 @@ class PluginAuthController extends AbstractController
         return $response->withJson(['redirect_uri' => $target]);
     }
 
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/plugin/token',
         summary: 'Exchange a PKCE authorization code for a plugin Bearer token',
         tags: ['Plugin'],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 required: ['code', 'code_verifier'],
                 properties: [
-                    new OA\Property(property: 'code', type: 'string'),
-                    new OA\Property(property: 'code_verifier', type: 'string'),
+                    new OAS\Property(property: 'code', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'code_verifier', schema: new OAS\Schema(type: 'string')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'The issued token (returned once)',
-                content: new OA\JsonContent(properties: [
-                    new OA\Property(property: 'token', type: 'string'),
-                    new OA\Property(property: 'token_type', type: 'string'),
-                    new OA\Property(property: 'scope', type: 'string'),
-                    new OA\Property(property: 'display_name', type: 'string'),
+                content: new OAS\MediaType\Json(properties: [
+                    new OAS\Property(property: 'token', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'token_type', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'scope', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'display_name', schema: new OAS\Schema(type: 'string')),
                 ])
             ),
-            new OA\Response(response: 400, description: 'Invalid or expired authorization code'),
+            new OAS\Response(response: 400, description: 'Invalid or expired authorization code'),
         ]
     )]
     public function token(Request $request, Response $response): Response|ResponseInterface
@@ -143,16 +143,16 @@ class PluginAuthController extends AbstractController
         ]);
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/account/tokens',
         summary: "The signed-in user's linked plugin tokens (Connected Apps)",
         tags: ['Plugin'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of linked tokens (never includes the token value)',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/PluginToken'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/PluginToken'))
             ),
         ]
     )]
@@ -164,17 +164,17 @@ class PluginAuthController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/account/tokens/{id}',
         summary: 'Revoke a linked plugin token (forces the plugin to re-link)',
         tags: ['Plugin'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Revoked'),
-            new OA\Response(response: 404, description: 'Token not found'),
+            new OAS\Response(response: 204, description: 'Revoked'),
+            new OAS\Response(response: 404, description: 'Token not found'),
         ]
     )]
     public function revokeToken(Request $request, Response $response, array $args): Response|ResponseInterface

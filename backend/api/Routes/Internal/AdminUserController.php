@@ -2,13 +2,13 @@
 
 namespace Routes\Internal;
 
-use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Config\Env;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\AuthService;
+use OpenApi\Spec as OAS;
 
 /**
  * User accounts: activation, the admin flag, resending activation, deletion.
@@ -21,16 +21,16 @@ class AdminUserController extends AbstractController
     ) {
     }
 
-    #[OA\Get(
+    #[OAS\Operation\Get(
         path: '/admin/users',
         summary: 'List all user accounts',
         tags: ['Admin · Users'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Array of users',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/User'))
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/User'))
             ),
         ]
     )]
@@ -42,23 +42,23 @@ class AdminUserController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/users/{user_id}/activate',
         summary: 'Activate a user account',
         tags: ['Admin · Users'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'user_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'user_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Activated',
-                content: new OA\JsonContent(
-                    properties: [new OA\Property(property: 'success', type: 'boolean')]
+                content: new OAS\MediaType\Json(
+                    properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))]
                 )
             ),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OAS\Response(response: 404, description: 'User not found'),
         ]
     )]
     public function activateUser(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -80,29 +80,29 @@ class AdminUserController extends AbstractController
      *
      * @param array<string,string> $args
      */
-    #[OA\Patch(
+    #[OAS\Operation\Patch(
         path: '/admin/users/{user_id}',
         summary: 'Partially update a user account',
         tags: ['Admin · Users'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'user_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'user_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
-        requestBody: new OA\RequestBody(
+        requestBody: new OAS\RequestBody(
             required: true,
-            content: new OA\JsonContent(
+            content: new OAS\MediaType\Json(
                 properties: [
-                    new OA\Property(property: 'is_admin', type: 'boolean'),
+                    new OAS\Property(property: 'is_admin', schema: new OAS\Schema(type: 'boolean')),
                 ]
             )
         ),
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Updated user',
-                content: new OA\JsonContent(ref: '#/components/schemas/User')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/User')
             ),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OAS\Response(response: 404, description: 'User not found'),
         ]
     )]
     public function updateUser(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -126,21 +126,21 @@ class AdminUserController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Post(
+    #[OAS\Operation\Post(
         path: '/admin/users/{user_id}/resend-activation',
         summary: 'Resend a user activation email',
         tags: ['Admin · Users'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'user_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'user_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(
+            new OAS\Response(
                 response: 200,
                 description: 'Activation resent',
-                content: new OA\JsonContent(type: 'object')
+                content: new OAS\MediaType\Json(type: 'object')
             ),
-            new OA\Response(response: 400, description: 'Could not resend activation'),
+            new OAS\Response(response: 400, description: 'Could not resend activation'),
         ]
     )]
     public function resendActivation(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -166,17 +166,17 @@ class AdminUserController extends AbstractController
     /**
      * @param array<string,string> $args
      */
-    #[OA\Delete(
+    #[OAS\Operation\Delete(
         path: '/admin/users/{user_id}',
         summary: 'Delete a user account',
         tags: ['Admin · Users'],
-        security: [['sessionCookie' => []]],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
-            new OA\Parameter(name: 'user_id', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'user_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OA\Response(response: 204, description: 'Deleted'),
-            new OA\Response(response: 404, description: 'User not found'),
+            new OAS\Response(response: 204, description: 'Deleted'),
+            new OAS\Response(response: 404, description: 'User not found'),
         ]
     )]
     public function deleteUser(Request $request, Response $response, array $args): Response|ResponseInterface
