@@ -194,8 +194,12 @@ export interface DrawCard {
   card_name: string
 }
 
+/** URLs come from `cardImageUrls()` (utils/cardImages). */
 export interface ReadingCard extends DrawCard {
+  /** Full-size display WebP (lightbox, export). */
   imgUrl: string
+  /** Master PNG scan — the fallback while a deck's web images aren't generated. */
+  pngUrl: string
   thumbUrl: string
 }
 

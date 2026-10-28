@@ -413,7 +413,14 @@ stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
 - Don't commit generated artifacts (`dist/`, `vendor/`, `node_modules/`,
   `.phpunit.cache`) or the local `.env`.
 - Deck card images live at `assets/decks/{deck_id}/Card_XXXX.png` with a
-  `Card_Back.png`; thumbnails are generated via `ThumbnailService` / admin routes.
+  `Card_Back.png` — the master scans, never modified (the plugin loads them).
+  `CardImageService` derives a full-size display `Card_XXXX.webp` (lightbox,
+  export) and a 400 px `thumbs/Card_XXXX.webp`, regenerating any older than its
+  PNG. Run it from the admin Decks page, or for a backfill / after an SFTP upload:
+  `runuser -u www-data -- nice -n 19 php scripts/generate_card_images.php [deck_id …]`.
+  The frontend builds these URLs only through `cardImageUrls()` /
+  `cardBackImageUrls()` (`src/utils/cardImages.ts`). After replacing a scan,
+  regenerate, then purge its URLs in Cloudflare (`/assets` is edge-cached 30 days).
 
 ---
 

@@ -20,7 +20,7 @@ use Tarot\Repository\SpreadRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\AuthService;
 use Tarot\Service\StatsService;
-use Tarot\Service\ThumbnailService;
+use Tarot\Service\CardImageService;
 use Tarot\Structure\DeckSystem;
 
 class AdminController extends AbstractController
@@ -36,7 +36,7 @@ class AdminController extends AbstractController
         private readonly CardReportRepository $cardReports,
         private readonly ReadingRepository $readings,
         private readonly StatsService $stats,
-        private readonly ThumbnailService $thumbnails,
+        private readonly CardImageService $cardImages,
         private readonly UserRepository $users,
         private readonly AuthService $auth,
         private readonly FavoriteSpreadRepository $favorites,
@@ -220,14 +220,14 @@ class AdminController extends AbstractController
         return $response->withJson($deck);
     }
 
-    // ── Thumbnails ──────────────────────────────────────────────
+    // ── Card web images (display WebP + thumbnail, derived from the PNG scans) ──
 
     /**
      * @param array<string,string> $args
      */
     #[OA\Post(
-        path: '/admin/decks/{deck_id}/thumbnails',
-        summary: 'Generate thumbnails for a deck',
+        path: '/admin/decks/{deck_id}/images',
+        summary: 'Generate missing or stale web images (display WebP + thumbnail) for a deck',
         tags: ['Admin · Decks'],
         security: [['sessionCookie' => []]],
         parameters: [
@@ -236,47 +236,61 @@ class AdminController extends AbstractController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Thumbnail generation result',
-                content: new OA\JsonContent(type: 'object')
+                description: 'Per-card counts: generated, skipped (already current), failed',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'deck_id', type: 'integer'),
+                    new OA\Property(property: 'generated', type: 'integer'),
+                    new OA\Property(property: 'skipped', type: 'integer'),
+                    new OA\Property(property: 'failed', type: 'integer'),
+                ])
             ),
             new OA\Response(response: 400, description: 'Invalid deck ID'),
         ]
     )]
-    public function generateDeckThumbnails(Request $request, Response $response, array $args): Response|ResponseInterface
+    public function generateDeckImages(Request $request, Response $response, array $args): Response|ResponseInterface
     {
+        // Full-size WebP encoding is ~0.3 s per card; a whole deck outlives the
+        // default 30 s limit, and a closed tab mustn't abort it half-way.
         @set_time_limit(0);
+        ignore_user_abort(true);
 
         $deck_id = (int)($args['deck_id'] ?? 0);
         if ($deck_id < 1) {
             return $response->withJson(['error' => 'Invalid deck ID'], 400);
         }
 
-        return $response->withJson($this->thumbnails->generateForDeck($deck_id));
+        return $response->withJson($this->cardImages->generateForDeck($deck_id));
     }
 
     #[OA\Post(
-        path: '/admin/decks/thumbnails',
-        summary: 'Generate thumbnails for all decks',
+        path: '/admin/decks/images',
+        summary: 'Generate missing or stale web images for all decks',
         tags: ['Admin · Decks'],
         security: [['sessionCookie' => []]],
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'Thumbnail generation result',
-                content: new OA\JsonContent(type: 'object')
+                description: 'Per-card totals across decks: generated, skipped (already current), failed',
+                content: new OA\JsonContent(properties: [
+                    new OA\Property(property: 'decks', type: 'integer'),
+                    new OA\Property(property: 'generated', type: 'integer'),
+                    new OA\Property(property: 'skipped', type: 'integer'),
+                    new OA\Property(property: 'failed', type: 'integer'),
+                ])
             ),
         ]
     )]
-    public function generateAllThumbnails(Request $request, Response $response): Response|ResponseInterface
+    public function generateAllImages(Request $request, Response $response): Response|ResponseInterface
     {
         @set_time_limit(0);
+        ignore_user_abort(true);
 
         $ids = [];
         foreach ($this->decks->getAll() as $deck) {
             $ids[] = $deck->deck_id;
         }
 
-        return $response->withJson($this->thumbnails->generateAll($ids));
+        return $response->withJson($this->cardImages->generateAll($ids));
     }
 
     /**
@@ -325,7 +339,7 @@ class AdminController extends AbstractController
         // the dedicated POST …/usable action; it is now a PATCH field carrying the
         // same side effect.
         if (array_key_exists('usable', $params) && (bool)$params['usable']) {
-            $this->thumbnails->ensureDeckFolders($deck->deck_id);
+            $this->cardImages->ensureDeckFolders($deck->deck_id);
         }
 
         return $response->withJson($deck);

@@ -14,6 +14,8 @@ import { useToasts } from '@/composables/useToasts'
 
 export interface ExportCard {
   imgUrl: string
+  /** Tried when imgUrl doesn't load (a deck whose web images aren't generated yet). */
+  fallbackUrl?: string
   reversed: boolean
   card_name: string
 }
@@ -61,6 +63,12 @@ function loadImage(url: string): Promise<HTMLImageElement | null> {
     img.onerror = () => resolve(null)
     img.src = url
   })
+}
+
+async function loadCardImage(card: ExportCard): Promise<HTMLImageElement | null> {
+  const img = await loadImage(card.imgUrl)
+  if (img || !card.fallbackUrl) return img
+  return loadImage(card.fallbackUrl)
 }
 
 function roundRect(
@@ -363,7 +371,7 @@ export function useReadingExport() {
     exporting.value = true
     try {
       const scale = opts.scale && opts.scale > 0 ? opts.scale : 1
-      const images = await Promise.all(opts.cards.map((c) => loadImage(c.imgUrl)))
+      const images = await Promise.all(opts.cards.map(loadCardImage))
       const hasSpread = !!(opts.positions && opts.positions.length > 0)
       const canvas = hasSpread ? renderSpread(opts, images, scale) : renderGrid(opts, images, scale)
 

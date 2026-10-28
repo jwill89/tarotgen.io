@@ -24,6 +24,7 @@ import { readApiError } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
+import { cardImageUrls } from '@/utils/cardImages'
 import type { DeckCard } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
@@ -197,8 +198,7 @@ function cardOptionsFor(currentCardId: number | null) {
 
 function cardThumb(cardId: number | null): string {
   if (cardId === null || deckId.value === null) return ''
-  const filename = 'Card_' + String(cardId).padStart(4, '0')
-  return '/assets/decks/' + String(deckId.value) + '/thumbs/' + filename + '.webp'
+  return cardImageUrls(deckId.value, cardId).thumb
 }
 
 function resetForm() {

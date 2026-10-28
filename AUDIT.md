@@ -354,7 +354,16 @@ five-entry baseline; strict TS + typed ESLint.
     (30 days; images change only on a re-scan). On re-scan, purge the CF cache
     for that path or bump a `?v=` in `cardImageUrls` (§4.1).
   - **Verify:** `curl -sI https://tarotgen.io/assets/decks/1/Card_0001.png | grep -i cache`.
-  - **Implemented 2026-10-28 (awaiting deploy):** `/assets/*` 2xx responses get
+  - **DONE 2026-10-28** (deploy of `e2189f3` + `.htaccess` follow-up installed
+    05:35 UTC with auto-rollback; 27 status/header checks passed). Follow-up
+    found while verifying: the existing `/_app/` `immutable` and `/fonts/`
+    rules had **never** been sent — those paths are rewritten into `dist/`, and
+    `SetEnvIf Request_URI "^/_app/"` doesn't match the rewritten request; they
+    now match the served file (`<If "%{REQUEST_FILENAME} =~ m#/dist/_app/#">`).
+    The HTML shell (`index.html`, `og.php`) is now `no-cache`, so a returning
+    browser can't boot a stale shell naming deleted bundles; missing files under
+    `/_app/` and `/fonts/` 404 instead of returning cacheable 200-HTML.
+  - **Implemented 2026-10-28:** `/assets/*` 2xx responses get
     `public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800`
     (Cloudflare 30 days, browsers 1 day; `Header set` without `always`, so
     errors are never edge-cached). Also fixed: a **missing** file under
@@ -376,6 +385,24 @@ five-entry baseline; strict TS + typed ESLint.
     fallback (`<picture>` or `onerror` swap). Keep PNGs — the plugin's
     `CardTextureCache` loads them.
   - **Verify:** bytes transferred opening a lightbox before/after.
+  - **Implemented 2026-10-28 (awaiting deploy + backfill):** `ThumbnailService`
+    → `CardImageService`, which writes a full-size WebP q82 next to each PNG plus
+    the 400 px q80 thumb from one decode, regenerates when either is missing or
+    older than its PNG (a re-scan refreshes), writes via temp file + rename, and
+    reports a `failed` count. Admin routes are now `POST /admin/decks/images` and
+    `/admin/decks/{id}/images` (buttons: "Generate web images");
+    `scripts/generate_card_images.php` does the backfill without a request time
+    limit. Frontend: `imgUrl` is the WebP, `ReadingCard.pngUrl` the fallback —
+    the lightbox swaps to the PNG on `@error`, the export retries with it, and
+    the report dialog's 52 px preview now uses the thumb instead of the full scan.
+    AVIF skipped: WebP already gets ~92% of the win. Measured locally: 5.9 MB PNG → 461 KB WebP (1629×2834, visually
+    identical at 1:1) + 72 KB thumb; lightbox load and PNG fallback checked in
+    the browser. **Deploy order:** backend → backfill (≈15 min at nice 19,
+    ≈1 GB) → frontend. Between the backend and frontend deploys the old admin
+    "Generate thumbnails" button 404s; nothing user-facing changes.
+  - **Follow-up (plugin):** `CardTextureCache` still downloads the master PNG.
+    Switching it to the display WebP needs a check that Dalamud's texture
+    provider decodes WebP; until then the PNGs must stay.
 
 - [ ] **3.3 The CSS bundle is 407 KB (48.6 KB gz) and roughly 60% unreferenced.** [medium] [M]
   - **Where:** census (appendix): 780 class selectors in `dist/_app/index-*.css`,
@@ -413,6 +440,10 @@ five-entry baseline; strict TS + typed ESLint.
     → `{ full, thumb }` and `cardBackUrls(deckId)`; the version token from §3.1
     lives here too. Unit-test it.
   - **Verify:** `grep -rn "padStart(4" src --include=*.vue` returns nothing.
+  - **DONE 2026-10-28** with §3.2: `src/utils/cardImages.ts` exports
+    `cardImageUrls()` → `{ display, png, thumb }` and `cardBackImageUrls()`,
+    covered by `cardImages.spec.ts`; all four views use it and the grep is clean.
+    No `?v=` token: §3.1 settled on purging Cloudflare after a re-scan instead.
 
 - [ ] **4.2 Forty raw `fetch('/api' + …)` call sites bypass the API client.** [medium] [M]
   - **Where:** composables `useAccount` (6), `usePasskeys` (9),

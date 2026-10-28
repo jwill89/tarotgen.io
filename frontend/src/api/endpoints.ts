@@ -180,8 +180,8 @@ export const endpoints = {
       create: '/decks',
       byId: (id: string | number) => `/decks/${id}`,
       approve: (id: string | number) => `/decks/${id}/approve`,
-      thumbnails: (id: string | number) => `/decks/${id}/thumbnails`,
-      allThumbnails: '/decks/thumbnails',
+      images: (id: string | number) => `/decks/${id}/images`,
+      allImages: '/decks/images',
       specialCards: (deckId: string | number) => `/decks/${deckId}/special-cards`,
       specialCardById: (deckId: string | number, cardId: string | number) =>
         `/decks/${deckId}/special-cards/${cardId}`,

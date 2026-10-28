@@ -10,6 +10,7 @@ import PageHeader from '@/components/PageHeader.vue'
 import IconButton from '@/components/IconButton.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { formatDateTime } from '@/utils/datetime'
+import { cardImageUrls } from '@/utils/cardImages'
 import {
   currentSubmissions,
   earlierSubmissions,
@@ -71,15 +72,12 @@ const viewingWithoutReason = computed(() =>
   viewing.value ? reportsWithoutReason(viewing.value) : 0,
 )
 
-/** Padded 4-digit card image path, matching the reading/deck asset layout. */
-function cardId4(cardId: number): string {
-  return String(cardId).padStart(4, '0')
-}
 function cardThumb(r: CardReport): string {
-  return `/assets/decks/${r.deck_id}/thumbs/Card_${cardId4(r.card_id)}.webp`
+  return cardImageUrls(r.deck_id, r.card_id).thumb
 }
+/** The master scan, not the WebP copy — a reported flaw is judged on the original. */
 function cardFull(r: CardReport): string {
-  return `/assets/decks/${r.deck_id}/Card_${cardId4(r.card_id)}.png`
+  return cardImageUrls(r.deck_id, r.card_id).png
 }
 function deckLabel(r: CardReport): string {
   return r.deck_name || `Deck #${r.deck_id}`

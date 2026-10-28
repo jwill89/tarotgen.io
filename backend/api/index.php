@@ -262,14 +262,14 @@ $app->group('/admin', function (RouteCollectorProxy $group) {
     $group->get('/decks[/]', AdminController::class . ':getDecks');
     $group->get('/decks/pending[/]', AdminController::class . ':getPendingDecks');
     $group->post('/decks[/]', AdminController::class . ':createDeck');
-    $group->post('/decks/thumbnails[/]', AdminController::class . ':generateAllThumbnails');
+    $group->post('/decks/images[/]', AdminController::class . ':generateAllImages');
     // Special cards, nested under their deck.
     $group->get('/decks/{deck_id}/special-cards[/]', AdminController::class . ':getSpecialCards');
     $group->post('/decks/{deck_id}/special-cards[/]', AdminController::class . ':createSpecialCard');
     $group->put('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':updateSpecialCard');
     $group->delete('/decks/{deck_id}/special-cards/{card_id}[/]', AdminController::class . ':deleteSpecialCard');
     $group->post('/decks/{deck_id}/approve[/]', AdminController::class . ':approveDeck');
-    $group->post('/decks/{deck_id}/thumbnails[/]', AdminController::class . ':generateDeckThumbnails');
+    $group->post('/decks/{deck_id}/images[/]', AdminController::class . ':generateDeckImages');
     $group->patch('/decks/{deck_id}[/]', AdminController::class . ':updateDeck');
     $group->delete('/decks/{deck_id}[/]', AdminController::class . ':deleteDeck');
 

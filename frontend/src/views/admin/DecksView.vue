@@ -26,7 +26,7 @@ const editingDeck = ref<Partial<Deck> | null>(null)
 const isNew = ref(false)
 const saving = ref(false)
 const generatingAll = ref(false)
-const thumbBusyId = ref<number | null>(null)
+const imagesBusyId = ref<number | null>(null)
 
 const {
   search,
@@ -148,33 +148,36 @@ async function toggleUsable(deck: Deck) {
   }
 }
 
-interface ThumbResult {
+/** Per-card counts from CardImageService (display WebP + thumbnail per card). */
+interface ImageResult {
   deck_id?: number
+  decks?: number
   generated: number
   skipped: number
-  decks?: number
+  failed: number
 }
 
-async function generateThumbnails(deck: Deck) {
-  thumbBusyId.value = deck.deck_id
-  const res = await api.post<ThumbResult>(endpoints.admin.decks.thumbnails(deck.deck_id), {})
-  thumbBusyId.value = null
-  if (res) {
-    toasts.success(
-      `"${deck.name}": ${res.generated} thumbnail(s) generated, ${res.skipped} already existed.`,
-    )
+function reportImages(scope: string, res: ImageResult) {
+  const summary = `${scope}: ${res.generated} card(s) processed, ${res.skipped} already current`
+  if (res.failed > 0) {
+    toasts.warning(`${summary}, ${res.failed} failed (unreadable scan or unwritable folder).`)
+  } else {
+    toasts.success(`${summary}.`)
   }
 }
 
-async function generateAllThumbnails() {
+async function generateImages(deck: Deck) {
+  imagesBusyId.value = deck.deck_id
+  const res = await api.post<ImageResult>(endpoints.admin.decks.images(deck.deck_id), {})
+  imagesBusyId.value = null
+  if (res) reportImages(`"${deck.name}"`, res)
+}
+
+async function generateAllImages() {
   generatingAll.value = true
-  const res = await api.post<ThumbResult>(endpoints.admin.decks.allThumbnails, {})
+  const res = await api.post<ImageResult>(endpoints.admin.decks.allImages, {})
   generatingAll.value = false
-  if (res) {
-    toasts.success(
-      `Generated ${res.generated} thumbnail(s) across ${res.decks} deck(s); ${res.skipped} already existed.`,
-    )
-  }
+  if (res) reportImages(`${res.decks ?? 0} deck(s)`, res)
 }
 
 function systemName(id: number): string {
@@ -208,10 +211,10 @@ onMounted(() => {
             <button
               class="button is-link"
               :class="{ 'is-loading': generatingAll }"
-              @click="generateAllThumbnails"
+              @click="generateAllImages"
             >
               <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['images']" /></span>
-              <span>Generate All Thumbnails</span>
+              <span>Generate All Web Images</span>
             </button>
             <button class="button is-primary" @click="openAdd">
               <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
@@ -367,10 +370,10 @@ onMounted(() => {
                         />
                         <IconButton
                           :icon="byPrefixAndName.fas['images']"
-                          label="Generate thumbnails"
+                          label="Generate web images"
                           intent="gold"
-                          :loading="thumbBusyId === deck.deck_id"
-                          @click="generateThumbnails(deck)"
+                          :loading="imagesBusyId === deck.deck_id"
+                          @click="generateImages(deck)"
                         />
                         <IconButton
                           :icon="byPrefixAndName.fas['trash']"

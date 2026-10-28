@@ -344,7 +344,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/decks/{deck_id}/thumbnails": {
+    "/admin/decks/{deck_id}/images": {
         parameters: {
             query?: never;
             header?: never;
@@ -353,15 +353,15 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate thumbnails for a deck */
-        post: operations["d1b0e7867c5636fd30959dd2cc974308"];
+        /** Generate missing or stale web images (display WebP + thumbnail) for a deck */
+        post: operations["db77b928753550089034abbdd42a8004"];
         delete?: never;
         options?: never;
         head?: never;
         patch?: never;
         trace?: never;
     };
-    "/admin/decks/thumbnails": {
+    "/admin/decks/images": {
         parameters: {
             query?: never;
             header?: never;
@@ -370,8 +370,8 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Generate thumbnails for all decks */
-        post: operations["13c6e696187dc1b44d1c3023a1c5602f"];
+        /** Generate missing or stale web images for all decks */
+        post: operations["81bd8d0d326c79305144f6102f47ca88"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2447,7 +2447,7 @@ export interface operations {
             };
         };
     };
-    d1b0e7867c5636fd30959dd2cc974308: {
+    db77b928753550089034abbdd42a8004: {
         parameters: {
             query?: never;
             header?: never;
@@ -2458,13 +2458,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Thumbnail generation result */
+            /** @description Per-card counts: generated, skipped (already current), failed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        deck_id?: number;
+                        generated?: number;
+                        skipped?: number;
+                        failed?: number;
+                    };
                 };
             };
             /** @description Invalid deck ID */
@@ -2476,7 +2481,7 @@ export interface operations {
             };
         };
     };
-    "13c6e696187dc1b44d1c3023a1c5602f": {
+    "81bd8d0d326c79305144f6102f47ca88": {
         parameters: {
             query?: never;
             header?: never;
@@ -2485,13 +2490,18 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Thumbnail generation result */
+            /** @description Per-card totals across decks: generated, skipped (already current), failed */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        decks?: number;
+                        generated?: number;
+                        skipped?: number;
+                        failed?: number;
+                    };
                 };
             };
         };

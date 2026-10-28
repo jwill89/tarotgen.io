@@ -7,6 +7,7 @@ import { useUser } from '@/composables/useUser'
 import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
 import { cardAspectStyle } from '@/utils/cardAspect'
+import { cardImageUrls } from '@/utils/cardImages'
 import { readApiError } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
@@ -131,8 +132,7 @@ const allPlaced = computed(() => slots.value.length > 0 && slots.value.every((s)
 
 function cardThumb(cardId: number): string {
   if (!deck.value) return ''
-  const filename = 'Card_' + String(cardId).padStart(4, '0')
-  return '/assets/decks/' + String(deck.value.deck_id) + '/thumbs/' + filename + '.webp'
+  return cardImageUrls(deck.value.deck_id, cardId).thumb
 }
 
 // Submit placement

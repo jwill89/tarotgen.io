@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, reactive, computed, watch, onMounted, onUnmounted } from 'vue'
 import {
   DialogRoot,
   DialogPortal,
@@ -14,10 +14,11 @@ import Tooltip from '@/components/Tooltip.vue'
 import CardReportDialog from '@/components/CardReportDialog.vue'
 import { useCardReports } from '@/composables/useCardReports'
 import type { ReadingCard } from '@/types'
+import type { CardImageUrls } from '@/utils/cardImages'
 
 const props = defineProps<{
   cards: ReadingCard[]
-  cardBackUrl: string
+  cardBack: CardImageUrls
   initialIndex: number
   deckId: number
 }>()
@@ -40,11 +41,27 @@ const panY = ref(0)
 const isPanning = ref(false)
 const animate = ref(false) // smooth transition for button / double-click zoom
 
-const imageSrc = computed(() => {
-  if (index.value === -1) return props.cardBackUrl
+const imageUrls = computed(() => {
+  if (index.value === -1) return { display: props.cardBack.display, png: props.cardBack.png }
   const card = props.cards[index.value] as ReadingCard | undefined
-  return card ? card.imgUrl : ''
+  return card ? { display: card.imgUrl, png: card.pngUrl } : null
 })
+
+// A deck's display WebPs are generated after its scans are uploaded; until
+// then show the master PNG rather than a broken image. Remembered per URL so
+// paging back to a card doesn't retry the missing file.
+const missingDisplays = reactive(new Set<string>())
+
+const imageSrc = computed(() => {
+  const urls = imageUrls.value
+  if (!urls) return ''
+  return missingDisplays.has(urls.display) ? urls.png : urls.display
+})
+
+function onImageError(): void {
+  const urls = imageUrls.value
+  if (urls && imageSrc.value === urls.display) missingDisplays.add(urls.display)
+}
 
 const imageTitle = computed(() => {
   if (index.value === -1) return 'Card Back'
@@ -396,6 +413,7 @@ onUnmounted(() => {
                 transition: animate ? 'transform 0.2s ease' : 'none',
               }"
               draggable="false"
+              @error="onImageError"
             />
           </div>
 

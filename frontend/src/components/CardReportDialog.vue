@@ -88,7 +88,7 @@ async function submit(): Promise<void> {
         <!-- A missing image may be the very thing being reported; drop the frame then. -->
         <img
           v-if="!imgFailed"
-          :src="card.imgUrl"
+          :src="card.thumbUrl"
           alt=""
           class="report-card__img"
           @error="imgFailed = true"

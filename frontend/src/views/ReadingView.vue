@@ -15,6 +15,7 @@ import { endpoints } from '@/api/endpoints'
 import { renderMarkdown } from '@/utils/markdown'
 import { formatDateTime } from '@/utils/datetime'
 import { cardAspectStyle } from '@/utils/cardAspect'
+import { cardImageUrls, cardBackImageUrls } from '@/utils/cardImages'
 import type { Reading, ReadingInfo, ReadingCard, SpreadPosition } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import LightboxOverlay from '@/components/LightboxOverlay.vue'
@@ -61,15 +62,9 @@ const readingDeck = computed(() => {
   return deckLookup.value[readingInfo.value.deck_id] ?? null
 })
 
-const cardBackUrl = computed(() => {
-  if (!readingInfo.value) return ''
-  return '/assets/decks/' + String(readingInfo.value.deck_id) + '/Card_Back.png'
-})
-
-const cardBackThumbUrl = computed(() => {
-  if (!readingInfo.value) return ''
-  return '/assets/decks/' + String(readingInfo.value.deck_id) + '/thumbs/Card_Back.webp'
-})
+const cardBack = computed(() =>
+  readingInfo.value ? cardBackImageUrls(readingInfo.value.deck_id) : null,
+)
 
 const readingUrl = computed(() => {
   if (!reading.value) return ''
@@ -77,15 +72,11 @@ const readingUrl = computed(() => {
 })
 
 const readingCards = computed<ReadingCard[]>(() => {
-  if (!readingInfo.value?.draw) return []
-  const deckPath = '/assets/decks/' + String(readingInfo.value.deck_id)
-  return readingInfo.value.draw.map((card) => {
-    const filename = 'Card_' + String(card.card_id).padStart(4, '0')
-    return {
-      ...card,
-      imgUrl: deckPath + '/' + filename + '.png',
-      thumbUrl: deckPath + '/thumbs/' + filename + '.webp',
-    }
+  const info = readingInfo.value
+  if (!info?.draw) return []
+  return info.draw.map((card) => {
+    const urls = cardImageUrls(info.deck_id, card.card_id)
+    return { ...card, imgUrl: urls.display, pngUrl: urls.png, thumbUrl: urls.thumb }
   })
 })
 
@@ -324,6 +315,7 @@ function exportAt(scale: number) {
       formatDateTime(reading.value.reading_time),
     cards: readingCards.value.map((c) => ({
       imgUrl: c.imgUrl,
+      fallbackUrl: c.pngUrl,
       reversed: c.reversed,
       card_name: c.card_name,
     })),
@@ -634,7 +626,7 @@ watch(
                 @keydown.space.prevent="onSpreadCardClick(item.drawIndex)"
               >
                 <div class="spread-face spread-face--back">
-                  <img :src="cardBackThumbUrl" alt="Card Back" />
+                  <img :src="cardBack?.thumb" alt="Card Back" />
                   <span class="spread-order-badge">{{ item.order }}</span>
                 </div>
                 <div class="spread-face spread-face--reveal">
@@ -682,7 +674,7 @@ watch(
                     @keydown.space.prevent="onSpreadCardClick(sc.drawIndex)"
                   >
                     <div class="spread-face spread-face--back">
-                      <img :src="cardBackThumbUrl" alt="Card Back" />
+                      <img :src="cardBack?.thumb" alt="Card Back" />
                       <span class="spread-order-badge">{{ sc.position.order }}</span>
                     </div>
                     <div class="spread-face spread-face--reveal">
@@ -872,9 +864,9 @@ watch(
   <LoadingOverlay v-if="isLoading" message="Loading your reading..." />
 
   <LightboxOverlay
-    v-if="lightboxIndex !== null"
+    v-if="lightboxIndex !== null && cardBack"
     :cards="readingCards"
-    :card-back-url="cardBackUrl"
+    :card-back="cardBack"
     :initial-index="lightboxIndex"
     :deck-id="readingInfo?.deck_id ?? 0"
     @close="lightboxIndex = null"

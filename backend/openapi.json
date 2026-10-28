@@ -934,13 +934,13 @@
                 ]
             }
         },
-        "/admin/decks/{deck_id}/thumbnails": {
+        "/admin/decks/{deck_id}/images": {
             "post": {
                 "tags": [
                     "Admin · Decks"
                 ],
-                "summary": "Generate thumbnails for a deck",
-                "operationId": "d1b0e7867c5636fd30959dd2cc974308",
+                "summary": "Generate missing or stale web images (display WebP + thumbnail) for a deck",
+                "operationId": "db77b928753550089034abbdd42a8004",
                 "parameters": [
                     {
                         "name": "deck_id",
@@ -953,10 +953,24 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Thumbnail generation result",
+                        "description": "Per-card counts: generated, skipped (already current), failed",
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "properties": {
+                                        "deck_id": {
+                                            "type": "integer"
+                                        },
+                                        "generated": {
+                                            "type": "integer"
+                                        },
+                                        "skipped": {
+                                            "type": "integer"
+                                        },
+                                        "failed": {
+                                            "type": "integer"
+                                        }
+                                    },
                                     "type": "object"
                                 }
                             }
@@ -973,19 +987,33 @@
                 ]
             }
         },
-        "/admin/decks/thumbnails": {
+        "/admin/decks/images": {
             "post": {
                 "tags": [
                     "Admin · Decks"
                 ],
-                "summary": "Generate thumbnails for all decks",
-                "operationId": "13c6e696187dc1b44d1c3023a1c5602f",
+                "summary": "Generate missing or stale web images for all decks",
+                "operationId": "81bd8d0d326c79305144f6102f47ca88",
                 "responses": {
                     "200": {
-                        "description": "Thumbnail generation result",
+                        "description": "Per-card totals across decks: generated, skipped (already current), failed",
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "properties": {
+                                        "decks": {
+                                            "type": "integer"
+                                        },
+                                        "generated": {
+                                            "type": "integer"
+                                        },
+                                        "skipped": {
+                                            "type": "integer"
+                                        },
+                                        "failed": {
+                                            "type": "integer"
+                                        }
+                                    },
                                     "type": "object"
                                 }
                             }
