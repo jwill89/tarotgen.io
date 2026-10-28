@@ -12,7 +12,7 @@ import { useToasts } from '@/composables/useToasts'
  * a numbered legend; free-draw readings render as a captioned grid.
  */
 
-export interface ExportCard {
+interface ExportCard {
   imgUrl: string
   /** Tried when imgUrl doesn't load (a deck whose web images aren't generated yet). */
   fallbackUrl?: string

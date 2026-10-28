@@ -125,9 +125,12 @@ async function submitSystem() {
               <div class="columns">
                 <div class="column is-5">
                   <div class="field">
-                    <label class="label">System Name <span class="has-text-danger">*</span></label>
+                    <label for="submit-system-name" class="label"
+                      >System Name <span class="has-text-danger">*</span></label
+                    >
                     <div class="control">
                       <input
+                        id="submit-system-name"
                         v-model="name"
                         class="input"
                         type="text"
@@ -138,18 +141,33 @@ async function submitSystem() {
                 </div>
                 <div class="column is-4">
                   <div class="field">
-                    <label class="label">Short Name <span class="has-text-danger">*</span></label>
+                    <label for="submit-system-short-name" class="label"
+                      >Short Name <span class="has-text-danger">*</span></label
+                    >
                     <div class="control">
-                      <input v-model="shortName" class="input" type="text" placeholder="e.g. TdM" />
+                      <input
+                        id="submit-system-short-name"
+                        v-model="shortName"
+                        class="input"
+                        type="text"
+                        placeholder="e.g. TdM"
+                      />
                     </div>
                     <p class="help">A brief abbreviation shown in deck lists.</p>
                   </div>
                 </div>
                 <div class="column is-3">
                   <div class="field">
-                    <label class="label">Total Cards <span class="has-text-danger">*</span></label>
+                    <label for="submit-system-total-cards" class="label"
+                      >Total Cards <span class="has-text-danger">*</span></label
+                    >
                     <div class="control">
-                      <NumberField v-model="totalCards" :min="1" :max="200" />
+                      <NumberField
+                        id="submit-system-total-cards"
+                        v-model="totalCards"
+                        :min="1"
+                        :max="200"
+                      />
                     </div>
                   </div>
                 </div>

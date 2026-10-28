@@ -20,10 +20,10 @@ use Tarot\Config\Env;
 class IndexNow
 {
     /** Shared endpoint; participating engines forward submissions to each other. */
-    private const ENDPOINT = 'https://api.indexnow.org/indexnow';
+    private const string ENDPOINT = 'https://api.indexnow.org/indexnow';
 
     /** IndexNow accepts at most this many URLs per request. */
-    private const MAX_URLS = 10000;
+    private const int MAX_URLS = 10000;
 
     /** @var callable(string, string): int Sends a JSON POST, returns the HTTP status. */
     private $poster;
@@ -107,9 +107,7 @@ class IndexNow
         ]);
 
         curl_exec($ch);
-        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
-        return $status;
+        return curl_getinfo($ch, CURLINFO_HTTP_CODE);
     }
 }

@@ -156,7 +156,7 @@ class AdminUserController extends AbstractController
         $payload = ['success' => true, 'emailed' => $result['emailed'] ?? false];
 
         // Outside production, surface the link when email isn't configured.
-        if (!Env::isProduction() && empty($result['emailed'])) {
+        if (!Env::isProduction() && !($result['emailed'] ?? false)) {
             $payload['activation_link'] = $result['activation_link'] ?? null;
         }
 

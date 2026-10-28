@@ -21,7 +21,7 @@ use Tarot\Service\CardImageService;
 
 $decksRoot = dirname(__DIR__) . '/assets/decks';
 
-$deckIds = array_map('intval', array_slice($argv, 1));
+$deckIds = array_map(intval(...), array_slice($argv, 1));
 if ($deckIds === []) {
     foreach (glob($decksRoot . '/*', GLOB_ONLYDIR) ?: [] as $dir) {
         if (ctype_digit(basename($dir))) {

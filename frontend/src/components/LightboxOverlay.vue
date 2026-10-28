@@ -394,6 +394,7 @@ onUnmounted(() => {
           >
             &#10094;
           </button>
+          <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- wheel/drag/double-click zoom and pan; the keyboard has +/- and the zoom buttons -->
           <div
             class="lightbox-viewport"
             :class="{ zoomed: isZoomed, panning: isPanning }"

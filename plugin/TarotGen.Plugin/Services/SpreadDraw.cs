@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Numerics;
 using Dalamud.Bindings.ImGui;
 
@@ -46,7 +47,7 @@ public static class SpreadDraw
     /// <summary>Just the position number, centred at <paramref name="center"/>.</summary>
     public static void OrderNumber(ImDrawListPtr dl, Vector2 center, int order)
     {
-        var text = order.ToString();
+        var text = order.ToString(CultureInfo.InvariantCulture);
         var ts = ImGui.CalcTextSize(text);
         dl.AddText(center - (ts / 2f), 0xFFFFFFFFu, text);
     }

@@ -347,7 +347,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.SliderInt("Number of cards", ref this.freeDrawCount, 1, max);
     }
 
-    private void DrawSpreadDetailsColumns(Spread spread)
+    private static void DrawSpreadDetailsColumns(Spread spread)
     {
         var positions = spread.Positions.OrderBy(p => p.Order).ToList();
 
@@ -469,10 +469,9 @@ public sealed class MainWindow : Window, IDisposable
     {
         if (query.Length == 0)
             return true;
-        query = query.ToLowerInvariant();
-        return ReadingFormat.Title(r).ToLowerInvariant().Contains(query)
-            || r.ReadingId.ToLowerInvariant().Contains(query)
-            || DeckName(r).ToLowerInvariant().Contains(query);
+        return ReadingFormat.Title(r).Contains(query, StringComparison.OrdinalIgnoreCase)
+            || r.ReadingId.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || DeckName(r).Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 
     private string DeckName(Reading r)
@@ -655,7 +654,7 @@ public sealed class MainWindow : Window, IDisposable
         }
     }
 
-    private void DrawLinksSection()
+    private static void DrawLinksSection()
     {
         Ui.Section(FontAwesomeIcon.Link, "Links");
 
@@ -675,7 +674,7 @@ public sealed class MainWindow : Window, IDisposable
                         new Vector4(0.20f, 0.47f, 0.58f, 1f),
                         new Vector4(0.30f, 0.62f, 0.74f, 1f),
                         new Vector4(0.16f, 0.40f, 0.50f, 1f)))
-                    Util.OpenLink(this.api.SiteBase);
+                    Util.OpenLink(Configuration.SiteUrl);
 
                 ImGui.TableNextColumn();
                 ImGui.AlignTextToFramePadding();

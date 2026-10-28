@@ -76,7 +76,7 @@ abstract class AbstractData
 
         $row = $stmt->fetch();
 
-        return $row ?: null;
+        return $row === false ? null : $row;
     }
 
     /**
@@ -137,7 +137,7 @@ abstract class AbstractData
             }
         }
 
-        if (empty($fields)) {
+        if ($fields === []) {
             return false;
         }
 

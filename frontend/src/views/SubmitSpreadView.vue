@@ -111,18 +111,18 @@ function goHome() {
 
               <div v-if="isLoggedIn" class="myst-callout mb-5">
                 <div class="field mb-0">
-                  <label class="label">
+                  <span id="submit-spread-save-as" class="label">
                     <span class="icon-text">
                       <span class="icon"
                         ><FontAwesomeIcon :icon="byPrefixAndName.fas['bookmark']"
                       /></span>
                       <span>Save as</span>
                     </span>
-                  </label>
+                  </span>
                   <SegmentedControl
                     v-model="saveMode"
                     :options="saveModeOptions"
-                    aria-label="Save as"
+                    aria-labelledby="submit-spread-save-as"
                   />
                   <p v-if="saveMode === 'public'" class="help mt-3">
                     Your spread will be submitted for admin review before it becomes available to

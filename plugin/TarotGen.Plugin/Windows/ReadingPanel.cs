@@ -147,7 +147,7 @@ public sealed class ReadingPanel
             meta += $"  ·  {r.ReadingTime}";
         ImGui.TextDisabled(meta);
 
-        var url = $"{this.api.SiteBase}/reading/{r.ReadingId}";
+        var url = $"{Configuration.SiteUrl}/reading/{r.ReadingId}";
 
         // The share code is what people paste into a /tell or party chat.
         ImGui.Spacing();
@@ -224,7 +224,7 @@ public sealed class ReadingPanel
         DrawDetails(positions, cards);
     }
 
-    private void DrawSpreadCanvas(ReadingInfo info, List<SpreadPosition> positions, IReadOnlyList<DrawCard> cards)
+    private void DrawSpreadCanvas(ReadingInfo info, List<SpreadPosition> positions, List<DrawCard> cards)
     {
         var fit = SpreadLayout.ComputeFit(positions);
         var sizePct = SpreadLayout.CardSizePct(fit);
@@ -285,7 +285,7 @@ public sealed class ReadingPanel
         }
     }
 
-    private void DrawDetails(IReadOnlyList<SpreadPosition> positions, IReadOnlyList<DrawCard> cards)
+    private static void DrawDetails(List<SpreadPosition> positions, List<DrawCard> cards)
     {
         for (int i = 0; i < positions.Count; i++)
         {

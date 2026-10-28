@@ -16,9 +16,10 @@ use ReflectionProperty;
 abstract class AbstractStructure implements JsonSerializable
 {
     /**
-     * Cache of property names per class to avoid repeated reflection.
+     * Each class's public properties — its serialized shape — cached to avoid
+     * repeated reflection.
      *
-     * @var array<class-string, list<string>>
+     * @var array<class-string, list<ReflectionProperty>>
      */
     private static array $propertyCache = [];
 
@@ -38,7 +39,6 @@ abstract class AbstractStructure implements JsonSerializable
      * This method sets the properties of the object based on the provided associative array.
      *
      * @param array<string,mixed> $params An associative array of properties to set on the object.
-     * @return void
      */
     public function setProperties(array $params = []): void
     {
@@ -74,29 +74,19 @@ abstract class AbstractStructure implements JsonSerializable
     }
 
     /**
-     * JSON serialize method
+     * The object's public properties as an associative array — the API shape.
      *
-     * This method caches ReflectionClass property names per class and
-     * returns an associative array of the object's properties.
-     *
-     * @return array<string,mixed> An associative array of the object's properties.
+     * @return array<string,mixed>
      */
     #[\Override]
     public function jsonSerialize(): array
     {
-        $class = static::class;
-
-        if (!isset(self::$propertyCache[$class])) {
-            $reflection_class = new ReflectionClass($this);
-            self::$propertyCache[$class] = array_map(
-                fn($prop) => $prop->getName(),
-                $reflection_class->getProperties()
-            );
-        }
+        $properties = self::$propertyCache[static::class]
+            ??= new ReflectionClass($this)->getProperties(ReflectionProperty::IS_PUBLIC);
 
         $data = [];
-        foreach (self::$propertyCache[$class] as $name) {
-            $data[$name] = $this->$name;
+        foreach ($properties as $property) {
+            $data[$property->getName()] = $property->getValue($this);
         }
 
         return $data;

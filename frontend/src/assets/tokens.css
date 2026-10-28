@@ -24,6 +24,7 @@
   --myst-surface: #16161d; /* dropdowns, modals */
   --myst-surface-2: #1c1c25; /* boxes, panels, inputs, tables */
   --myst-surface-3: #24242f; /* raised / hover */
+  --myst-scrim: #06060a; /* below the background: the wash behind dialogs, used as a tint */
   --myst-border: rgba(255, 255, 255, 0.1);
   --myst-border-strong: rgba(255, 255, 255, 0.16);
   --myst-hair-gold: color-mix(in srgb, var(--myst-gold) 38%, transparent); /* thin gold hairline */
@@ -176,8 +177,7 @@
 
 /* Small grey inline hints (e.g. "tap to place", instructions) use is-size-7
    + has-text-grey across the app — give them the same readable treatment. */
-.is-size-7.has-text-grey,
-.has-text-grey.is-size-7 {
+.is-size-7.has-text-grey {
   font-size: 0.85rem !important;
   color: var(--myst-text-muted) !important;
 }

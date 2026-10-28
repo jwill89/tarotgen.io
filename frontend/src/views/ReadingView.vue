@@ -586,6 +586,7 @@ watch(
 
           <!-- Free draw: cards use the full width; no per-card details list. -->
           <div v-if="!spread" class="reading-grid" :style="cardAspectStyle(readingDeck)">
+            <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- hover/focus only syncs the highlight with the details list; the card's own role=button below is the control -->
             <div
               v-for="item in detailItems"
               :key="'g-' + item.drawIndex"
@@ -597,6 +598,7 @@ watch(
               @mouseenter="setActive(item.drawIndex)"
               @mouseleave="clearActive"
               @focusin="setActive(item.drawIndex)"
+              @focusout="clearActive"
             >
               <div
                 class="spread-flip"
@@ -633,6 +635,7 @@ watch(
           <div v-else class="columns reading-main">
             <div class="column is-7-desktop">
               <div class="spread-canvas reading-canvas" :style="cardAspectStyle(readingDeck)">
+                <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -- hover/focus only syncs the highlight with the details list; the card's own role=button below is the control -->
                 <div
                   v-for="sc in spreadCards"
                   :key="sc.drawIndex"
@@ -645,6 +648,7 @@ watch(
                   @mouseenter="setActive(sc.drawIndex)"
                   @mouseleave="clearActive"
                   @focusin="setActive(sc.drawIndex)"
+                  @focusout="clearActive"
                 >
                   <div
                     class="spread-flip"
@@ -683,6 +687,7 @@ watch(
                 </p>
 
                 <div class="reading-detail-grid">
+                  <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions, vuejs-accessibility/mouse-events-have-key-events -- a mouse shortcut for each card's own role=button above; a second tab stop per card would double the tab order -->
                   <div
                     v-for="item in detailItems"
                     :key="'row-' + item.drawIndex"
@@ -791,14 +796,17 @@ watch(
             <form @submit.prevent="unlock">
               <div class="field">
                 <div class="control has-icons-left">
+                  <!-- eslint-disable vuejs-accessibility/no-autofocus -- the password is all a locked reading asks for -->
                   <input
                     v-model="unlockPassword"
                     class="input"
                     type="password"
+                    aria-label="Reading password"
                     placeholder="Reading password"
                     autocomplete="off"
                     autofocus
                   />
+                  <!-- eslint-enable vuejs-accessibility/no-autofocus -->
                   <span class="icon is-small is-left"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
                   /></span>
@@ -890,25 +898,30 @@ watch(
     </p>
 
     <div class="field">
-      <label class="label">Number of Cards</label>
-      <NumberField v-model="drawForm.count" :min="1" :max="maxDrawMore" />
+      <label for="reading-number-of-cards" class="label">Number of Cards</label>
+      <NumberField
+        id="reading-number-of-cards"
+        v-model="drawForm.count"
+        :min="1"
+        :max="maxDrawMore"
+      />
       <p class="help">
         {{ maxDrawMore }} card{{ maxDrawMore === 1 ? '' : 's' }} left in this deck.
       </p>
     </div>
 
     <div class="field">
-      <label class="label">Reversed Cards</label>
-      <ToggleSwitch v-model="drawForm.useReversals">{{
+      <label for="reading-reversed-cards" class="label">Reversed Cards</label>
+      <ToggleSwitch id="reading-reversed-cards" v-model="drawForm.useReversals">{{
         drawForm.useReversals ? 'On' : 'Off'
       }}</ToggleSwitch>
     </div>
 
     <div v-if="deckExtraCards > 0" class="field">
-      <label class="label"
+      <label for="reading-include-extra-card" class="label"
         >Include {{ deckExtraCards }} Extra Card{{ deckExtraCards === 1 ? '' : 's' }}</label
       >
-      <ToggleSwitch v-model="drawForm.useAdditionalCards">{{
+      <ToggleSwitch id="reading-include-extra-card" v-model="drawForm.useAdditionalCards">{{
         drawForm.useAdditionalCards ? 'On' : 'Off'
       }}</ToggleSwitch>
     </div>

@@ -277,7 +277,7 @@ async function submit() {
               <div class="column is-6">
                 <div class="field">
                   <label class="label" for="cr-deck">Deck</label>
-                  <DeckComboBox v-model="deckId" :decks="decks" />
+                  <DeckComboBox id="cr-deck" v-model="deckId" :decks="decks" />
                 </div>
               </div>
               <div class="column is-6">
@@ -305,22 +305,22 @@ async function submit() {
             <div class="columns">
               <div class="column is-4">
                 <div class="field">
-                  <label class="label">Number of Cards</label>
-                  <NumberField v-model="cardCount" :min="1" :max="78" />
+                  <label for="custom-number-of-cards" class="label">Number of Cards</label>
+                  <NumberField id="custom-number-of-cards" v-model="cardCount" :min="1" :max="78" />
                 </div>
               </div>
               <div class="column is-8">
                 <div class="field">
-                  <label class="label"
+                  <label for="custom-base-on-a-spread" class="label"
                     >Base on a Spread
                     <span class="has-text-grey is-size-7 has-text-weight-normal"
                       >(optional)</span
                     ></label
                   >
                   <BaseSelect
+                    id="custom-base-on-a-spread"
                     v-model="baseSpreadModel"
                     :options="baseSpreadOptions"
-                    aria-label="Base on a spread"
                   />
                   <p class="help">
                     Pre-fills the card count and positions; you still choose which card goes in each
@@ -383,22 +383,27 @@ async function submit() {
                 >
                   <template v-if="item">
                     <div class="field">
-                      <label class="label"
+                      <label for="custom-position-title" class="label"
                         >Position Title
                         <span class="has-text-grey is-size-7 has-text-weight-normal"
                           >(optional)</span
                         ></label
                       >
-                      <input v-model="item.title" class="input" placeholder="e.g. The Present" />
+                      <input
+                        id="custom-position-title"
+                        v-model="item.title"
+                        class="input"
+                        placeholder="e.g. The Present"
+                      />
                     </div>
                     <div class="field">
-                      <label class="label">Card</label>
+                      <label for="custom-card" class="label">Card</label>
                       <BaseSelect
+                        id="custom-card"
                         v-model="item.cardId"
                         :options="cardOptionsFor(item.cardId)"
                         :disabled="loadingCards"
                         :placeholder="loadingCards ? 'Loading cards…' : 'Select a card…'"
-                        aria-label="Card"
                       />
                     </div>
                     <div class="field">

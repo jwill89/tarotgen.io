@@ -127,9 +127,12 @@ async function submitDeck() {
               </div>
 
               <div class="field">
-                <label class="label">Deck Name <span class="has-text-danger">*</span></label>
+                <label for="submit-deck-name" class="label"
+                  >Deck Name <span class="has-text-danger">*</span></label
+                >
                 <div class="control">
                   <input
+                    id="submit-deck-name"
                     v-model="name"
                     class="input"
                     type="text"
@@ -139,9 +142,12 @@ async function submitDeck() {
               </div>
 
               <div class="field">
-                <label class="label">Artist <span class="has-text-danger">*</span></label>
+                <label for="submit-deck-artist" class="label"
+                  >Artist <span class="has-text-danger">*</span></label
+                >
                 <div class="control">
                   <input
+                    id="submit-deck-artist"
                     v-model="artist"
                     class="input"
                     type="text"
@@ -151,11 +157,13 @@ async function submitDeck() {
               </div>
 
               <div class="field">
-                <label class="label">Deck System <span class="has-text-danger">*</span></label>
+                <label for="submit-deck-system" class="label"
+                  >Deck System <span class="has-text-danger">*</span></label
+                >
                 <BaseSelect
+                  id="submit-deck-system"
                   v-model="deckSystemId"
                   :options="deckSystemOptions"
-                  aria-label="Deck System"
                 />
                 <p class="help">
                   The card system this deck uses. Don't see yours?
@@ -166,7 +174,7 @@ async function submitDeck() {
               </div>
 
               <div class="field">
-                <label class="label"
+                <label for="submit-deck-additional-cards" class="label"
                   >Additional Cards
                   <span class="has-text-grey is-size-7 has-text-weight-normal"
                     >(optional)</span
@@ -174,6 +182,7 @@ async function submitDeck() {
                 >
                 <div class="control">
                   <input
+                    id="submit-deck-additional-cards"
                     v-model.number="additionalCards"
                     class="input"
                     type="number"
@@ -187,14 +196,20 @@ async function submitDeck() {
               </div>
 
               <div class="field">
-                <label class="label"
+                <label for="submit-deck-purchase-url" class="label"
                   >Purchase URL
                   <span class="has-text-grey is-size-7 has-text-weight-normal"
                     >(optional)</span
                   ></label
                 >
                 <div class="control">
-                  <input v-model="purchaseUrl" class="input" type="url" placeholder="https://..." />
+                  <input
+                    id="submit-deck-purchase-url"
+                    v-model="purchaseUrl"
+                    class="input"
+                    type="url"
+                    placeholder="https://..."
+                  />
                 </div>
                 <p class="help">A link where this deck can be purchased, if known.</p>
               </div>

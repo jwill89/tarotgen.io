@@ -291,12 +291,13 @@ onMounted(load)
     </div>
 
     <div class="field">
-      <label class="label"
+      <span id="my-readings-notes" class="label"
         >Reading Notes
-        <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></label
+        <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></span
       >
       <MarkdownEditor
         v-model="form.reading_notes"
+        labelledby="my-readings-notes"
         placeholder="Write a detailed interpretation… Markdown is supported."
       />
     </div>

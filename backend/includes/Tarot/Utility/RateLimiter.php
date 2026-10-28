@@ -19,7 +19,8 @@ readonly class RateLimiter
     public function __construct(string $namespace, int $maxHits, int $windowSeconds)
     {
         // Keep the namespace filesystem-safe.
-        $this->namespace     = preg_replace('/[^A-Za-z0-9_]/', '_', $namespace) ?: 'default';
+        $safe                = preg_replace('/[^A-Za-z0-9_]/', '_', $namespace);
+        $this->namespace     = $safe === null || $safe === '' ? 'default' : $safe;
         $this->maxHits       = max(1, $maxHits);
         $this->windowSeconds = max(1, $windowSeconds);
     }
@@ -33,11 +34,11 @@ readonly class RateLimiter
             return false;
         }
 
-        if (time() - (int)$entry['first'] > $this->windowSeconds) {
+        if (time() - $entry['first'] > $this->windowSeconds) {
             return false; // window expired
         }
 
-        return (int)$entry['count'] >= $this->maxHits;
+        return $entry['count'] >= $this->maxHits;
     }
 
     /** Record one hit against $key, starting a fresh window if needed. */
@@ -47,7 +48,7 @@ readonly class RateLimiter
             $now   = time();
             $entry = $all[$key] ?? null;
 
-            if ($entry === null || $now - (int)$entry['first'] > $this->windowSeconds) {
+            if ($entry === null || $now - $entry['first'] > $this->windowSeconds) {
                 $all[$key] = ['count' => 1, 'first' => $now];
             } else {
                 $all[$key]['count']++;
@@ -78,8 +79,30 @@ readonly class RateLimiter
             return [];
         }
 
-        $decoded = json_decode((string)file_get_contents($file), true);
-        return is_array($decoded) ? $decoded : [];
+        return self::decode((string)file_get_contents($file));
+    }
+
+    /**
+     * The file's well-formed entries only. It sits in a shared temp dir, so a
+     * truncated write or a stray file must neither throw nor skew a count.
+     *
+     * @return array<string,array{count:int,first:int}>
+     */
+    private static function decode(string $json): array
+    {
+        $decoded = json_decode($json, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+
+        $entries = [];
+        foreach ($decoded as $key => $entry) {
+            if (is_array($entry) && is_int($entry['count'] ?? null) && is_int($entry['first'] ?? null)) {
+                $entries[(string)$key] = ['count' => $entry['count'], 'first' => $entry['first']];
+            }
+        }
+
+        return $entries;
     }
 
     /**
@@ -100,9 +123,7 @@ readonly class RateLimiter
         try {
             flock($fp, LOCK_EX);
 
-            $contents = stream_get_contents($fp);
-            $all      = json_decode((string)$contents, true);
-            $all      = is_array($all) ? $all : [];
+            $all = self::decode((string)stream_get_contents($fp));
 
             $all = $change($this->prune($all));
 
@@ -128,7 +149,7 @@ readonly class RateLimiter
     {
         $now = time();
         foreach ($all as $key => $entry) {
-            if (!is_array($entry) || $now - (int)($entry['first'] ?? 0) > $this->windowSeconds) {
+            if ($now - $entry['first'] > $this->windowSeconds) {
                 unset($all[$key]);
             }
         }

@@ -378,45 +378,64 @@ onMounted(() => {
   >
     <template v-if="editingDeck">
       <div class="field">
-        <label class="label">Name</label>
-        <input v-model="editingDeck.name" class="input" />
+        <label for="admin-deck-name" class="label">Name</label>
+        <input id="admin-deck-name" v-model="editingDeck.name" class="input" />
       </div>
       <div class="field">
-        <label class="label">Artist</label>
-        <input v-model="editingDeck.artist" class="input" />
+        <label for="admin-deck-artist" class="label">Artist</label>
+        <input id="admin-deck-artist" v-model="editingDeck.artist" class="input" />
       </div>
       <div class="field">
-        <label class="label">Purchase URL</label>
-        <input v-model="editingDeck.purchase_url" class="input" />
+        <label for="admin-deck-purchase-url" class="label">Purchase URL</label>
+        <input id="admin-deck-purchase-url" v-model="editingDeck.purchase_url" class="input" />
       </div>
       <div class="field">
-        <label class="label">Deck System</label>
+        <label for="admin-deck-system" class="label">Deck System</label>
         <BaseSelect
+          id="admin-deck-system"
           v-model="editingDeck.deck_system_id"
           :options="deckSystemOptions"
-          aria-label="Deck System"
         />
       </div>
       <div class="columns">
         <div class="column is-6">
           <div class="field">
-            <label class="label">Additional Cards</label>
-            <NumberField v-model="editingDeck.additional_cards" :min="0" />
+            <label for="admin-deck-additional-cards" class="label">Additional Cards</label>
+            <NumberField
+              id="admin-deck-additional-cards"
+              v-model="editingDeck.additional_cards"
+              :min="0"
+            />
             <p class="help">Extra cards beyond the deck system's standard count.</p>
           </div>
         </div>
       </div>
       <div class="field">
-        <label class="label"
+        <span id="admin-deck-aspect" class="label"
           >Card Aspect Ratio
           <span class="has-text-grey is-size-7 has-text-weight-normal"
             >(width × height — any unit)</span
-          ></label
+          ></span
         >
-        <div class="is-flex is-align-items-center" style="gap: 0.5rem">
-          <NumberField v-model="editingDeck.card_aspect_w" :min="0.1" :step="0.1" />
-          <span>×</span>
-          <NumberField v-model="editingDeck.card_aspect_h" :min="0.1" :step="0.1" />
+        <div
+          class="is-flex is-align-items-center"
+          style="gap: 0.5rem"
+          role="group"
+          aria-labelledby="admin-deck-aspect"
+        >
+          <NumberField
+            v-model="editingDeck.card_aspect_w"
+            :min="0.1"
+            :step="0.1"
+            aria-label="Width"
+          />
+          <span aria-hidden="true">×</span>
+          <NumberField
+            v-model="editingDeck.card_aspect_h"
+            :min="0.1"
+            :step="0.1"
+            aria-label="Height"
+          />
         </div>
         <p class="help">Controls the card slot shape — only the ratio matters.</p>
       </div>

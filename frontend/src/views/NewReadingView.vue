@@ -326,7 +326,7 @@ async function submitNewReading() {
           <div class="settings-panel">
             <div class="field">
               <label class="label" for="deck_id">Deck</label>
-              <DeckComboBox v-model="form.deckId" :decks="decks" />
+              <DeckComboBox id="deck_id" v-model="form.deckId" :decks="decks" />
             </div>
 
             <div
@@ -349,8 +349,9 @@ async function submitNewReading() {
             </div>
 
             <div class="field">
-              <label class="label">Spread</label>
+              <label for="new-reading-spread" class="label">Spread</label>
               <SpreadComboBox
+                id="new-reading-spread"
                 v-model="selectedSpreadOption"
                 :options="spreadOptions"
                 @free-draw="onFreeDrawSelected"
@@ -383,13 +384,17 @@ async function submitNewReading() {
             </div>
 
             <div v-if="selectedSpread" class="field">
-              <label class="label">
+              <span id="new-reading-position-titles" class="label">
                 Position Titles
                 <span class="has-text-grey is-size-7 has-text-weight-normal"
                   >(optional — leave blank to use the spread's defaults)</span
                 >
-              </label>
-              <div class="columns is-multiline">
+              </span>
+              <div
+                class="columns is-multiline"
+                role="group"
+                aria-labelledby="new-reading-position-titles"
+              >
                 <div
                   v-for="(pos, idx) in selectedSpreadPositions"
                   :key="'title-' + pos.order"
@@ -403,6 +408,7 @@ async function submitNewReading() {
                       <input
                         v-model="positionTitles[idx]"
                         class="input"
+                        :aria-label="'Position ' + pos.order + ' title'"
                         :placeholder="pos.title || 'Position ' + pos.order"
                         autocomplete="off"
                       />
@@ -413,11 +419,11 @@ async function submitNewReading() {
             </div>
 
             <div v-if="freeDrawChosen && !selectedSpread" class="field">
-              <label class="label">Free Draw Mode</label>
+              <span id="new-reading-free-draw-mode" class="label">Free Draw Mode</span>
               <SegmentedControl
                 v-model="form.freeDrawMode"
                 :options="freeDrawModeOptions"
-                aria-label="Free draw mode"
+                aria-labelledby="new-reading-free-draw-mode"
               />
               <p v-if="form.freeDrawMode === 'standard'" class="help">
                 Cards are drawn and displayed in order.
@@ -430,8 +436,9 @@ async function submitNewReading() {
             <div v-if="spreadReady" class="columns is-multiline">
               <div class="column is-4-desktop is-6-tablet">
                 <div class="field">
-                  <label class="label">Number of Cards</label>
+                  <label for="new-reading-number-of-cards" class="label">Number of Cards</label>
                   <NumberField
+                    id="new-reading-number-of-cards"
                     v-model="form.numberOfCards"
                     :min="1"
                     :max="maxCards"
@@ -443,9 +450,9 @@ async function submitNewReading() {
               </div>
               <div class="column is-4-desktop is-6-tablet">
                 <div class="field">
-                  <label class="label">Reversed Cards</label>
+                  <label for="new-reading-reversed-cards" class="label">Reversed Cards</label>
                   <div class="control">
-                    <ToggleSwitch v-model="form.useReversals">{{
+                    <ToggleSwitch id="new-reading-reversed-cards" v-model="form.useReversals">{{
                       form.useReversals ? 'On' : 'Off'
                     }}</ToggleSwitch>
                   </div>

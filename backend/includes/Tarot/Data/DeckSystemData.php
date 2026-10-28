@@ -124,7 +124,7 @@ class DeckSystemData extends AbstractData
      */
     public function retrieveCardsByIds(int $systemId, array $cardIds): array
     {
-        if (empty($cardIds)) {
+        if ($cardIds === []) {
             return [];
         }
 

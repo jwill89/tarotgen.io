@@ -6,6 +6,7 @@ namespace Tarot\Tests\Unit\Data;
 
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\TestCase;
 use Tarot\Data\NormalizesPositions;
 use Tarot\Data\UserSpreadData;
@@ -16,7 +17,7 @@ use Tarot\Structure\UserSpread;
  * SQLite database.
  */
 #[CoversClass(UserSpreadData::class)]
-#[CoversClass(NormalizesPositions::class)]
+#[CoversTrait(NormalizesPositions::class)]
 #[CoversClass(UserSpread::class)]
 final class UserSpreadDataTest extends TestCase
 {

@@ -41,7 +41,7 @@ verification are listed at the end so nobody re-chases them.
 | 3 | Performance | 5 | 0 | — |
 | 4 | Duplication | 7 | 0 | — |
 | 5 | Standards | 9 | 0 | — (`eslint-plugin-vuejs-accessibility` is tracked in §6.1) |
-| 6 | Tooling | 0 | 5 | Stylelint, Knip, coverage, PHPStan extensions, plugin CI, Dependabot (a few sub-items already done — see each) |
+| 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 1 | 3 | In-range updates, the swagger-php 7 / vitest 5 / happy-dom 21 majors, plugin packages; TypeScript 7 waits for Vue |
 | 8 | Tests | 2 | 5 | More HTTP tests, Data classes, 7 composables, component tests, Playwright, coverage |
 | 9 | Product | 0 | 12 | All |
@@ -1191,7 +1191,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
 Nothing currently lints CSS, nothing finds unused code or dependencies, the
 plugin is never compiled in CI, and no bot watches dependencies.
 
-- [ ] **6.1 Frontend.** [medium] [S–M]
+- [x] **6.1 Frontend.** [medium] [S–M]
   - **Knip** (unused files/exports/dependencies). Install as a devDependency so
     it runs offline and in CI (`npm run knip`). It would have flagged
     `api.generated.ts` (§4.4) immediately.
@@ -1204,11 +1204,67 @@ plugin is never compiled in CI, and no bot watches dependencies.
     at today's numbers and ratcheted.
   - `eslint-plugin-vuejs-accessibility`.
   - **Playwright** smoke test (§8.6).
-  - *Status 2026-10-28:* none of the above yet. Related, done: `npm run
-    type-check` actually type-checks now (it checked no files before — §4.4), and
-    the `tarot/api-client-only` lint rule bans raw `fetch` (§4.2).
+  - **DONE 2026-10-28** (Playwright stays with §8.6):
+    - **Knip** (`npm run knip`, `knip.ts`). First run: `public/sw.js` (registered
+      by URL; now an entry), `bulma` (pulled in by Sass `@use`, which Knip
+      doesn't read; a small SCSS compiler now hands it the specifiers), the
+      submodule's own deps and the generated types (ignored). Real findings,
+      fixed: eight exports used only in their own file un-exported; the unused
+      `deckLabel()` deleted (the combobox renders its own markup); the unused
+      `SpreadSnapshot` alias removed; and `CARD_HALF_H` is now *used*:
+      `SpreadCanvasEditor` had hard-coded its value (9.46) instead of importing it.
+    - **Stylelint** (`npm run lint:css`) extends the *recommended* configs, not
+      `-standard`: standard flagged 667 lines of working CSS for blank lines,
+      BEM class names and `rgba()` notation, all Prettier's business. Recommended
+      found 34 real ones, fixed:
+      - **The table hover was broken in all 11 striped, hoverable tables.** Bulma's
+        three hover rules out-ranked ours, so the authored white-3% tint never
+        applied and odd and even rows hovered in two different greys (measured:
+        surface vs surface-3). Ours now use Bulma's selectors and win by order.
+      - `word-break: break-word` (deprecated) became `overflow-wrap: anywhere`.
+      - Duplicate `body` and `.box` rules were merged.
+      - `no-descending-specificity` is off: its other 25 hits were unrelated
+        selectors.
 
-- [ ] **6.2 Backend.** [medium] [S–M]
+      The palette rule: no hex, and `rgb()`/`hsl()` outside `tokens.css` only for
+      pure white or black. It caught the dialog scrims, `rgba(6, 6, 10, …)` twice,
+      now `--myst-scrim` with `color-mix()` (pixel-identical), and three `#fff`,
+      now `white`.
+    - **Coverage** (`npm run test:coverage`, CI runs it in place of `npm test`):
+      10.5% statements / 6.3% branches / 12.1% functions / 10.0% lines. The floor
+      sits just under that in `vite.config.ts`; §8 raises it.
+    - **`eslint-plugin-vuejs-accessibility`** found real bugs:
+      - **66 of 91 form labels named nothing.** No `for`/`id`, so screen readers
+        got placeholder text or nothing, and clicking a label didn't focus its
+        field. All are associated now, with 26 controls given names:
+        - plain fields got `for`/`id`;
+        - `BaseSelect`, `NumberField`, `ToggleSwitch`, `DeckComboBox` and
+          `SpreadComboBox` take an `id` and put it on their focusable element;
+        - group captions (`SegmentedControl`, the aspect-ratio pair, the
+          position-title inputs) and `MarkdownEditor` (now a named
+          `role="textbox"`) use `aria-labelledby`;
+        - captions that labelled nothing became `<span class="label">`.
+
+        The browser check caught one cross-component bug the linter can't see:
+        `/new` and `/custom` already had `<label for>` on the deck combobox, but
+        the id never reached its input. Verified on dev with a throwaway admin:
+        all 62 rendered controls on 28 routes named, no dangling `for`, the
+        "Add Deck" modal fully named, and clicking a label focuses its field.
+        Backup restored after.
+      - **The dashboard's "Logout" card** was an `<a>` with no `href`, so the
+        keyboard couldn't reach it. Now a `<button>`, measured identical in size
+        and computed style.
+      - **Reading cards** clear their highlight when focus leaves, as on mouse-out.
+      - **Inline exceptions, each with its reason in the template:** autofocus on
+        login, forgot-password, reset and unlock; the lightbox's gesture surface
+        (the keyboard has +/- and buttons); the detail rows' mouse shortcut.
+  - **Open, found here:** keyboard users can't favourite a deck or spread. The
+    star is the only place to do it, and it sits inside a listbox option, which
+    can't hold a focusable control. Needs a design decision (a key on the
+    highlighted option, or a star button beside the field). Marked inline in
+    both comboboxes.
+
+- [x] **6.2 Backend.** [medium] [S–M]
   - PHPStan extensions via `phpstan/extension-installer`: `phpstan-strict-rules`,
     `phpstan-deprecation-rules` (would have caught §1.2 at analysis time if the
     Structures were analysed against real rows — at minimum it flags deprecated
@@ -1221,11 +1277,48 @@ plugin is never compiled in CI, and no bot watches dependencies.
   - **`composer audit` as a CI step** — green since §7.1, so it can gate now.
     *Done 2026-10-28 (§7.1).*
   - Coverage with `pcov` in CI.
-  - *Also done since:* one code-style tool (§5.2); PHPStan level 8 now covers
-    all of `api/` and `tests/Http` (§8.1). The extensions, Rector, the
-    unused/require checkers, composer-normalize and coverage are still open.
+  - **DONE 2026-10-28:**
+    - **PHPStan extensions:** 168 new findings, all fixed, none baselined (the
+      baseline went from 3 entries to 1):
+      - **8 deprecations:** `curl_close()` (deprecated in 8.5, a no-op since 8.0)
+        and swagger-php's `Generator::isDefault()` (now `Undefined::isDefault()`).
+      - **22 `empty()`:** exact checks now. A request flag goes through
+        `Input::bool()`; a session value is compared with what was stored.
+      - **Short ternaries, non-boolean conditions, 24 useless casts.**
+        `RateLimiter`'s casts were standing in for validation, so it now
+        validates where it reads the file (`decode()`), which also retires two
+        baseline guards; there's a new test for a malformed file.
+      - **Strict base64 in passkey sign-in:** bad input now fails as missing data
+        rather than decoding to bytes with junk dropped.
+      - **`AbstractStructure::jsonSerialize()`** reads cached public
+        `ReflectionProperty`s instead of `$this->$name`.
 
-- [ ] **6.3 Plugin.** [medium] [S]
+      Only PHPUnit's documented `$this->assert…()` style is exempt from the
+      static-call rule, and only in `tests/`.
+    - **Rector** (`composer rector`, `rector:check` in CI): 10 files, e.g.
+      `array_any()`, typed constants, the no-op `imagedestroy()` gone. Skipped
+      once, with its reason: a first-class-callable factory in `dependencies.php`,
+      because production compiles the DI container.
+    - **`composer deps:check`:**
+      - **composer-unused:** `php-di/slim-bridge` was unused (nothing referenced
+        it), so it's removed.
+      - **composer-require-checker:** eight extensions now declared (`ctype`,
+        `curl`, `filter`, `gd`, `mbstring`, `pdo_sqlite`, `session`,
+        `simplexml`), checked against prod's `php -m` first so a deploy's
+        `composer install` can't refuse. `psr/container`, `psr/http-message` and
+        `psr/http-server-handler` were used directly, so they're declared too.
+        swagger-php's symbols are whitelisted (dev-only by design; see AGENTS §6).
+    - **composer-normalize:** `composer.json` reordered; CI runs `--dry-run`.
+    - **Coverage:** CI runs PHPUnit with pcov and prints the summary: 54.9%
+      lines / 46.9% methods. Two tests used `CoversClass` on a trait (a warning
+      only under coverage, so a failure with `failOnWarning`); they use
+      `CoversTrait` now. The threshold waits for §8.7.
+
+    310 tests, PHPStan, php-cs-fixer pass. **Deploy note:** the lock changed
+    (slim-bridge out, dev tools in), so the next backend deploy runs
+    `composer install` on the droplet.
+
+- [x] **6.3 Plugin.** [medium] [S]
   - `TarotGen.Plugin.csproj`: `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`,
     `<AnalysisLevel>latest-recommended</AnalysisLevel>`,
     `<EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>`; a `.editorconfig`
@@ -1234,14 +1327,60 @@ plugin is never compiled in CI, and no bot watches dependencies.
     The standard goatcorp workflow downloads the Dalamud dev distribution
     (`https://goatcorp.github.io/dalamud-distrib/latest.zip`) into `DALAMUD_HOME`
     and runs `dotnet build -c Release`; upload `latest.zip` as an artifact.
+  - **DONE 2026-10-28:**
+    - **The three settings are in the `.csproj`**, plus `plugin/.editorconfig`
+      (§5.3). NuGet vulnerability advisories stay warnings so a new one can't
+      block a release; Dependabot raises the update.
+    - **11 analyzer findings, fixed:**
+      - **CA1001**, which led to a real bug: unloading the plugin mid-link left
+        the loopback listener running for up to 3 minutes. `LinkService` is now
+        `IDisposable`, and `Plugin.Dispose()` stops the flow.
+      - **CA1305:** an invariant-culture number badge.
+      - **CA1862:** ordinal case-insensitive search.
+      - **CA1822/CA1859:** static helpers and list parameters; `SiteBase` (an
+        alias for `Configuration.SiteUrl`) is gone.
+    - **`.github/workflows/plugin.yml`** runs on changes under `plugin/`, on
+      Linux as Kindred Nights' plugin job does: Dalamud into `DALAMUD_HOME`,
+      `EnableWindowsTargeting`, then a Release build, `dotnet format
+      --verify-no-changes` and the package uploaded as an artifact. Local
+      Debug and Release builds have 0 warnings; the package builds.
 
-- [ ] **6.4 Repo.** [low] [S] `.github/dependabot.yml` covering `npm`
+- [x] **6.4 Repo.** [low] [S] `.github/dependabot.yml` covering `npm`
   (`/frontend`), `composer` (`/backend`), `nuget` (`/plugin/TarotGen.Plugin`),
   and `github-actions`. CodeQL if the plan allows it.
+  - **DONE 2026-10-28:**
+    - **Dependabot:** weekly on Mondays; minors and patches grouped per
+      ecosystem, majors one by one (Kindred Nights' shape). TypeScript's major is
+      held (owner's rule), and the Font Awesome registry is declared. **Owner:**
+      add `FONTAWESOME_NPM_TOKEN` and `ESLINT_CONFIG_TOKEN` as *Dependabot*
+      secrets, or its npm job and CI on its PRs fail. Untested risk: the
+      `file:eslint-config` dependency is a git submodule Dependabot may not check
+      out; if its npm job errors on that, the shared config needs publishing as
+      a package.
+    - **CodeQL** (`.github/workflows/codeql.yml`; the repo is public, so free):
+      JavaScript/TypeScript, C# (build-mode none) and the workflows. CodeQL has
+      no PHP.
+    - **Also added:** a "Scripts" CI job running PSScriptAnalyzer
+      (`PSScriptAnalyzerSettings.psd1`, as in Kindred Nights) over the deploy
+      scripts. Its 12 findings are fixed:
+      - the scripts are now plain ASCII, so Windows PowerShell 5.1 reads them
+        without a BOM;
+      - the switches are passed into the functions instead of read through
+        script scope;
+      - `Publish-Bundles` became `Publish-Bundle`.
 
-- [ ] **6.5 "Kindred Nights"** was mentioned as a candidate linter; it is not a
+      The deploy harness confirmed `-SkipBuild`/`-NoBackup` still work. The
+      release job now waits for it too.
+
+- [x] **6.5 "Kindred Nights"** was mentioned as a candidate linter; it is not a
   tool I recognise. If it meant **Knip**, see §6.1. Otherwise, name the tool and
   evaluate it against the gaps above rather than adding it on principle.
+  - **Resolved 2026-10-28:** Kindred Nights is the owner's sibling repo
+    (`C:\Web Projects\Kindred Nights`), and its tooling was the reference:
+    - Its frontend already runs what §6.1 added (the accessibility lint plugin,
+      Stylelint with recommended Vue configs, a token check, `.nvmrc`).
+    - This repo took three things from it: Dependabot's shape, PSScriptAnalyzer
+      for the deploy scripts, and its Linux Dalamud build with `dotnet format`.
 
 ---
 
@@ -1477,18 +1616,16 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 
 1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
    first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
-   branches, stash.
-2. **Tooling that stops regressions (owner's order: tooling, dependencies, then
-   tests):** §6.1 Stylelint (enforces §4.6) + Knip +
-   `eslint-plugin-vuejs-accessibility`, §6.2 PHPStan extensions, §6.3 plugin CI
-   build, §6.4 Dependabot.
-3. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
+   branches, stash; add the two Dependabot secrets (§6.4).
+2. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
    vitest 5, happy-dom 21) one at a time; TypeScript 7 waits for Vue (owner);
    §7.4 plugin packages.
-4. **Tests, on the updated stack (PHPUnit too, if a newer one is out):** §8.1's
+3. **Tests, on the updated stack (PHPUnit too, if a newer one is out):** §8.1's
    next targets (account ownership, reading flows, plugin PKCE, the other admin
    controllers), §8.2, §8.4's remainder, then §8.3 component tests and §8.6
-   Playwright; §8.7 coverage with §6.1/§6.2.
+   Playwright; §8.7 coverage thresholds for the backend (the frontend floor is in,
+   §6.1) and raising both.
+4. **Open from §6.1:** keyboard favouriting (a design call).
 5. **Features:** §9.1 → §9.4 first.
 ---
 

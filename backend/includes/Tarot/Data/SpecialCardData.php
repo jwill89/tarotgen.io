@@ -26,7 +26,7 @@ class SpecialCardData extends AbstractData
      */
     public function retrieveMultiple(int $deck_id, array $card_ids): array
     {
-        if (empty($card_ids)) {
+        if ($card_ids === []) {
             return [];
         }
 

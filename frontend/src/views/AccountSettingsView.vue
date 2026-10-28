@@ -287,13 +287,14 @@ async function revokePluginToken(token: PluginToken) {
 
           <!-- Display name -->
           <div class="settings-panel mb-5">
-            <h2 class="title is-5">Display Name</h2>
+            <h2 id="settings-display-name" class="title is-5">Display Name</h2>
             <form @submit.prevent="saveName">
               <div class="field">
                 <div class="control has-icons-left">
                   <input
                     v-model="displayName"
                     class="input"
+                    aria-labelledby="settings-display-name"
                     type="text"
                     maxlength="30"
                     autocomplete="nickname"
@@ -451,6 +452,7 @@ async function revokePluginToken(token: PluginToken) {
                 <input
                   v-model="passkeyName"
                   class="input"
+                  aria-label="Passkey name"
                   type="text"
                   placeholder="Passkey name (e.g. MacBook, Phone)"
                   maxlength="50"
@@ -471,7 +473,7 @@ async function revokePluginToken(token: PluginToken) {
             <!-- Password login toggle -->
             <hr />
             <div class="field">
-              <label class="label">Password Login</label>
+              <span class="label">Password Login</span>
               <p class="mb-2 is-size-7 has-text-grey">
                 If you have at least one passkey, you can disable password login for extra security.
                 You can always re-enable it here. This does not affect Google sign-in.

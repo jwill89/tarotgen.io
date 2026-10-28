@@ -43,7 +43,7 @@ final class PasswordPolicy
         }
 
         // A single repeated character (e.g. "aaaaaaaaaaaa") is trivially weak.
-        if (preg_match('/^(.)\1+$/u', $password)) {
+        if (preg_match('/^(.)\1+$/u', $password) === 1) {
             return 'Password is too simple. Please choose a less predictable password.';
         }
 

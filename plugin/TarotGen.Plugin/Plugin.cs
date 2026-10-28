@@ -84,6 +84,7 @@ public sealed class Plugin : IDalamudPlugin
 
         this.mainWindow.Dispose();
 
+        this.linkService.Dispose();
         this.textures.Dispose();
         this.api.Dispose();
         this.http.Dispose();

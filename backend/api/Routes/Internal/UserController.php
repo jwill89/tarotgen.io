@@ -11,6 +11,7 @@ use Tarot\Repository\UserRepository;
 use Tarot\Service\AuthService;
 use Tarot\Service\TurnstileService;
 use Tarot\Utility\RateLimiter;
+use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 
 /**
@@ -93,7 +94,7 @@ class UserController extends AbstractController
         // In non-production, when no SMTP is configured the email can't be sent,
         // so surface the activation link directly to keep dev/testing usable.
         $isProduction = Env::isProduction();
-        if (!$isProduction && empty($result['emailed'])) {
+        if (!$isProduction && !($result['emailed'] ?? false)) {
             $payload['activation_link'] = $result['activation_link'] ?? null;
             $payload['message'] .= ' (Email is not configured in this environment — use the activation link below.)';
         }
@@ -169,8 +170,8 @@ class UserController extends AbstractController
         // SMTP is configured, so resets are testable without email.
         if (
             !Env::isProduction()
-            && !empty($result['exists'])
-            && empty($result['emailed'])
+            && $result['exists']
+            && !($result['emailed'] ?? false)
         ) {
             $payload['reset_link'] = $result['reset_link'] ?? null;
         }
@@ -263,7 +264,7 @@ class UserController extends AbstractController
         $params     = $this->parsedBody($request);
         $email      = (string)($params['email'] ?? '');
         $password   = (string)($params['password'] ?? '');
-        $rememberMe = !empty($params['remember_me']);
+        $rememberMe = Input::bool($params['remember_me'] ?? null);
 
         // Bot/abuse guard: when Turnstile is configured, a valid challenge token
         // is required before we even check credentials.

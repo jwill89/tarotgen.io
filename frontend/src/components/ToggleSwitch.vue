@@ -7,12 +7,17 @@
  *
  *   <ToggleSwitch v-model="flag">Hide my display name</ToggleSwitch>
  */
-import { useId } from 'vue'
+import { computed, useId } from 'vue'
 import { SwitchRoot, SwitchThumb } from 'reka-ui'
 
 const model = defineModel<boolean>({ default: false })
-defineProps<{ compact?: boolean }>()
-const id = useId()
+const props = defineProps<{
+  compact?: boolean
+  /** The switch's id, for a form `<label for>` elsewhere; generated otherwise. */
+  id?: string
+}>()
+const generatedId = useId()
+const id = computed(() => props.id ?? generatedId)
 </script>
 
 <template>

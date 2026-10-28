@@ -12,10 +12,10 @@
  * responses (see og.php for shared reading links).
  */
 
-export const SITE_URL = 'https://tarotgen.io'
+const SITE_URL = 'https://tarotgen.io'
 
 /** Site-wide fallback, kept in sync with index.html's static description. */
-export const DEFAULT_DESCRIPTION =
+const DEFAULT_DESCRIPTION =
   'Draw your own tarot spreads! Select one of various decks, draw a specific spread or freely choose a number of cards, then draw! Tools for tarot readers to share their craft online!'
 
 function upsertMetaByName(name: string, content: string): void {

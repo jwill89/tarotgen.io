@@ -65,7 +65,7 @@ class GoogleAuthController extends AbstractController
         }
 
         // For 'link', the user must already be logged in.
-        if ($intent === 'link' && empty($_SESSION['user_id'])) {
+        if ($intent === 'link' && Session::userId() === null) {
             return $response->withJson(['error' => 'You must be logged in to link a Google account.'], 401);
         }
 
@@ -219,7 +219,7 @@ class GoogleAuthController extends AbstractController
 
         if ($user === null) {
             // No account exists — auto-register.
-            $displayName = $this->uniqueDisplayName($name ?: 'User');
+            $displayName = $this->uniqueDisplayName($name !== '' ? $name : 'User');
             $user = $this->users->createFromGoogle($email, $displayName, $googleId);
             if ($user === null) {
                 return $this->redirectToFrontend($response, '/login', 'Could not create your account.');
@@ -260,7 +260,7 @@ class GoogleAuthController extends AbstractController
             );
         }
 
-        $displayName = $this->uniqueDisplayName($name ?: 'User');
+        $displayName = $this->uniqueDisplayName($name !== '' ? $name : 'User');
         $user = $this->users->createFromGoogle($email, $displayName, $googleId);
         if ($user === null) {
             return $this->redirectToFrontend($response, '/register', 'Could not create your account.');

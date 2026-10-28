@@ -27,7 +27,7 @@ class CardImageService
     private const int THUMB_QUALITY = 80;
     private const int DISPLAY_QUALITY = 82;
 
-    private string $decksRoot;
+    private readonly string $decksRoot;
 
     /**
      * @param string|null $decksRoot Override the deck-images root (for tests).
@@ -73,7 +73,8 @@ class CardImageService
             @mkdir($thumbDir, 0o775, true);
         }
 
-        foreach (glob($dir . '/Card_*.png') ?: [] as $png) {
+        $pngs = glob($dir . '/Card_*.png');
+        foreach ($pngs === false ? [] : $pngs as $png) {
             $name = basename($png, '.png');
             $display = $dir . '/' . $name . '.webp';
             $thumb = $thumbDir . '/' . $name . '.webp';
@@ -104,7 +105,7 @@ class CardImageService
         $totals = ['decks' => count($deckIds), 'generated' => 0, 'skipped' => 0, 'failed' => 0];
 
         foreach ($deckIds as $deckId) {
-            $result = $this->generateForDeck((int)$deckId);
+            $result = $this->generateForDeck($deckId);
             $totals['generated'] += $result['generated'];
             $totals['skipped'] += $result['skipped'];
             $totals['failed'] += $result['failed'];

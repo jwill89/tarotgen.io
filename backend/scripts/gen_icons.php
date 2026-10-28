@@ -34,7 +34,6 @@ function resizeTransparent($src, int $size, string $path): void
     imagefill($dst, 0, 0, $transparent);
     imagecopyresampled($dst, $src, 0, 0, 0, 0, $size, $size, imagesx($src), imagesy($src));
     imagepng($dst, $path);
-    imagedestroy($dst);
     echo "wrote $path\n";
 }
 
@@ -70,7 +69,6 @@ function composite($src, int $size, float $inner, string $path): void
     imagecopyresampled($dst, $src, $offset, $offset, 0, 0, $target, $target, imagesx($src), imagesy($src));
 
     imagepng($dst, $path);
-    imagedestroy($dst);
     echo "wrote $path\n";
 }
 
@@ -81,7 +79,4 @@ resizeTransparent($tile, 192, $outDir . '/icon-192.png');
 // circular / rounded OS mask crops cleanly (no rounded-rect-in-a-circle artifact).
 composite($mark, 512, 0.92, $outDir . '/icon-maskable-512.png');
 composite($mark, 180, 0.86, $outDir . '/apple-touch-icon.png');
-
-imagedestroy($tile);
-imagedestroy($mark);
 echo "done\n";

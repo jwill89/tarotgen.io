@@ -93,6 +93,7 @@ async function handlePasskeyLogin() {
               <div class="field">
                 <label class="label" for="login-email">Email</label>
                 <div class="control has-icons-left">
+                  <!-- eslint-disable vuejs-accessibility/no-autofocus -- signing in is the page's only task -->
                   <input
                     id="login-email"
                     v-model="email"
@@ -103,6 +104,7 @@ async function handlePasskeyLogin() {
                     required
                     autofocus
                   />
+                  <!-- eslint-enable vuejs-accessibility/no-autofocus -->
                   <span class="icon is-small is-left"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']"
                   /></span>

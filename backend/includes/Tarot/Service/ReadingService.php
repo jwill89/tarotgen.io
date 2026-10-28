@@ -451,6 +451,7 @@ class ReadingService
         // Ids are 40 random bits: a collision is rare, but it used to surface as
         // a 500. Draw a fresh id and retry; any other database error, or a
         // collision on the last attempt, propagates as before (AUDIT §1.6).
+        $saved = null;
         for ($attempt = 1;; $attempt++) {
             $reading->setReadingId(bin2hex(random_bytes(5)));
             try {

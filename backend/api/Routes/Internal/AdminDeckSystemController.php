@@ -191,7 +191,7 @@ class AdminDeckSystemController extends AbstractController
                     'reversed_advice'   => $card['reversed_advice'] ?? null,
                 ];
             }
-            if (!empty($cardData)) {
+            if ($cardData !== []) {
                 $this->deckSystems->deleteCards($id);
                 $this->deckSystems->saveCards($id, $cardData);
             }

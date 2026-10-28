@@ -30,6 +30,8 @@ import Tooltip from '@/components/Tooltip.vue'
 const props = defineProps<{
   options: SpreadOption[]
   modelValue: SpreadOption | null
+  /** Put on the search input, so a `<label for>` names the combobox. */
+  id?: string
 }>()
 
 const emit = defineEmits<{
@@ -117,7 +119,12 @@ function onToggleFavorite(option: SpreadOption): void {
       <span class="icon is-small is-left">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['table-cells']" />
       </span>
-      <ComboboxInput class="input" :display-value="displayValue" placeholder="Search spreads..." />
+      <ComboboxInput
+        :id="id"
+        class="input"
+        :display-value="displayValue"
+        placeholder="Search spreads..."
+      />
       <button
         v-if="modelValue"
         type="button"
@@ -161,6 +168,7 @@ function onToggleFavorite(option: SpreadOption): void {
                 v-if="isLoggedIn"
                 :text="option.isFavorite ? 'Remove from favorites' : 'Add to favorites'"
               >
+                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite yet (AUDIT §6.1, open) -->
                 <span
                   class="myst-combobox__star ml-auto"
                   :class="{ 'is-active': option.isFavorite }"

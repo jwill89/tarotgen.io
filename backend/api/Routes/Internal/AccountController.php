@@ -124,7 +124,7 @@ class AccountController extends AbstractController
     )]
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $body       = $this->parsedBody($request);
         $fields     = [];
 
@@ -142,7 +142,7 @@ class AccountController extends AbstractController
         }
 
         // Password: explicit removal, or set a new one. Omit both to leave as-is.
-        if (!empty($body['remove_password'])) {
+        if (Input::bool($body['remove_password'] ?? null)) {
             $fields['password_hash'] = null;
         } elseif (array_key_exists('password', $body) && (string)$body['password'] !== '') {
             $password = (string)$body['password'];
@@ -184,7 +184,7 @@ class AccountController extends AbstractController
     )]
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
 
         if (!$this->readings->deleteOwned($reading_id, $this->userId($request))) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
@@ -547,7 +547,7 @@ class AccountController extends AbstractController
     )]
     public function removeFavorite(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $spreadType = (string)($args['spread_type'] ?? '');
+        $spreadType = $args['spread_type'] ?? '';
         $spreadId   = (int)($args['spread_id'] ?? 0);
 
         if (!in_array($spreadType, ['public', 'personal'], true) || $spreadId < 1) {

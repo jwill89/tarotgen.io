@@ -329,7 +329,7 @@ class AuthService
         $expires = Clock::in(self::ACTIVATION_TTL);
         $this->tokens->store($userId, self::TOKEN_ACTIVATION, self::hashToken($raw), $expires);
 
-        $base = rtrim((string)Env::get('APP_URL', 'https://tarotgen.io'), '/');
+        $base = rtrim(Env::get('APP_URL', 'https://tarotgen.io'), '/');
         return $base . '/activate?token=' . $raw;
     }
 
@@ -345,7 +345,7 @@ class AuthService
         $expires = Clock::in(self::RESET_TTL);
         $this->tokens->store($userId, self::TOKEN_PASSWORD_RESET, self::hashToken($raw), $expires);
 
-        $base = rtrim((string)Env::get('APP_URL', 'https://tarotgen.io'), '/');
+        $base = rtrim(Env::get('APP_URL', 'https://tarotgen.io'), '/');
         return $base . '/reset-password?token=' . $raw;
     }
 

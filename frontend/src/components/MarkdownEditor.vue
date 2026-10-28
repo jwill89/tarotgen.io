@@ -13,9 +13,12 @@ const props = withDefaults(
   defineProps<{
     modelValue: string
     placeholder?: string
+    /** id of the visible caption that names the editor (aria-labelledby). */
+    labelledby?: string
   }>(),
   {
     placeholder: 'Write your notes…',
+    labelledby: undefined,
   },
 )
 
@@ -41,6 +44,14 @@ function htmlToMd(html: string): string {
 
 const editor = useEditor({
   content: mdToHtml(props.modelValue),
+  // The editable region is a plain contenteditable: say what it is, and name it.
+  editorProps: {
+    attributes: {
+      role: 'textbox',
+      'aria-multiline': 'true',
+      ...(props.labelledby ? { 'aria-labelledby': props.labelledby } : {}),
+    },
+  },
   extensions: [
     StarterKit.configure({
       heading: { levels: [2, 3] },
@@ -230,7 +241,7 @@ function setLink() {
 .wysiwyg-toolbar .button.is-active {
   background-color: var(--bulma-link);
   border-color: transparent;
-  color: #fff;
+  color: white;
 }
 
 .wysiwyg-content {

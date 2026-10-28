@@ -78,7 +78,7 @@ readonly class PendingSpreadRepository
             $this->db->commit();
 
             return $spread;
-        } catch (Throwable $e) {
+        } catch (Throwable) {
             if ($this->db->inTransaction()) {
                 $this->db->rollBack();
             }

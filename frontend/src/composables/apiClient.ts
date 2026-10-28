@@ -11,7 +11,7 @@ export const NETWORK_ERROR_MESSAGE = 'Network error. Please check your connectio
  * Pull a human-readable message out of an already-parsed response body. The
  * backend returns `{ "error": "..." }` bodies; fall back when it's missing.
  */
-export function messageFromBody(body: unknown, fallback: string): string {
+function messageFromBody(body: unknown, fallback: string): string {
   if (body && typeof body === 'object') {
     const err = (body as { error?: unknown }).error
     if (typeof err === 'string' && err.trim() !== '') {

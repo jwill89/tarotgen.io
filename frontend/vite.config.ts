@@ -66,6 +66,18 @@ export default defineConfig({
     include: ['src/**/*.spec.ts'],
     restoreMocks: true,
     unstubGlobals: true,
+    // `npm run test:coverage`. Measured over all of src, untested files included,
+    // so the numbers say how much of the app the specs reach.
+    coverage: {
+      provider: 'v8',
+      include: ['src/**/*.{ts,vue}'],
+      exclude: ['src/__tests__/**', 'src/types/**', 'src/**/*.d.ts'],
+      reporter: ['text-summary', 'html'],
+      // The floor, a little under what the specs reached when coverage was first
+      // measured (2026-10-28: 10.5 / 6.3 / 12.1 / 10.0%). Raise it as specs land;
+      // never lower it.
+      thresholds: { statements: 10, branches: 6, functions: 12, lines: 10 },
+    },
   },
   build: {
     outDir: 'dist',

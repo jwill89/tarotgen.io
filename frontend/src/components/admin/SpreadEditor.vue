@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import type { Spread, SpreadPosition } from '@/types'
 import { renderMarkdown } from '@/utils/markdown'
 import BaseModal from '@/components/BaseModal.vue'
@@ -10,6 +10,7 @@ import type { SpreadSlotBase } from '@/components/spreadCanvas'
 const props = withDefaults(defineProps<{ spread: Spread | null; saveLabel?: string }>(), {
   saveLabel: 'Save Spread',
 })
+const uid = useId()
 const emit = defineEmits<{
   save: [
     payload: { name: string; description: string; card_count: number; positions: SpreadPosition[] },
@@ -115,28 +116,37 @@ defineExpose({
     <div class="columns">
       <div class="column is-8">
         <div class="field">
-          <label class="label">Spread Name</label>
-          <input v-model="name" class="input" placeholder="e.g. Celtic Cross" />
+          <label :for="uid + '-name'" class="label">Spread Name</label>
+          <input :id="uid + '-name'" v-model="name" class="input" placeholder="e.g. Celtic Cross" />
         </div>
       </div>
       <div class="column is-4">
         <div class="field">
-          <label class="label">Number of Cards</label>
-          <input v-model.number="cardCount" class="input" type="number" min="1" max="78" />
+          <label :for="uid + '-count'" class="label">Number of Cards</label>
+          <input
+            :id="uid + '-count'"
+            v-model.number="cardCount"
+            class="input"
+            type="number"
+            min="1"
+            max="78"
+          />
         </div>
       </div>
     </div>
 
     <div class="field">
-      <label class="label">
-        Description (Markdown)
+      <label :for="uid + '-description'" class="label">
+        <span :id="uid + '-description-caption'">Description (Markdown)</span>
         <button class="button is-small is-text ml-2" @click="showPreview = !showPreview">
           {{ showPreview ? 'Edit' : 'Preview' }}
         </button>
       </label>
       <textarea
         v-if="!showPreview"
+        :id="uid + '-description'"
         v-model="description"
+        :aria-labelledby="uid + '-description-caption'"
         class="textarea"
         rows="5"
         placeholder="Describe the spread. Markdown is supported."
@@ -159,8 +169,9 @@ defineExpose({
           @close="close"
         >
           <div v-if="item" class="field">
-            <label class="label">Position Title</label>
+            <label :for="uid + '-position-title'" class="label">Position Title</label>
             <input
+              :id="uid + '-position-title'"
               v-model="item.title"
               class="input"
               placeholder="e.g. The Present"
@@ -199,7 +210,7 @@ defineExpose({
   font-size: 0.62rem;
   line-height: 1.1;
   text-align: center;
-  color: #fff;
+  color: white;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   overflow: hidden;
   max-height: 2.4em;

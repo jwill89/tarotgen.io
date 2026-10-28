@@ -58,13 +58,14 @@ async function doLogout() {
               </router-link>
             </div>
             <div class="column is-3">
-              <a class="box home-action has-text-centered" @click="doLogout">
+              <!-- An action, not a link: a button, so the keyboard can reach it. -->
+              <button type="button" class="box home-action has-text-centered" @click="doLogout">
                 <span class="icon is-large has-text-danger">
                   <FontAwesomeIcon :icon="byPrefixAndName.fad['right-from-bracket']" size="2x" />
                 </span>
                 <p class="title is-4 mt-3">Logout</p>
                 <p class="subtitle is-6">Sign out of your account</p>
-              </a>
+              </button>
             </div>
           </div>
         </div>

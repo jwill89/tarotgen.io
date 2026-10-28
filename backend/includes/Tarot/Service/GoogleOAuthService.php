@@ -75,21 +75,20 @@ class GoogleOAuthService
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200 || !is_string($response)) {
             return null;
         }
 
         $data = json_decode($response, true);
-        if (!is_array($data) || empty($data['access_token'])) {
+        if (!is_array($data) || !is_string($data['access_token'] ?? null) || $data['access_token'] === '') {
             return null;
         }
 
         // Normalize to the documented shape rather than passing Google's raw,
         // loosely-typed payload upward.
         return [
-            'access_token' => (string)$data['access_token'],
+            'access_token' => $data['access_token'],
             'id_token'     => (string)($data['id_token'] ?? ''),
         ];
     }
@@ -113,20 +112,23 @@ class GoogleOAuthService
 
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
 
         if ($httpCode !== 200 || !is_string($response)) {
             return null;
         }
 
         $data = json_decode($response, true);
-        if (!is_array($data) || empty($data['sub']) || empty($data['email'])) {
+        if (
+            !is_array($data)
+            || !is_string($data['sub'] ?? null) || $data['sub'] === ''
+            || !is_string($data['email'] ?? null) || $data['email'] === ''
+        ) {
             return null;
         }
 
         return [
-            'sub'            => (string)$data['sub'],
-            'email'          => (string)$data['email'],
+            'sub'            => $data['sub'],
+            'email'          => $data['email'],
             'email_verified' => (bool)($data['email_verified'] ?? false),
             'name'           => (string)($data['name'] ?? ''),
             'picture'        => (string)($data['picture'] ?? ''),

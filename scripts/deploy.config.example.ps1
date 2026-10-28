@@ -1,5 +1,5 @@
 # Deploy configuration TEMPLATE. Copy this file to `deploy.config.ps1` (which is
-# untracked — see .gitignore) and fill in your values. scripts/deploy.ps1
+# untracked - see .gitignore) and fill in your values. scripts/deploy.ps1
 # dot-sources deploy.config.ps1 to resolve every environment-specific setting
 # when it isn't passed as a -param or set via the matching $env:DEPLOY_* variable.
 #
@@ -7,6 +7,9 @@
 #   1. the script -parameter (e.g. -VpsHost, -WebRoot)
 #   2. the environment variable (e.g. $env:DEPLOY_VPS_HOST, $env:DEPLOY_WEB_ROOT)
 #   3. the $Deploy* value below (this file's copy)
+[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseDeclaredVarsMoreThanAssignments', '', Justification = 'deploy.ps1 dot-sources this file and reads the four')]
+param()
+
 $DeployVpsHost = '<your-droplet-ip-or-hostname>'
 $DeployVpsUser = '<ssh-user>'                     # e.g. root or a deploy user
 $DeployKeyPath = '<path-to-your-deploy-key.ppk>'

@@ -17,3 +17,12 @@ parameters:
         - api
         # tests/Unit predates this and isn't clean yet; the HTTP tests are.
         - tests/Http
+    # phpstan-strict-rules, phpstan-deprecation-rules and phpstan-phpunit load
+    # through phpstan/extension-installer (AUDIT §6.2).
+    ignoreErrors:
+        # PHPUnit's assertions are static methods that its own docs call as
+        # $this->assertSame(); strict-rules' "static via instance" check stays on
+        # for application code.
+        -
+            identifier: staticMethod.dynamicCall
+            path: tests/*

@@ -134,7 +134,10 @@ class PasskeyController extends AbstractController
         $body = $this->parsedBody($request);
         $clientDataJSON   = self::base64UrlDecode((string)($body['clientDataJSON'] ?? ''));
         $attestationObject = self::base64UrlDecode((string)($body['attestationObject'] ?? ''));
-        $name = Input::string($body['name'] ?? 'My Passkey', 50) ?: 'My Passkey';
+        $name = Input::string($body['name'] ?? 'My Passkey', 50);
+        if ($name === '') {
+            $name = 'My Passkey';
+        }
 
         if ($clientDataJSON === '' || $attestationObject === '') {
             return $response->withJson(['error' => 'Missing attestation data.'], 400);
@@ -547,6 +550,8 @@ class PasskeyController extends AbstractController
 
     private static function base64UrlDecode(string $data): string
     {
-        return base64_decode(strtr($data, '-_', '+/') . str_repeat('=', (4 - strlen($data) % 4) % 4));
+        $decoded = base64_decode(strtr($data, '-_', '+/') . str_repeat('=', (4 - strlen($data) % 4) % 4), true);
+
+        return $decoded === false ? '' : $decoded;
     }
 }

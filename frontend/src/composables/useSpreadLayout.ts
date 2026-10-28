@@ -13,7 +13,7 @@ import type { SpreadPosition } from '@/types'
 // Card extents as a percentage of the (square) canvas.
 export const CARD_WIDTH_PCT = 11
 export const CARD_ASPECT = 8.6 / 5 // height / width
-export const CARD_HALF_W = CARD_WIDTH_PCT / 2
+const CARD_HALF_W = CARD_WIDTH_PCT / 2
 export const CARD_HALF_H = (CARD_WIDTH_PCT * CARD_ASPECT) / 2
 
 export interface SpreadFit {

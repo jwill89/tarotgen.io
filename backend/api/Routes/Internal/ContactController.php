@@ -75,7 +75,7 @@ class ContactController extends AbstractController
             );
         }
 
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             return $response->withJson(['error' => 'Please provide a valid email address.'], 400);
         }
 

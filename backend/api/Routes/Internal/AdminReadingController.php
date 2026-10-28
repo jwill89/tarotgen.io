@@ -69,7 +69,7 @@ class AdminReadingController extends AbstractController
     )]
     public function deleteReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
 
         if ($reading_id === '') {
             return $response->withJson(['error' => 'Invalid reading ID'], 400);

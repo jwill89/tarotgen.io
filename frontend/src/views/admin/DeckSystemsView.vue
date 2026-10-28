@@ -206,8 +206,11 @@ onMounted(() => {
       <div class="columns">
         <div class="column is-4">
           <div class="field">
-            <label class="label">Name <span class="has-text-danger">*</span></label>
+            <label for="admin-system-name" class="label"
+              >Name <span class="has-text-danger">*</span></label
+            >
             <input
+              id="admin-system-name"
               v-model="editingSystem.name"
               class="input"
               placeholder="e.g. Rider-Waite-Smith"
@@ -216,14 +219,27 @@ onMounted(() => {
         </div>
         <div class="column is-4">
           <div class="field">
-            <label class="label">Short Name <span class="has-text-danger">*</span></label>
-            <input v-model="editingSystem.short_name" class="input" placeholder="e.g. RWS" />
+            <label for="admin-system-short-name" class="label"
+              >Short Name <span class="has-text-danger">*</span></label
+            >
+            <input
+              id="admin-system-short-name"
+              v-model="editingSystem.short_name"
+              class="input"
+              placeholder="e.g. RWS"
+            />
           </div>
         </div>
         <div class="column is-4">
           <div class="field">
-            <label class="label">Total Cards <span class="has-text-danger">*</span></label>
-            <NumberField v-model="editingSystem.total_cards" :min="1" />
+            <label for="admin-system-total-cards" class="label"
+              >Total Cards <span class="has-text-danger">*</span></label
+            >
+            <NumberField
+              id="admin-system-total-cards"
+              v-model="editingSystem.total_cards"
+              :min="1"
+            />
           </div>
         </div>
       </div>

@@ -23,10 +23,10 @@
 
     -Target backend:
         Packs the runtime PHP payload (api/, includes/, scripts/, og.php,
-        openapi.json, composer.json, composer.lock, .htaccess) — NOT vendor/, db/,
+        openapi.json, composer.json, composer.lock, .htaccess) - NOT vendor/, db/,
         .env, assets/. Archives the current backend to .deploy/backend-prev.tgz
-        (rollback), swaps the new files into place, and — only if composer.lock
-        changed — runs `composer install --no-dev --optimize-autoloader`.
+        (rollback), swaps the new files into place, and - only if composer.lock
+        changed - runs `composer install --no-dev --optimize-autoloader`.
 
     -Target both: frontend and backend, in one upload and one install.
 
@@ -35,7 +35,7 @@
     Nothing goes live unless every bundle of the run built and uploaded intact.
     Unpacked files get the server's usual modes (644 files, 755 dirs, owned by the
     SSH user) and the extraction time as mtime, exactly as the old per-file pscp
-    upload left them — Windows tar records 0666 files and read-only dirs, which
+    upload left them - Windows tar records 0666 files and read-only dirs, which
     are deliberately not kept.
 
     Uses PuTTY's pscp/plink so the DigitalOcean .ppk key works directly. pscp/plink
@@ -110,7 +110,7 @@ function Fail($msg) { Write-Host "`nERROR: $msg" -ForegroundColor Red; exit 1 }
 trap { Write-Host "`nERROR: $($_.Exception.Message)" -ForegroundColor Red; exit 1 }
 
 # Run a remote command via plink. Retry once (after the 30s ufw window) ONLY when
-# the failure looks like a dropped/refused connection — not a genuine command
+# the failure looks like a dropped/refused connection - not a genuine command
 # error (so a real failure isn't misreported as a rate-limit and re-run).
 function Invoke-RemoteWithRetry([string]$cmd) {
     $out = & $plink -batch -i $KeyPath $remoteTarget $cmd 2>&1
@@ -141,7 +141,11 @@ function Invoke-Upload([string[]]$Files) {
     while (-not $proc.HasExited) {
         Start-Sleep -Seconds 1
         Write-Progress -Activity 'Uploading' -Status ("{0} - {1:mm\:ss} elapsed" -f ($Files -join ', '), $sw.Elapsed)
-        if ($sw.Elapsed.TotalSeconds -gt $maxSeconds) { try { $proc.Kill() } catch {}; $killed = $true; break }
+        if ($sw.Elapsed.TotalSeconds -gt $maxSeconds) {
+            try { $proc.Kill() } catch [System.InvalidOperationException] { Write-Verbose 'pscp had already exited.' }
+            $killed = $true
+            break
+        }
     }
     $proc.WaitForExit()
     $sw.Stop()
@@ -153,7 +157,7 @@ function Invoke-Upload([string[]]$Files) {
     return [pscustomobject]@{ Ok = ($code -eq 0); Err = $err; Elapsed = $sw.Elapsed }
 }
 
-# ── Resolve connection settings (param > env var > gitignored local config) ───
+# -- Resolve connection settings (param > env var > gitignored local config) ---
 # scripts/deploy.config.ps1 (gitignored) may set $DeployVpsHost / $DeployVpsUser /
 # $DeployKeyPath / $DeployWebRoot. Copy scripts/deploy.config.example.ps1 to set
 # yours. Keeping the host, key path, and web root out of the tracked script means
@@ -170,7 +174,7 @@ if (-not $VpsHost) { Fail "No deploy host configured. Pass -VpsHost, set `$env:D
 if (-not $KeyPath) { Fail "No SSH key path configured. Pass -KeyPath, set `$env:DEPLOY_KEY_PATH, or set `$DeployKeyPath in scripts/deploy.config.ps1." }
 if (-not $WebRoot) { Fail "No web root configured. Pass -WebRoot, set `$env:DEPLOY_WEB_ROOT, or set `$DeployWebRoot in scripts/deploy.config.ps1." }
 
-# ── Resolve paths & tools ─────────────────────────────────────────────────────
+# -- Resolve paths & tools -----------------------------------------------------
 $RepoRoot = Split-Path $PSScriptRoot -Parent
 $FrontendDir = Join-Path $RepoRoot "frontend"
 $BackendDir = Join-Path $RepoRoot "backend"
@@ -195,7 +199,7 @@ if (-not (Test-Path $tar)) { Fail "tar.exe not found at $tar (it ships with Wind
 
 $remoteTarget = "$VpsUser@$VpsHost"
 
-# ── Bundles ───────────────────────────────────────────────────────────────────
+# -- Bundles -------------------------------------------------------------------
 $BundleDir = Join-Path $env:TEMP 'tarotgen-deploy'
 Remove-Item $BundleDir -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $BundleDir | Out-Null
@@ -224,19 +228,17 @@ function Add-Bundle([string]$Name, [string]$Root, [string[]]$Items, [string]$Ins
         })
 }
 
-# ══ Frontend ══════════════════════════════════════════════════════════════════
-function Add-FrontendBundle {
+# == Frontend ==================================================================
+function Add-FrontendBundle([switch]$SkipBuild, [switch]$NoBackup) {
     if ($SkipBuild) {
         Write-Step "Skipping frontend build (-SkipBuild); using existing dist/"
-    }
-    else {
+    } else {
         Write-Step "Building frontend (vite)..."
         Push-Location $FrontendDir
         try {
             npm run build
             if ($LASTEXITCODE -ne 0) { Fail "Frontend build failed (exit $LASTEXITCODE). Live site untouched." }
-        }
-        finally { Pop-Location }
+        } finally { Pop-Location }
     }
     if (-not (Test-Path (Join-Path $DistDir "index.html"))) {
         Fail "dist/index.html is missing - nothing to deploy."
@@ -261,16 +263,16 @@ rm -rf dist.new
     Add-Bundle -Name 'frontend' -Root $FrontendDir -Items @('dist') -Install $install -Done $done
 }
 
-# ══ Backend ═══════════════════════════════════════════════════════════════════
+# == Backend ===================================================================
 # Runtime PHP payload (everything the live site executes); deliberately excludes
 # vendor/ (regenerated on the droplet), and the server-only db/, .env, assets/.
 # openapi.json is the committed API spec served at /api/openapi.json and rendered
-# by Scalar at /api/docs — it must ship even though swagger-php (which generates
+# by Scalar at /api/docs - it must ship even though swagger-php (which generates
 # it) is a dev-only dependency not installed in production. scripts/ ships because
-# cron runs scripts/retention.php (AUDIT §1.7); .htaccess keeps it off the web.
+# cron runs scripts/retention.php (AUDIT 1.7); .htaccess keeps it off the web.
 $BackendPayload = @('api', 'includes', 'scripts', 'og.php', 'openapi.json', 'composer.json', 'composer.lock', '.htaccess')
 
-function Add-BackendBundle {
+function Add-BackendBundle([switch]$NoBackup) {
     Write-Step "Packing backend payload..."
     foreach ($item in $BackendPayload) {
         if (-not (Test-Path (Join-Path $BackendDir $item))) { Fail "Backend payload item not found: $(Join-Path $BackendDir $item)" }
@@ -318,7 +320,7 @@ fi
     Add-Bundle -Name 'backend' -Root $BackendDir -Items $BackendPayload -Install $install -Done $done
 }
 
-# ══ Plugin (Dalamud custom repo) ══════════════════════════════════════════════
+# == Plugin (Dalamud custom repo) ==============================================
 # Publishes the FFXIV plugin to <WebRoot>/plugin as a self-hosted "custom repo":
 # latest.zip (the built plugin), icon.png, and repo.json (the pluginmaster users
 # add under Dalamud's /xlsettings). Independent of the site's dist/ and backend.
@@ -329,7 +331,7 @@ function Add-PluginBundle {
     Write-Step "Building plugin (Release)..."
     # Clean bin/obj first. DalamudPackager's incremental packaging can otherwise
     # leave a STALE latest.zip whose embedded manifest version lags the freshly
-    # generated repo.json — Dalamud then offers an update it can never reconcile
+    # generated repo.json - Dalamud then offers an update it can never reconcile
     # (the downloaded zip reports the old version). A clean build guarantees the
     # zip's manifest matches the version advertised in repo.json.
     $pluginRoot = Join-Path $RepoRoot 'plugin\TarotGen.Plugin'
@@ -350,7 +352,7 @@ function Add-PluginBundle {
     $m = Get-Content $manifestPath -Raw | ConvertFrom-Json
     # Cache-bust the download URL with the version. Cloudflare caches `latest.zip`
     # (a static extension) keyed by full URL, so after a new upload it keeps serving
-    # the STALE cached zip — repo.json then advertises the new version while the
+    # the STALE cached zip - repo.json then advertises the new version while the
     # downloaded zip reports the old one, and the in-game update can never reconcile.
     # A per-version query string gives each release a distinct cache key (a miss),
     # so Dalamud always pulls the matching zip fresh from the origin.
@@ -373,8 +375,8 @@ function Add-PluginBundle {
     # Move the live dir ASIDE first and delete it only AFTER the new one is in
     # place, so the window where plugin/ is absent shrinks from "duration of an
     # rm -rf" to the instant between two renames. (During any absence, a request
-    # for latest.zip 404s via .htaccess rather than returning the SPA shell — see
-    # backend/.htaccess — so Cloudflare can't cache a broken 200-HTML under the
+    # for latest.zip 404s via .htaccess rather than returning the SPA shell - see
+    # backend/.htaccess - so Cloudflare can't cache a broken 200-HTML under the
     # .zip URL.)
     $install = @"
 unpack tarotgen-plugin.tgz .plugin.new
@@ -392,8 +394,8 @@ echo 'plugin published'
     Add-Bundle -Name 'plugin' -Root $stageRoot -Items @('plugin') -Install $install -Done $done
 }
 
-# ══ Publish: one upload, one install ══════════════════════════════════════════
-function Publish-Bundles {
+# == Publish: one upload, one install ==========================================
+function Publish-Bundle {
     $files = @($Bundles | ForEach-Object { $_.File })
 
     # 1. Upload every bundle (1 connection).
@@ -456,12 +458,12 @@ The uploaded bundles are left in the SSH user's home directory. To roll back on 
     }
 }
 
-# ── Dispatch ──────────────────────────────────────────────────────────────────
+# -- Dispatch ------------------------------------------------------------------
 Write-Host "Deploy target: $Target -> $remoteTarget : $WebRoot" -ForegroundColor Yellow
 switch ($Target) {
-    'frontend' { Add-FrontendBundle }
-    'backend' { Add-BackendBundle }
+    'frontend' { Add-FrontendBundle -SkipBuild:$SkipBuild -NoBackup:$NoBackup }
+    'backend' { Add-BackendBundle -NoBackup:$NoBackup }
     'plugin' { Add-PluginBundle }
-    'both' { Add-FrontendBundle; Add-BackendBundle }
+    'both' { Add-FrontendBundle -SkipBuild:$SkipBuild -NoBackup:$NoBackup; Add-BackendBundle -NoBackup:$NoBackup }
 }
-Publish-Bundles
+Publish-Bundle

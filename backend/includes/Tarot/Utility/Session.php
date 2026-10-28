@@ -77,7 +77,7 @@ final class Session
 
         session_start();
 
-        if (!empty($_SESSION['remember_me'])) {
+        if (($_SESSION['remember_me'] ?? false) === true) {
             self::applySlidingExpiration();
         }
     }

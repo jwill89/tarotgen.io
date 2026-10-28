@@ -36,7 +36,6 @@ readonly class CardNameResolver
         $standard_ids = [];
         $special_ids  = [];
         foreach ($card_ids as $card_id) {
-            $card_id = (int)$card_id;
             if ($card_id > $systemTotal) {
                 $special_ids[] = $card_id;
             } else {
@@ -46,13 +45,13 @@ readonly class CardNameResolver
 
         $names = [];
 
-        if (!empty($standard_ids)) {
+        if ($standard_ids !== []) {
             foreach ($this->deckSystems->getCardsByIds($systemId, array_values(array_unique($standard_ids))) as $card) {
                 $names[$card->card_id] = $card->name;
             }
         }
 
-        if (!empty($special_ids)) {
+        if ($special_ids !== []) {
             foreach ($this->specialCards->getMultiple($deck_id, array_values(array_unique($special_ids))) as $card) {
                 $names[$card->card_id] = $card->name;
             }

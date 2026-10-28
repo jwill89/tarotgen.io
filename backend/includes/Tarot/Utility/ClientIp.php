@@ -89,14 +89,7 @@ final class ClientIp
     private static function isCloudflare(string $ip): bool
     {
         $ranges = str_contains($ip, ':') ? self::CLOUDFLARE_IPV6 : self::CLOUDFLARE_IPV4;
-
-        foreach ($ranges as $cidr) {
-            if (self::ipInCidr($ip, $cidr)) {
-                return true;
-            }
-        }
-
-        return false;
+        return array_any($ranges, fn($cidr) => self::ipInCidr($ip, $cidr));
     }
 
     /** Whether $ip (v4 or v6) falls within the $cidr block. */

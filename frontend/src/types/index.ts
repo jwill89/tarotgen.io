@@ -38,7 +38,6 @@ export type AccountReading = Schemas['Reading']
 export type ReadingSummary = Schemas['ReadingSummary']
 export type ReadingInfo = Schemas['ReadingInfo']
 export type DrawCard = Schemas['DrawCard']
-export type SpreadSnapshot = Schemas['SpreadSnapshot']
 
 export interface DeckSystemWithCards extends DeckSystem {
   cards: DeckSystemCard[]

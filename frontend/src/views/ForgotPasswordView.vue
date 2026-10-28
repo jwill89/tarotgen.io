@@ -41,6 +41,7 @@ async function submit() {
               <div class="field">
                 <label class="label" for="fp-email">Email</label>
                 <div class="control has-icons-left">
+                  <!-- eslint-disable vuejs-accessibility/no-autofocus -- the email is the page's only field -->
                   <input
                     id="fp-email"
                     v-model="email"
@@ -51,6 +52,7 @@ async function submit() {
                     required
                     autofocus
                   />
+                  <!-- eslint-enable vuejs-accessibility/no-autofocus -->
                   <span class="icon is-small is-left"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']"
                   /></span>

@@ -68,7 +68,7 @@ class ChangelogData extends AbstractData
             $params[':entry_date'] = $this->cleanDate($data['entry_date']);
         }
 
-        if (empty($fields)) {
+        if ($fields === []) {
             return null;
         }
 
@@ -99,7 +99,7 @@ class ChangelogData extends AbstractData
     {
         $date = trim((string)$date);
 
-        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) === 1) {
             return $date;
         }
 

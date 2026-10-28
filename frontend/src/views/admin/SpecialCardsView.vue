@@ -175,11 +175,11 @@ onMounted(fetchData)
     <div class="columns">
       <div class="column is-4">
         <div class="field">
-          <label class="label">Filter by Deck</label>
+          <label for="special-filter-by-deck" class="label">Filter by Deck</label>
           <BaseSelect
+            id="special-filter-by-deck"
             v-model="filterDeckModel"
             :options="filterDeckOptions"
-            aria-label="Filter by deck"
           />
         </div>
       </div>
@@ -264,50 +264,71 @@ onMounted(fetchData)
   >
     <template v-if="editing">
       <div class="field">
-        <label class="label">Deck</label>
+        <label for="special-deck" class="label">Deck</label>
         <BaseSelect
+          id="special-deck"
           v-model="editing.deck_id"
           :options="deckOptions"
           :disabled="!isNew"
           placeholder="Select a deck…"
-          aria-label="Deck"
         />
       </div>
       <div class="field">
-        <label class="label">Card ID</label>
-        <NumberField v-model="editing.card_id" :min="1" :disabled="!isNew" />
+        <label for="special-card-id" class="label">Card ID</label>
+        <NumberField id="special-card-id" v-model="editing.card_id" :min="1" :disabled="!isNew" />
       </div>
       <div class="field">
-        <label class="label">Name</label>
-        <input v-model="editing.name" class="input" />
+        <label for="special-name" class="label">Name</label>
+        <input id="special-name" v-model="editing.name" class="input" />
       </div>
       <div class="field">
-        <label class="label">Keywords</label>
-        <input v-model="editing.keywords" class="input" placeholder="comma, separated, keywords" />
-      </div>
-      <div class="field">
-        <label class="label">Meaning</label>
-        <textarea v-model="editing.meaning" class="textarea" rows="3"></textarea>
-      </div>
-      <div class="field">
-        <label class="label">Advice</label>
-        <textarea v-model="editing.advice" class="textarea" rows="3"></textarea>
-      </div>
-      <div class="field">
-        <label class="label">Keywords (Reversed)</label>
+        <label for="special-keywords" class="label">Keywords</label>
         <input
+          id="special-keywords"
+          v-model="editing.keywords"
+          class="input"
+          placeholder="comma, separated, keywords"
+        />
+      </div>
+      <div class="field">
+        <label for="special-meaning" class="label">Meaning</label>
+        <textarea
+          id="special-meaning"
+          v-model="editing.meaning"
+          class="textarea"
+          rows="3"
+        ></textarea>
+      </div>
+      <div class="field">
+        <label for="special-advice" class="label">Advice</label>
+        <textarea id="special-advice" v-model="editing.advice" class="textarea" rows="3"></textarea>
+      </div>
+      <div class="field">
+        <label for="special-keywords-reversed" class="label">Keywords (Reversed)</label>
+        <input
+          id="special-keywords-reversed"
           v-model="editing.keywords_reversed"
           class="input"
           placeholder="comma, separated, keywords"
         />
       </div>
       <div class="field">
-        <label class="label">Meaning (Reversed)</label>
-        <textarea v-model="editing.meaning_reversed" class="textarea" rows="3"></textarea>
+        <label for="special-meaning-reversed" class="label">Meaning (Reversed)</label>
+        <textarea
+          id="special-meaning-reversed"
+          v-model="editing.meaning_reversed"
+          class="textarea"
+          rows="3"
+        ></textarea>
       </div>
       <div class="field">
-        <label class="label">Advice (Reversed)</label>
-        <textarea v-model="editing.advice_reversed" class="textarea" rows="3"></textarea>
+        <label for="special-advice-reversed" class="label">Advice (Reversed)</label>
+        <textarea
+          id="special-advice-reversed"
+          v-model="editing.advice_reversed"
+          class="textarea"
+          rows="3"
+        ></textarea>
       </div>
     </template>
 

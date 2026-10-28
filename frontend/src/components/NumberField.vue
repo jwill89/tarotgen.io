@@ -20,10 +20,14 @@ withDefaults(
     max?: number
     step?: number
     disabled?: boolean
+    /** Put on the input, so a `<label for>` names the field. */
+    id?: string
+    /** The input's name when no `<label for>` points at it. */
+    ariaLabel?: string
   }>(),
   // min/max are intentionally undefined by default — Reka treats an absent
   // bound as unbounded, so there is no sensible numeric default to supply.
-  { step: 1, min: undefined, max: undefined },
+  { step: 1, min: undefined, max: undefined, id: undefined, ariaLabel: undefined },
 )
 </script>
 
@@ -37,7 +41,7 @@ withDefaults(
     class="myst-number"
   >
     <NumberFieldDecrement class="myst-number__btn" aria-label="Decrease">−</NumberFieldDecrement>
-    <NumberFieldInput class="myst-number__input" />
+    <NumberFieldInput :id="id" class="myst-number__input" :aria-label="ariaLabel" />
     <NumberFieldIncrement class="myst-number__btn" aria-label="Increase">+</NumberFieldIncrement>
   </NumberFieldRoot>
 </template>

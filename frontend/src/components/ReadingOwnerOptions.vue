@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref } from 'vue'
+import { ref, useId } from 'vue'
 import { useUser } from '@/composables/useUser'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 
 const props = withDefaults(defineProps<{ notes?: boolean }>(), { notes: false })
+const notesCaptionId = useId()
 
 const { isLoggedIn } = useUser()
 
@@ -86,12 +87,13 @@ defineExpose({ collect, reset })
     </div>
 
     <div v-if="notes" class="field">
-      <label class="label"
+      <span :id="notesCaptionId" class="label"
         >Reading Notes
-        <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></label
+        <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></span
       >
       <MarkdownEditor
         v-model="readingNotes"
+        :labelledby="notesCaptionId"
         placeholder="Write a detailed interpretation… Markdown is supported."
       />
       <p class="help">

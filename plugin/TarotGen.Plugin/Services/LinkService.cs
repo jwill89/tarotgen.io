@@ -20,7 +20,7 @@ namespace TarotGen.Plugin.Services;
 /// code for a token via POST /api/plugin/token. See plugin/README.md, "How it
 /// authenticates".
 /// </summary>
-public sealed class LinkService
+public sealed class LinkService : IDisposable
 {
     private const int TimeoutMinutes = 3;
 
@@ -65,6 +65,12 @@ public sealed class LinkService
         catch { /* stopping unblocks GetContextAsync */ }
         this.flowCts?.Cancel();
     }
+
+    /// <summary>
+    /// Stops an in-flight link when the plugin unloads. The flow's own
+    /// <c>finally</c> releases the listener and the token source.
+    /// </summary>
+    public void Dispose() => this.Cancel();
 
     public void Unlink()
     {

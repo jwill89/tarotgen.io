@@ -107,7 +107,7 @@ class ReadingData extends AbstractData
         }
         if (array_key_exists('hide_user', $fields)) {
             $set[] = 'hide_user = :hide_user';
-            $params[':hide_user'] = $fields['hide_user'] ? 1 : 0;
+            $params[':hide_user'] = (bool)$fields['hide_user'] ? 1 : 0;
         }
         if (array_key_exists('password_hash', $fields)) {
             $set[] = 'password_hash = :password_hash';

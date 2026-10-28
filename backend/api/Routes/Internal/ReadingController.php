@@ -69,7 +69,7 @@ class ReadingController extends AbstractController
         }
         $limiter->hit($ip);
 
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
         if (!($reading instanceof Reading)) {
@@ -82,7 +82,7 @@ class ReadingController extends AbstractController
 
         // Password gate: anyone who isn't the owner and hasn't already unlocked
         // this reading in their session gets only the locked stub.
-        if ($reading->password_protected && !$isOwner && empty($_SESSION['unlocked_readings'][$reading_id])) {
+        if ($reading->password_protected && !$isOwner && ($_SESSION['unlocked_readings'][$reading_id] ?? false) !== true) {
             return $response
                 ->withJson(['locked' => true, 'reading_name' => $reading->reading_name])
                 ->withHeader('Cache-Control', 'private, no-store');
@@ -135,7 +135,7 @@ class ReadingController extends AbstractController
         }
         $limiter->hit($ip);
 
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
         if (!($reading instanceof Reading)) {
@@ -282,7 +282,7 @@ class ReadingController extends AbstractController
     )]
     public function updatePlacement(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
         if (!($reading instanceof Reading)) {
@@ -327,7 +327,8 @@ class ReadingController extends AbstractController
         $existingSpread = is_array($info['spread'] ?? null) ? $info['spread'] : null;
         $spreadName = Input::string($params['spread_name'] ?? null, 100);
         if ($spreadName === '') {
-            $spreadName = (string)($existingSpread['name'] ?? '') ?: 'Free Draw Placement';
+            $existingName = (string)($existingSpread['name'] ?? '');
+            $spreadName = $existingName !== '' ? $existingName : 'Free Draw Placement';
         }
         $snappedPositions = [];
 
@@ -361,7 +362,7 @@ class ReadingController extends AbstractController
         $ownerId = $isOwner ? $userId : null;
         $updated = $this->readings->updateReadingInfo($reading_id, $updatedJson, $ownerId);
 
-        if (!$updated) {
+        if ($updated === null) {
             return $response->withJson(['error' => 'Failed to save placement.'], 500);
         }
 
@@ -398,7 +399,7 @@ class ReadingController extends AbstractController
     )]
     public function drawCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
         if (!($reading instanceof Reading)) {
@@ -469,7 +470,7 @@ class ReadingController extends AbstractController
     )]
     public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $reading_id = (string)($args['reading_id'] ?? '');
+        $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
         if (!($reading instanceof Reading)) {

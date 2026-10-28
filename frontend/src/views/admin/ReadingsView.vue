@@ -319,9 +319,13 @@ onMounted(fetchReadings)
       than the selected period.
     </p>
     <div class="field">
-      <label class="label">Older than</label>
+      <label for="admin-readings-older-than" class="label">Older than</label>
       <div class="control">
-        <BaseSelect v-model="cleanDays" :options="cleanDaySelectOptions" aria-label="Older than" />
+        <BaseSelect
+          id="admin-readings-older-than"
+          v-model="cleanDays"
+          :options="cleanDaySelectOptions"
+        />
       </div>
     </div>
     <template #footer>

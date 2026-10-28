@@ -20,12 +20,13 @@
  * caller with a card-count field can resync it.
  */
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch } from 'vue'
+import { ref, computed, watch, useId } from 'vue'
 import type { StyleValue } from 'vue'
 import type { SpreadSlotBase } from '@/components/spreadCanvas'
 import { usePanZoom } from '@/composables/usePanZoom'
 import { useLayoutTools } from '@/composables/useLayoutTools'
 import { useUndoRedo } from '@/composables/useUndoRedo'
+import { CARD_HALF_H } from '@/composables/useSpreadLayout'
 import {
   ToolbarRoot,
   ToolbarButton,
@@ -40,11 +41,8 @@ import {
 import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import Tooltip from '@/components/Tooltip.vue'
 
-// Half a card's height as a % of the (square) canvas — floats the control bar
-// just above the selected card.
-const CARD_HALF_H_PCT = 9.46
-
 const slots = defineModel<T[]>({ required: true })
+const trayCaptionId = useId()
 
 const props = withDefaults(
   defineProps<{
@@ -249,10 +247,10 @@ defineExpose({ resetHistory, clearSelection, setSelection })
   <div class="spread-canvas-editor">
     <!-- Tray of unplaced cards -->
     <div class="field">
-      <label class="label"
-        >Unplaced Cards <span class="has-text-grey is-size-7">{{ trayHint }}</span></label
+      <span :id="trayCaptionId" class="label"
+        >Unplaced Cards <span class="has-text-grey is-size-7">{{ trayHint }}</span></span
       >
-      <div class="spread-token-tray">
+      <div class="spread-token-tray" role="group" :aria-labelledby="trayCaptionId">
         <button
           v-for="i in unplacedIndexes"
           :key="'tray-' + i"
@@ -275,7 +273,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
       <!-- Layout toolbar: snap, undo/redo, center, align, distribute, zoom -->
       <div class="spread-tools is-flex is-flex-wrap-wrap is-align-items-center mb-2">
         <Tooltip text="Drag to move · shift-click to multi-select">
-          <label class="label mb-0 mr-1">Layout</label>
+          <span class="label mb-0 mr-1">Layout</span>
         </Tooltip>
         <span class="has-text-grey is-size-7 spread-tools-hint">{{ selectedCount }} selected</span>
 
@@ -534,7 +532,7 @@ defineExpose({ resetHistory, clearSelection, setSelection })
             <div
               v-if="selectedCount === 1 && isSelected(i)"
               class="card-controls"
-              :style="{ left: slots[i].x + '%', top: slots[i].y - CARD_HALF_H_PCT + '%' }"
+              :style="{ left: slots[i].x + '%', top: slots[i].y - CARD_HALF_H + '%' }"
               @pointerdown.stop
               @pointerup.stop
             >

@@ -12,7 +12,7 @@
  * SpreadCanvasEditor callers reset the canvas.
  */
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, nextTick } from 'vue'
+import { ref, computed, nextTick, useId } from 'vue'
 import {
   AccordionRoot,
   AccordionItem,
@@ -23,6 +23,12 @@ import {
 import type { DeckSystemCard } from '@/types'
 
 const cards = defineModel<DeckSystemCard[]>({ required: true })
+
+const uid = useId()
+/** A per-card field id: one editor lists many cards. */
+function fieldId(index: number, field: string): string {
+  return `${uid}-${String(index)}-${field}`
+}
 
 const props = withDefaults(
   defineProps<{
@@ -159,9 +165,12 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
 
       <AccordionContent class="deck-card-body">
         <div class="field">
-          <label class="label is-small">Card Title <span class="has-text-danger">*</span></label>
+          <label :for="fieldId(index, 'title')" class="label is-small"
+            >Card Title <span class="has-text-danger">*</span></label
+          >
           <div class="control">
             <input
+              :id="fieldId(index, 'title')"
               :ref="(el) => setTitleRef(el, index)"
               v-model="card.name"
               class="input"
@@ -174,9 +183,10 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
         <div class="columns is-multiline">
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Keywords</label>
+              <label :for="fieldId(index, 'keywords')" class="label is-small">Keywords</label>
               <div class="control">
                 <input
+                  :id="fieldId(index, 'keywords')"
                   v-model="card.keywords"
                   class="input"
                   type="text"
@@ -187,9 +197,12 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
           </div>
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Reversed Keywords</label>
+              <label :for="fieldId(index, 'reversed-keywords')" class="label is-small"
+                >Reversed Keywords</label
+              >
               <div class="control">
                 <input
+                  :id="fieldId(index, 'reversed-keywords')"
                   v-model="card.reversed_keywords"
                   class="input"
                   type="text"
@@ -200,9 +213,10 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
           </div>
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Meaning</label>
+              <label :for="fieldId(index, 'meaning')" class="label is-small">Meaning</label>
               <div class="control">
                 <textarea
+                  :id="fieldId(index, 'meaning')"
                   v-model="card.meaning"
                   class="textarea is-small"
                   placeholder="Meaning..."
@@ -213,9 +227,12 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
           </div>
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Reversed Meaning</label>
+              <label :for="fieldId(index, 'reversed-meaning')" class="label is-small"
+                >Reversed Meaning</label
+              >
               <div class="control">
                 <textarea
+                  :id="fieldId(index, 'reversed-meaning')"
                   v-model="card.reversed_meaning"
                   class="textarea is-small"
                   placeholder="Reversed meaning..."
@@ -226,9 +243,10 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
           </div>
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Advice</label>
+              <label :for="fieldId(index, 'advice')" class="label is-small">Advice</label>
               <div class="control">
                 <textarea
+                  :id="fieldId(index, 'advice')"
                   v-model="card.advice"
                   class="textarea is-small"
                   placeholder="Advice..."
@@ -239,9 +257,12 @@ defineExpose({ expandAll, collapseAll, revealFirstMissing })
           </div>
           <div class="column is-6">
             <div class="field">
-              <label class="label is-small">Reversed Advice</label>
+              <label :for="fieldId(index, 'reversed-advice')" class="label is-small"
+                >Reversed Advice</label
+              >
               <div class="control">
                 <textarea
+                  :id="fieldId(index, 'reversed-advice')"
                   v-model="card.reversed_advice"
                   class="textarea is-small"
                   placeholder="Reversed advice..."

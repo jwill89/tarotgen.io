@@ -66,14 +66,21 @@ jobs:
       - name: Type-check
         run: npm run type-check
 
-      - name: Lint
+      - name: Lint (ESLint, incl. template accessibility)
         run: npm run lint
+
+      - name: Lint styles (Stylelint, incl. the palette rule)
+        run: npm run lint:css
+
+      - name: Unused files, exports and dependencies (Knip)
+        run: npm run knip
 
       - name: Check formatting (Prettier)
         run: npm run format:check
 
-      - name: Unit tests
-        run: npm run test
+      # The same specs as `npm test`, plus the coverage floor in vite.config.ts.
+      - name: Unit tests + coverage
+        run: npm run test:coverage
 
       - name: Production build
         run: npm run build
@@ -91,8 +98,10 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.5'
-          extensions: mbstring, pdo, pdo_sqlite, curl, openssl, gmp
-          coverage: none
+          # The ext-* composer.json requires (composer install refuses without
+          # them), plus gmp and openssl for lbuchs/webauthn.
+          extensions: ctype, curl, filter, gd, mbstring, pdo, pdo_sqlite, session, simplexml, openssl, gmp
+          coverage: pcov
           tools: composer
 
       - name: Cache Composer dependencies
@@ -117,14 +126,41 @@ jobs:
           composer docs
           git diff --exit-code openapi.json
 
+      - name: composer.json is normalized
+        run: composer normalize --dry-run
+
+      - name: Dependencies declared and used (composer-unused, composer-require-checker)
+        run: composer deps:check
+
       - name: Coding standard (PHP CS Fixer / PER-CS 3.0)
         run: composer lint
 
-      - name: Unit tests (PHPUnit)
-        run: composer test
+      - name: Current PHP idioms, no dead code (Rector)
+        run: composer rector:check
+
+      # A threshold waits for AUDIT §8.7; the summary shows the trend.
+      - name: Tests (PHPUnit) + coverage
+        run: composer test -- --coverage-text --only-summary-for-coverage-text
 
       - name: Static analysis (PHPStan)
         run: composer stan
+
+  # The deploy scripts, with PSScriptAnalyzer as PSScriptAnalyzerSettings.psd1 sets it.
+  scripts:
+    name: Scripts (PSScriptAnalyzer)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Lint the PowerShell scripts
+        shell: pwsh
+        run: |
+          Install-PSResource PSScriptAnalyzer -Version 1.25.0 -Scope CurrentUser -TrustRepository -Quiet
+          $found = foreach ($f in 'scripts/deploy.ps1', 'scripts/deploy.config.example.ps1') {
+            Invoke-ScriptAnalyzer -Path $f -Settings PSScriptAnalyzerSettings.psd1
+          }
+          $found | Format-Table -AutoSize
+          if ($found) { exit 1 }
 
   # On a push to main, AFTER the gate passes, tag + release the project version
   # if it has no release yet. Tag = v<version> (frontend/package.json); release
@@ -133,7 +169,7 @@ jobs:
   # released is skipped, so ordinary pushes are a no-op.
   release:
     name: Tag + release (main, on version bump)
-    needs: [frontend, backend]
+    needs: [frontend, backend, scripts]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

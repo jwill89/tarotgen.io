@@ -80,9 +80,10 @@ function resetForm() {
 
         <form v-else @submit.prevent="submit">
           <div class="field">
-            <label class="label">Name</label>
+            <label for="contact-name" class="label">Name</label>
             <div class="control has-icons-left">
               <input
+                id="contact-name"
                 v-model="name"
                 class="input"
                 type="text"
@@ -97,9 +98,10 @@ function resetForm() {
           </div>
 
           <div class="field">
-            <label class="label">Email</label>
+            <label for="contact-email" class="label">Email</label>
             <div class="control has-icons-left">
               <input
+                id="contact-email"
                 v-model="email"
                 class="input"
                 type="email"
@@ -114,9 +116,10 @@ function resetForm() {
           </div>
 
           <div class="field">
-            <label class="label">Message</label>
+            <span id="contact-message" class="label">Message</span>
             <MarkdownEditor
               v-model="message"
+              labelledby="contact-message"
               placeholder="Write your message… Markdown is supported."
               :rows="6"
             />

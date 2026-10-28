@@ -34,6 +34,8 @@ defineProps<{
   placeholder?: string
   disabled?: boolean
   ariaLabel?: string
+  /** Put on the trigger button, so a `<label for>` names the select. */
+  id?: string
 }>()
 
 const model = defineModel<SelectValueType | null>()
@@ -41,7 +43,7 @@ const model = defineModel<SelectValueType | null>()
 
 <template>
   <SelectRoot v-model="model" :disabled="disabled">
-    <SelectTrigger class="myst-select" :aria-label="ariaLabel">
+    <SelectTrigger :id="id" class="myst-select" :aria-label="ariaLabel">
       <SelectValue :placeholder="placeholder ?? 'Select…'" />
       <SelectIcon class="myst-select__icon">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']" />

@@ -95,7 +95,7 @@ return function (ContainerInterface $container, bool $is_production): App {
     $app->add(function ($request, $handler) use ($allowed_origin) {
         $response = $handler->handle($request);
 
-        if ($allowed_origin) {
+        if (($allowed_origin ?? '') !== '') {
             $response = $response
                 ->withHeader('Access-Control-Allow-Origin', $allowed_origin)
                 ->withHeader('Access-Control-Allow-Credentials', 'true')

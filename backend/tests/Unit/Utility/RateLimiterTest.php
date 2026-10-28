@@ -32,12 +32,42 @@ final class RateLimiterTest extends TestCase
 
     private function removeBackingFile(): void
     {
-        // Mirrors RateLimiter::file(): the namespace is sanitised to [A-Za-z0-9_].
-        $safe = preg_replace('/[^A-Za-z0-9_]/', '_', $this->namespace) ?: 'default';
-        $file = sys_get_temp_dir() . '/tarot_rl_' . $safe . '.json';
+        $file = $this->backingFile();
         if (is_file($file)) {
             @unlink($file);
         }
+    }
+
+    /** Mirrors RateLimiter::file(): the namespace is sanitised to [A-Za-z0-9_]. */
+    private function backingFile(): string
+    {
+        $safe = preg_replace('/[^A-Za-z0-9_]/', '_', $this->namespace) ?: 'default';
+        return sys_get_temp_dir() . '/tarot_rl_' . $safe . '.json';
+    }
+
+    public function testMalformedEntriesInTheFileAreIgnored(): void
+    {
+        // The file sits in a shared temp dir: a stray or half-written entry must
+        // neither throw nor count — not even a numeric string a cast would accept.
+        file_put_contents($this->backingFile(), json_encode([
+            'good'    => ['count' => 5, 'first' => time()],
+            'stringy' => ['count' => '5', 'first' => time()],
+            'partial' => ['count' => 5],
+            'scalar'  => 7,
+        ]));
+        $limiter = new RateLimiter($this->namespace, 3, 3600);
+
+        $this->assertTrue($limiter->isLimited('good'));
+        $this->assertFalse($limiter->isLimited('stringy'));
+        $this->assertFalse($limiter->isLimited('partial'));
+        $this->assertFalse($limiter->isLimited('scalar'));
+
+        // The next write keeps only well-formed entries.
+        $limiter->hit('stringy');
+        $stored = json_decode((string)file_get_contents($this->backingFile()), true);
+        $this->assertIsArray($stored);
+        $this->assertSame(['good', 'stringy'], array_keys($stored));
+        $this->assertSame(1, $stored['stringy']['count']);
     }
 
     public function testUnknownKeyIsNotLimited(): void

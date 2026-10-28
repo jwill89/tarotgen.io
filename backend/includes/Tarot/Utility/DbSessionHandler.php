@@ -180,7 +180,7 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
      */
     private function lifetime(): int
     {
-        return !empty($_SESSION['remember_me'])
+        return ($_SESSION['remember_me'] ?? false) === true
             ? Session::REMEMBER_ME_LIFETIME
             : Session::DEFAULT_LIFETIME;
     }

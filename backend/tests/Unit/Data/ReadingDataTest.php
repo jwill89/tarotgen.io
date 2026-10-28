@@ -108,7 +108,7 @@ final class ReadingDataTest extends TestCase
     {
         $r = $this->make('notes1', 3);
         $r->setReadingNotes('# Heading\n\nSome **markdown** notes.');
-        $this->data->store($r, null);
+        $this->data->store($r);
 
         $loaded = $this->data->retrieve('notes1');
         $this->assertSame('# Heading\n\nSome **markdown** notes.', $loaded->reading_notes);
@@ -127,7 +127,7 @@ final class ReadingDataTest extends TestCase
         $this->assertTrue($this->data->verifyPassword('r2', 'opensesame'));
         $this->assertFalse($this->data->verifyPassword('r2', 'wrong'));
         // A reading with no password never verifies.
-        $this->data->store($this->make('r3', 1), null);
+        $this->data->store($this->make('r3', 1));
         $this->assertFalse($this->data->verifyPassword('r3', 'anything'));
     }
 
@@ -157,7 +157,7 @@ final class ReadingDataTest extends TestCase
 
     public function testMarkFinalIsScopedToTheOwnerAndIsIdempotent(): void
     {
-        $this->data->store($this->make('lockme', 5), null);
+        $this->data->store($this->make('lockme', 5));
         $this->assertFalseOrNullFinal('lockme');
 
         // Wrong owner can't lock it.
@@ -176,7 +176,7 @@ final class ReadingDataTest extends TestCase
 
     public function testUpdateReadingInfoAppendsDraw(): void
     {
-        $this->data->store($this->make('grow', 8), null);
+        $this->data->store($this->make('grow', 8));
 
         $updated = $this->data->updateReadingInfo(
             'grow',
@@ -195,7 +195,7 @@ final class ReadingDataTest extends TestCase
 
     public function testUpdateMetaIsScopedToTheOwner(): void
     {
-        $this->data->store($this->make('owned', 1), null);
+        $this->data->store($this->make('owned', 1));
 
         // Wrong owner → no update, null returned.
         $this->assertNull($this->data->updateMeta('owned', 99, ['reading_name' => 'Hacked']));

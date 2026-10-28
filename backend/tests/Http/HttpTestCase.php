@@ -223,7 +223,8 @@ abstract class HttpTestCase extends TestCase
     protected function createUser(string $email, bool $admin = false, bool $active = true): User
     {
         $users = $this->service(UserRepository::class);
-        $user = $users->create($email, strstr($email, '@', true) ?: $email, 'not-a-password-hash');
+        $local = strstr($email, '@', true);
+        $user = $users->create($email, $local === false ? $email : $local, 'not-a-password-hash');
         $this->assertNotNull($user);
 
         if ($active) {
@@ -296,7 +297,7 @@ abstract class HttpTestCase extends TestCase
     {
         if (isset($schema['$ref'])) {
             $ref = (string)$schema['$ref'];
-            $schema = self::spec()['components']['schemas'][substr($ref, strrpos($ref, '/') + 1)] ?? null;
+            $schema = self::spec()['components']['schemas'][basename($ref)] ?? null;
             if (!is_array($schema)) {
                 return ["no schema {$ref}"];
             }
@@ -358,7 +359,8 @@ abstract class HttpTestCase extends TestCase
     private function endRequest(): void
     {
         if (session_status() === PHP_SESSION_ACTIVE) {
-            $this->sessionId = session_id() ?: null;
+            $id = session_id();
+            $this->sessionId = $id === false || $id === '' ? null : $id;
             session_write_close();
         }
         $_SESSION = [];

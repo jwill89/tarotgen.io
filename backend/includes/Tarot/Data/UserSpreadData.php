@@ -107,7 +107,7 @@ class UserSpreadData extends AbstractData
             $params[':card_count'] = (int)$data['card_count'];
         }
 
-        if (empty($fields)) {
+        if ($fields === []) {
             return null;
         }
 

@@ -33,12 +33,12 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 | Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
 | Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
-| FE testing  | Vitest `^4` with `happy-dom` |
-| FE linting  | ESLint `^10` (flat config) + `eslint-plugin-vue` + `@vue/eslint-config-typescript` |
+| FE testing  | Vitest `^4` with `happy-dom`, coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`) |
+| FE linting  | ESLint `^10` (flat config: `eslint-plugin-vue`, `@vue/eslint-config-typescript`, `eslint-plugin-vuejs-accessibility`), Stylelint `^17` (recommended + Vue/SCSS, palette rule), Knip (unused code/deps), Prettier |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^13` |
-| BE linting  | `friendsofphp/php-cs-fixer` (PER-CS 3.0, `.php-cs-fixer.dist.php`), PHPStan `^2` (level 8, baselined) |
+| BE linting  | `friendsofphp/php-cs-fixer` (PER-CS 3.0, `.php-cs-fixer.dist.php`), PHPStan `^2` (level 8 + strict, deprecation and PHPUnit rules, baselined), Rector (PHP 8.5 + dead-code sets), composer-unused + composer-require-checker, composer-normalize |
 | Plugin      | **FFXIV Dalamud plugin** (`plugin/`) — C# / **.NET 10** (`net10.0-windows`), Dalamud **API 15** (`Dalamud.NET.Sdk/15.0.0`), ImGui via `Dalamud.Bindings.ImGui`. Windows-only, built independently — see §12. |
 | Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
 
@@ -59,6 +59,9 @@ flattens both into the live server's single flat web root.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
 │   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/eslint-config + project rules.
 │   ├── eslint-config/      # Git submodule holding that shared config (`git submodule update --init`).
+│   ├── stylelint.config.js # Stylelint: recommended configs + the palette rule (§5).
+│   ├── knip.ts             # Knip: unused files/exports/deps; entry points it can't infer.
+│   ├── .nvmrc              # Node version (CI reads it too).
 │   ├── tsconfig*.json       # TS project config.
 │   ├── .npmrc              # FontAwesome Pro registry token (gitignored).
 │   ├── public/             # PWA assets (manifest, sw, icons), robots.txt, sitemap.xml, fonts/.
@@ -82,8 +85,10 @@ flattens both into the live server's single flat web root.
 │   ├── .htaccess           # Web-root rewrites (api/ → static files → every page via og.php).
 │   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`.
 │   ├── phpunit.xml         # PHPUnit config (unit + http suites).
-│   ├── phpstan.neon        # PHPStan config (level 8); phpstan-baseline.neon holds pre-existing findings.
+│   ├── phpstan.neon        # PHPStan config (level 8 + strict rules); phpstan-baseline.neon holds pre-existing findings.
 │   ├── .php-cs-fixer.dist.php # Code style (PER-CS 3.0 + house tweaks): `composer lint` / `lint:fix`.
+│   ├── rector.php          # Rector: PHP 8.5 + dead-code sets (`composer rector`, `rector:check`).
+│   ├── composer-require-checker.json # Symbols used but deliberately not required (swagger-php, dev-only).
 │   ├── .env / .env.example # Environment (gitignored / template).
 │   ├── api/                # HTTP API entry point (Slim).
 │   │   ├── index.php       #   Bootstrap: env, session cookie params, container; runs app.php's app.
@@ -104,6 +109,9 @@ flattens both into the live server's single flat web root.
 │   └── TarotGen.Plugin/    #   C# project (net10.0-windows, Dalamud.NET.Sdk); packaged by DalamudPackager.
 │
 ├── scripts/deploy.ps1      # Build & deploy orchestration (frontend + backend + plugin).
+├── PSScriptAnalyzerSettings.psd1 # Lint settings for scripts/*.ps1 (CI "Scripts" job).
+├── .editorconfig           # Editor defaults for the repo (plugin/.editorconfig adds the C# rules).
+├── .github/                # CI, plugin, CodeQL workflows; dependabot.yml.
 ├── README.md               # Human-facing quick orientation.
 ├── .gitignore / .gitattributes
 └── (frontend/dist, */node_modules — generated)
@@ -265,13 +273,24 @@ little PHP per navigation):
   `src/assets/tokens.css` (the palette source of truth, mapped onto Bulma's own
   variables). Theme is dark (`data-theme="dark"` on `<html>`). A translucent
   palette colour is `color-mix(in srgb, var(--myst-gold) 12%, transparent)` —
-  never an `rgba()` copy of the token's channels. Bulma is a modular build
+  never an `rgba()` copy of the token's channels; Stylelint enforces it (no hex,
+  and outside `tokens.css` only pure white/black may be written as `rgb()`).
+  Bulma is a modular build
   (`src/assets/bulma.scss`): only the modules in use, and only the dark theme's
   variables; a Bulma class that does nothing is probably a module that isn't
   imported (see that file's header).
 - **Admin list pages** sit in `components/admin/AdminListPage.vue` (column width,
   back-to-dashboard link, `PageHeader` with an `#actions` slot) and use
   `AdminSearchField` for the search box; the view keeps its own tables.
+- **Form labels:** every control has a name. Pair `<label for="x">` with the
+  control's `id` (views: a `view-field` prefix, as `login-email`; components:
+  ids from `useId()`, plus the row index inside a `v-for`). The custom controls
+  take an `id` and put it on their focusable element (`BaseSelect`, `NumberField`,
+  `ToggleSwitch`, `DeckComboBox`, `SpreadComboBox`); a caption over a group
+  (`SegmentedControl`, several inputs) or over `MarkdownEditor` is a
+  `<span class="label" :id>` the group or editor names with `aria-labelledby`.
+  `eslint-plugin-vuejs-accessibility` checks the templates; a label that points
+  into a component can only be checked in the browser.
 - **Interactive UI (Reka UI):** dialogs, menus, popovers, tooltips, comboboxes,
   selects, switches, segmented controls, number fields, disclosures, pagination,
   and toasts are Reka UI headless primitives wrapped in shared components
@@ -296,10 +315,13 @@ npm run dev            # Vite dev server :5173 (proxies /api and /assets to loca
 npm run build          # production build to frontend/dist/
 npm run preview        # preview the production build
 npm run type-check     # vue-tsc on tsconfig.app.json + tsconfig.node.json (the root tsconfig only lists references)
-npm run lint           # eslint . (flat config; lints src/ TS + Vue SFCs)
+npm run lint           # eslint . (flat config; TS + Vue SFCs, incl. template accessibility)
 npm run lint:fix       # eslint . --fix
+npm run lint:css       # stylelint (styles in .css/.scss/.vue; incl. the palette rule, §5)
+npm run knip           # unused files, exports and dependencies (knip.ts)
 npm test               # vitest run (single pass)
 npm run test:watch     # vitest watch mode
+npm run test:coverage  # vitest + coverage; fails below the floor in vite.config.ts
 npm run gen:types      # regenerate src/types/api.generated.ts from backend/openapi.json
 ```
 
@@ -317,12 +339,18 @@ composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
 composer lint          # php-cs-fixer check (the code style CI enforces)
 composer lint:fix      # php-cs-fixer fix (apply it)
+composer rector        # Rector: current PHP idioms, dead code out (rector.php); rector:check lists without changing
+composer deps:check    # composer-unused + composer-require-checker (every package used, every use declared)
+composer normalize     # composer.json key order/format (CI runs it with --dry-run)
 composer docs          # regenerate backend/openapi.json from the swagger-php attributes
 vendor\bin\phpunit     # run PHPUnit directly
 ```
 
-> PHPStan runs at **level 8** with a baseline (`phpstan-baseline.neon`) capturing
-> a handful of pre-existing findings, so `composer stan` fails only on *new* issues.
+> PHPStan runs at **level 8** plus `phpstan-strict-rules` (no `empty()`, no short
+> ternary, boolean-only conditions, no useless casts), `phpstan-deprecation-rules`
+> and `phpstan-phpunit`, loaded by `phpstan/extension-installer`. A baseline
+> (`phpstan-baseline.neon`, one entry) holds a pre-existing finding, so
+> `composer stan` fails only on *new* issues.
 > The Data/Repository/Structure layers and controller route `$args` are fully
 > annotated (`array<string,mixed>`, `list<Structure>`, `array<string,string>`,
 > etc.), so keep new array params/returns typed. Regenerate the baseline with
@@ -336,6 +364,12 @@ to `http://localhost:80`, where `dev-router.php` reproduces the production
 disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 `/api` on port 80 (e.g. Apache) works too.
 
+> **swagger-php is dev-only on purpose.** PHP never loads an attribute's class
+> unless something reads the attribute, and only `composer docs` does, so
+> production runs without the package. `composer-require-checker.json`
+> whitelists its symbols by name (the tool matches exactly); a new `OA\*`
+> attribute type fails `composer deps:check` until it is added there.
+
 > **Gotcha — don't `import` files under `/assets` in Vue.** `/assets` is proxied
 > to the PHP host, so referencing e.g. the brand logo as `<img src="/assets/...">`
 > would make `@vitejs/plugin-vue` compile it into an asset-module import that
@@ -343,10 +377,14 @@ disk) for PHP's built-in server, which has no `.htaccess`. Any PHP host serving
 > string instead (`const brandLogo = '/assets/favicon.png'`; `:src="brandLogo"`).
 
 ### Always do after changes
-- After editing **frontend** TS/Vue: run `npm run type-check`, `npm run lint`, and
-  the relevant `npm test` specs.
-- After editing **backend** PHP: run `composer test`, `composer stan`, and
-  `composer lint` for style.
+- After editing **frontend** TS/Vue: run `npm run type-check`, `npm run lint`,
+  `npm run lint:css` (styles), `npm run knip`, and the relevant `npm test` specs.
+- After editing **backend** PHP: run `composer test`, `composer stan`,
+  `composer lint`, and `composer rector:check`; after touching `composer.json` or
+  adding a dependency, `composer deps:check` and `composer normalize`.
+- After editing **`scripts/*.ps1`**: `Invoke-ScriptAnalyzer -Path scripts/deploy.ps1
+  -Settings PSScriptAnalyzerSettings.psd1` (CI's "Scripts" job). Keep the scripts
+  ASCII, so Windows PowerShell 5.1 reads them without a BOM.
 
 ### Deployment
 The site runs on a DigitalOcean droplet (Apache + PHP 8.5) at
@@ -380,6 +418,13 @@ sums, then unpacks and swaps each target in. A bad checksum stops the run before
 anything is touched. Unpacked files get root ownership, 644/755 modes and the
 extraction time, as the old per-file upload left them. Per-file uploading cost
 ~0.15 s a file (240 files ≈ 35 s); the tarballs total ~0.8 MB.
+
+**Automation.** `.github/workflows/ci.yml` (frontend, backend, scripts, then the
+release tag), `plugin.yml` (when `plugin/` changes) and `codeql.yml` (frontend,
+plugin and workflows; CodeQL has no PHP). `.github/dependabot.yml` opens weekly
+grouped updates for npm, Composer, NuGet and Actions; TypeScript's major is held
+(see §2). Dependabot can't read Actions secrets: `FONTAWESOME_NPM_TOKEN` and
+`ESLINT_CONFIG_TOKEN` must also exist as **Dependabot** secrets.
 
 **Backups.** `/etc/cron.d/tarotgen` runs `/usr/local/sbin/tarotgen-backup` at 03:17
 UTC: an online `.backup` of the DB, integrity-checked, gzipped into
@@ -550,6 +595,13 @@ and it has its own version, package, and release channel.
   which emits `bin/Release/TarotGen.Plugin/latest.zip` + manifest. The plugin
   **version** comes from `<Version>` in the `.csproj` — bump it to make Dalamud
   offer an update to installed testers.
+- **Analysis:** every build runs the recommended .NET analyzers and the
+  `.editorconfig` style rules (`plugin/.editorconfig`), with **warnings as
+  errors** (NuGet vulnerability advisories excepted, so a new advisory can't block
+  a release). `dotnet format plugin/TarotGen.Plugin/TarotGen.Plugin.csproj
+  --verify-no-changes` checks the formatting. CI (`.github/workflows/plugin.yml`)
+  builds on Linux whenever `plugin/` changes: the Dalamud distribution goes into
+  `DALAMUD_HOME`, and `EnableWindowsTargeting` lets the Windows target build there.
 - **Distribute:** `scripts/deploy.ps1 -Target plugin` builds Release and uploads
   `latest.zip` / `icon.png` / a generated `repo.json` (the pluginmaster) to
   `$WebRoot/plugin`. Testers add `https://tarotgen.io/plugin/repo.json` as a

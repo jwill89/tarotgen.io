@@ -1,8 +1,9 @@
 import shared from '@jwill89/eslint-config'
+import vueA11y from 'eslint-plugin-vuejs-accessibility'
 
 // Shared ruleset (Vue 3 + TypeScript strictTypeChecked + Prettier) lives in the
-// @jwill89/eslint-config submodule (frontend/eslint-config). Only project-specific
-// ignores live here. Build/tooling config files are not linted.
+// @jwill89/eslint-config submodule (frontend/eslint-config). Project-specific
+// ignores and rules live here. Build/tooling config files are not linted.
 export default [
   {
     name: 'tarot/ignores',
@@ -14,10 +15,24 @@ export default [
       'src/types/api.generated.ts', // generated from the OpenAPI spec
       '*.config.ts',
       '*.config.js',
+      'knip.ts',
       'vitest.setup.ts',
     ],
   },
   ...shared,
+  // Template accessibility: labels, alt text, interactive roles (AUDIT §5.6/§6.1).
+  ...vueA11y.configs['flat/recommended'],
+  {
+    name: 'tarot/a11y',
+    rules: {
+      // A label works by wrapping its control or by `for`/`id`; the plugin's
+      // default demands both. Our forms use `for`/`id`.
+      'vuejs-accessibility/label-has-for': [
+        'error',
+        { required: { some: ['nesting', 'id'] }, allowChildren: true },
+      ],
+    },
+  },
   {
     // Every API call goes through composables/apiClient.ts, so a failure always
     // arrives as the server's message, a status and a network flag — not as a

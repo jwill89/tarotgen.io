@@ -69,6 +69,7 @@ async function submit() {
               <div class="field">
                 <label class="label" for="rp-password">New Password</label>
                 <div class="control has-icons-left">
+                  <!-- eslint-disable vuejs-accessibility/no-autofocus -- the new password is the page's first field -->
                   <input
                     id="rp-password"
                     v-model="password"
@@ -79,6 +80,7 @@ async function submit() {
                     required
                     autofocus
                   />
+                  <!-- eslint-enable vuejs-accessibility/no-autofocus -->
                   <span class="icon is-small is-left"
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']"
                   /></span>

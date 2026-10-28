@@ -6,12 +6,13 @@ namespace Tarot\Tests\Unit\Data;
 
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use PHPUnit\Framework\TestCase;
 use Tarot\Data\NormalizesPositions;
 use Tarot\Data\PendingSpreadData;
 
 #[CoversClass(PendingSpreadData::class)]
-#[CoversClass(NormalizesPositions::class)]
+#[CoversTrait(NormalizesPositions::class)]
 final class PendingSpreadDataTest extends TestCase
 {
     private PDO $pdo;
@@ -47,7 +48,7 @@ final class PendingSpreadDataTest extends TestCase
 
     public function testGuestSubmissionResolvesToGuest(): void
     {
-        $created = $this->data->store($this->payload(), null);
+        $created = $this->data->store($this->payload());
         $this->assertNotNull($created);
         $this->assertSame('Guest', $created->submitter);
         $this->assertNull($created->user_id);

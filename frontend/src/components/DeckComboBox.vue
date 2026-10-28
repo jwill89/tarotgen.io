@@ -28,6 +28,8 @@ import Tooltip from '@/components/Tooltip.vue'
 const props = defineProps<{
   decks: Deck[]
   modelValue: number | null
+  /** Put on the search input, so a `<label for>` names the combobox. */
+  id?: string
 }>()
 
 const emit = defineEmits<{
@@ -106,7 +108,12 @@ function onToggleFavorite(deck: Deck): void {
       <span class="icon is-small is-left">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['book']" />
       </span>
-      <ComboboxInput class="input" :display-value="displayValue" placeholder="Search decks..." />
+      <ComboboxInput
+        :id="id"
+        class="input"
+        :display-value="displayValue"
+        placeholder="Search decks..."
+      />
       <ComboboxTrigger class="myst-combobox__trigger" aria-label="Toggle decks">
         <FontAwesomeIcon :icon="byPrefixAndName.fas['chevron-down']" />
       </ComboboxTrigger>
@@ -138,6 +145,7 @@ function onToggleFavorite(deck: Deck): void {
                 v-if="isLoggedIn"
                 :text="isFavorite(deck.deck_id) ? 'Remove from favorites' : 'Add to favorites'"
               >
+                <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/interactive-supports-focus -- a focusable control can't sit inside a listbox option, so keyboard users can't favourite yet (AUDIT §6.1, open) -->
                 <span
                   class="myst-combobox__star ml-auto"
                   :class="{ 'is-active': isFavorite(deck.deck_id) }"

@@ -56,7 +56,7 @@ final class OriginGuardTest extends TestCase
     private function guardStatus(string $method, array $headers): int
     {
         $request = new ServerRequestFactory()->createServerRequest($method, self::SELF . '/api/thing')
-            ->withHeader('Host', (string)parse_url(self::SELF, PHP_URL_HOST));
+            ->withHeader('Host', parse_url(self::SELF, PHP_URL_HOST));
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
         }

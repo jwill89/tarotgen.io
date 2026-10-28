@@ -267,13 +267,14 @@ function skipSaveSpread() {
                 >
                   <template v-if="item">
                     <div class="field">
-                      <label class="label"
+                      <label for="freedraw-position-title" class="label"
                         >Position Title
                         <span class="has-text-grey is-size-7 has-text-weight-normal"
                           >(optional)</span
                         ></label
                       >
                       <input
+                        id="freedraw-position-title"
                         v-model="item.title"
                         class="input"
                         placeholder="e.g. The Present"
@@ -333,8 +334,9 @@ function skipSaveSpread() {
     </p>
 
     <div class="field">
-      <label class="label">Spread Name</label>
+      <label for="freedraw-spread-name" class="label">Spread Name</label>
       <input
+        id="freedraw-spread-name"
         v-model="spreadName"
         class="input"
         placeholder="e.g. My Three-Card Pull"
@@ -344,11 +346,12 @@ function skipSaveSpread() {
     </div>
 
     <div class="field">
-      <label class="label"
+      <label for="freedraw-description" class="label"
         >Description
         <span class="has-text-grey is-size-7 has-text-weight-normal">(optional)</span></label
       >
       <textarea
+        id="freedraw-description"
         v-model="spreadDescription"
         class="textarea"
         rows="3"
@@ -357,11 +360,11 @@ function skipSaveSpread() {
     </div>
 
     <div v-if="isLoggedIn" class="field">
-      <label class="label">Save As</label>
+      <span id="freedraw-save-as" class="label">Save As</span>
       <SegmentedControl
         v-model="spreadSaveMode"
         :options="spreadSaveModeOptions"
-        aria-label="Save as"
+        aria-labelledby="freedraw-save-as"
       />
       <p v-if="spreadSaveMode === 'personal'" class="help">Saved to your personal collection.</p>
       <p v-else class="help">Submitted for review to become a public spread.</p>

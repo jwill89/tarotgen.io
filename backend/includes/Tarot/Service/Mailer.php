@@ -102,19 +102,19 @@ class Mailer
 
             if ($mail->SMTPAuth) {
                 $mail->Username = (string)Env::get('SMTP_USER');
-                $mail->Password = (string)Env::get('SMTP_PASS', '');
+                $mail->Password = Env::get('SMTP_PASS', '');
             }
 
             // 'tls' (STARTTLS, port 587) or 'ssl' (implicit TLS, port 465).
-            $secure = strtolower((string)Env::get('SMTP_SECURE', 'tls'));
+            $secure = strtolower(Env::get('SMTP_SECURE', 'tls'));
             if ($secure === 'ssl') {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_SMTPS;
             } elseif ($secure === 'tls') {
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             }
 
-            $fromEmail = (string)Env::get('MAIL_FROM', (string)Env::get('SMTP_USER', 'noreply@tarotgen.io'));
-            $fromName  = (string)Env::get('MAIL_FROM_NAME', 'TarotGen.io');
+            $fromEmail = Env::get('MAIL_FROM', Env::get('SMTP_USER', 'noreply@tarotgen.io'));
+            $fromName  = Env::get('MAIL_FROM_NAME', 'TarotGen.io');
 
             $mail->setFrom($fromEmail, $fromName);
             $mail->addAddress($toEmail, $toName);

@@ -54,8 +54,6 @@ public sealed class TarotApiClient : IDisposable
 
     private static string ApiBase => Configuration.SiteUrl + "/api";
 
-    public string SiteBase => Configuration.SiteUrl;
-
     // ── Catalog (cached) ─────────────────────────────────────────────────────
 
     public async Task<IReadOnlyList<Deck>> GetDecksAsync(CancellationToken ct = default)

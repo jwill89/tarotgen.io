@@ -11,8 +11,7 @@ export interface CardReportInput {
   details: string
 }
 
-export type CardReportOutcome =
-  { ok: true; alreadyReported: boolean } | { ok: false; error: string }
+type CardReportOutcome = { ok: true; alreadyReported: boolean } | { ok: false; error: string }
 
 // Cards reported this session, keyed "deck:card". Module-level so the lightbox
 // still shows "Reported" after it is closed and reopened, instead of inviting a
