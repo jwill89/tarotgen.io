@@ -315,6 +315,24 @@ five-entry baseline; strict TS + typed ESLint.
     violations and both `/cdn-cgi/challenge-platform/…` and `/cdn-cgi/rum`
     requests. If anything is blocked, set `CSP_MODE=report-only` first, then
     fix.
+  - **Verified on prod 2026-10-28** (after the deploy): `/`, `/new`,
+    `/reading/{id}`, `/privacy`, `/index.html`, `/dist/index.html` all send an
+    **enforced** CSP with a different nonce each, no report-only header,
+    `no-cache`; `/reading/{id}` keeps its share meta. Cloudflare **stamps the
+    nonce**: in navigation HTML both its JS-detection inline script and the
+    analytics beacon carry the response's nonce (`MATCH`), and the detection
+    snippet passes it on — `d.nonce=…` on the inner iframe script and
+    `a.nonce=…` on the `/cdn-cgi/challenge-platform/…/main.js` loader — so the
+    whole chain is allowed. In a fresh browser tab: zero CSP violations on
+    home, New Draw, a reading + lightbox (WebP), login (Turnstile renders its
+    "Verify you are human" widget; it waits for a human click, as it should for
+    an automated browser), beacon loaded and `/cdn-cgi/rum` sent.
+  - **One gap found and fixed (needs a backend deploy):** Cloudflare injects the
+    beacon into `/api/docs` too, and that page's policy had no nonce, so the
+    beacon was blocked there (console error only, no user impact). The docs
+    route now issues its own nonce + the beacon host; verified locally (renders,
+    fonts, clean console, nonce fresh per request). Tick this item once
+    `/api/docs` on prod shows a clean console.
 
 - [x] **1.6 Reading-id collision is a 500.** [low] [S]
   - **Where:** `backend/includes/Tarot/Service/ReadingService.php:435` — 5 random

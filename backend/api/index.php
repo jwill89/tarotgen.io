@@ -34,6 +34,7 @@ use Routes\Middleware\OriginGuard;
 use Routes\Middleware\UserAuth;
 use Tarot\Config\Env;
 use Tarot\Config\Paths;
+use Tarot\Utility\ContentSecurityPolicy;
 
 // Load environment variables (from TAROT_DATA_DIR in production — outside the
 // web root — or the project root in dev; see Tarot\Config\Paths).
@@ -159,11 +160,16 @@ $app->get('/docs', function ($request, $response) {
         </html>
         HTML);
 
-    // Only that one script; Scalar injects its own styles and loads its fonts
-    // from fonts.scalar.com. No proxy.scalar.com: the API is same-origin.
-    $csp = "default-src 'none'; script-src {$bundle}; style-src 'unsafe-inline'; "
-        . "font-src https://fonts.scalar.com data:; img-src 'self' data:; connect-src 'self'; "
-        . "base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
+    // Only that one script — plus a nonce, because Cloudflare injects its analytics
+    // beacon and bot-detection script into this page too and stamps the header's
+    // nonce on them (as for every other page; see ContentSecurityPolicy). Scalar
+    // injects its own styles and loads its fonts from fonts.scalar.com. No
+    // proxy.scalar.com: the API is same-origin.
+    $nonce = ContentSecurityPolicy::nonce();
+    $csp = "default-src 'none'; "
+        . "script-src {$bundle} 'nonce-{$nonce}' https://static.cloudflareinsights.com; "
+        . "style-src 'unsafe-inline'; font-src https://fonts.scalar.com data:; img-src 'self' data:; "
+        . "connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'";
 
     return $response
         ->withHeader('Content-Type', 'text/html; charset=utf-8')
