@@ -94,7 +94,7 @@ class CardReportData extends AbstractData
         }
 
         $byReport = [];
-        foreach ($this->submissionsFor(array_map(static fn (CardReport $r): int => $r->report_id, $reports)) as $s) {
+        foreach ($this->submissionsFor(array_map(static fn(CardReport $r): int => $r->report_id, $reports)) as $s) {
             $byReport[$s->report_id][] = $s;
         }
 

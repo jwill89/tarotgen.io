@@ -38,7 +38,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
 | BE testing  | PHPUnit `^13` |
-| BE linting  | `squizlabs/php_codesniffer` (PSR-12, `phpcs.xml`), `friendsofphp/php-cs-fixer`, PHPStan `^2` (level 8, baselined) |
+| BE linting  | `friendsofphp/php-cs-fixer` (PER-CS 3.0, `.php-cs-fixer.dist.php`), PHPStan `^2` (level 8, baselined) |
 | Plugin      | **FFXIV Dalamud plugin** (`plugin/`) — C# / **.NET 10** (`net10.0-windows`), Dalamud **API 15** (`Dalamud.NET.Sdk/15.0.0`), ImGui via `Dalamud.Bindings.ImGui`. Windows-only, built independently — see §12. |
 | Misc tooling| Python scripts for deck image cleanup (`scripts/`) |
 
@@ -80,17 +80,19 @@ flattens both into the live server's single flat web root.
 │   ├── dev-router.php      # Local PHP built-in-server router (composer dev); mimics .htaccess.
 │   ├── .htaccess           # Web-root rewrites (api/ → static files → every page via og.php).
 │   ├── composer.json       # Backend deps, PSR-4 autoload, `composer test`/`stan`/`dev`.
-│   ├── phpunit.xml         # PHPUnit config (tests/Unit suite).
-│   ├── phpstan.neon        # PHPStan config (level 6); phpstan-baseline.neon holds pre-existing findings.
+│   ├── phpunit.xml         # PHPUnit config (unit + http suites).
+│   ├── phpstan.neon        # PHPStan config (level 8); phpstan-baseline.neon holds pre-existing findings.
+│   ├── .php-cs-fixer.dist.php # Code style (PER-CS 3.0 + house tweaks): `composer lint` / `lint:fix`.
 │   ├── .env / .env.example # Environment (gitignored / template).
 │   ├── api/                # HTTP API entry point (Slim).
-│   │   ├── index.php       #   Bootstrap: container, middleware, ALL route definitions.
+│   │   ├── index.php       #   Bootstrap: env, session cookie params, container; runs app.php's app.
+│   │   ├── app.php         #   Builds the app: middleware, error handling, ALL route definitions.
 │   │   ├── dependencies.php #  PHP-DI definitions (only PDO; rest autowired).
 │   │   ├── .htaccess       #   Rewrites non-file requests to index.php.
 │   │   └── Routes/{Internal,Middleware}/  # Controllers + AbstractController; UserAuth/AdminAuth/OriginGuard.
 │   ├── includes/Tarot/     # Domain code (PSR-4 `Tarot\`): Config, Database, Data,
 │   │                       #   Repository, Service, Structure, Exception, Utility.
-│   ├── tests/Unit/         # PHPUnit tests (namespace `Tarot\Tests\`).
+│   ├── tests/{Unit,Http}/  # PHPUnit tests (namespace `Tarot\Tests\`) — see §8.
 │   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, *.py).
 │   ├── db/                 # SQLite DB + one-off migration scripts (gitignored).
 │   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
@@ -133,10 +135,11 @@ HTTP Request
   in-memory SQLite PDO. Always use **prepared statements / bound params**.
 - **`PDO::class`** is the only manual container definition (see
   `api/dependencies.php`); it comes from `Connection::getInstance()`. Everything
-  else (repositories, services, controllers) is autowired.
+  else (repositories, services, controllers) is autowired. Sessions are stored
+  through the same PDO: `app.php` hands it to `Session::useDatabase()`.
 
 ### Routing
-All routes are declared in `api/index.php` (base path `/api`), grouped by
+All routes are declared in `api/app.php` (base path `/api`), grouped by
 resource. Admin routes are under `/admin` and guarded by `AdminAuth`; account
 self-service routes under `/account` are guarded by `UserAuth`. Trailing-slash
 variants are allowed via `[/]`.
@@ -153,12 +156,12 @@ Endpoints are documented with **swagger-php** attributes (`#[OA\...]`) on the
 controllers, plus `#[OA\Schema]` on the `Structure` classes. `composer docs`
 regenerates the committed `backend/openapi.json` (OpenAPI 3.1); it's served raw at
 `GET /api/openapi.json` and rendered by **Scalar** at `GET /api/docs` (both public,
-declared in `index.php`). `OpenApiSpecTest` fails if the committed spec drifts from
+served by `ApiDocsController`). `OpenApiSpecTest` fails if the committed spec drifts from
 the attributes — so **after changing a route or a response shape, run `composer docs`
 and commit `openapi.json`** (and `npm run gen:types` for the frontend types). Global
 metadata (info, server, security scheme, tags) lives in `api/Routes/OpenApiSpec.php`.
 The Scalar bundle is pinned to one version with Subresource Integrity, and `/api/docs`
-sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` in `api/index.php`); to
+sends its own enforced CSP (`SCALAR_BUNDLE` / `SCALAR_SRI` on `ApiDocsController`); to
 upgrade, change the version and recompute the sha384 of that exact file.
 
 ### Auth & security
@@ -279,8 +282,8 @@ composer install       # install PHP deps
 composer dev           # PHP built-in server on :80 via dev-router.php (the API backend)
 composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
-composer lint          # PHP_CodeSniffer (alias for `phpcs`)
-composer lint:fix      # php-cs-fixer fix (auto-fix code style)
+composer lint          # php-cs-fixer check (the code style CI enforces)
+composer lint:fix      # php-cs-fixer fix (apply it)
 composer docs          # regenerate backend/openapi.json from the swagger-php attributes
 vendor\bin\phpunit     # run PHPUnit directly
 ```
@@ -393,10 +396,21 @@ scripts/retention.php --dry-run`.
 - **Frontend (Vitest):** specs live in `src/__tests__/*.spec.ts`. Config in
   `vite.config.ts` (`environment: happy-dom`, `restoreMocks`, `unstubGlobals`,
   setup file `vitest.setup.ts`). Test composables and utils as units.
-- **Backend (PHPUnit):** tests in `tests/Unit/` under namespace
-  `Tarot\Tests\`. Config (`phpunit.xml`) treats warnings/deprecations/notices as
-  failures (`failOnWarning/Deprecation/Notice`) — keep tests clean. Service-layer
-  tests pass an **in-memory SQLite PDO** to Data classes for isolation.
+- **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites. Config
+  (`phpunit.xml`) treats warnings/deprecations/notices as failures
+  (`failOnWarning/Deprecation/Notice`) — keep tests clean.
+  - `tests/Unit/` — one class at a time. Service-layer tests pass an **in-memory
+    SQLite PDO** to Data classes for isolation.
+  - `tests/Http/` — whole requests through the real app: extend `HttpTestCase`,
+    which builds `api/app.php` on an in-memory database loaded from
+    `db/schema.sql` (foreign keys on) and acts as one browser, carrying the
+    session id from request to request (sessions really are stored, by
+    `DbSessionHandler`). Helpers: `get`/`post`/`request`, `assertJsonResponse`,
+    `createUser` + `signInAs` (no password hashing), `service()` for the
+    container, `rows()` for what landed in the DB, `setEnv()`. Env is blanked per
+    test (no SMTP, Turnstile or OAuth; not production) and each test gets its own
+    client IP so the file-backed rate limiters don't collide. Use these for
+    status codes, error bodies, auth and anything that crosses layers.
 - Add/extend tests when you change logic in services, repositories, composables,
   or utils.
 
@@ -427,7 +441,8 @@ scripts/retention.php --dry-run`.
 
 - **Match existing patterns.** New backend resource? Add a `Structure`, `Data`,
   `Repository`, optional `Service`, a `Controller` extending
-  `AbstractController`, and route group in `api/index.php`. New frontend feature?
+  `AbstractController`, a route group in `api/app.php`, and a `tests/Http` test
+  for its status codes and auth. New frontend feature?
   Add a `use*` composable + view/component and a route with appropriate `meta`.
 - **Layer discipline:** controllers don't touch SQL; SQL lives only in `Data`.
 - **Security first:** always use prepared statements; never trust client input;
@@ -438,7 +453,7 @@ scripts/retention.php --dry-run`.
   `CURRENT_TIMESTAMP` and the frontend (`utils/datetime.ts`) are UTC. Check with
   `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
 - **Comments** in this codebase explain *why*, not *what* — follow that style.
-- **PSR-4 / PSR-12** for PHP (run php-cs-fixer/phpcs). **Strict TypeScript**
+- **PSR-4 / PER-CS 3.0** for PHP (`composer lint:fix`). **Strict TypeScript**
   (`strict: true`) — keep `npm run type-check` clean.
 - Don't commit generated artifacts (`dist/`, `vendor/`, `node_modules/`,
   `.phpunit.cache`) or the local `.env`.
@@ -458,7 +473,7 @@ scripts/retention.php --dry-run`.
 
 | I want to…                          | Go to |
 |-------------------------------------|-------|
-| Add/modify an API endpoint          | `api/index.php` (route) + `api/Routes/Internal/*Controller.php` |
+| Add/modify an API endpoint          | `api/app.php` (route) + `api/Routes/Internal/*Controller.php` + `tests/Http/` |
 | Change DB queries                   | `includes/Tarot/Data/*Data.php` |
 | Add business logic                  | `includes/Tarot/Service/*Service.php` |
 | Add an entity shape (PHP)           | `includes/Tarot/Structure/*.php` |
@@ -469,7 +484,7 @@ scripts/retention.php --dry-run`.
 | Change/add a heading font           | `public/fonts/` + `src/assets/fonts.css` + `--myst-heading-font` in `src/assets/tokens.css` |
 | Change a DB schema                  | new `db/migrate_*.php` script |
 | Grant admin                         | `php scripts/make_admin.php <email>` |
-| Adjust auth/session/CSRF            | `api/index.php` + `api/Routes/Middleware/*` |
+| Adjust auth/session/CSRF            | `api/app.php` (middleware) + `api/index.php` (cookie params) + `api/Routes/Middleware/*` |
 
 ---
 
@@ -499,7 +514,7 @@ and it has its own version, package, and release channel.
   readings needs no auth; a linked account adds a per-account **Bearer token** for
   the account routes (`AccountAuth`), obtained through a browser loopback + PKCE
   flow on the site's `/authorize` page and stored DPAPI-encrypted. The endpoints
-  it uses are the `Plugin`/`Cards`-tagged routes in `api/index.php` (`/plugin/*`,
+  it uses are the `Plugin`/`Cards`-tagged routes in `api/app.php` (`/plugin/*`,
   `/account/tokens`, `/card-reports`). The chatless share relay (per-install
   client token, `plugin_clients` & co.) was removed; its tables were dropped in
   AUDIT §2.1 — a future relay gets a fresh design.

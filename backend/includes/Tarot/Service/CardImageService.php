@@ -45,10 +45,10 @@ class CardImageService
         $dir = $this->deckDir($deckId);
         $thumbs = $dir . '/thumbs';
         if (!is_dir($dir)) {
-            @mkdir($dir, 0775, true);
+            @mkdir($dir, 0o775, true);
         }
         if (!is_dir($thumbs)) {
-            @mkdir($thumbs, 0775, true);
+            @mkdir($thumbs, 0o775, true);
         }
     }
 
@@ -70,7 +70,7 @@ class CardImageService
 
         $thumbDir = $dir . '/thumbs';
         if (!is_dir($thumbDir)) {
-            @mkdir($thumbDir, 0775, true);
+            @mkdir($thumbDir, 0o775, true);
         }
 
         foreach (glob($dir . '/Card_*.png') ?: [] as $png) {

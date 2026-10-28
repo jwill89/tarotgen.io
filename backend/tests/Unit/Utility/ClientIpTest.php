@@ -20,7 +20,7 @@ final class ClientIpTest extends TestCase
 {
     private function request(string $remoteAddr, ?string $cfConnectingIp = null): ServerRequestInterface
     {
-        $request = (new ServerRequestFactory())->createServerRequest(
+        $request = new ServerRequestFactory()->createServerRequest(
             'GET',
             'http://tarotgen.io/api/readings/abc',
             $remoteAddr === '' ? [] : ['REMOTE_ADDR' => $remoteAddr]

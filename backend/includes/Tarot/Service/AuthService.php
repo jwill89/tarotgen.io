@@ -213,8 +213,10 @@ class AuthService
      * @return array{status:'ok'|'invalid'|'weak', error?:string}
      */
     public function resetPassword(
-        #[\SensitiveParameter] string $rawToken,
-        #[\SensitiveParameter] string $newPassword,
+        #[\SensitiveParameter]
+        string $rawToken,
+        #[\SensitiveParameter]
+        string $newPassword,
     ): array {
         $rawToken = trim($rawToken);
         if ($rawToken === '') {
@@ -279,8 +281,10 @@ class AuthService
      */
     public function changePassword(
         int $userId,
-        #[\SensitiveParameter] string $currentPassword,
-        #[\SensitiveParameter] string $newPassword,
+        #[\SensitiveParameter]
+        string $currentPassword,
+        #[\SensitiveParameter]
+        string $newPassword,
     ): array {
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($currentPassword, $hash)) {

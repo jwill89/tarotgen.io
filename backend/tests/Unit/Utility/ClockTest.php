@@ -67,7 +67,7 @@ final class ClockTest extends TestCase
     {
         // A real write path: registration stamps registered_at in PHP.
         $this->db->exec((string)file_get_contents(dirname(__DIR__, 3) . '/db/schema.sql'));
-        $user = (new UserData($this->db))->create('clock@example.test', 'Clock', 'not-a-real-hash');
+        $user = new UserData($this->db)->create('clock@example.test', 'Clock', 'not-a-real-hash');
 
         $this->assertNotNull($user);
         $this->assertLessThanOrEqual(2, $this->secondsFromSqliteNow($user->registered_at));

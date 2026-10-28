@@ -93,7 +93,7 @@ abstract class AbstractData
         array $allowed,
         array $where,
         array $intCols = [],
-        array $boolCols = []
+        array $boolCols = [],
     ): bool {
         $fields = [];
         $params = [];

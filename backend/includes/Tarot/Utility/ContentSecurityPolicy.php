@@ -12,7 +12,7 @@ namespace Tarot\Utility;
  * Cloudflare stamps the nonce it finds in this header onto what it injects. Our
  * own code needs none: the app is one external module script (AUDIT §1.5).
  *
- * /api/docs sends its own, narrower policy (api/index.php).
+ * /api/docs sends its own, narrower policy (Routes\Internal\ApiDocsController).
  */
 final class ContentSecurityPolicy
 {

@@ -54,7 +54,7 @@ final class StatsServiceTest extends TestCase
             'draw'    => [['card_id' => 1], ['card_id' => 2]],
         ]);
 
-        $overview = (new StatsService($this->pdo))->overview();
+        $overview = new StatsService($this->pdo)->overview();
 
         $this->assertSame(3, $overview['totals']['readings']);
         $this->assertSame(['freeDraw' => 1, 'spread' => 1, 'custom' => 1], $overview['byType']);
@@ -81,7 +81,7 @@ final class StatsServiceTest extends TestCase
         $this->pdo->exec('INSERT INTO spreads (spread_id) VALUES (1)');
         $this->pdo->exec('INSERT INTO users (user_id) VALUES (1), (2)');
 
-        $counts = (new StatsService($this->pdo))->counts();
+        $counts = new StatsService($this->pdo)->counts();
 
         $this->assertSame(3, $counts['deckSystems']);
         $this->assertSame(2, $counts['decks']);   // seeded in setUp
@@ -95,7 +95,7 @@ final class StatsServiceTest extends TestCase
 
     public function testOverviewHandlesNoReadings(): void
     {
-        $overview = (new StatsService($this->pdo))->overview();
+        $overview = new StatsService($this->pdo)->overview();
 
         $this->assertSame(0, $overview['totals']['readings']);
         $this->assertSame(['freeDraw' => 0, 'spread' => 0, 'custom' => 0], $overview['byType']);
@@ -109,7 +109,7 @@ final class StatsServiceTest extends TestCase
         // deck_id 99 has no row in decks.
         $this->insertReading('x', ['deck_id' => 99, 'draw' => [['card_id' => 1]]]);
 
-        $overview = (new StatsService($this->pdo))->overview();
+        $overview = new StatsService($this->pdo)->overview();
 
         $this->assertSame(99, $overview['topDecks'][0]['deck_id']);
         $this->assertSame('Deck #99', $overview['topDecks'][0]['name']);

@@ -5,6 +5,7 @@
 /backend/db/*
 !/backend/db/schema.sql
 /backend/.phpunit.cache/
+/backend/.php-cs-fixer.cache
 /backend/.env
 
 # Frontend (Vue) — generated deps + build output, private registry token

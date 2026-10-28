@@ -110,7 +110,7 @@ function withReadingShareMeta(string $template, string $id): string
         $image .= '?v=' . $mtime;
     }
 
-    $esc = static fn (string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
+    $esc = static fn(string $s): string => htmlspecialchars($s, ENT_QUOTES, 'UTF-8');
 
     // Strip the build's generic title + managed social tags, then inject our own.
     $template = preg_replace('#<title>.*?</title>#is', '', $template, 1) ?? $template;

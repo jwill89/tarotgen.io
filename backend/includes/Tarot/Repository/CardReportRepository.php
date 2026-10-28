@@ -18,7 +18,7 @@ readonly class CardReportRepository
         int $cardId,
         string $cardName,
         ?CardReportReason $reason,
-        string $details
+        string $details,
     ): void {
         $this->data->report($deckId, $cardId, $cardName, $reason?->value, $details);
     }

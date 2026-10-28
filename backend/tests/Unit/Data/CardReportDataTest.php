@@ -141,7 +141,7 @@ final class CardReportDataTest extends TestCase
 
         // Same-second reports fall back to insertion order, newest first.
         $details = array_map(
-            static fn (CardReportSubmission $s): string => $s->details,
+            static fn(CardReportSubmission $s): string => $s->details,
             $this->reports->get(false)[0]->submissions
         );
         $this->assertSame(['second', 'first'], $details);

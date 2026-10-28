@@ -48,7 +48,7 @@ class PluginTokenService
     public function createAuthorizationCode(
         int $userId,
         string $codeChallenge,
-        string $scope = self::DEFAULT_SCOPE
+        string $scope = self::DEFAULT_SCOPE,
     ): string {
         $code = bin2hex(random_bytes(32));
         $this->codes->store(
@@ -99,7 +99,7 @@ class PluginTokenService
     public function issueToken(
         int $userId,
         string $scope = self::DEFAULT_SCOPE,
-        string $label = 'TarotGen plugin'
+        string $label = 'TarotGen plugin',
     ): string {
         $token = self::TOKEN_PREFIX . bin2hex(random_bytes(32));
         $this->tokens->store($userId, $this->hash($token), $label, $scope, null);

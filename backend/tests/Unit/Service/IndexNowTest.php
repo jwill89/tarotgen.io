@@ -24,10 +24,10 @@ final class IndexNowTest extends TestCase
 
     public function testIsConfiguredReflectsKeyPresence(): void
     {
-        self::assertTrue((new IndexNow())->isConfigured());
+        self::assertTrue(new IndexNow()->isConfigured());
 
         unset($_ENV['INDEXNOW_KEY']);
-        self::assertFalse((new IndexNow())->isConfigured());
+        self::assertFalse(new IndexNow()->isConfigured());
     }
 
     public function testSubmitPostsHostKeyAndUrls(): void
@@ -54,8 +54,8 @@ final class IndexNowTest extends TestCase
 
     public function testSubmitTreats202AsSuccessAndOtherStatusesAsFailure(): void
     {
-        self::assertTrue((new IndexNow(fn () => 202))->submit(['https://tarotgen.io/']));
-        self::assertFalse((new IndexNow(fn () => 403))->submit(['https://tarotgen.io/']));
+        self::assertTrue(new IndexNow(fn() => 202)->submit(['https://tarotgen.io/']));
+        self::assertFalse(new IndexNow(fn() => 403)->submit(['https://tarotgen.io/']));
     }
 
     public function testSubmitIsNoOpWithoutKeyOrUrls(): void
@@ -67,11 +67,11 @@ final class IndexNowTest extends TestCase
         };
 
         // No URLs: never reaches the network.
-        self::assertFalse((new IndexNow($counting))->submit([]));
+        self::assertFalse(new IndexNow($counting)->submit([]));
 
         // No key configured: also a no-op.
         unset($_ENV['INDEXNOW_KEY']);
-        self::assertFalse((new IndexNow($counting))->submit(['https://tarotgen.io/']));
+        self::assertFalse(new IndexNow($counting)->submit(['https://tarotgen.io/']));
 
         self::assertSame(0, $calls);
     }

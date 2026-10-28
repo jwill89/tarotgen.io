@@ -117,7 +117,7 @@ jobs:
           composer docs
           git diff --exit-code openapi.json
 
-      - name: Coding standard (PHPCS / PSR-12)
+      - name: Coding standard (PHP CS Fixer / PER-CS 3.0)
         run: composer lint
 
       - name: Unit tests (PHPUnit)

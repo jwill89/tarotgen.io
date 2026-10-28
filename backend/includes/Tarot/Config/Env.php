@@ -37,8 +37,8 @@ final class Env
 
             // Strip surrounding quotes
             if (
-                (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
-                (str_starts_with($value, "'") && str_ends_with($value, "'"))
+                (str_starts_with($value, '"') && str_ends_with($value, '"'))
+                || (str_starts_with($value, "'") && str_ends_with($value, "'"))
             ) {
                 $value = substr($value, 1, -1);
             }

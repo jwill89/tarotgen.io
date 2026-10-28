@@ -2,6 +2,8 @@
 
 namespace Tarot\Utility;
 
+use Closure;
+use PDO;
 use Tarot\Config\Env;
 use Tarot\Database\Connection;
 
@@ -26,6 +28,23 @@ final class Session
      * on every request, so active users are never logged out mid-session.
      */
     public const int DEFAULT_LIFETIME = 60 * 60 * 24; // 24 hours
+
+    /**
+     * Where sessions are stored, resolved only when one starts. The app hands over
+     * its container's PDO (api/app.php), so the HTTP tests, which build the app on
+     * an in-memory database, keep their sessions there too.
+     *
+     * @var (Closure(): PDO)|null
+     */
+    private static ?Closure $database = null;
+
+    /**
+     * @param Closure(): PDO $database
+     */
+    public static function useDatabase(Closure $database): void
+    {
+        self::$database = $database;
+    }
 
     /**
      * Start (or resume) the session, automatically honoring a previously-set
@@ -53,7 +72,8 @@ final class Session
         // Persist sessions in the database rather than the host's shared
         // filesystem, which an external cron / other vhost can garbage-collect
         // out from under us. The handler owns expiry and GC.
-        session_set_save_handler(new DbSessionHandler(Connection::getInstance()), true);
+        $db = self::$database !== null ? (self::$database)() : Connection::getInstance();
+        session_set_save_handler(new DbSessionHandler($db), true);
 
         session_start();
 

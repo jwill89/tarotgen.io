@@ -18,7 +18,7 @@ final class ExposedData extends AbstractData
         array $allowed,
         array $where,
         array $intCols = [],
-        array $boolCols = []
+        array $boolCols = [],
     ): bool {
         return $this->applyUpdate($table, $data, $allowed, $where, $intCols, $boolCols);
     }

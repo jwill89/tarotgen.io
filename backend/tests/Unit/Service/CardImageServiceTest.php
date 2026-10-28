@@ -21,7 +21,7 @@ final class CardImageServiceTest extends TestCase
         }
 
         $this->root = sys_get_temp_dir() . '/tarot_images_' . uniqid();
-        mkdir($this->root, 0775, true);
+        mkdir($this->root, 0o775, true);
         $this->service = new CardImageService($this->root);
     }
 
@@ -49,7 +49,7 @@ final class CardImageServiceTest extends TestCase
     {
         $dir = $this->root . '/' . $deckId;
         if (!is_dir($dir)) {
-            mkdir($dir, 0775, true);
+            mkdir($dir, 0o775, true);
         }
         $im = imagecreatetruecolor(600, 1032);
         imagefill($im, 0, 0, imagecolorallocate($im, 80, 40, 160));
@@ -134,7 +134,7 @@ final class CardImageServiceTest extends TestCase
 
     public function testAnUndecodablePngIsCountedAsFailedAndLeavesNothingBehind(): void
     {
-        mkdir($this->root . '/9', 0775, true);
+        mkdir($this->root . '/9', 0o775, true);
         file_put_contents($this->root . '/9/Card_0001.png', 'not a png');
 
         $result = @$this->service->generateForDeck(9);

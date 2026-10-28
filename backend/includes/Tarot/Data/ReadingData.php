@@ -12,8 +12,8 @@ class ReadingData extends AbstractData
      * only as the derived `password_protected` flag — the hash itself is never
      * hydrated onto the Reading (so it can't leak through serialization).
      */
-    private const string SELECT_COLS =
-        'reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes, is_final,
+    private const string SELECT_COLS
+        = 'reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes, is_final,
          CASE WHEN password_hash IS NOT NULL AND password_hash <> \'\' THEN 1 ELSE 0 END AS password_protected';
 
     public function retrieve(string $reading_id): ?Reading

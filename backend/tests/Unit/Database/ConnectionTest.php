@@ -23,7 +23,7 @@ final class ConnectionTest extends TestCase
     protected function setUp(): void
     {
         $this->dir = sys_get_temp_dir() . '/tarot-conn-test-' . bin2hex(random_bytes(4));
-        mkdir($this->dir . '/db', 0777, true);
+        mkdir($this->dir . '/db', 0o777, true);
         putenv('TAROT_DATA_DIR=' . $this->dir);
     }
 

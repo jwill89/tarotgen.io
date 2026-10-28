@@ -38,10 +38,10 @@ scripts/    deploy.ps1 (repo-level orchestration)
 | `frontend/src/` | Vue 3 (`<script setup>` + TS), Vue Router, Bulma (layout/utilities), Reka UI (headless interactive primitives), TipTap. Views, components, composables, utils, types. Specs in `src/__tests__/`. |
 | `frontend/index.html` | SPA entry HTML (Vite). |
 | `frontend/public/` | PWA assets (manifest, service worker, icons), `robots.txt`, `sitemap.xml`, self-hosted fonts. |
-| `backend/api/` | PHP API entry (Slim 4). `index.php` defines all routes; `Routes/` holds controllers + middleware. Endpoints are documented via swagger-php attributes → `backend/openapi.json` (`composer docs`), served at `/api/docs`. |
+| `backend/api/` | PHP API entry (Slim 4). `app.php` builds the app (middleware + all routes), `index.php` boots and runs it; `Routes/` holds controllers + middleware. Endpoints are documented via swagger-php attributes → `backend/openapi.json` (`composer docs`), served at `/api/docs`. |
 | `backend/includes/Tarot/` | Domain code (PSR-4 `Tarot\`): Data → Repository → Service → Structure, plus Config/Database/Utility. |
 | `backend/og.php` | Serves every page's HTML shell: per-response CSP nonce, plus Open Graph meta for `/reading/{id}` shares. |
-| `backend/tests/Unit/` | PHPUnit tests. |
+| `backend/tests/` | PHPUnit: `Unit/` (classes in isolation), `Http/` (requests through the whole app on an in-memory DB). |
 | `backend/scripts/` | PHP/Python CLI utilities (`make_admin.php`, `indexnow.php`, …). |
 | `backend/{phpunit.xml,phpstan.neon}` | QA configs (auto-discovered when running `composer` from `backend/`). |
 | `backend/{db,assets/decks}/` | SQLite DB and per-deck card images — server-side data, gitignored, **never** in a deploy payload. |

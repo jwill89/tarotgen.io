@@ -47,7 +47,7 @@ abstract class AbstractStructure implements JsonSerializable
                 // Properties use asymmetric visibility (public read, private(set)),
                 // so a direct `$this->$property =` from this parent scope would be
                 // rejected. Reflection writes them across scope.
-                (new ReflectionProperty($this, $property))->setValue($this, $value);
+                new ReflectionProperty($this, $property)->setValue($this, $value);
             }
         }
     }

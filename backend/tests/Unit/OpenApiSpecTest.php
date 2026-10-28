@@ -37,13 +37,13 @@ final class OpenApiSpecTest extends TestCase
             new DocBlockAnnotationFactory(),
         ]);
 
-        $openapi = (new Generator())
+        $openapi = new Generator()
             ->setVersion('3.1.0')
             ->setAnalyser($analyser)
             ->generate(new SourceFinder([$backend . '/api', $backend . '/includes']));
 
         $generated = json_decode($openapi->toJson(), true);
-        $committed = json_decode((string) file_get_contents($specPath), true);
+        $committed = json_decode((string)file_get_contents($specPath), true);
 
         self::assertSame(
             $committed,

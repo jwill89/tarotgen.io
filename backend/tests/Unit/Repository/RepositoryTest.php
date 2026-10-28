@@ -33,7 +33,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createStub(DeckData::class);
         $data->method('retrieve')->willReturn([$deck]);
 
-        $this->assertSame($deck, (new DeckRepository($data))->get(5));
+        $this->assertSame($deck, new DeckRepository($data)->get(5));
     }
 
     public function testGetWithoutIdReturnsTheFullList(): void
@@ -43,7 +43,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createStub(DeckData::class);
         $data->method('retrieve')->willReturn($list);
 
-        $this->assertSame($list, (new DeckRepository($data))->get());
+        $this->assertSame($list, new DeckRepository($data)->get());
     }
 
     public function testGetWithUnknownIdReturnsEmptyArrayNotSingle(): void
@@ -51,7 +51,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createStub(DeckData::class);
         $data->method('retrieve')->willReturn([]);
 
-        $this->assertSame([], (new DeckRepository($data))->get(404));
+        $this->assertSame([], new DeckRepository($data)->get(404));
     }
 
     // ── PendingSpreadRepository::approve() transaction ──────────
@@ -96,7 +96,7 @@ final class RepositoryTest extends TestCase
         $pdo = $this->createMock(PDO::class);
         $pdo->expects($this->never())->method('beginTransaction');
 
-        $this->assertNull((new PendingSpreadRepository($data, $spreads, $pdo))->approve(99));
+        $this->assertNull(new PendingSpreadRepository($data, $spreads, $pdo)->approve(99));
     }
 
     public function testApproveRollsBackWhenSpreadCreationFails(): void
@@ -115,7 +115,7 @@ final class RepositoryTest extends TestCase
         $pdo->expects($this->once())->method('rollBack')->willReturn(true);
         $pdo->expects($this->never())->method('commit');
 
-        $this->assertNull((new PendingSpreadRepository($data, $spreads, $pdo))->approve(7));
+        $this->assertNull(new PendingSpreadRepository($data, $spreads, $pdo)->approve(7));
     }
 
     // ── ContactRepository ────────────────────────────────────────
@@ -127,7 +127,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createMock(ContactData::class);
         $data->expects($this->once())->method('retrieve')->with(null)->willReturn($contacts);
 
-        $this->assertSame($contacts, (new ContactRepository($data))->get());
+        $this->assertSame($contacts, new ContactRepository($data)->get());
     }
 
     public function testContactGetUnreadOnlyPassesTrue(): void
@@ -137,7 +137,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createMock(ContactData::class);
         $data->expects($this->once())->method('retrieve')->with(true)->willReturn($contacts);
 
-        $this->assertSame($contacts, (new ContactRepository($data))->get(true));
+        $this->assertSame($contacts, new ContactRepository($data)->get(true));
     }
 
     public function testContactCreateDelegatesToDataStore(): void
@@ -148,7 +148,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createMock(ContactData::class);
         $data->expects($this->once())->method('store')->with($payload)->willReturn($contact);
 
-        $this->assertSame($contact, (new ContactRepository($data))->create($payload));
+        $this->assertSame($contact, new ContactRepository($data)->create($payload));
     }
 
     public function testContactMarkReadDelegatesToData(): void
@@ -156,7 +156,7 @@ final class RepositoryTest extends TestCase
         $data = $this->createMock(ContactData::class);
         $data->expects($this->once())->method('markRead')->with(3, true)->willReturn(true);
 
-        $this->assertTrue((new ContactRepository($data))->markRead(3, true));
+        $this->assertTrue(new ContactRepository($data)->markRead(3, true));
     }
 
     public function testContactCountUnreadDelegatesToData(): void
@@ -164,6 +164,6 @@ final class RepositoryTest extends TestCase
         $data = $this->createMock(ContactData::class);
         $data->expects($this->once())->method('countUnread')->willReturn(7);
 
-        $this->assertSame(7, (new ContactRepository($data))->countUnread());
+        $this->assertSame(7, new ContactRepository($data)->countUnread());
     }
 }

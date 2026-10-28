@@ -41,6 +41,9 @@ verification are listed at the end so nobody re-chases them.
   commands: the droplet runs `ufw limit ssh` (6 connections / 30 s).
 - **Backups (§1.1): local rotation on the droplet, 14 copies.** No off-site copy.
 - **Guest-reading retention (§1.7): 1 year.**
+- **Exposure notification (§1.0): none** — too few users to warrant one.
+- **CSP (§1.5): keep Cloudflare Web Analytics and Bot Fight Mode**; allow them
+  with a per-response nonce.
 
 **Read-only reconnaissance of production** (2026-10-28; these supersede the
 audit's assumptions where they differ):
@@ -95,7 +98,7 @@ five-entry baseline; strict TS + typed ESLint.
 
 ## 1. Bugs and risks
 
-- [ ] **1.0 The production database and `.env` were publicly downloadable.** [critical] [S + M]
+- [x] **1.0 The production database and `.env` were publicly downloadable.** [critical] [S + M]
   - **Found 2026-10-28** while placing the §1.1 backup script. The deploy flattens
     `backend/` into one web root and `.htaccess` serves every existing file, so
     `/.env`, `/db/tarotdb.db` (+ the `db/tarotdb.pre-*.db` copies),
@@ -116,8 +119,9 @@ five-entry baseline; strict TS + typed ESLint.
     contact-form senders (DB held emails, Argon2id hashes, contact messages,
     reading contents; sessions/tokens are stored hashed and are not replayable).
     `PLUGIN_IDENTITY_SALT` is dead (§2.1) — delete, don't rotate.
-    *2026-10-28:* both secrets rotated and the salt line deleted by the owner;
-    only the notification decision remains open.
+    *2026-10-28:* both secrets rotated and the salt line deleted by the owner.
+    **Decided (owner): no user notification** — the user base is too small to
+    warrant one.
   - **Durable fix — DONE 2026-10-28 05:21 UTC** (commit `2a44c27` + droplet
     change): `Tarot\Config\Paths` resolves `.env` and the DB from
     `TAROT_DATA_DIR` (fallback `backend/` for dev); `Connection` refuses to
@@ -259,7 +263,7 @@ five-entry baseline; strict TS + typed ESLint.
     +14; PHPStan/phpcs clean. Prod data needs nothing (it always ran UTC); rows a
     Windows dev PHP wrote in local time stay as they are on dev.
 
-- [ ] **1.5 CSP has been "report-only, promote later" since it shipped.** [medium] [S–M]
+- [x] **1.5 CSP has been "report-only, promote later" since it shipped.** [medium] [S–M]
   - **Where:** `backend/.htaccess:12`. The policy still allows
     `fonts.googleapis.com`/`fonts.gstatic.com` (fonts are self-hosted now), and
     `/api/docs` (`api/index.php:127`) loads Scalar from `cdn.jsdelivr.net`, which
@@ -327,12 +331,14 @@ five-entry baseline; strict TS + typed ESLint.
     home, New Draw, a reading + lightbox (WebP), login (Turnstile renders its
     "Verify you are human" widget; it waits for a human click, as it should for
     an automated browser), beacon loaded and `/cdn-cgi/rum` sent.
-  - **One gap found and fixed (needs a backend deploy):** Cloudflare injects the
-    beacon into `/api/docs` too, and that page's policy had no nonce, so the
-    beacon was blocked there (console error only, no user impact). The docs
-    route now issues its own nonce + the beacon host; verified locally (renders,
-    fonts, clean console, nonce fresh per request). Tick this item once
-    `/api/docs` on prod shows a clean console.
+  - **One gap found and fixed:** Cloudflare injects the beacon into `/api/docs`
+    too, and that page's policy had no nonce, so the beacon was blocked there
+    (console error only, no user impact). The docs route now issues its own
+    nonce + the beacon host. **Verified on prod 2026-10-28** after the backend
+    deploy: fresh nonce per request, both Cloudflare scripts `MATCH`; in a fresh
+    tab the reference renders in full, Inter + JetBrains Mono load, the console
+    holds only Scalar's version banner, and `/cdn-cgi/rum` and the JS-detection
+    `oneshot` both complete.
 
 - [x] **1.6 Reading-id collision is a 500.** [low] [S]
   - **Where:** `backend/includes/Tarot/Service/ReadingService.php:435` — 5 random
@@ -760,12 +766,28 @@ five-entry baseline; strict TS + typed ESLint.
   `squizlabs/php_codesniffer`. [medium] [S] Pin to the installed majors
   (`composer show -D` for current versions) with caret ranges.
 
-- [ ] **5.2 php-cs-fixer has no config file.** [medium] [S]
+- [x] **5.2 php-cs-fixer has no config file.** [medium] [S]
   `composer lint` runs phpcs (PSR-12, warnings ignored); `composer lint:fix`
   runs php-cs-fixer with **no** `.php-cs-fixer.dist.php`, so the fixer and the
   checker don't agree on a ruleset. Pick one: recommended php-cs-fixer with a
   dist config (`@PSR12` + `@PHP8x` risky set as tolerated), `php-cs-fixer check`
   in CI, and drop phpcs; or keep phpcs and remove the fixer.
+  - **DONE 2026-10-28 — php-cs-fixer, phpcs removed.** Measured first: the two
+    tools disagreed in 26 files (php-cs-fixer's own `@PSR12` flagged code phpcs
+    passed). `backend/.php-cs-fixer.dist.php`: `@PER-CS3x0` (PSR-12's successor,
+    pinned) + `@PHP8x5Migration` + `no_unused_imports`, with three house-style
+    overrides so adopting it didn't restyle working code: casts stay `(int)$x`
+    (344 of 347 casts), empty constructor bodies keep their own lines (44
+    files), and multi-line *call arguments* take no trailing comma (61 files;
+    arrays already did, everywhere). The risky set was left out: it would add
+    `declare(strict_types=1)` to 139 files, a behaviour change, not a format.
+    One pass fixed 26 files — mostly PHP 8.4's `new Foo()->bar()`, `fn(`
+    spacing, `0o775` octals, a few trailing commas on parameter lists. Scope is
+    every committed PHP file (`api`, `includes`, `scripts`, `tests`, `og.php`,
+    `dev-router.php`); phpcs only looked at three directories. `composer lint` =
+    `php-cs-fixer check`, `lint:fix` = `fix`; CI step renamed; `phpcs.xml` and
+    `squizlabs/php_codesniffer` removed; cache gitignored. Lost: phpcs's 120-char
+    line warning, which was already set not to fail anything.
 
 - [ ] **5.3 Missing project metadata.** [low] [S] `engines` in
   `frontend/package.json` + `.nvmrc` (CI pins Node 24); root `.editorconfig`;
@@ -826,6 +848,16 @@ five-entry baseline; strict TS + typed ESLint.
     and `scrollbar-color: var(--myst-border-strong) transparent` (inherited;
     colour only, so the modal scroll-lock widths are untouched). Computed on dev:
     `colorScheme` = `dark`, scrollbar `rgba(255,255,255,.16) transparent`.
+
+- [ ] **5.9 Slim's own errors don't use the `{ error }` shape.** [low] [S]
+  Found by the §8.1 tests. A route or method that doesn't exist answers
+  `{"message": "404 Not Found"}` / `"405 Method Not Allowed"` (plus an
+  `exception` array outside production), or an HTML page when the request
+  doesn't ask for JSON, while API.md promises `{ "error": "…" }` and every
+  controller sends that. No visible harm today: the frontend's
+  `messageFromBody()` reads only `error` and falls back to its own text. Fix: a
+  JSON error renderer for the default handler that emits `{ error }` (detail
+  only outside production), then tighten `RequestPipelineTest`'s 404/405 test.
 
 ---
 
@@ -964,7 +996,7 @@ Current: backend 240 tests / 638 assertions (unit only); frontend 132 tests
 across 17 specs (utils + composables only). Coverage is not measured anywhere
 (`coverage: none` in CI).
 
-- [ ] **8.1 No HTTP-level tests at all.** [high] [M]
+- [x] **8.1 No HTTP-level tests at all.** [high] [M]
   All 14 controllers and all three auth middleware (`UserAuth`, `AdminAuth`,
   `AccountAuth`) are untested — `AdminController`'s 1,505 lines included.
   **Fix:** extract app construction from `api/index.php` into `api/app.php`
@@ -973,6 +1005,46 @@ across 17 specs (utils + composables only). Coverage is not measured anywhere
   from `db/schema.sql` and dispatches PSR-7 requests. First targets: 401 shapes
   from each middleware, `OriginGuard` end-to-end, validation 400s, card-reports
   201/200/400/429, one admin CRUD round-trip.
+  - **DONE 2026-10-28 (the harness + the first targets).** `api/app.php` returns
+    a factory `(container, is_production) → App` holding the middleware, error
+    handling and every route; `index.php` keeps the process setup (UTC, env,
+    cookie params, container compilation) and runs it. The `/openapi.json` and
+    `/docs` closures became `ApiDocsController` (top-level `const`s can't be
+    re-declared each time a test builds the app). The one production change the
+    harness needed: `Session` took its store from the `Connection` singleton, so
+    `app.php` now hands it the container's PDO (`Session::useDatabase`) and
+    sessions follow whatever database the app was built on.
+  - `tests/Http/HttpTestCase` (new `http` suite): schema.sql in memory with
+    foreign keys on, as on prod; each test is one browser whose session id
+    carries from request to request, with sessions really stored by
+    `DbSessionHandler` (in-process works because PHPUnit writes to the stdout
+    stream, so PHP never marks headers as sent); env blanked per test; a
+    per-test documentation-range IPv6 client address so the file-backed rate
+    limiters don't collide; Slim/mailer logging sent to a temp file.
+  - 30 tests, ~1.6 s: `AuthGuardsTest` (admin/user/account 401 bodies,
+    inactive and deleted accounts, demotion taking effect next request, plugin
+    tokens open only the three read routes, unknown/revoked tokens),
+    `RequestPipelineTest` (OriginGuard by Origin and by Referer, before routing
+    and before auth, same-origin/no-header/GET pass, `APP_ORIGIN` + CORS,
+    security headers, 404/405 as JSON), `CardReportsTest` (201 with reason,
+    reason-less bump, 200 cooldown, four 400s, 429 after 20),
+    `AdminChangelogTest` (create → public read → update → delete; 404; reader
+    401 writes nothing), `SignInFlowTest` (register → 403 inactive → activate →
+    401 wrong password → login → me → logout; new session id on sign-in, the
+    pre-login one carries no user; duplicate 422), `ApiDocsTest`. PHPStan level
+    8 now covers `api/` whole and `tests/Http` (tests/Unit has ~170 findings and
+    stays out for now).
+  - **Found by the new tests — fixed:** a card report for a deck that no longer
+    exists (a stale tab, an old plugin build) failed the `card_reports` foreign
+    key as a **500** with a stack trace in the error log; it is now a 400 ("A
+    valid deck and card are required."). Verified on the dev server too.
+  - **Found — open, see §5.9:** Slim's own 404/405 bodies aren't `{ error }`.
+  - **Noticed, left alone:** `POST /admin/changelog` accepts an entry with no
+    title (the spec says `title` is required; admin-only, so low).
+  - Next targets, by risk: `AccountController` (ownership: one user's
+    readings/spreads vs another's), `ReadingController` (draw/finalize/unlock,
+    password-protected readings), `PluginAuthController` (PKCE code → token),
+    the rest of `AdminController` (§4.5 wants these before it is split).
 - [ ] **8.2 Untested Data classes:** `ChangelogData`, `SpecialCardData`,
   `FavoriteDeckData`. [low] [S] Same in-memory pattern as `CardReportDataTest`.
 - [ ] **8.3 Zero component/view tests on the frontend.** [medium] [M]

@@ -7,7 +7,9 @@ use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\CardReportRepository;
+use Tarot\Repository\DeckRepository;
 use Tarot\Structure\CardReportReason;
+use Tarot\Structure\Deck;
 use Tarot\Utility\Input;
 use Tarot\Utility\RateLimiter;
 
@@ -31,8 +33,10 @@ class CardReportController extends AbstractController
     /** Longest description a reporter can attach; longer input is truncated. */
     private const int DETAILS_MAX_LENGTH = 500;
 
-    public function __construct(private readonly CardReportRepository $reports)
-    {
+    public function __construct(
+        private readonly CardReportRepository $reports,
+        private readonly DeckRepository $decks,
+    ) {
     }
 
     #[OA\Post(
@@ -100,7 +104,9 @@ class CardReportController extends AbstractController
         $reason    = CardReportReason::tryFrom($reasonKey);
         $details   = Input::string($body['details'] ?? null, self::DETAILS_MAX_LENGTH);
 
-        if ($deckId < 1 || $cardId < 0) {
+        // A deck deleted since its card was shown (a stale tab, an old plugin
+        // build) would otherwise fail the foreign key as a 500.
+        if ($deckId < 1 || $cardId < 0 || !$this->decks->get($deckId) instanceof Deck) {
             return $response->withJson(['error' => 'A valid deck and card are required.'], 400);
         }
 

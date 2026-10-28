@@ -1,5 +1,5 @@
 # Security headers for the app shell / static responses (the API sets its own in
-# api/index.php). Guarded so a host without mod_headers doesn't 500.
+# api/app.php). Guarded so a host without mod_headers doesn't 500.
 <IfModule mod_headers.c>
     Header always set X-Frame-Options "SAMEORIGIN"
     Header always set X-Content-Type-Options "nosniff"

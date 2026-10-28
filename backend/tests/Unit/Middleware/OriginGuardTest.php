@@ -55,7 +55,7 @@ final class OriginGuardTest extends TestCase
      */
     private function guardStatus(string $method, array $headers): int
     {
-        $request = (new ServerRequestFactory())->createServerRequest($method, self::SELF . '/api/thing')
+        $request = new ServerRequestFactory()->createServerRequest($method, self::SELF . '/api/thing')
             ->withHeader('Host', (string)parse_url(self::SELF, PHP_URL_HOST));
         foreach ($headers as $name => $value) {
             $request = $request->withHeader($name, $value);
@@ -111,7 +111,7 @@ final class OriginGuardTest extends TestCase
     public function testPortIsIgnoredWhenComparingHosts(): void
     {
         // Dev: Host carries a port, Origin's parsed host does not — still same site.
-        $request = (new ServerRequestFactory())->createServerRequest('POST', 'http://localhost/api/thing')
+        $request = new ServerRequestFactory()->createServerRequest('POST', 'http://localhost/api/thing')
             ->withHeader('Host', 'localhost:80')
             ->withHeader('Origin', 'http://localhost:5173');
 

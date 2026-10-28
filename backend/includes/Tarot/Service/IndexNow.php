@@ -53,7 +53,7 @@ class IndexNow
     public function submit(array $urls): bool
     {
         $key  = $this->key();
-        $urls = array_values(array_filter($urls, static fn (string $u): bool => $u !== ''));
+        $urls = array_values(array_filter($urls, static fn(string $u): bool => $u !== ''));
         if ($key === null || $urls === []) {
             return false;
         }
@@ -107,7 +107,7 @@ class IndexNow
         ]);
 
         curl_exec($ch);
-        $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $status = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
         curl_close($ch);
 
         return $status;

@@ -11,6 +11,10 @@
         <testsuite name="unit">
             <directory>tests/Unit</directory>
         </testsuite>
+        <!-- The whole app, request in, response out (tests/Http/HttpTestCase.php). -->
+        <testsuite name="http">
+            <directory>tests/Http</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

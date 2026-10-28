@@ -7,13 +7,13 @@ as interactive docs:
 
 | | |
 |---|---|
-| **Interactive reference (Scalar)** | [`GET /api/docs`](backend/api/index.php) |
+| **Interactive reference (Scalar)** | [`GET /api/docs`](backend/api/Routes/Internal/ApiDocsController.php) |
 | **Raw OpenAPI 3.1 spec** | [`GET /api/openapi.json`](backend/openapi.json) — committed at [`backend/openapi.json`](backend/openapi.json) |
 | **Where it comes from** | swagger-php (`#[OA\...]`) attributes on the controllers in [`backend/api/Routes/Internal/`](backend/api/Routes/Internal/) and the `#[OA\Schema]` Structure classes in [`backend/includes/Tarot/Structure/`](backend/includes/Tarot/Structure/) |
 | **Regenerate** | `cd backend && composer docs` (writes `openapi.json`); a PHPUnit test fails if the committed spec drifts |
 | **Frontend types** | `cd frontend && npm run gen:types` → `frontend/src/types/api.generated.ts` |
 
-> The route table itself lives in [`backend/api/index.php`](backend/api/index.php).
+> The route table itself lives in [`backend/api/app.php`](backend/api/app.php).
 > See [`AGENTS.md`](AGENTS.md) §4 for the backend architecture (Controller → Service →
 > Repository → Data → Structure) and the auth/CSRF model.
 
