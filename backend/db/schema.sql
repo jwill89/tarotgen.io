@@ -50,10 +50,6 @@ CREATE TABLE "decks" (
 	"name"	TEXT NOT NULL UNIQUE,
 	"artist"	TEXT,
 	"purchase_url"	TEXT,
-	"is_thoth"	INTEGER NOT NULL DEFAULT 0,
-	"has_extras"	INTEGER NOT NULL DEFAULT 0,
-	"non_standard"	INTEGER NOT NULL DEFAULT 0,
-	"total_cards"	INTEGER NOT NULL DEFAULT 78,
 	"additional_cards"	INTEGER NOT NULL DEFAULT 0, card_aspect_w REAL NOT NULL DEFAULT 5, card_aspect_h REAL NOT NULL DEFAULT 8.6, approved INTEGER NOT NULL DEFAULT 1, usable INTEGER NOT NULL DEFAULT 1, submitted_by INTEGER DEFAULT NULL, deck_system_id INTEGER NOT NULL DEFAULT 1,
 	PRIMARY KEY("deck_id" AUTOINCREMENT)
 );

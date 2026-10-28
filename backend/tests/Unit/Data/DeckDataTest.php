@@ -121,6 +121,21 @@ final class DeckDataTest extends TestCase
         $this->assertNull($row['submitted_by']);
     }
 
+    public function testColumnsDeckDoesNotDeclareAreNotHydrated(): void
+    {
+        // A column the Structure doesn't know (e.g. the legacy is_thoth a stale
+        // DB still had) must not become a dynamic property — a deprecation now,
+        // which phpunit.xml fails on, and a fatal error in PHP 9.
+        $this->pdo->exec('ALTER TABLE decks ADD COLUMN is_thoth INTEGER NOT NULL DEFAULT 0');
+        $this->data->store(['name' => 'Deck']);
+
+        $decks = $this->data->retrieve();
+
+        $this->assertCount(1, $decks);
+        $this->assertSame('RWS', $decks[0]->system_short_name);
+        $this->assertFalse(property_exists($decks[0], 'is_thoth'));
+    }
+
     public function testUpdateReturnsNullWhenNoAllowedFieldsProvided(): void
     {
         $deck = $this->data->store(['name' => 'Deck']);

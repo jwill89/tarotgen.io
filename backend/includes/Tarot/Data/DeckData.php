@@ -7,8 +7,13 @@ use Tarot\Structure\Deck;
 
 class DeckData extends AbstractData
 {
+    // Columns are listed, not d.*: FETCH_CLASS turns any column Deck doesn't
+    // declare into a dynamic property (deprecated, fatal in PHP 9), which is how
+    // the dropped legacy columns broke dev DBs built from a stale schema (AUDIT §1.2).
     private const string SELECT_WITH_SYSTEM = "
-        SELECT d.*, ds.short_name AS system_short_name, ds.total_cards AS system_total_cards
+        SELECT d.deck_id, d.deck_system_id, d.name, d.artist, d.purchase_url, d.additional_cards,
+               d.card_aspect_w, d.card_aspect_h, d.approved, d.usable, d.submitted_by,
+               ds.short_name AS system_short_name, ds.total_cards AS system_total_cards
         FROM decks d
         LEFT JOIN deck_systems ds ON ds.deck_system_id = d.deck_system_id
     ";

@@ -159,7 +159,7 @@ five-entry baseline; strict TS + typed ESLint.
     and alerting if a nightly run fails (today a failure is only visible in the
     journal).
 
-- [ ] **1.2 Dev deck loads emit dynamic-property deprecations; `schema.sql` is stale.** [low] [S]
+- [x] **1.2 Dev deck loads emit dynamic-property deprecations; `schema.sql` is stale.** [low] [S]
   - **Correction (prod recon):** prod's `decks` table **does not** have the
     legacy columns, so prod is unaffected. The problem is local: the dev DB and
     the committed `schema.sql` (lines 54-58) still carry `is_thoth`,
@@ -175,6 +175,16 @@ five-entry baseline; strict TS + typed ESLint.
     `CREATE TABLE "decks"` (no legacy columns).
   - **Verify:** the appendix one-liner prints only `hydrated N decks` on dev; a
     DB built from `schema.sql` has the same `decks` columns as prod.
+  - **DONE 2026-10-28:** (a) `DeckData::SELECT_WITH_SYSTEM` lists its columns;
+    new `DeckDataTest::testColumnsDeckDoesNotDeclareAreNotHydrated` adds an
+    undeclared `is_thoth` column — it fails on the old `d.*` query (deprecation
+    + assertion) and passes now. (b) `drop_legacy_deck_columns.php` run on the
+    dev DB (backup `db/tarotdb.backup-20261028-011103-pre-1.2.db`): one-liner
+    went from the four `Deck::$…` deprecations per deck to a clean
+    `hydrated 27 decks`. (c) The four legacy lines removed from the `decks`
+    block of `schema.sql`. Prod's `CREATE TABLE "decks"` (read-only query) is
+    byte-identical to both the migrated dev DB's and a fresh DB built from
+    `schema.sql`. The other `SELECT *` sites remain — §2.4.
 
 - [x] **1.3 PHP warning on every login/logout.** [medium] [S]
   - **Where:** `backend/includes/Tarot/Utility/Session.php:80` —
@@ -313,7 +323,8 @@ five-entry baseline; strict TS + typed ESLint.
 
 - [ ] **2.4 `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
   - **Where:** 18 occurrences across `ChangelogData`, `DeckSystemData` (×6),
-    `SpecialCardData` (×3), `UserData` (×4), plus `DeckData`'s `d.*`. Any added
+    `SpecialCardData` (×3), `UserData` (×4), plus `DeckData`'s `d.*` (fixed in
+    §1.2). Any added
     column that a Structure doesn't declare becomes a dynamic property →
     deprecation now, fatal in PHP 9. §1.2 is this bug happening.
   - **Fix:** explicit column lists (a `private const string COLS` per Data
@@ -390,7 +401,7 @@ five-entry baseline; strict TS + typed ESLint.
     no live page relied on that fallthrough. **After replacing a card image,
     purge its URL in Cloudflare.**
 
-- [ ] **3.2 Lightbox serves raw PNG; only thumbnails are WebP.** [high] [M]
+- [x] **3.2 Lightbox serves raw PNG; only thumbnails are WebP.** [high] [M]
   - **Where:** `ThumbnailService` writes `thumbs/*.webp` only; `imgUrl` in
     `ReadingView.vue:86` points at the PNG. **Prod recon:** a full card is ~5 MB
     of PNG (thumb: 62 KB WebP), so a 10-card spread viewed in the lightbox moves
@@ -417,6 +428,13 @@ five-entry baseline; strict TS + typed ESLint.
     the browser. **Deploy order:** backend → backfill (≈15 min at nice 19,
     ≈1 GB) → frontend. Between the backend and frontend deploys the old admin
     "Generate thumbnails" button 404s; nothing user-facing changes.
+  - **DONE 2026-10-28** (commit `37782a9`, deployed): backfill ran 05:54–06:10
+    UTC as www-data at nice 19 — 28 decks, 2,228 generated, 0 failed, 952 s;
+    every PNG has its display WebP, no temp files left, all www-data-owned,
+    dimensions match the masters. 5.25 GB of PNG → 0.35 GB of WebP (6.6%).
+    Live: `Card_0001.webp` 377 KB vs the 5.1 MB PNG, `image/webp` with the
+    §3.1 cache headers; the lightbox on a real reading loads the WebP at
+    1629×2834 for 416 KB with no PNG requests.
   - **Follow-up (plugin):** `CardTextureCache` still downloads the master PNG.
     Switching it to the display WebP needs a check that Dalamud's texture
     provider decodes WebP; until then the PNGs must stay.
