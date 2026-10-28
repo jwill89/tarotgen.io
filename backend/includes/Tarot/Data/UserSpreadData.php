@@ -10,6 +10,10 @@ class UserSpreadData extends AbstractData
 {
     use NormalizesPositions;
 
+    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    private const string SELECT_COLS = 'user_spread_id, user_id, name, description, card_count, positions, '
+        . 'created_at, updated_at';
+
     /**
      * Retrieve all spreads for a user, or a single one by ID (scoped to user).
      *
@@ -17,7 +21,7 @@ class UserSpreadData extends AbstractData
      */
     public function retrieve(int $userId, ?int $userSpreadId = null): array
     {
-        $query = "SELECT * FROM user_spreads WHERE user_id = :user_id";
+        $query = "SELECT " . self::SELECT_COLS . " FROM user_spreads WHERE user_id = :user_id";
 
         if ($userSpreadId !== null) {
             $query .= " AND user_spread_id = :user_spread_id";
@@ -44,7 +48,7 @@ class UserSpreadData extends AbstractData
      */
     public function findById(int $userSpreadId): ?UserSpread
     {
-        $stmt = $this->db->prepare("SELECT * FROM user_spreads WHERE user_spread_id = :id");
+        $stmt = $this->db->prepare("SELECT " . self::SELECT_COLS . " FROM user_spreads WHERE user_spread_id = :id");
         $stmt->execute([':id' => $userSpreadId]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
 

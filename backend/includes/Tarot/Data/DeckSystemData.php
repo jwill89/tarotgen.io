@@ -7,6 +7,12 @@ use Tarot\Structure\DeckSystemCard;
 
 class DeckSystemData extends AbstractData
 {
+    // Listed, not *: FETCH_CLASS turns any column the Structure doesn't declare
+    // into a dynamic property (deprecated, fatal in PHP 9) — AUDIT §1.2/§2.4.
+    private const string SYSTEM_COLS = 'deck_system_id, name, short_name, total_cards, approved, submitted_by';
+    private const string CARD_COLS = 'deck_system_id, card_id, name, keywords, meaning, advice, '
+        . 'reversed_keywords, reversed_meaning, reversed_advice';
+
     /**
      * @return list<DeckSystem>
      */
@@ -14,13 +20,17 @@ class DeckSystemData extends AbstractData
     {
         if ($id !== null) {
             return $this->fetchAllAs(
-                "SELECT * FROM deck_systems WHERE deck_system_id = :id",
+                "SELECT " . self::SYSTEM_COLS . " FROM deck_systems WHERE deck_system_id = :id",
                 [':id' => $id],
                 DeckSystem::class
             );
         }
 
-        return $this->fetchAllAs("SELECT * FROM deck_systems ORDER BY name", [], DeckSystem::class);
+        return $this->fetchAllAs(
+            "SELECT " . self::SYSTEM_COLS . " FROM deck_systems ORDER BY name",
+            [],
+            DeckSystem::class
+        );
     }
 
     /**
@@ -28,7 +38,11 @@ class DeckSystemData extends AbstractData
      */
     public function retrieveApproved(): array
     {
-        return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 1 ORDER BY name", [], DeckSystem::class);
+        return $this->fetchAllAs(
+            "SELECT " . self::SYSTEM_COLS . " FROM deck_systems WHERE approved = 1 ORDER BY name",
+            [],
+            DeckSystem::class
+        );
     }
 
     /**
@@ -36,7 +50,11 @@ class DeckSystemData extends AbstractData
      */
     public function retrievePending(): array
     {
-        return $this->fetchAllAs("SELECT * FROM deck_systems WHERE approved = 0 ORDER BY name", [], DeckSystem::class);
+        return $this->fetchAllAs(
+            "SELECT " . self::SYSTEM_COLS . " FROM deck_systems WHERE approved = 0 ORDER BY name",
+            [],
+            DeckSystem::class
+        );
     }
 
     /**
@@ -94,7 +112,7 @@ class DeckSystemData extends AbstractData
     public function retrieveCards(int $systemId): array
     {
         return $this->fetchAllAs(
-            "SELECT * FROM deck_system_cards WHERE deck_system_id = :id ORDER BY card_id",
+            "SELECT " . self::CARD_COLS . " FROM deck_system_cards WHERE deck_system_id = :id ORDER BY card_id",
             [':id' => $systemId],
             DeckSystemCard::class
         );
@@ -114,7 +132,8 @@ class DeckSystemData extends AbstractData
         $params = array_merge([$systemId], $cardIds);
 
         return $this->fetchAllAs(
-            "SELECT * FROM deck_system_cards WHERE deck_system_id = ? AND card_id IN ($placeholders)",
+            "SELECT " . self::CARD_COLS . " FROM deck_system_cards
+             WHERE deck_system_id = ? AND card_id IN ($placeholders)",
             $params,
             DeckSystemCard::class
         );

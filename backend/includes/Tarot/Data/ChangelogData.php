@@ -7,12 +7,15 @@ use Tarot\Structure\ChangelogEntry;
 
 class ChangelogData extends AbstractData
 {
+    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    private const string SELECT_COLS = 'entry_id, title, body, entry_date';
+
     /**
      * @return list<ChangelogEntry>
      */
     public function retrieve(?int $entry_id = null): array
     {
-        $query = "SELECT * FROM changelog";
+        $query = "SELECT " . self::SELECT_COLS . " FROM changelog";
 
         if ($entry_id !== null) {
             $query .= " WHERE entry_id = :entry_id";

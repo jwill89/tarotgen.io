@@ -8,26 +8,33 @@ use Tarot\Structure\User;
 class UserData extends AbstractData
 {
     /**
+     * Exactly what hydrate() reads. Notably not password_hash: only
+     * findAuthByEmail() and getPasswordHash() ever select it.
+     */
+    private const string SELECT_COLS = 'user_id, email, display_name, is_active, is_admin, registered_at, '
+        . 'last_login_at, google_id, password_login_disabled';
+
+    /**
      * Every account, newest first — for the admin user-management screen.
      *
      * @return User[]
      */
     public function getAll(): array
     {
-        $stmt = $this->query('SELECT * FROM users ORDER BY registered_at DESC, user_id DESC');
+        $stmt = $this->query('SELECT ' . self::SELECT_COLS . ' FROM users ORDER BY registered_at DESC, user_id DESC');
         return array_map($this->hydrate(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 
     public function findById(int $userId): ?User
     {
-        $row = $this->row('SELECT * FROM users WHERE user_id = :id', [':id' => $userId]);
+        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE user_id = :id', [':id' => $userId]);
         return $row ? $this->hydrate($row) : null;
     }
 
     public function findByEmail(string $email): ?User
     {
         // The email column is COLLATE NOCASE, so this match is case-insensitive.
-        $row = $this->row('SELECT * FROM users WHERE email = :email', [':email' => $email]);
+        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE email = :email', [':email' => $email]);
         return $row ? $this->hydrate($row) : null;
     }
 
@@ -133,7 +140,7 @@ class UserData extends AbstractData
 
     public function findByGoogleId(string $googleId): ?User
     {
-        $row = $this->row('SELECT * FROM users WHERE google_id = :gid', [':gid' => $googleId]);
+        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE google_id = :gid', [':gid' => $googleId]);
         return $row ? $this->hydrate($row) : null;
     }
 

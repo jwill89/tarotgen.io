@@ -321,7 +321,7 @@ five-entry baseline; strict TS + typed ESLint.
     `deck_id`/`spread_id` extracted from the JSON, indexed.
   - **Verify:** `EXPLAIN QUERY PLAN` on the three queries shows the index.
 
-- [ ] **2.4 `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
+- [x] **2.4 `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
   - **Where:** 18 occurrences across `ChangelogData`, `DeckSystemData` (×6),
     `SpecialCardData` (×3), `UserData` (×4), plus `DeckData`'s `d.*` (fixed in
     §1.2). Any added
@@ -332,6 +332,21 @@ five-entry baseline; strict TS + typed ESLint.
   - **Verify:** `grep -rn "SELECT \*" backend/includes/Tarot/Data` is empty.
     Note the unit tests cannot catch prod schema drift because each test creates
     its own minimal table; the explicit list is the real guard.
+  - **DONE 2026-10-28:** the count missed `SpreadData` (×1) and
+    `UserSpreadData` (×2); all 18 sites now use a per-class `SELECT_COLS`
+    (`SYSTEM_COLS`/`CARD_COLS` in `DeckSystemData`), matching
+    `ReadingData::SELECT_COLS`. Every list equals its Structure's properties /
+    `hydrate()`'s reads, checked against `schema.sql` (= prod) — so no data
+    changes. Side benefit: `UserData`'s rows no longer carry `password_hash`;
+    only `findAuthByEmail()`/`getPasswordHash()` select it. The grep is empty.
+    New `ProductionSchemaReadsTest` closes the gap noted above: it loads the
+    committed `db/schema.sql` into SQLite, seeds one row per table through each
+    class's own writers, and runs every read — a mistyped column fails at
+    prepare (`no such column`, checked by planting one in `ChangelogData`), a
+    stray column into a `FETCH_CLASS` Structure fails as a deprecation. It also
+    gives `ChangelogData`, `SpecialCardData` and `SpreadData` their first tests.
+    252 tests, PHPStan, phpcs (no new warnings) pass; public deck-system,
+    deck-card, spread and changelog endpoints smoke-tested clean on dev.
 
 - [ ] **2.5 Two hydration styles.** [low] [M]
   - **Where:** 12 Data classes do `FETCH_ASSOC` + a hand-written `hydrate()`

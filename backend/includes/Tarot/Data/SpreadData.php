@@ -10,12 +10,15 @@ class SpreadData extends AbstractData
 {
     use NormalizesPositions;
 
+    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    private const string SELECT_COLS = 'spread_id, name, description, card_count, positions';
+
     /**
      * @return list<Spread>
      */
     public function retrieve(?int $spread_id = null): array
     {
-        $query = "SELECT * FROM spreads";
+        $query = "SELECT " . self::SELECT_COLS . " FROM spreads";
 
         if ($spread_id !== null) {
             $query .= " WHERE spread_id = :spread_id";

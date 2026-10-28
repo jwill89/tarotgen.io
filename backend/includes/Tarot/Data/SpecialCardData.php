@@ -6,10 +6,15 @@ use Tarot\Structure\SpecialCard;
 
 class SpecialCardData extends AbstractData
 {
+    // Listed, not *: FETCH_CLASS turns any column the Structure doesn't declare
+    // into a dynamic property (deprecated, fatal in PHP 9) — AUDIT §1.2/§2.4.
+    private const string SELECT_COLS = 'deck_id, card_id, name, keywords, meaning, advice, '
+        . 'keywords_reversed, meaning_reversed, advice_reversed';
+
     public function retrieve(int $deck_id, int $card_id): ?SpecialCard
     {
         return $this->fetchOne(
-            "SELECT * FROM special_cards WHERE deck_id = :deck_id AND card_id = :card_id",
+            "SELECT " . self::SELECT_COLS . " FROM special_cards WHERE deck_id = :deck_id AND card_id = :card_id",
             [':deck_id' => $deck_id, ':card_id' => $card_id],
             SpecialCard::class
         );
@@ -28,7 +33,7 @@ class SpecialCardData extends AbstractData
         $placeholders = implode(', ', array_fill(0, count($card_ids), '?'));
 
         return $this->fetchAllAs(
-            "SELECT * FROM special_cards WHERE deck_id = ? AND card_id IN ($placeholders)",
+            "SELECT " . self::SELECT_COLS . " FROM special_cards WHERE deck_id = ? AND card_id IN ($placeholders)",
             array_merge([$deck_id], $card_ids),
             SpecialCard::class
         );
@@ -41,14 +46,14 @@ class SpecialCardData extends AbstractData
     {
         if ($deck_id !== null) {
             return $this->fetchAllAs(
-                "SELECT * FROM special_cards WHERE deck_id = :deck_id ORDER BY card_id",
+                "SELECT " . self::SELECT_COLS . " FROM special_cards WHERE deck_id = :deck_id ORDER BY card_id",
                 [':deck_id' => $deck_id],
                 SpecialCard::class
             );
         }
 
         return $this->fetchAllAs(
-            "SELECT * FROM special_cards ORDER BY deck_id, card_id",
+            "SELECT " . self::SELECT_COLS . " FROM special_cards ORDER BY deck_id, card_id",
             [],
             SpecialCard::class
         );
