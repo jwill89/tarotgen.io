@@ -334,7 +334,8 @@ stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
 `backend/scripts/retention.php` as www-data (`scripts/` ships with `-Target
 backend`): it deletes **guest** readings (`user_id IS NULL`) older than 365 days —
 readings made while signed in, on the site or via a linked plugin, are never
-touched — then runs `PRAGMA optimize`. The window is stated on the privacy page
+touched — then runs `ANALYZE` (not `PRAGMA optimize`: prod's SQLite 3.45 ignores its
+check-every-table bit). The window is stated on the privacy page
 (`PrivacyPolicyView.vue`, "Data Retention"); change both together. Check runs with
 `journalctl -t tarotgen-retention`; preview with `runuser -u www-data -- php
 scripts/retention.php --dry-run`.

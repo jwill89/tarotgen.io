@@ -40,9 +40,9 @@ if ($dryRun) {
 $db->commit();
 echo "deleted {$deleted} guest reading(s) older than " . GUEST_READING_DAYS . " days\n";
 
-// Nothing had ever run ANALYZE (AUDIT §2.7). optimize only re-analyses tables
-// whose stats are missing or stale; 0x10002 makes it check every table, since a
-// fresh connection hasn't run the queries its default heuristic watches, and
-// analysis_limit keeps each table's scan cheap.
+// Nothing had ever run ANALYZE (AUDIT §2.7). Plain ANALYZE, not PRAGMA optimize:
+// production's SQLite (3.45) ignores optimize's check-every-table bit (3.46+) and
+// only analysed the one table this connection had touched. The database is small
+// and analysis_limit caps each index scan, so a full pass costs nothing nightly.
 $db->exec('PRAGMA analysis_limit = 400');
-$db->exec('PRAGMA optimize = 0x10002');
+$db->exec('ANALYZE');

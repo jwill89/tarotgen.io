@@ -275,7 +275,8 @@ five-entry baseline; strict TS + typed ESLint.
   - **Implemented 2026-10-28 (awaiting deploy + droplet install):**
     `backend/scripts/retention.php` → `ReadingRepository::cleanGuest(365)`, with
     `--dry-run` (same DELETE in a rolled-back transaction) and
-    `PRAGMA optimize=0x10002` after (closes §2.7's ANALYZE note). Cron: chained
+    `ANALYZE` after (closes §2.7's ANALYZE note; see the prod dry run below for
+    why not `PRAGMA optimize`). Cron: chained
     onto the 03:17 backup with `&&`, so nothing is deleted without a fresh backup;
     output to `journalctl -t tarotgen-retention`. `scripts/` added to the
     backend deploy payload so cron never runs a hand-copied, drifting file (the
@@ -292,6 +293,15 @@ five-entry baseline; strict TS + typed ESLint.
     those 210, leaves all 5 owned, analyses 17 tables; re-run deletes 0.
   - **Order on the droplet:** deploy frontend (policy live) + backend (ships
     the script) → dry run as www-data → install the cron line.
+  - **Prod dry run 2026-10-28 06:33 UTC** (after both deploys): 2,044 readings
+    (1,925 guest, 119 owned); **210 guest readings** would go (2025-03-16 …
+    2025-10-23); no owned reading is older than a year yet. Same 210 under
+    cron's bare environment (`env -i` + the cron file's variables), exit 0; the
+    count was unchanged afterwards. **Found:** prod's PHP links SQLite 3.45.1,
+    where `PRAGMA optimize=0x10002` analysed 1 table (the bit is 3.46+) vs 20 for
+    plain `ANALYZE` — tested on a root-only temp copy of the nightly backup,
+    deleted after. The script now runs `PRAGMA analysis_limit=400; ANALYZE`;
+    that change needs a backend deploy before the cron line goes in.
 
 - [ ] **1.8 Small leaks / decisions to record.** [low] [S]
   - Public `GET /decks` and `/deck-systems` return `submitted_by` user ids
@@ -399,7 +409,8 @@ five-entry baseline; strict TS + typed ESLint.
     the table is next migrated.
   - Mixed timestamp sources — §1.4.
   - No `ANALYZE`/`PRAGMA optimize` ever runs; fold into the retention cron (§1.7).
-    **Done in §1.7** (`scripts/retention.php` runs `PRAGMA optimize=0x10002` nightly).
+    **Done in §1.7** (`scripts/retention.php` runs `ANALYZE` nightly; `PRAGMA
+    optimize` was tried and is ineffective on prod's SQLite 3.45).
 
 ---
 
@@ -731,6 +742,27 @@ plugin is never compiled in CI, and no bot watches dependencies.
   6.0.10, `sass-embedded` 1.106.1, `jsdom` 30.1.3, `prettier` 3.9.10.
   **Majors (plan separately):** `typescript` 6.0.3 → 7.0.2, `vitest`
   4.1.11 → 5.0.5, `happy-dom` 20.11.2 → 21.0.4. [low–medium] [S–M]
+  - **Vue/Vite done 2026-10-28** (lock only — all in range): `vue` 3.5.44,
+    `vite` 8.3.5, `@vitejs/plugin-vue` 6.0.10, `vue-router` 5.4.0, `vue-tsc`
+    3.3.13. All MIT on the registry; the only new transitive dep is `confbox`
+    (MIT). TypeScript stays 6.0.3 — `package.json` pins `~6.0.0` (`vue-tsc`'s
+    own peer range is just `>=5`, so the pin is the guard; owner: wait for TS 7.1).
+    type-check, lint, 135 tests, build pass; home → New Draw (deck combobox,
+    generate) → reading → lightbox clicked through on dev, no Vue warnings.
+  - **`npm audit` (found while doing the above; pre-existing):** 36 advisories,
+    1 critical / 5 high. Shipped code: `dompurify` (critical + high — but both
+    need `SAFE_FOR_TEMPLATES`/`IN_PLACE`+hooks; `utils/markdown.ts` uses defaults),
+    `prosemirror-view` paste XSS (reachable: TipTap is on the public contact
+    form and reading notes — needs the victim to paste crafted content),
+    `@tiptap/core` ReDoS. Dev/test only: `undici`, `brace-expansion`,
+    `@vitest/mocker`, `postcss-selector-parser`, `happy-dom` (major). Every
+    shipped fix is in range → `npm audit fix` (no `--force`), as its own commit.
+  - **SQLite on prod is 3.45.1 and stays there on 24.04:** PHP (packages.sury.org)
+    links the distro `libsqlite3`, and noble only gets 3.45.1 security patches.
+    26.04 LTS (offered to the droplet) ships 3.46.1 — enough for `PRAGMA
+    optimize`'s check-every-table bit, little else. Not a reason to upgrade the
+    OS; §1.7 uses plain `ANALYZE` instead. A self-built lib in `/usr/local/lib`
+    would shadow the distro one for every program and lose apt security updates.
 - [ ] **7.4 Plugin:** `Dalamud.NET.Sdk` 15.0.0, `System.Security.Cryptography.ProtectedData`
   10.0.11 — **unverified** (NuGet was not reachable from the audit sandbox).
   `dotnet list package --outdated` from a networked shell.
