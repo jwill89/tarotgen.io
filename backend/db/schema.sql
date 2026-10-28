@@ -78,12 +78,18 @@ CREATE TABLE sessions (
     );
 
 CREATE TABLE "special_cards" (
-	"deck_id"	INTEGER NOT NULL,
-	"card_id"	INTEGER NOT NULL,
-	"name"	TEXT NOT NULL, "keywords"	TEXT, "meaning"	TEXT, "advice"	TEXT, "keywords_reversed"	TEXT, "meaning_reversed"	TEXT, "advice_reversed"	TEXT,
-	PRIMARY KEY("deck_id","card_id"),
-	CONSTRAINT "FK__sepcial_cards__decks" FOREIGN KEY("deck_id") REFERENCES "decks"("deck_id")
-);
+            deck_id           INTEGER NOT NULL,
+            card_id           INTEGER NOT NULL,
+            name              TEXT    NOT NULL,
+            keywords          TEXT,
+            meaning           TEXT,
+            advice            TEXT,
+            keywords_reversed TEXT,
+            meaning_reversed  TEXT,
+            advice_reversed   TEXT,
+            PRIMARY KEY (deck_id, card_id),
+            CONSTRAINT fk_special_cards_decks FOREIGN KEY (deck_id) REFERENCES decks (deck_id) ON DELETE CASCADE
+        );
 
 CREATE TABLE spreads (
         spread_id   INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -210,7 +216,9 @@ CREATE INDEX idx_passkeys_user ON user_passkeys (user_id);
 
 CREATE INDEX idx_pending_spreads_user ON pending_spreads (user_id);
 
-CREATE INDEX idx_readings_user ON readings (user_id);
+CREATE INDEX idx_readings_time ON readings (reading_time, reading_id);
+
+CREATE INDEX idx_readings_user_time ON readings (user_id, reading_time, reading_id);
 
 CREATE INDEX idx_sessions_expires ON sessions(expires);
 

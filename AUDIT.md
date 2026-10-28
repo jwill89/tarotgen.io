@@ -29,6 +29,28 @@ verification are listed at the end so nobody re-chases them.
   meanings, no AI readings, no "what does this spread say". It is a tool for
   people who do readings. Do not propose or build that.
 
+## Status (2026-10-28, end of day)
+
+**32 items done, 36 open — 12 of the open ones are §9 product features.**
+
+| § | Area | Done | Open | What's left |
+|---|---|---|---|---|
+| 0 | State of the tree | 1 | 2 | Owner's git housekeeping: dead worktrees/branches, old branches, a stash |
+| 1 | Bugs and risks | 8 | 1 | §1.7 retention — built, cron installed; tick after the first live run (03:17 UTC 2026-10-29) |
+| 2 | Database | 7 | 0 | Prod: run §2.3's and §2.7's migrations (backup first) before the next backend deploy |
+| 3 | Performance | 5 | 0 | — |
+| 4 | Duplication | 7 | 0 | — |
+| 5 | Standards | 4 | 5 | §5.1 `"*"` constraints, §5.3 metadata, §5.4 plugin/AGENTS doc lines, §5.6 a11y, §5.9 Slim error shape |
+| 6 | Tooling | 0 | 5 | Stylelint, Knip, coverage, PHPStan extensions, plugin CI, Dependabot (a few sub-items already done — see each) |
+| 7 | Dependencies | 1 | 3 | In-range updates, the swagger-php 7 / vitest 5 / happy-dom 21 majors, plugin packages; TypeScript 7 waits for Vue |
+| 8 | Tests | 2 | 5 | More HTTP tests, Data classes, 7 composables, component tests, Playwright, coverage |
+| 9 | Product | 0 | 12 | All |
+
+**Edited but not yet committed/deployed** (as of this writing): the reading-
+endpoint API docs + `ReadingPayloadsTest` (§4.4 follow-up), the real
+`type-check` with its 14 type and 29 lint fixes (§4.4), and removing the two
+Bulma leftovers from the home cards (§3.3). Needs a frontend and a backend deploy.
+
 ## Decisions and production facts (2026-10-28)
 
 **Working agreement (owner's decisions):**
@@ -63,15 +85,24 @@ audit's assumptions where they differ):
 | Card image | `Card_0001.png` = **5.1 MB**, no `Cache-Control`, `cf-cache-status: MISS`; its WebP thumb is 62 KB | §3.1, §3.2 |
 | Ad-hoc DB copies on server | four `tarotdb.pre-*.db` from July migrations + `db/old/` | §1.1 |
 
+*That table is the morning-of snapshot that shaped the plan. Since changed by the
+work below: cron now runs the nightly backup (§1.1) and retention (§1.7); the
+`.env` and DB moved out of the web root (§1.0); `schema.sql` matches prod and
+the pending migration ran (§0, §1.2); the relay tables are gone (§2.1); card
+images are cached for 30 days at the edge with a full-size WebP beside each PNG
+(§3.1, §3.2).*
+
 ## 0. State of the tree (read before doing anything)
 
-- [ ] **Uncommitted feature work is sitting in the tree.** Card-report reasons
+- [x] **Uncommitted feature work is sitting in the tree.** Card-report reasons
       (22 modified + 7 new files: `CardReportReason.php`, `CardReportSubmission.php`,
       `CardReportDialog.vue`, `useCardReports.ts`, `utils/cardReports.ts`, two specs).
       All gates were green when it was written. Commit it (or stash it) before
       starting audit work so diffs stay reviewable. It needs
       `php db/migrate_card_report_submissions.php` run on the droplet **before**
       the next backend deploy.
+  - **Done 2026-10-28:** committed by the owner; the migration ran on the
+    droplet (prod, dev and `schema.sql` matched object-for-object afterwards).
 - [ ] **Three dead worktrees + branches.** `.claude/worktrees/{dazzling-lovelace-4f59b9,
       pensive-tereshkova-d135ec,priceless-jackson-d01aeb}` and branches
       `claude/dazzling-lovelace-4f59b9`, `claude/pensive-tereshkova-d135ec`,
@@ -79,6 +110,9 @@ audit's assumptions where they differ):
       They were spun off for the session-cookie warning, the stale relay docs,
       and the dark `color-scheme`; none of that work landed, so all three items
       are still open below (§1.3, §5.4, §5.8). `git worktree remove` + `git branch -D`.
+  - **Still present (2026-10-28, end of day)**, but nothing of value is in them
+    any more: §1.3 and §5.8 were done on `main`, and §5.4 mostly. Pure clutter —
+    the owner's to remove.
 - [ ] Review the other local branches (`api-rewrite`, `dalamud-plugin`) with
       `git branch --merged main` and the stash `stash@{0}` ("pre-reskin tweaks");
       drop what is dead.
@@ -92,7 +126,10 @@ with PKCE (`PluginTokenService`); Cloudflare-range-gated `ClientIp`;
 `OriginGuard`; `password_hash` never hydrated onto `Reading`/`User`; lazy route
 chunks and the three vendor groups in `vite.config.ts`; the spec-drift and
 generated-types CI checks; forgot-password non-enumeration; PHPStan 8 with a
-five-entry baseline; strict TS + typed ESLint.
+five-entry baseline; strict TS + typed ESLint. *(Correction 2026-10-28: strict
+TS was configured but never actually checked — `npm run type-check` checked no
+files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
+§4.4. They are known-good from that fix on.)*
 
 ---
 
@@ -485,7 +522,7 @@ five-entry baseline; strict TS + typed ESLint.
 
 - [x] **2.2 Legacy deck columns** — handled by §1.2 (drop them, stop selecting `*`).
 
-- [ ] **2.3 `readings` has no index on `reading_time`.** [low] [S]
+- [x] **2.3 `readings` has no index on `reading_time`.** [low] [S]
   - **Prod recon:** 2,044 rows in a 1.43 MB DB — the scans cost nothing today.
     Cheap insurance, not a fix for a felt problem.
   - **Where:** used by `StatsService` (totals/daily, lines 68-74, 156-160),
@@ -498,8 +535,19 @@ five-entry baseline; strict TS + typed ESLint.
     if the table grows past tens of thousands: generated columns
     `deck_id`/`spread_id` extracted from the JSON, indexed.
   - **Verify:** `EXPLAIN QUERY PLAN` on the three queries shows the index.
-
-- [x] **2.4 `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
+  - **Implemented 2026-10-28 (dev done; prod migration pending):**
+    `db/migrate_readings_time_indexes.php` (idempotent) adds
+    `idx_readings_time (reading_time, reading_id)` and
+    `idx_readings_user_time (user_id, reading_time, reading_id)`, drops
+    `idx_readings_user` (now a prefix of the second), and runs `ANALYZE readings`.
+    The trailing `reading_id` matches every `ORDER BY reading_time DESC,
+    reading_id DESC`. Plans on dev: `listByUser`, `countByUser`, `listAll`,
+    `cleanGuestOlderThan` and the stats daily series went from a full scan + temp
+    B-tree sort to an index scan with no sort. `listAll` was rewritten in §2.5 and
+    re-checked: it pages on `idx_readings_time`, then looks up users and decks by
+    primary key for the page's rows only. `schema.sql` hand-edited; dev DB =
+    `schema.sql` object-for-object. The dashboard's whole-table `json_extract`
+    stays as is (generated columns only if the table grows past tens of thousands). `SELECT *` + `FETCH_CLASS` couples schema to Structures.** [medium] [S]
   - **Where:** 18 occurrences across `ChangelogData`, `DeckSystemData` (×6),
     `SpecialCardData` (×3), `UserData` (×4), plus `DeckData`'s `d.*` (fixed in
     §1.2). Any added
@@ -526,7 +574,7 @@ five-entry baseline; strict TS + typed ESLint.
     252 tests, PHPStan, phpcs (no new warnings) pass; public deck-system,
     deck-card, spread and changelog endpoints smoke-tested clean on dev.
 
-- [ ] **2.5 Two hydration styles.** [low] [M]
+- [x] **2.5 Two hydration styles.** [low] [M]
   - **Where:** 12 Data classes do `FETCH_ASSOC` + a hand-written `hydrate()`
     (`ChangelogData`, `ContactData`, `FavoriteSpreadData`, `PasskeyData`,
     `PendingSpreadData`, `PluginAuthCodeData`, `PluginTokenData`, `ReadingData`,
@@ -537,6 +585,53 @@ five-entry baseline; strict TS + typed ESLint.
     and `"5"` → `int` assignments are fine; keep manual hydration where JSON
     decoding or derived flags are needed, e.g. `ReadingData`).
   - **Verify:** existing Data tests; no new deprecations.
+  - **DONE 2026-10-28 — one style, no exceptions (owner's call):** every row
+    read now fetches straight into a class through `fetchOne`/`fetchAllAs`, and
+    the Data layer has no `FETCH_ASSOC` left (`fetchColumn`/`FETCH_COLUMN` for
+    scalars). The "keep manual hydration" cases above didn't hold up:
+    - *Derived flags* moved into the SELECT: `User::$google_linked`
+      (`COALESCE(google_id, '') <> ''`, so the Google id stays in SQL) and
+      `has_passkeys` (`EXISTS …`). The second also ends an N+1: the admin users
+      list ran one passkey query per user. `Reading::$password_protected` was
+      already computed in SQL; its hydrate was pure casting.
+    - *JSON columns:* spread `positions` arrive as text and the property's PHP 8.4
+      set hook decodes them (`AbstractStructure::jsonList`), so `Spread`,
+      `PendingSpread` and `UserSpread` fetch directly. Checked first that hooks
+      fire under `FETCH_CLASS`.
+    - *The admin readings list* is a `ReadingSummary` worked out in SQL
+      (`json_extract` for deck and spread, a decks join for the name, `Guest` and
+      `Deck #<id>` fallbacks), a page at a time. The controller's load-every-deck
+      loop is gone.
+    - *Arrays that were entities:* the passkey list (`Passkey`), favourite spreads
+      (`FavoriteSpread`) and the admin list are now schemas in the spec. Until now
+      their endpoints were documented as a bare `object`. The internal lookups
+      fetch into small classes with no schema: `PasskeyCredential`,
+      `PluginAuthCode`, `UserToken`, and `PluginToken` (which already existed)
+      for `findActive`.
+    - *The password hash* fetches into `UserCredentials`, where it is `private`
+      behind `verify()`/`needsRehash()`, so nothing can read or `json_encode` it.
+      This is safer than the array was. It deliberately isn't an
+      `AbstractStructure`, whose `jsonSerialize()` reflects private properties too.
+
+    `fetchOne`/`fetchAllAs` use `FETCH_PROPS_LATE` (construct, then fill), so a
+    Structure constructor can never overwrite fetched values. The rule, and where
+    each kind of conversion belongs, is in `AbstractData`'s docblock and AGENTS
+    §4. Every non-nullable property was checked against a NOT NULL column, since
+    `FETCH_CLASS` doesn't absorb a NULL the way the old casts did. Removed: seven
+    `hydrate()`s, `UserData::userHasPasskeys`, and the unused
+    `Reading::setIsFinal`/`setPasswordProtected`.
+
+    Tests: new `ListPayloadsTest` (the three lists against their schemas; the admin
+    list's owners, decks, spreads, fallbacks and paging). The spec checker moved
+    from `ReadingPayloadsTest` into `HttpTestCase::assertDocumented`, which now
+    handles arrays and inline objects; it was confirmed to reject a missing field,
+    an object for a list, and an extra nested field. 305 tests, PHPStan and
+    php-cs-fixer pass; frontend type-check, lint and 166 tests pass. Against the
+    dev DB, read-only: every converted read hydrates every row, and the admin
+    list equals the old PHP derivation over all 1,225 readings. Frontend:
+    `Passkey`, `FavoriteSpread` and `ReadingSummary` come from the spec, replacing
+    three hand-written interfaces. **No prod data step:** deploy backend and
+    frontend.
 
 - [x] **2.6 `myReadings` is unbounded.** [medium] [M]
   - **Where:** `AccountController.php:52` → `ReadingData::listByUser` returns
@@ -561,11 +656,22 @@ five-entry baseline; strict TS + typed ESLint.
     when the header is missing. Verified on dev with 30 seeded readings
     (pages 25 + 5, delete, step-back). The light-summary payload is left for §9.1.
 
-- [ ] **2.7 Cosmetic / when-you-touch-it.** [low]
+- [x] **2.7 Cosmetic / when-you-touch-it.** [low]
   - `special_cards` FK has no `ON DELETE CASCADE` (worked around manually in
     `DeckData::delete`, line 125) and its constraint is named
     `FK__sepcial_cards__decks`. SQLite needs a table rebuild to fix; do it when
     the table is next migrated.
+    **Implemented 2026-10-28 (dev done; prod migration pending):**
+    `db/migrate_special_cards_cascade.php` rebuilds the table (foreign keys off
+    outside the transaction → new table → copy → row-count check → drop → rename
+    → `foreign_key_check`, which must come back empty or it rolls back and exits 1;
+    idempotent). The constraint is now `fk_special_cards_decks … ON DELETE
+    CASCADE`. Orphan rollback tested on a copy. With every table that references
+    `decks` cascading, `DeckData::delete` is one `DELETE`. New `AdminDecksTest`:
+    deleting a deck takes its special cards, reports and favourites and leaves the
+    other deck's. It fails (500) against the old schema. **Order on prod: back
+    up, run this migration, then deploy the backend** — the new `delete()` relies
+    on the cascade.
   - Mixed timestamp sources — §1.4.
   - No `ANALYZE`/`PRAGMA optimize` ever runs; fold into the retention cron (§1.7).
     **Done in §1.7** (`scripts/retention.php` runs `ANALYZE` nightly; `PRAGMA
@@ -665,10 +771,11 @@ five-entry baseline; strict TS + typed ESLint.
     `<html data-theme="dark">` once — light as the base, dark over it, the
     shared setup — 61 KB / 6.2 KB gz. Dropped `layout/hero` and
     `components/panel` (38 KB): their only "users" were HomeView's own scoped
-    `.hero`/`.panel`, which matched Bulma's names by accident. Two things that
-    leak gave the home cards — a 24 px bottom margin on the first and a faint
-    white resting shadow on the second — are now written in HomeView explicitly,
-    so the page looks the same (both look accidental; say if they should go).
+    `.hero`/`.panel`, which matched Bulma's names by accident. That leak had
+    given the home cards a 24 px bottom margin on the first (on a phone it sat
+    *inside* the card, not between the two) and a faint white resting shadow on
+    the second; compared side by side on the live page, the owner confirmed
+    both were artefacts, so they are gone with the modules.
     One unused helper removed (`has-text-weight-bold`). Left alone, on purpose:
     `grid/columns` (28 KB, 334 of 357 classes unused, but 2.9 KB gz — hand-
     trimming the grid would make the next `is-offset-2` silently do nothing)
@@ -802,10 +909,44 @@ five-entry baseline; strict TS + typed ESLint.
     five request bodies that take positions. `types/index.ts` re-exports 15
     entity types from the generated file and deletes their hand copies; the
     reading-view payload, `AccountReading`, `UsageStats` and client shapes stay
-    hand-written (no schema describes them). Type-check clean with no call-site
-    changes. Found while doing it: the `Reading` schema documents the stored row
-    (with `reading_info` as a string), not what `GET /readings/{id}` sends — the
-    docs for that endpoint are wrong; fixing them is a docs task for later.
+    hand-written for now.
+  - **Follow-up, done the same day:** the reading endpoints were documented
+    with the stored-row `Reading` schema while get/unlock/generate/draw/finalize
+    send `accessiblePayload()` and GET can send the locked stub. New schemas in
+    `OpenApiSpec.php` — `ReadingView`, `LockedReading` (GET is a `oneOf` of the
+    two), `ReadingInfo`, `DrawCard`, `SpreadSnapshot` — every property described;
+    `Reading.reading_info` now references `ReadingInfo`. `card_name` is honestly
+    optional (the resolver omits it for an unnamed extra card), so the frontend's
+    `ReadingCard` gets `cardLabel()` ("Card #N") instead of a blank caption. The
+    frontend now takes all six reading types from the spec — no hand-written API
+    types are left except `UsageStats` and client shapes.
+    `tests/Http/ReadingPayloadsTest` reads each endpoint's documented response
+    from `openapi.json` and compares real responses with it, nested objects
+    included; run against the old spec it fails on exactly the mismatches.
+  - **Found while doing that — frontend type-checking had been off.**
+    `npm run type-check` ran `vue-tsc --noEmit` on the solution-style root
+    `tsconfig.json` (`"files": []`), which checks no files. Checking the app
+    project for real gave 599 errors, nearly all "`vue` has no exported member
+    `ref`": `vite-env.d.ts` had no top-level import/export, so its
+    `declare module 'vue' { GlobalComponents }` *replaced* Vue's types instead of
+    augmenting them. Not a Vue/TypeScript version problem — Vue 3.5.44 (latest
+    stable) with TypeScript 6.0.3 compiles cleanly in isolation. The augmentation
+    moved to `src/global-components.d.ts` (a module); the script now checks
+    `tsconfig.app.json` and `tsconfig.node.json`, and a deliberate error in a
+    `.ts` and a `.vue` file both fail it. That left 14 real errors, fixed: a
+    TipTap 3 bug (`setContent(html, false)` — v3 takes an options object, so
+    `emitUpdate: false` was ignored and syncing the prop echoed an update back),
+    `SegmentedControl` assigning a plain string to its generic model (it now
+    takes the matching option's value), three admin forms passing a possibly
+    missing id into a URL, `lib`/`target` still ES2020 under code that ships
+    `.at()`/`Object.hasOwn` (now ES2022, which Vite 8's browser targets have),
+    the reading types above, and a spec's mock signature. With real types, typed
+    ESLint surfaced 29 more: `Number()`/`String()` wrappers left from when
+    everything was `any` (removed where the value is a typed number/string; the
+    `perPage` select was checked to hand back numbers), a floating `nextTick`,
+    `as` casts replaced by a typed form interface, Turnstile's after-`await`
+    element re-check kept but made to read the ref fresh, and indexes that can
+    miss typed honestly (`deckLookup` is `Partial`, `.at()` for maybe-empty).
 
 - [x] **4.5 `AdminController` is 1,505 lines / 45 methods.** [medium] [M]
   - **Fix:** split per resource to mirror the admin views and the route groups
@@ -872,6 +1013,8 @@ five-entry baseline; strict TS + typed ESLint.
   `slim/http`, `slim/psr7`, `php-di/slim-bridge`, `friendsofphp/php-cs-fixer`,
   `squizlabs/php_codesniffer`. [medium] [S] Pin to the installed majors
   (`composer show -D` for current versions) with caret ranges.
+  - *Status 2026-10-28:* `squizlabs/php_codesniffer` is gone (§5.2); the other
+    five still read `"*"`.
 
 - [x] **5.2 php-cs-fixer has no config file.** [medium] [S]
   `composer lint` runs phpcs (PSR-12, warnings ignored); `composer lint:fix`
@@ -914,8 +1057,12 @@ five-entry baseline; strict TS + typed ESLint.
   - `backend/.env.example`: the `PLUGIN_IDENTITY_SALT` block (§2.1).
   - **Partly done with §2.1:** AGENTS.md §12 no longer describes the relay
     (layout list matches the plugin's real files; auth paragraph rewritten) and
-    the `.env.example` block is gone. Still open: the eslint/PHPStan-level lines
-    in AGENTS.md §3, `plugin/README.md`, `TarotGen.Plugin.json`, `Configuration.cs`.
+    the `.env.example` block is gone. The PHPStan-level line in AGENTS.md §3 was
+    fixed with §5.2. **Still open (checked 2026-10-28):** AGENTS.md §3 tree says
+    `eslint.config.js`; `plugin/README.md` still advertises the chatless share
+    (line ~21) and the client token / relay (~78–82); `TarotGen.Plugin.json`
+    still says "Optional account linking (later)"; `Configuration.cs` still
+    points at the missing `docs/auth.md`.
 
 - [x] **5.5 `contactForm.spec.ts` tests a re-implementation, not the code.** [low] [S]
   The spec defines its own `submitContact()` with its own fetch logic and tests
@@ -986,6 +1133,9 @@ plugin is never compiled in CI, and no bot watches dependencies.
     at today's numbers and ratcheted.
   - `eslint-plugin-vuejs-accessibility`.
   - **Playwright** smoke test (§8.6).
+  - *Status 2026-10-28:* none of the above yet. Related, done: `npm run
+    type-check` actually type-checks now (it checked no files before — §4.4), and
+    the `tarot/api-client-only` lint rule bans raw `fetch` (§4.2).
 
 - [ ] **6.2 Backend.** [medium] [S–M]
   - PHPStan extensions via `phpstan/extension-installer`: `phpstan-strict-rules`,
@@ -998,7 +1148,11 @@ plugin is never compiled in CI, and no bot watches dependencies.
     for `CardImageService`, `ext-mbstring`, `ext-json` are not declared).
   - `ergebnis/composer-normalize`.
   - **`composer audit` as a CI step** — green since §7.1, so it can gate now.
+    *Done 2026-10-28 (§7.1).*
   - Coverage with `pcov` in CI.
+  - *Also done since:* one code-style tool (§5.2); PHPStan level 8 now covers
+    all of `api/` and `tests/Http` (§8.1). The extensions, Rector, the
+    unused/require checkers, composer-normalize and coverage are still open.
 
 - [ ] **6.3 Plugin.** [medium] [S]
   - `TarotGen.Plugin.csproj`: `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`,
@@ -1056,6 +1210,10 @@ plugin is never compiled in CI, and no bot watches dependencies.
     `openapi.json` unchanged. `laravel/serializable-closure` 2.0.15 → 2.1.0
     (php-di's, used to compile the prod container) left alone: bug fix + PHP 8.6
     support only.
+  - *Still behind (`composer outdated --direct`, 2026-10-28):* php-cs-fixer
+    3.95.20 → 3.95.27, phpstan 2.2.8 → 2.3.3, phpunit 13.3.1 → 13.4.5 (all
+    dev-only); `zircote/swagger-php` 6.6.0 now has a **7.0** major out — plan it
+    with a spec diff, since it generates `openapi.json`.
 - [ ] **7.3 npm:** 20 packages behind. Minors: `vue` 3.5.44, `vue-router` 5.4.0,
   `vite` 8.3.5, `reka-ui` 2.11.0, `@tiptap/*` 3.32.0, `dompurify` 3.4.17,
   `marked` 18.1.2, `eslint` 10.13.0, `vue-tsc` 3.3.13, `@vitejs/plugin-vue`
@@ -1069,6 +1227,10 @@ plugin is never compiled in CI, and no bot watches dependencies.
     own peer range is just `>=5`, so the pin is the guard; owner: wait for TS 7.1).
     type-check, lint, 135 tests, build pass; home → New Draw (deck combobox,
     generate) → reading → lightbox clicked through on dev, no Vue warnings.
+    *(Correction: "type-check" checked no files at the time — see §4.4. Once it
+    was made real, Vue 3.5.44 + TypeScript 6.0.3 type-checked clean after fixing
+    a broken `vue` augmentation in this repo; the versions were never the
+    problem. Verified separately in an isolated project.)*
   - **`npm audit` (found while doing the above; pre-existing):** 36 advisories,
     1 critical / 5 high. Shipped code: `dompurify` (critical + high — but both
     need `SAFE_FOR_TEMPLATES`/`IN_PLACE`+hooks; `utils/markdown.ts` uses defaults),
@@ -1085,6 +1247,12 @@ plugin is never compiled in CI, and no bot watches dependencies.
     vulnerabilities.** Left: `happy-dom` (dev/test, needs 21 — a major, planned
     with the other majors). type-check, lint, 135 tests, build pass; the TipTap
     editor (contact form) typed + toggled Bold → `<p>… <strong>…</strong></p>`.
+    *(The real type-check later found one TipTap 3 API change this had missed —
+    `setContent(html, false)` — fixed in §4.4.)*
+  - *Still behind (`npm outdated`, 2026-10-28):* in range — `@tiptap/*` 3.32.1,
+    `eslint` 10.13.0, `reka-ui` 2.11.0, `marked` 18.1.2, `prettier` 3.9.10,
+    `sass-embedded` 1.106.1, `jsdom` 30.1.3. Majors — `typescript` 7 (owner:
+    stay on 6 until Vue supports TS 7.1), `vitest` 5, `happy-dom` 21.
   - **SQLite on prod is 3.45.1 and stays there on 24.04:** PHP (packages.sury.org)
     links the distro `libsqlite3`, and noble only gets 3.45.1 security patches.
     26.04 LTS (offered to the droplet) ships 3.46.1 — enough for `PRAGMA
@@ -1099,9 +1267,11 @@ plugin is never compiled in CI, and no bot watches dependencies.
 
 ## 8. Tests
 
-Current: backend 240 tests / 638 assertions (unit only); frontend 132 tests
-across 17 specs (utils + composables only). Coverage is not measured anywhere
-(`coverage: none` in CI).
+At audit time: backend 240 tests / 638 assertions (unit only); frontend 132
+tests across 17 specs (utils + composables only). **Now (2026-10-28, end of
+day): backend 301 tests / 1,163 assertions (unit + 34 HTTP); frontend 166 tests
+across 24 specs** (still utils + composables only). Coverage is still not
+measured anywhere (`coverage: none` in CI).
 
 - [x] **8.1 No HTTP-level tests at all.** [high] [M]
   All 14 controllers and all three auth middleware (`UserAuth`, `AdminAuth`,
@@ -1153,6 +1323,9 @@ across 17 specs (utils + composables only). Coverage is not measured anywhere
     password-protected readings), `PluginAuthController` (PKCE code → token),
     the other eight admin controllers (§4.5 split them; only changelog has
     HTTP tests).
+  - *Since:* `ReadingPayloadsTest` (4 tests, §4.4 follow-up) checks every
+    reading endpoint's response against its documented schema — 34 HTTP tests
+    in all.
 - [ ] **8.2 Untested Data classes:** `ChangelogData`, `SpecialCardData`,
   `FavoriteDeckData`. [low] [S] Same in-memory pattern as `CardReportDataTest`.
 - [ ] **8.3 Zero component/view tests on the frontend.** [medium] [M]
@@ -1164,6 +1337,11 @@ across 17 specs (utils + composables only). Coverage is not measured anywhere
   (272 lines; mock `navigator.credentials`), `usePluginLink`,
   `useReadingExport` (393 lines; canvas — at least the layout math),
   `useSpreads`, `useUserSpreads`, `utils/seo.ts`. [medium] [M] Easier after §4.2.
+  - *Status 2026-10-28:* now covered — `useAccount`, `useFavoriteDecks`,
+    `usePasskeys`, `useUserSpreads` (plus the new `useContact`, `useReadings`,
+    `useSubmissions`). **Still untested:** `useChangelog`, `useFavoriteSpreads`,
+    `usePanZoom`, `usePluginLink`, `useReadingExport`, `useSpreads`,
+    `utils/seo.ts`.
 - [x] **8.5 Replace `contactForm.spec.ts`** (§5.5). [low] [S]
 - [ ] **8.6 One Playwright smoke run in CI:** home → new draw → reading →
   lightbox → report a problem → (seeded admin) Errored Cards shows it. [medium] [M]
@@ -1212,7 +1390,8 @@ Ranked by value against cost. Each is a thin slice over existing data.
 - [ ] **9.11 Admin:** open-card-reports count on the dashboard (the code notes
   it is missing, `admin/DashboardView.vue:42`), and a "re-scanned → regenerate
   thumbnail" action on Errored Cards rows wired to the existing
-  `POST /admin/decks/{id}/thumbnails`, so the reporting loop closes in one click.
+  `POST /admin/decks/{id}/images` (renamed from `…/thumbnails` in §3.2), so the
+  reporting loop closes in one click.
   [low] [S]
 - [ ] **9.12 PWA offline for saved readings.** [low] [L] `sw.js` is a
   pass-through today (correctly, to avoid stale deploys); a reading-scoped cache
@@ -1222,20 +1401,26 @@ Ranked by value against cost. Each is a thin slice over existing data.
 
 ## 10. Suggested order
 
-Revised after the prod reconnaissance (§1.2/§1.3/§1.4 turned out latent or
-dev-only; §3.1/§3.2 turned out to be the largest user-visible cost):
+The original order (prod reconnaissance → §0, §1, §2, §3, §4, §8.1) is done
+except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 
-1. §0 (owner commits the card-report work; prod migration
-   `migrate_card_report_submissions.php` before the next backend deploy) →
-   §1.1 backups → §3.1 cache headers → §3.2 full-size WebP → §7.1 audit fix →
-   §1.3 session warning → §1.2 + §2.4 explicit columns / `schema.sql` decks fix.
-2. §1.7 retention (privacy text first) → §2.1 dead schema → §1.4 timezone →
-   §1.5 CSP → §2.3 index.
-3. §4.1 / §4.2 / §4.6 with §6.1 (Stylelint + Knip) landing alongside so the
-   duplication can't grow back; §5.1 / §5.2 / §5.4 docs.
-4. §8.1 HTTP tests (unlocked by the `app.php` split) and §8.3 component tests;
-   §6.3 plugin CI.
-5. Features, §9.1 → §9.4 first.
+1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
+   first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
+   branches, stash.
+2. **Before the next backend deploy:** `sudo tarotgen-backup`, then §2.3's and
+   §2.7's migrations as www-data.
+3. **Small fixes (each S):** §5.9 Slim error shape, §5.1 version constraints,
+   §5.4 the leftover plugin/AGENTS doc lines, §5.3 metadata, §5.6 `<main>` +
+   skip link.
+4. **Tests:** §8.1's next targets (account ownership, reading flows, plugin
+   PKCE, the other admin controllers), §8.2, §8.4's remainder, then §8.3
+   component tests and §8.6 Playwright; §8.7 coverage with §6.1/§6.2.
+5. **Tooling that stops regressions:** §6.1 Stylelint (enforces §4.6) + Knip,
+   §6.2 PHPStan extensions, §6.3 plugin CI build, §6.4 Dependabot.
+6. **Dependencies:** §7.2 / §7.3 in-range updates; majors (swagger-php 7,
+   vitest 5, happy-dom 21) one at a time; TypeScript 7 waits for Vue (owner);
+   §7.4 plugin packages.
+7. **Features:** §9.1 → §9.4 first.
 
 ---
 
@@ -1243,8 +1428,9 @@ dev-only; §3.1/§3.2 turned out to be the largest user-visible cost):
 
 Listed so nobody re-chases them.
 
-- "Favorites orphan when a spread is deleted" — **false.** `AdminController.php:635`
-  and `AccountController.php:393` call `FavoriteSpreadData::removeBySpread()`;
+- "Favorites orphan when a spread is deleted" — **false.** `AdminSpreadController`
+  (`deleteSpread`; was `AdminController.php:635` before §4.5) and
+  `AccountController::deleteSpread` call `FavoriteSpreadData::removeBySpread()`;
   deck favorites cascade via FK.
 - "Admin user list leaks password hashes" — **false.** `Structure/User.php`
   never declares `password_hash`; `UserData::hydrate` drops it.

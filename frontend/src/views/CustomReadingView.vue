@@ -255,7 +255,7 @@ async function submit() {
     summary:
       readingName.value.trim() ||
       String(slots.value.length) + (slots.value.length === 1 ? ' card' : ' cards'),
-    at: res.data.reading_time ?? new Date().toISOString(),
+    at: res.data.reading_time,
   })
   toasts.success('Your custom reading has been saved!')
   void router.push({ name: 'reading', params: { id: res.data.reading_id } })

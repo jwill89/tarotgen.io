@@ -2,45 +2,36 @@
 
 namespace Tarot\Data;
 
-use PDO;
 use Tarot\Structure\Contact;
 
 class ContactData extends AbstractData
 {
     /**
-     * Retrieve contacts, optionally filtered by read status.
+     * A contact as the admin sees it: when the sender was signed in, their
+     * current display name and email from users, otherwise what they typed.
+     */
+    private const string SELECT = 'SELECT c.contact_id, c.user_id,
+                COALESCE(u.display_name, c.name) AS name,
+                COALESCE(u.email, c.email) AS email,
+                c.message, c.is_read, c.submitted_at
+         FROM contacts c
+         LEFT JOIN users u ON c.user_id = u.user_id';
+
+    /**
+     * Retrieve contacts, newest first, optionally only the unread ones.
      *
-     * When a contact has a user_id, the display_name and email are resolved from
-     * the users table so the admin always sees up-to-date account info.
-     *
-     * @return Contact[]
+     * @return list<Contact>
      */
     public function retrieve(?bool $unreadOnly = null): array
     {
-        $query = "SELECT c.contact_id, c.user_id, 
-                         COALESCE(u.display_name, c.name) AS name,
-                         COALESCE(u.email, c.email) AS email,
-                         c.message, c.is_read, c.submitted_at
-                  FROM contacts c
-                  LEFT JOIN users u ON c.user_id = u.user_id";
+        $where = $unreadOnly === true ? ' WHERE c.is_read = 0' : '';
 
-        if ($unreadOnly === true) {
-            $query .= " WHERE c.is_read = 0";
-        }
-
-        $query .= " ORDER BY c.submitted_at DESC";
-
-        $stmt = $this->db->prepare($query);
-        $stmt->execute();
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_map([$this, 'hydrate'], $rows);
+        return $this->fetchAllAs(self::SELECT . $where . ' ORDER BY c.submitted_at DESC', [], Contact::class);
     }
 
     /**
      * Store a new contact submission.
-     */
-    /**
+     *
      * @param array<string,mixed> $data
      */
     public function store(array $data): ?Contact
@@ -56,9 +47,11 @@ class ContactData extends AbstractData
             ':message' => trim((string)($data['message'] ?? '')),
         ]);
 
-        $id = (int)$this->db->lastInsertId();
-        $results = $this->retrieveById($id);
-        return $results;
+        return $this->fetchOne(
+            self::SELECT . ' WHERE c.contact_id = :contact_id',
+            [':contact_id' => (int)$this->db->lastInsertId()],
+            Contact::class
+        );
     }
 
     /**
@@ -79,38 +72,5 @@ class ContactData extends AbstractData
     public function countUnread(): int
     {
         return (int)$this->query("SELECT COUNT(*) FROM contacts WHERE is_read = 0")->fetchColumn();
-    }
-
-    private function retrieveById(int $contact_id): ?Contact
-    {
-        $query = "SELECT c.contact_id, c.user_id,
-                         COALESCE(u.display_name, c.name) AS name,
-                         COALESCE(u.email, c.email) AS email,
-                         c.message, c.is_read, c.submitted_at
-                  FROM contacts c
-                  LEFT JOIN users u ON c.user_id = u.user_id
-                  WHERE c.contact_id = :contact_id";
-
-        $stmt = $this->db->prepare($query);
-        $stmt->execute([':contact_id' => $contact_id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? $this->hydrate($row) : null;
-    }
-
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): Contact
-    {
-        return new Contact([
-            'contact_id'   => (int)$row['contact_id'],
-            'user_id'      => $row['user_id'] !== null ? (int)$row['user_id'] : null,
-            'name'         => (string)$row['name'],
-            'email'        => (string)$row['email'],
-            'message'      => (string)$row['message'],
-            'is_read'      => (int)$row['is_read'],
-            'submitted_at' => (string)$row['submitted_at'],
-        ]);
     }
 }

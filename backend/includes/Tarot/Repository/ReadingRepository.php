@@ -4,6 +4,7 @@ namespace Tarot\Repository;
 
 use Tarot\Data\ReadingData;
 use Tarot\Structure\Reading;
+use Tarot\Structure\ReadingSummary;
 
 readonly class ReadingRepository
 {
@@ -70,7 +71,7 @@ readonly class ReadingRepository
     /**
      * Admin: paginated list of all readings.
      *
-     * @return array{rows: list<array<string,mixed>>, total: int}
+     * @return array{rows: list<ReadingSummary>, total: int}
      */
     public function listAll(int $limit = 50, int $offset = 0): array
     {

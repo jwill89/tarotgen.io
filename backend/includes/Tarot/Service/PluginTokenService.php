@@ -76,19 +76,19 @@ class PluginTokenService
             return null;
         }
 
-        $row = $this->codes->findActive($this->hash($code));
-        if ($row === null) {
+        $authCode = $this->codes->findActive($this->hash($code));
+        if ($authCode === null) {
             return null;
         }
 
-        if (!$this->verifyChallenge($codeVerifier, $row['code_challenge'])) {
+        if (!$this->verifyChallenge($codeVerifier, $authCode->code_challenge)) {
             return null;
         }
 
         // Single-use: burn the code before issuing so it can't be replayed.
-        $this->codes->markUsed($row['id']);
+        $this->codes->markUsed($authCode->id);
 
-        return $this->issueToken($row['user_id'], $row['scope'], $label);
+        return $this->issueToken($authCode->user_id, $authCode->scope, $label);
     }
 
     /**
@@ -119,14 +119,14 @@ class PluginTokenService
             return null;
         }
 
-        $row = $this->tokens->findActive($this->hash($token));
-        if ($row === null) {
+        $stored = $this->tokens->findActive($this->hash($token));
+        if ($stored === null) {
             return null;
         }
 
-        $this->tokens->touchLastUsed($row['id']);
+        $this->tokens->touchLastUsed($stored->id);
 
-        return $row['user_id'];
+        return $stored->user_id;
     }
 
     /**

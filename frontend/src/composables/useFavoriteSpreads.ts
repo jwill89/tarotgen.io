@@ -2,13 +2,9 @@ import { ref, type Ref } from 'vue'
 import { apiRequest } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 import { useToasts } from './useToasts'
+import type { FavoriteSpread } from '@/types'
 
-export interface FavoriteEntry {
-  spread_type: 'public' | 'personal'
-  spread_id: number
-}
-
-const favorites: Ref<FavoriteEntry[]> = ref([])
+const favorites: Ref<FavoriteSpread[]> = ref([])
 // Dedupe concurrent callers: a single page load mounts several components that
 // each call fetchFavorites — collapse them into one in-flight request instead of
 // a burst of identical authenticated calls (each of which the server serializes).
@@ -18,7 +14,7 @@ export function useFavoriteSpreads() {
   function fetchFavorites(): Promise<void> {
     if (inFlight) return inFlight
     inFlight = (async () => {
-      const res = await apiRequest<FavoriteEntry[]>(endpoints.account.favorites)
+      const res = await apiRequest<FavoriteSpread[]>(endpoints.account.favorites)
       if (res.ok) {
         favorites.value = res.data
       } else if (res.status !== 401) {

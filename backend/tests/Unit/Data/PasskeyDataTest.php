@@ -45,8 +45,8 @@ final class PasskeyDataTest extends TestCase
 
         $found = $this->data->findByCredentialId('cred-abc');
         $this->assertNotNull($found);
-        $this->assertSame(1, (int)$found['user_id']);
-        $this->assertSame('-----PEM-----', $found['public_key_pem']);
+        $this->assertSame(1, $found->user_id);
+        $this->assertSame('-----PEM-----', $found->public_key_pem);
 
         $this->assertNull($this->data->findByCredentialId('does-not-exist'));
     }
@@ -79,7 +79,8 @@ final class PasskeyDataTest extends TestCase
         $this->data->updateSignCount($id, 12);
 
         $row = $this->data->findByCredentialId('c1');
-        $this->assertSame(12, (int)$row['sign_count']);
+        $this->assertNotNull($row);
+        $this->assertSame(12, $row->sign_count);
 
         $stamp = $this->pdo->query('SELECT last_used_at FROM user_passkeys WHERE passkey_id = ' . $id)
             ->fetchColumn();
@@ -93,7 +94,7 @@ final class PasskeyDataTest extends TestCase
         $this->assertFalse($this->data->rename($id, 2, 'Hijacked'), 'wrong owner cannot rename');
         $this->assertTrue($this->data->rename($id, 1, 'New Name'));
 
-        $this->assertSame('New Name', $this->data->getByUser(1)[0]['name']);
+        $this->assertSame('New Name', $this->data->getByUser(1)[0]->name);
     }
 
     public function testDeleteIsOwnershipScoped(): void

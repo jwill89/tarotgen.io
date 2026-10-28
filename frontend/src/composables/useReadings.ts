@@ -1,12 +1,6 @@
 import { endpoints } from '@/api/endpoints'
 import { apiRequest, sendForm, sendJson, type ApiResult } from './apiClient'
-import type { Reading } from '@/types'
-
-/** What creating a reading answers with: enough to link to it and list it as recent. */
-export interface CreatedReading {
-  reading_id: string
-  reading_time?: string
-}
+import type { AccountReading, LockedReading, Reading } from '@/types'
 
 /** A free-draw card's place on the canvas, as the placement editor saves it. */
 export interface PlacedPosition {
@@ -24,7 +18,7 @@ export function useReadings() {
   const path = (id: string) => encodeURIComponent(id)
 
   /** Draw a new reading from the New Reading form's fields. */
-  function generate(fields: URLSearchParams): Promise<ApiResult<CreatedReading>> {
+  function generate(fields: URLSearchParams): Promise<ApiResult<Reading>> {
     return apiRequest(
       endpoints.readings.generate,
       sendForm(fields),
@@ -32,8 +26,8 @@ export function useReadings() {
     )
   }
 
-  /** Save a reading made of hand-picked cards. */
-  function createCustom(payload: Record<string, unknown>): Promise<ApiResult<CreatedReading>> {
+  /** Save a reading made of hand-picked cards. Answers with the stored row, not a Reading. */
+  function createCustom(payload: Record<string, unknown>): Promise<ApiResult<AccountReading>> {
     return apiRequest(
       endpoints.readings.create,
       sendJson('POST', payload),
@@ -41,8 +35,8 @@ export function useReadings() {
     )
   }
 
-  /** A reading, or `{ locked: true }` when it needs a password this visitor hasn't given. */
-  function get(id: string): Promise<ApiResult<Reading>> {
+  /** A reading, or the locked stub when it needs a password this visitor hasn't given. */
+  function get(id: string): Promise<ApiResult<Reading | LockedReading>> {
     return apiRequest(endpoints.readings.byId(path(id)))
   }
 

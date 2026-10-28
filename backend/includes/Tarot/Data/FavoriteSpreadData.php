@@ -2,7 +2,7 @@
 
 namespace Tarot\Data;
 
-use PDO;
+use Tarot\Structure\FavoriteSpread;
 
 /**
  * Data layer for the user_favorite_spreads table.
@@ -13,16 +13,15 @@ class FavoriteSpreadData extends AbstractData
     /**
      * Get all favorite spread entries for a user.
      *
-     * @return array<array{spread_type: string, spread_id: int}>
+     * @return list<FavoriteSpread>
      */
     public function listByUser(int $userId): array
     {
-        $stmt = $this->db->prepare(
-            "SELECT spread_type, spread_id FROM user_favorite_spreads WHERE user_id = :user_id ORDER BY created_at ASC"
+        return $this->fetchAllAs(
+            "SELECT spread_type, spread_id FROM user_favorite_spreads WHERE user_id = :user_id ORDER BY created_at ASC",
+            [':user_id' => $userId],
+            FavoriteSpread::class
         );
-        $stmt->execute([':user_id' => $userId]);
-
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**

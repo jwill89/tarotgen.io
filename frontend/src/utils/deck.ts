@@ -1,4 +1,12 @@
-import type { Deck } from '@/types'
+import type { Deck, DrawCard } from '@/types'
+
+/**
+ * A drawn card's name, or "Card #N" when the deck has none for it (an extra card
+ * nobody has named yet — the API leaves card_name out then).
+ */
+export function cardLabel(card: DrawCard): string {
+  return card.card_name ?? `Card #${String(card.card_id)}`
+}
 
 /**
  * Label for a deck <option>, with the deck system short name and extra card count.

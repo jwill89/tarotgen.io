@@ -5,7 +5,8 @@ import { useToasts } from './useToasts'
 import type { Deck, DeckCard } from '@/types'
 
 const decks: Ref<Deck[]> = ref([])
-const deckLookup: Ref<Record<number, Deck>> = ref({})
+// Partial: a reading or report can name a deck that isn't (or is no longer) listed.
+const deckLookup: Ref<Partial<Record<number, Deck>>> = ref({})
 // Several components on one page ask for decks at mount; share one request.
 let inFlight: Promise<void> | null = null
 

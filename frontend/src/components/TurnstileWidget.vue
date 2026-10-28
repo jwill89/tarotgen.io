@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onBeforeUnmount } from 'vue'
+import { ref, toValue, onMounted, onBeforeUnmount } from 'vue'
 import { apiFetch } from '@/composables/apiClient'
 import { endpoints } from '@/api/endpoints'
 
@@ -72,9 +72,12 @@ onMounted(async () => {
     return
   }
 
-  if (!window.turnstile || !container.value) return
+  // Read the element again: the component may have unmounted while the script
+  // loaded (TypeScript still assumes the check before the await holds).
+  const el = toValue(container)
+  if (!window.turnstile || !el) return
 
-  widgetId = window.turnstile.render(container.value, {
+  widgetId = window.turnstile.render(el, {
     sitekey: siteKey,
     theme: 'auto',
     callback: (t: string) => {

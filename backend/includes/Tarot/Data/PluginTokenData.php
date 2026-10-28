@@ -2,7 +2,6 @@
 
 namespace Tarot\Data;
 
-use PDO;
 use Tarot\Structure\PluginToken;
 use Tarot\Utility\Clock;
 
@@ -13,6 +12,9 @@ use Tarot\Utility\Clock;
  */
 class PluginTokenData extends AbstractData
 {
+    /** Exactly the properties PluginToken declares: never token_hash. */
+    private const string SELECT_COLS = 'id, user_id, label, scope, created_at, last_used_at, expires_at, revoked_at';
+
     public function store(int $userId, string $tokenHash, string $label, string $scope, ?string $expiresAt): int
     {
         $sql = 'INSERT INTO plugin_tokens (user_id, token_hash, label, scope, expires_at, created_at)
@@ -32,27 +34,19 @@ class PluginTokenData extends AbstractData
     }
 
     /**
-     * The active token row matching the hash, or null. "Active" = not revoked and
+     * The active token matching the hash, or null. "Active" = not revoked and
      * not past its (optional) expiry.
-     *
-     * @return array{id:int,user_id:int}|null
      */
-    public function findActive(string $tokenHash): ?array
+    public function findActive(string $tokenHash): ?PluginToken
     {
-        $sql = 'SELECT id, user_id FROM plugin_tokens
-                WHERE token_hash = :hash AND revoked_at IS NULL
-                  AND (expires_at IS NULL OR expires_at > :now)
-                LIMIT 1';
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $tokenHash, ':now' => Clock::now()]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!is_array($row)) {
-            return null;
-        }
-
-        return ['id' => (int)$row['id'], 'user_id' => (int)$row['user_id']];
+        return $this->fetchOne(
+            'SELECT ' . self::SELECT_COLS . ' FROM plugin_tokens
+             WHERE token_hash = :hash AND revoked_at IS NULL
+               AND (expires_at IS NULL OR expires_at > :now)
+             LIMIT 1',
+            [':hash' => $tokenHash, ':now' => Clock::now()],
+            PluginToken::class
+        );
     }
 
     public function touchLastUsed(int $id): void
@@ -69,8 +63,7 @@ class PluginTokenData extends AbstractData
     public function listForUser(int $userId): array
     {
         return $this->fetchAllAs(
-            'SELECT id, user_id, label, scope, created_at, last_used_at, expires_at, revoked_at
-             FROM plugin_tokens WHERE user_id = :uid ORDER BY created_at DESC, id DESC',
+            'SELECT ' . self::SELECT_COLS . ' FROM plugin_tokens WHERE user_id = :uid ORDER BY created_at DESC, id DESC',
             [':uid' => $userId],
             PluginToken::class
         );

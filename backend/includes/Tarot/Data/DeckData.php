@@ -125,23 +125,17 @@ class DeckData extends AbstractData
         return max(0.1, min(100000.0, (float)$v));
     }
 
+    /**
+     * Delete a deck. Its special cards, card reports and favourites go with it:
+     * every table that references decks does so ON DELETE CASCADE (special_cards
+     * since db/migrate_special_cards_cascade.php, AUDIT §2.7).
+     */
     public function delete(int $deck_id): bool
     {
-        $this->db->beginTransaction();
-
         try {
-            $this->db->prepare("DELETE FROM special_cards WHERE deck_id = :deck_id")
-                     ->execute([':deck_id' => $deck_id]);
-
-            $this->db->prepare("DELETE FROM decks WHERE deck_id = :deck_id")
-                     ->execute([':deck_id' => $deck_id]);
-
-            $this->db->commit();
-
-            return true;
-        } catch (Throwable $e) {
-            $this->db->rollBack();
-
+            return $this->db->prepare('DELETE FROM decks WHERE deck_id = :deck_id')
+                ->execute([':deck_id' => $deck_id]);
+        } catch (Throwable) {
             return false;
         }
     }

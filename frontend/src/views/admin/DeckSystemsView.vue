@@ -133,7 +133,7 @@ async function saveSystem() {
       }
       result = res.data
       toasts.success('Deck system created.')
-    } else {
+    } else if (editingSystem.value.deck_system_id !== undefined) {
       result = await api.put(
         endpoints.admin.deckSystems.byId(editingSystem.value.deck_system_id),
         editingSystem.value,

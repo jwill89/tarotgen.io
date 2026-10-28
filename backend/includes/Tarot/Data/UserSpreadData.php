@@ -3,14 +3,13 @@
 namespace Tarot\Data;
 
 use JsonException;
-use PDO;
 use Tarot\Structure\UserSpread;
 
 class UserSpreadData extends AbstractData
 {
     use NormalizesPositions;
 
-    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    /** Exactly the properties UserSpread declares (AUDIT §2.4). */
     private const string SELECT_COLS = 'user_spread_id, user_id, name, description, card_count, positions, '
         . 'created_at, updated_at';
 
@@ -22,25 +21,14 @@ class UserSpreadData extends AbstractData
     public function retrieve(int $userId, ?int $userSpreadId = null): array
     {
         $query = "SELECT " . self::SELECT_COLS . " FROM user_spreads WHERE user_id = :user_id";
+        $params = [':user_id' => $userId];
 
         if ($userSpreadId !== null) {
             $query .= " AND user_spread_id = :user_spread_id";
+            $params[':user_spread_id'] = $userSpreadId;
         }
 
-        $query .= " ORDER BY created_at DESC";
-
-        $stmt = $this->db->prepare($query);
-        $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
-
-        if ($userSpreadId !== null) {
-            $stmt->bindParam(':user_spread_id', $userSpreadId, PDO::PARAM_INT);
-        }
-
-        $stmt->execute();
-        /** @var list<array<string,mixed>> $rows */
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_map($this->hydrate(...), $rows);
+        return $this->fetchAllAs($query . ' ORDER BY created_at DESC', $params, UserSpread::class);
     }
 
     /**
@@ -48,11 +36,11 @@ class UserSpreadData extends AbstractData
      */
     public function findById(int $userSpreadId): ?UserSpread
     {
-        $stmt = $this->db->prepare("SELECT " . self::SELECT_COLS . " FROM user_spreads WHERE user_spread_id = :id");
-        $stmt->execute([':id' => $userSpreadId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? $this->hydrate($row) : null;
+        return $this->fetchOne(
+            'SELECT ' . self::SELECT_COLS . ' FROM user_spreads WHERE user_spread_id = :id',
+            [':id' => $userSpreadId],
+            UserSpread::class
+        );
     }
 
     /**
@@ -140,27 +128,5 @@ class UserSpreadData extends AbstractData
             "DELETE FROM user_spreads WHERE user_spread_id = :user_spread_id AND user_id = :user_id"
         );
         return $stmt->execute([':user_spread_id' => $userSpreadId, ':user_id' => $userId]);
-    }
-
-    /**
-     * @throws JsonException
-     */
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): UserSpread
-    {
-        $positions = json_decode($row['positions'] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
-
-        return new UserSpread([
-            'user_spread_id' => (int)$row['user_spread_id'],
-            'user_id'        => (int)$row['user_id'],
-            'name'           => (string)$row['name'],
-            'description'    => (string)$row['description'],
-            'card_count'     => (int)$row['card_count'],
-            'positions'      => is_array($positions) ? $positions : [],
-            'created_at'     => (string)$row['created_at'],
-            'updated_at'     => (string)$row['updated_at'],
-        ]);
     }
 }

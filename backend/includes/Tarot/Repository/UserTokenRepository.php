@@ -3,6 +3,7 @@
 namespace Tarot\Repository;
 
 use Tarot\Data\UserTokenData;
+use Tarot\Structure\UserToken;
 
 readonly class UserTokenRepository
 {
@@ -15,8 +16,7 @@ readonly class UserTokenRepository
         return $this->data->store($userId, $type, $tokenHash, $expiresAt);
     }
 
-    /** @return array{token_id:int,user_id:int}|null */
-    public function findValid(string $tokenHash, string $type): ?array
+    public function findValid(string $tokenHash, string $type): ?UserToken
     {
         return $this->data->findValid($tokenHash, $type);
     }

@@ -2,13 +2,12 @@
 
 namespace Tarot\Data;
 
-use PDO;
 use Tarot\Structure\ChangelogEntry;
 use Tarot\Utility\Clock;
 
 class ChangelogData extends AbstractData
 {
-    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    /** Exactly the properties ChangelogEntry declares (AUDIT §2.4). */
     private const string SELECT_COLS = 'entry_id, title, body, entry_date';
 
     /**
@@ -16,26 +15,14 @@ class ChangelogData extends AbstractData
      */
     public function retrieve(?int $entry_id = null): array
     {
-        $query = "SELECT " . self::SELECT_COLS . " FROM changelog";
-
-        if ($entry_id !== null) {
-            $query .= " WHERE entry_id = :entry_id";
-        }
+        $where = $entry_id !== null ? ' WHERE entry_id = :entry_id' : '';
 
         // Newest first: order by the entry date, then by id to break ties.
-        $query .= " ORDER BY entry_date DESC, entry_id DESC";
-
-        $stmt = $this->db->prepare($query);
-
-        if ($entry_id !== null) {
-            $stmt->bindParam(':entry_id', $entry_id, PDO::PARAM_INT);
-        }
-
-        $stmt->execute();
-        /** @var list<array<string,mixed>> $rows */
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_map($this->hydrate(...), $rows);
+        return $this->fetchAllAs(
+            'SELECT ' . self::SELECT_COLS . ' FROM changelog' . $where . ' ORDER BY entry_date DESC, entry_id DESC',
+            $entry_id !== null ? [':entry_id' => $entry_id] : [],
+            ChangelogEntry::class
+        );
     }
 
     /**
@@ -97,19 +84,6 @@ class ChangelogData extends AbstractData
     {
         $stmt = $this->db->prepare("DELETE FROM changelog WHERE entry_id = :entry_id");
         return $stmt->execute([':entry_id' => $entry_id]);
-    }
-
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): ChangelogEntry
-    {
-        return new ChangelogEntry([
-            'entry_id'   => (int)$row['entry_id'],
-            'title'      => (string)$row['title'],
-            'body'       => (string)$row['body'],
-            'entry_date' => (string)$row['entry_date'],
-        ]);
     }
 
     private function cleanTitle(mixed $title): string

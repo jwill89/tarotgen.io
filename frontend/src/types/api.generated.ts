@@ -1605,6 +1605,76 @@ export interface components {
             /** @description Degrees, 0–359. */
             rotation: number;
         };
+        /** @description One drawn card, in draw order. */
+        DrawCard: {
+            /** @description The card's number in its deck; a deck's extra cards come after its system's cards. */
+            card_id: number;
+            /** @description Drawn upside down. */
+            reversed: boolean;
+            /** @description Absent when the deck has no name for the card (an extra card nobody has named yet). */
+            card_name?: string;
+        };
+        /** @description The layout as it was when the reading was made, so a shared reading still renders after its spread is edited or deleted. */
+        SpreadSnapshot: {
+            /** @description The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement. */
+            spread_id: number;
+            /** @description The spread's name. */
+            name: string;
+            /** @description Markdown; may be empty. */
+            description: string;
+            /** @description One per drawn card. */
+            positions: components["schemas"]["SpreadPosition"][];
+        };
+        /** @description What was drawn, from which deck, in which layout. */
+        ReadingInfo: {
+            /** @description The deck the cards were drawn from. */
+            deck_id: number;
+            /**
+             * @description How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.
+             * @enum {string}
+             */
+            origin?: "generated" | "custom";
+            /** @description Absent for a free draw that was never placed. */
+            spread?: components["schemas"]["SpreadSnapshot"];
+            /** @description The cards, in draw order. */
+            draw: components["schemas"]["DrawCard"][];
+        };
+        /** @description A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return. */
+        ReadingView: {
+            /** @description The code in the reading link. */
+            reading_id: string;
+            /** @description What was drawn. */
+            reading_info: components["schemas"]["ReadingInfo"];
+            /** @description When it was made, UTC ("Y-m-d H:i:s"). */
+            reading_time: string;
+            /** @description The owner's title for it, if any. */
+            reading_name: string | null;
+            /** @description The owner's notes (Markdown), if any. */
+            reading_notes: string | null;
+            /** @description "Guest", or the owner's display name unless they chose to hide it. */
+            reader: string;
+            /** @description Whether the requester owns it. */
+            is_owner: boolean;
+            /** @description Locked for good against further draws. */
+            is_final: boolean;
+            /** @description The requester may draw more cards into it: their own, not final, not custom. */
+            can_draw_more: boolean;
+            /**
+             * @description Always false here; see LockedReading.
+             * @enum {boolean}
+             */
+            locked: false;
+        };
+        /** @description Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock). */
+        LockedReading: {
+            /**
+             * @description Always true here.
+             * @enum {boolean}
+             */
+            locked: true;
+            /** @description The owner's title for it, if any — the only thing shown before unlocking. */
+            reading_name: string | null;
+        };
         /** @description A card users have reported as having a problem with its image. */
         CardReport: {
             report_id: number;
@@ -1698,6 +1768,25 @@ export interface components {
             reversed_meaning: string | null;
             reversed_advice: string | null;
         };
+        /** @description A favourited spread: which table it lives in, and its id there. */
+        FavoriteSpread: {
+            /**
+             * @description `public` for an official spread, `personal` for a custom one.
+             * @enum {string}
+             */
+            spread_type: "public" | "personal";
+            /** @description The spread_id or user_spread_id, according to spread_type. */
+            spread_id: number;
+        };
+        /** @description A passkey registered to the signed-in user's account. */
+        Passkey: {
+            passkey_id: number;
+            /** @description The WebAuthn credential id, base64url-encoded. */
+            credential_id: string;
+            name: string;
+            created_at: string;
+            last_used_at: string | null;
+        };
         /** @description A user-submitted spread awaiting moderation. */
         PendingSpread: {
             pending_id: number;
@@ -1725,11 +1814,11 @@ export interface components {
             expires_at: string | null;
             revoked_at: string | null;
         };
-        /** @description A saved tarot reading. */
+        /** @description A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead. */
         Reading: {
             reading_id: string;
-            /** @description Serialized to a nested JSON object in the response (see jsonSerialize). */
-            reading_info: Record<string, never>;
+            /** @description What was drawn. */
+            reading_info: components["schemas"]["ReadingInfo"];
             reading_time: string;
             user_id: number | null;
             hide_user: boolean;
@@ -1739,6 +1828,20 @@ export interface components {
             is_final: boolean;
             /** @description Derived flag — true when a view password is set. The hash itself is never exposed. */
             password_protected: boolean;
+        };
+        /** @description A reading as the admin readings list shows it. */
+        ReadingSummary: {
+            reading_id: string;
+            reading_time: string;
+            /** @description The owner, or null for a guest reading. */
+            user_id: number | null;
+            /** @description The owner's display name, or `Guest`. */
+            display_name: string;
+            deck_id: number;
+            /** @description The deck's name, or `Deck #<id>` once the deck is gone. */
+            deck_name: string;
+            /** @description The spread name, or empty for a free draw. */
+            spread_name: string;
         };
         /** @description A deck-specific special (custom) card. */
         SpecialCard: {
@@ -2161,7 +2264,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["FavoriteSpread"][];
                 };
             };
         };
@@ -3125,7 +3228,11 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        rows: components["schemas"]["ReadingSummary"][];
+                        /** @description Every stored reading, across all pages. */
+                        total: number;
+                    };
                 };
             };
         };
@@ -4172,7 +4279,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>[];
+                    "application/json": components["schemas"]["Passkey"][];
                 };
             };
             /** @description Not authenticated */
@@ -4454,13 +4561,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The reading, or a { locked, reading_name } stub */
+            /** @description The reading, or — when it has a password this requester has not given — the locked stub */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Reading"];
+                    "application/json": components["schemas"]["ReadingView"] | components["schemas"]["LockedReading"];
                 };
             };
             /** @description InvalidReadingID */
@@ -4502,7 +4609,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Reading"];
+                    "application/json": components["schemas"]["ReadingView"];
                 };
             };
             /** @description Incorrect password */
@@ -4548,7 +4655,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Reading"];
+                    "application/json": components["schemas"]["ReadingView"];
                 };
             };
             /** @description Invalid draw spec */
@@ -4580,7 +4687,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created reading */
+            /** @description The created reading, as stored (not the viewer payload the other reading commands return) */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4679,7 +4786,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Reading"];
+                    "application/json": components["schemas"]["ReadingView"];
                 };
             };
             /** @description Custom readings cannot draw */
@@ -4729,7 +4836,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Reading"];
+                    "application/json": components["schemas"]["ReadingView"];
                 };
             };
             /** @description Not the owner */

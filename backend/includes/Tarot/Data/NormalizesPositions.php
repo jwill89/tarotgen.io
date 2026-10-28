@@ -3,9 +3,10 @@
 namespace Tarot\Data;
 
 /**
- * Shared sanitizer for spread position payloads. Used by both SpreadData and
- * PendingSpreadData so the official and user-submitted tables enforce the same
- * shape: clamped coordinates, normalized rotation, length-capped titles.
+ * Shared sanitizer for spread position payloads, used by SpreadData,
+ * PendingSpreadData and UserSpreadData so the official, submitted and personal
+ * tables enforce the same shape: clamped coordinates, normalized rotation,
+ * length-capped titles. (Reading it back is the Structures' positions hook.)
  */
 trait NormalizesPositions
 {

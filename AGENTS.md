@@ -133,6 +133,15 @@ HTTP Request
   `fetchAllAs()`, and `applyUpdate()` (dynamic, allow-listed UPDATE). The `PDO`
   handle is **injected**, never fetched from a global, so tests can pass an
   in-memory SQLite PDO. Always use **prepared statements / bound params**.
+- **Every row read fetches straight into a class** with `fetchOne()`/`fetchAllAs()`
+  — there is no `FETCH_ASSOC` + hand-written `hydrate()`. The SELECT lists exactly
+  the class's properties (never `*`). A derived value is computed in the SELECT
+  (`… IS NOT NULL AS password_protected`, `EXISTS (…) AS has_passkeys`). A JSON
+  column is decoded by the property's set hook (`Spread::$positions`). A secret
+  goes into a class that keeps it `private` (`UserCredentials`). A row for
+  internal use only gets a plain Structure with no `#[OA\Schema]`. A NULL into a
+  non-nullable property is a TypeError, so match nullability to the column.
+  `AbstractData`'s docblock has the details.
 - **`PDO::class`** is the only manual container definition (see
   `api/dependencies.php`); it comes from `Connection::getInstance()`. Everything
   else (repositories, services, controllers) is autowired. Sessions are stored
@@ -285,7 +294,7 @@ npm install            # install deps (requires frontend/.npmrc with the FA Pro 
 npm run dev            # Vite dev server :5173 (proxies /api and /assets to localhost:80)
 npm run build          # production build to frontend/dist/
 npm run preview        # preview the production build
-npm run type-check     # vue-tsc --noEmit (strict TS check)
+npm run type-check     # vue-tsc on tsconfig.app.json + tsconfig.node.json (the root tsconfig only lists references)
 npm run lint           # eslint . (flat config; lints src/ TS + Vue SFCs)
 npm run lint:fix       # eslint . --fix
 npm test               # vitest run (single pass)
@@ -430,7 +439,10 @@ scripts/retention.php --dry-run`.
     session id from request to request (sessions really are stored, by
     `DbSessionHandler`). Helpers: `get`/`post`/`request`, `assertJsonResponse`,
     `createUser` + `signInAs` (no password hashing), `service()` for the
-    container, `rows()` for what landed in the DB, `setEnv()`. Env is blanked per
+    container, `rows()` for what landed in the DB, `setEnv()`, and
+    `assertDocumented()` — the payload matches the response schema in the
+    committed `openapi.json` (no missing or undocumented fields, nested schemas
+    included). Env is blanked per
     test (no SMTP, Turnstile or OAuth; not production) and each test gets its own
     client IP so the file-backed rate limiters don't collide. Use these for
     status codes, error bodies, auth and anything that crosses layers.
@@ -477,7 +489,11 @@ scripts/retention.php --dry-run`.
   `vendor\bin\phpunit -d date.timezone=Pacific/Kiritimati` (UTC+14).
 - **Comments** in this codebase explain *why*, not *what* — follow that style.
 - **PSR-4 / PER-CS 3.0** for PHP (`composer lint:fix`). **Strict TypeScript**
-  (`strict: true`) — keep `npm run type-check` clean.
+  (`strict: true`) — keep `npm run type-check` clean. Augment a module's types
+  (`declare module 'vue' { … }`) only in a file that is itself a module (has a
+  top-level import/export, like `src/global-components.d.ts`): in a script file
+  such as `vite-env.d.ts` the block *replaces* the module, which once silently
+  emptied Vue's types.
 - Don't commit generated artifacts (`dist/`, `vendor/`, `node_modules/`,
   `.phpunit.cache`) or the local `.env`.
 - Deck card images live at `assets/decks/{deck_id}/Card_XXXX.png` with a

@@ -15,6 +15,7 @@ import { renderMarkdown } from '@/utils/markdown'
 import { formatDateTime } from '@/utils/datetime'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls, cardBackImageUrls } from '@/utils/cardImages'
+import { cardLabel } from '@/utils/deck'
 import type { Reading, ReadingInfo, ReadingCard, SpreadPosition } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import LightboxOverlay from '@/components/LightboxOverlay.vue'
@@ -68,7 +69,7 @@ const cardBack = computed(() =>
 
 const readingUrl = computed(() => {
   if (!reading.value) return ''
-  return 'https://tarotgen.io/reading/' + String(reading.value.reading_id)
+  return 'https://tarotgen.io/reading/' + reading.value.reading_id
 })
 
 const readingCards = computed<ReadingCard[]>(() => {
@@ -76,7 +77,13 @@ const readingCards = computed<ReadingCard[]>(() => {
   if (!info?.draw) return []
   return info.draw.map((card) => {
     const urls = cardImageUrls(info.deck_id, card.card_id)
-    return { ...card, imgUrl: urls.display, pngUrl: urls.png, thumbUrl: urls.thumb }
+    return {
+      ...card,
+      card_name: cardLabel(card),
+      imgUrl: urls.display,
+      pngUrl: urls.png,
+      thumbUrl: urls.thumb,
+    }
   })
 })
 
@@ -108,7 +115,7 @@ const drawForm = reactive({ count: 1, useReversals: false, useAdditionalCards: f
 // Cards still available to draw from this deck (free-draw uses the system total).
 const maxDrawMore = computed(() => {
   const base = readingDeck.value?.system_total_cards || 78
-  const total = Number(base) + (drawForm.useAdditionalCards ? Number(deckExtraCards.value) : 0)
+  const total = base + (drawForm.useAdditionalCards ? deckExtraCards.value : 0)
   return Math.max(0, total - drawnCount.value)
 })
 
@@ -185,7 +192,9 @@ const spreadCards = computed<SpreadCard[]>(() => {
     .sort((a, b) => a.order - b.order)
     .map((position) => {
       const drawIndex = position.order - 1
-      return { position, card: cards[drawIndex], drawIndex }
+      // A position past the cards drawn so far has no card yet.
+      const card = drawIndex < cards.length ? cards[drawIndex] : undefined
+      return { position, card, drawIndex }
     })
     .filter((sc): sc is SpreadCard => sc.card !== undefined)
 })
@@ -213,7 +222,7 @@ const detailItems = computed<DetailItem[]>(() => {
     }))
   }
   return readingCards.value.map((card, i) => ({
-    order: Number(i) + 1,
+    order: i + 1,
     title: '',
     card,
     drawIndex: i,
@@ -290,14 +299,11 @@ function exportAt(scale: number) {
   showExportModal.value = false
   if (!reading.value || !readingInfo.value) return
   void exportReading({
-    fileName:
-      'tarot-reading-' + String(reading.value.reading_id) + (scale > 1 ? '-hires' : '') + '.png',
+    fileName: 'tarot-reading-' + reading.value.reading_id + (scale > 1 ? '-hires' : '') + '.png',
     readingId: reading.value.reading_id,
     title: spread.value?.name || 'Tarot Reading',
     subtitle:
-      String(readingDeck.value?.name ?? 'Tarot') +
-      '  ·  ' +
-      formatDateTime(reading.value.reading_time),
+      (readingDeck.value?.name ?? 'Tarot') + '  ·  ' + formatDateTime(reading.value.reading_time),
     cards: readingCards.value.map((c) => ({
       imgUrl: c.imgUrl,
       fallbackUrl: c.pngUrl,
@@ -318,9 +324,9 @@ function applyReading(data: Reading) {
   reading.value = data
   const info = data.reading_info
   readingInfo.value = info
-  readingName.value = data.reading_name ?? null
-  readingNotes.value = data.reading_notes ?? null
-  readerName.value = data.reader ?? 'Guest'
+  readingName.value = data.reading_name
+  readingNotes.value = data.reading_notes
+  readerName.value = data.reader
   locked.value = false
   recordReading({
     id: data.reading_id,
@@ -357,7 +363,7 @@ async function fetchReading(id: string) {
     }
     if (res.data.locked) {
       locked.value = true
-      readingName.value = res.data.reading_name ?? null
+      readingName.value = res.data.reading_name
       return
     }
     applyReading(res.data)
@@ -374,10 +380,11 @@ async function unlock() {
   const res = await unlockReading(id, unlockPassword.value)
   unlocking.value = false
 
-  if (res.ok && !res.data.locked) {
+  // A wrong password is a 401 carrying the server's message; success is the reading.
+  if (res.ok) {
     applyReading(res.data)
   } else {
-    unlockError.value = res.ok ? 'Incorrect password.' : res.error
+    unlockError.value = res.error
   }
 }
 

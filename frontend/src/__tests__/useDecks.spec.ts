@@ -71,7 +71,7 @@ describe('useDecks', () => {
     await fetchDecks()
 
     expect(decks.value).toEqual([])
-    const [toast] = useToasts().toasts.value
+    const toast = useToasts().toasts.value.at(0)
     expect(toast?.type).toBe('error')
     expect(toast?.message).toMatch(/Couldn't load the decks/)
   })

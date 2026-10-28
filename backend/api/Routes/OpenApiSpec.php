@@ -79,6 +79,67 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'rotation', description: 'Degrees, 0–359.', type: 'integer', maximum: 359, minimum: 0),
     ]
 )]
+// What a reading holds (its reading_info JSON) and the two shapes the reading
+// endpoints answer with. None has a Structure: reading_info is stored as JSON, and
+// ReadingController builds the payloads (accessiblePayload, the locked stub).
+#[OA\Schema(
+    schema: 'DrawCard',
+    description: 'One drawn card, in draw order.',
+    required: ['card_id', 'reversed'],
+    properties: [
+        new OA\Property(property: 'card_id', description: "The card's number in its deck; a deck's extra cards come after its system's cards.", type: 'integer'),
+        new OA\Property(property: 'reversed', description: 'Drawn upside down.', type: 'boolean'),
+        new OA\Property(property: 'card_name', description: 'Absent when the deck has no name for the card (an extra card nobody has named yet).', type: 'string'),
+    ]
+)]
+#[OA\Schema(
+    schema: 'SpreadSnapshot',
+    description: "The layout as it was when the reading was made, so a shared reading still renders after its spread is edited or deleted.",
+    required: ['spread_id', 'name', 'description', 'positions'],
+    properties: [
+        new OA\Property(property: 'spread_id', description: 'The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.', type: 'integer'),
+        new OA\Property(property: 'name', description: "The spread's name.", type: 'string'),
+        new OA\Property(property: 'description', description: 'Markdown; may be empty.', type: 'string'),
+        new OA\Property(property: 'positions', description: 'One per drawn card.', type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition')),
+    ]
+)]
+#[OA\Schema(
+    schema: 'ReadingInfo',
+    description: 'What was drawn, from which deck, in which layout.',
+    required: ['deck_id', 'draw'],
+    properties: [
+        new OA\Property(property: 'deck_id', description: 'The deck the cards were drawn from.', type: 'integer'),
+        new OA\Property(property: 'origin', description: "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.", type: 'string', enum: ['generated', 'custom']),
+        new OA\Property(property: 'spread', ref: '#/components/schemas/SpreadSnapshot', description: 'Absent for a free draw that was never placed.'),
+        new OA\Property(property: 'draw', description: 'The cards, in draw order.', type: 'array', items: new OA\Items(ref: '#/components/schemas/DrawCard')),
+    ]
+)]
+#[OA\Schema(
+    schema: 'ReadingView',
+    description: 'A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return.',
+    required: ['reading_id', 'reading_info', 'reading_time', 'reading_name', 'reading_notes', 'reader', 'is_owner', 'is_final', 'can_draw_more', 'locked'],
+    properties: [
+        new OA\Property(property: 'reading_id', description: 'The code in the reading link.', type: 'string'),
+        new OA\Property(property: 'reading_info', ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.'),
+        new OA\Property(property: 'reading_time', description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string'),
+        new OA\Property(property: 'reading_name', description: "The owner's title for it, if any.", type: 'string', nullable: true),
+        new OA\Property(property: 'reading_notes', description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true),
+        new OA\Property(property: 'reader', description: '"Guest", or the owner\'s display name unless they chose to hide it.', type: 'string'),
+        new OA\Property(property: 'is_owner', description: 'Whether the requester owns it.', type: 'boolean'),
+        new OA\Property(property: 'is_final', description: 'Locked for good against further draws.', type: 'boolean'),
+        new OA\Property(property: 'can_draw_more', description: 'The requester may draw more cards into it: their own, not final, not custom.', type: 'boolean'),
+        new OA\Property(property: 'locked', description: 'Always false here; see LockedReading.', type: 'boolean', enum: [false]),
+    ]
+)]
+#[OA\Schema(
+    schema: 'LockedReading',
+    description: "Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock).",
+    required: ['locked', 'reading_name'],
+    properties: [
+        new OA\Property(property: 'locked', description: 'Always true here.', type: 'boolean', enum: [true]),
+        new OA\Property(property: 'reading_name', description: "The owner's title for it, if any — the only thing shown before unlocking.", type: 'string', nullable: true),
+    ]
+)]
 final class OpenApiSpec
 {
 }

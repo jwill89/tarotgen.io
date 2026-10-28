@@ -41,7 +41,7 @@ const {
     deck_id: (d) => d.deck_id,
     name: (d) => d.name,
     artist: (d) => d.artist,
-    total_cards: (d) => Number(d.system_total_cards) + Number(d.additional_cards),
+    total_cards: (d) => d.system_total_cards + d.additional_cards,
   },
   initialSort: 'deck_id',
 })
@@ -59,7 +59,7 @@ function emptyDeck(): Partial<Deck> {
     artist: '',
     purchase_url: '',
     deck_system_id:
-      (deckSystems.value.find((s) => s.short_name === 'RWS') ?? deckSystems.value[0])
+      (deckSystems.value.find((s) => s.short_name === 'RWS') ?? deckSystems.value.at(0))
         ?.deck_system_id ?? 1,
     additional_cards: 0,
     card_aspect_w: 5,
@@ -100,13 +100,13 @@ async function saveDeck() {
   if (!editingDeck.value) return
   saving.value = true
   try {
-    const result = isNew.value
-      ? await api.post(endpoints.admin.decks.create, editingDeck.value, 'Deck created.')
-      : await api.patch(
-          endpoints.admin.decks.byId(editingDeck.value.deck_id),
-          editingDeck.value,
-          'Deck updated.',
-        )
+    const id = editingDeck.value.deck_id
+    let result
+    if (isNew.value) {
+      result = await api.post(endpoints.admin.decks.create, editingDeck.value, 'Deck created.')
+    } else if (id !== undefined) {
+      result = await api.patch(endpoints.admin.decks.byId(id), editingDeck.value, 'Deck updated.')
+    }
     if (!result) return
     await Promise.all([fetchDecks(), fetchPendingDecks()])
     closeEdit()

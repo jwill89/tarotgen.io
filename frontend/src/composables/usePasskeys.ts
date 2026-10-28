@@ -2,14 +2,7 @@ import { ref } from 'vue'
 import { useUser } from './useUser'
 import { endpoints } from '@/api/endpoints'
 import { apiFetch, apiRequest, sendJson } from './apiClient'
-import type { User } from '@/types'
-
-export interface Passkey {
-  passkey_id: number
-  name: string
-  created_at: string
-  last_used_at: string | null
-}
+import type { Passkey, User } from '@/types'
 
 /** A credential reference as the server sends it: the id is base64url, not bytes. */
 type CredentialDescriptorJson = Omit<PublicKeyCredentialDescriptor, 'id'> & { id: string }

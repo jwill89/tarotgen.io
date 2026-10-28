@@ -6,7 +6,6 @@ use OpenApi\Attributes as OA;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
-use Tarot\Repository\DeckRepository;
 use Tarot\Repository\ReadingRepository;
 
 /**
@@ -15,7 +14,6 @@ use Tarot\Repository\ReadingRepository;
 class AdminReadingController extends AbstractController
 {
     public function __construct(
-        private readonly DeckRepository $decks,
         private readonly ReadingRepository $readings,
     ) {
     }
@@ -33,7 +31,14 @@ class AdminReadingController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'Paginated readings',
-                content: new OA\JsonContent(type: 'object')
+                content: new OA\JsonContent(
+                    required: ['rows', 'total'],
+                    properties: [
+                        new OA\Property(property: 'rows', type: 'array', items: new OA\Items(ref: '#/components/schemas/ReadingSummary')),
+                        new OA\Property(property: 'total', type: 'integer', description: 'Every stored reading, across all pages.'),
+                    ],
+                    type: 'object'
+                )
             ),
         ]
     )]
@@ -43,20 +48,7 @@ class AdminReadingController extends AbstractController
         $limit  = max(1, (int)($params['limit'] ?? 50));
         $offset = max(0, (int)($params['offset'] ?? 0));
 
-        $result = $this->readings->listAll($limit, $offset);
-
-        // Resolve deck names for the listing.
-        $deckNames = [];
-        foreach ($this->decks->getAll() as $deck) {
-            $deckNames[$deck->deck_id] = $deck->name;
-        }
-
-        foreach ($result['rows'] as &$row) {
-            $row['deck_name'] = $deckNames[$row['deck_id']] ?? ('Deck #' . $row['deck_id']);
-        }
-        unset($row);
-
-        return $response->withJson($result);
+        return $response->withJson($this->readings->listAll($limit, $offset));
     }
 
     /**

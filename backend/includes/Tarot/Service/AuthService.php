@@ -105,13 +105,13 @@ class AuthService
             return false;
         }
 
-        $row = $this->tokens->findValid(self::hashToken($rawToken), self::TOKEN_ACTIVATION);
-        if ($row === null) {
+        $token = $this->tokens->findValid(self::hashToken($rawToken), self::TOKEN_ACTIVATION);
+        if ($token === null) {
             return false;
         }
 
-        $this->users->activate((int)$row['user_id']);
-        $this->tokens->markUsed((int)$row['token_id']);
+        $this->users->activate($token->user_id);
+        $this->tokens->markUsed($token->token_id);
 
         return true;
     }
@@ -149,22 +149,22 @@ class AuthService
         $email = strtolower(trim($email));
         $auth  = $this->users->findAuthByEmail($email);
 
-        if ($auth === null || !password_verify($password, (string)$auth['password_hash'])) {
+        if ($auth === null || !$auth->verify($password)) {
             return ['status' => 'invalid'];
         }
 
-        if ((int)$auth['is_active'] !== 1) {
+        if (!$auth->is_active) {
             return ['status' => 'inactive'];
         }
 
-        $userId = (int)$auth['user_id'];
+        $userId = $auth->user_id;
 
         // Check if password login has been disabled for this account.
         if ($this->users->isPasswordLoginDisabled($userId)) {
             return ['status' => 'password_disabled'];
         }
 
-        if (password_needs_rehash((string)$auth['password_hash'], self::passwordAlgo())) {
+        if ($auth->needsRehash(self::passwordAlgo())) {
             $this->users->updatePasswordHash($userId, password_hash($password, self::passwordAlgo()));
         }
 
@@ -223,8 +223,8 @@ class AuthService
             return ['status' => 'invalid'];
         }
 
-        $row = $this->tokens->findValid(self::hashToken($rawToken), self::TOKEN_PASSWORD_RESET);
-        if ($row === null) {
+        $token = $this->tokens->findValid(self::hashToken($rawToken), self::TOKEN_PASSWORD_RESET);
+        if ($token === null) {
             return ['status' => 'invalid'];
         }
 
@@ -233,9 +233,9 @@ class AuthService
             return ['status' => 'weak', 'error' => $pwError];
         }
 
-        $userId = (int)$row['user_id'];
+        $userId = $token->user_id;
         $this->users->updatePasswordHash($userId, password_hash($newPassword, self::passwordAlgo()));
-        $this->tokens->markUsed((int)$row['token_id']);
+        $this->tokens->markUsed($token->token_id);
         $this->users->activate($userId);
 
         return ['status' => 'ok'];

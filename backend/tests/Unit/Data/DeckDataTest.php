@@ -54,8 +54,6 @@ final class DeckDataTest extends TestCase
                 submitted_by INTEGER DEFAULT NULL
             )'
         );
-        $this->pdo->exec('CREATE TABLE special_cards (deck_id INTEGER, card_id INTEGER)');
-
         $this->data = new DeckData($this->pdo);
     }
 

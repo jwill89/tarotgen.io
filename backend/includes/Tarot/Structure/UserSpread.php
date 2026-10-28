@@ -27,7 +27,9 @@ class UserSpread extends AbstractStructure
 
     /** @var list<array<string,mixed>> */
     #[OA\Property(type: 'array', items: new OA\Items(ref: '#/components/schemas/SpreadPosition'))]
-    public private(set) array $positions = [];
+    public private(set) array $positions = [] {
+        set(array|string $value) => self::jsonList($value);
+    }
 
     #[OA\Property(type: 'string')]
     public private(set) string $created_at = '';

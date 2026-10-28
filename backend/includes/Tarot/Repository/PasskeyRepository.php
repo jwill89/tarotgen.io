@@ -3,6 +3,8 @@
 namespace Tarot\Repository;
 
 use Tarot\Data\PasskeyData;
+use Tarot\Structure\Passkey;
+use Tarot\Structure\PasskeyCredential;
 
 readonly class PasskeyRepository
 {
@@ -10,16 +12,13 @@ readonly class PasskeyRepository
     {
     }
 
-    /** @return array<array{passkey_id:int, credential_id:string, name:string, created_at:string, last_used_at:?string}> */
+    /** @return list<Passkey> */
     public function getByUser(int $userId): array
     {
         return $this->data->getByUser($userId);
     }
 
-    /**
-     * @return array<string,mixed>|null
-     */
-    public function findByCredentialId(string $credentialId): ?array
+    public function findByCredentialId(string $credentialId): ?PasskeyCredential
     {
         return $this->data->findByCredentialId($credentialId);
     }

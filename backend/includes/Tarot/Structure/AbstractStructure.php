@@ -53,6 +53,27 @@ abstract class AbstractStructure implements JsonSerializable
     }
 
     /**
+     * The set hook of a property stored as a JSON list of objects (spread
+     * positions): FETCH_CLASS hands it the column's text, the array constructor
+     * the already-decoded list. A malformed document throws rather than reading
+     * back as an empty spread.
+     *
+     * @param array<mixed>|string $value
+     * @return list<array<string,mixed>>
+     */
+    protected static function jsonList(array|string $value): array
+    {
+        $decoded = is_string($value) ? json_decode($value, true, 512, JSON_THROW_ON_ERROR) : $value;
+
+        // A list of objects by construction: NormalizesPositions wrote it, or
+        // the caller built it — JSON itself can't promise that shape.
+        /** @var list<array<string,mixed>> $list */
+        $list = is_array($decoded) ? $decoded : [];
+
+        return $list;
+    }
+
+    /**
      * JSON serialize method
      *
      * This method caches ReflectionClass property names per class and

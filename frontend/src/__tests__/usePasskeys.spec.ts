@@ -9,7 +9,8 @@ function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response
 
 /** A fetch stub that answers by URL and records what was sent. */
 function routes(table: Record<string, Response>) {
-  const fetchMock = vi.fn((url: string) =>
+  // The init parameter is unused, but typed so specs can read what was sent.
+  const fetchMock = vi.fn((url: string, _init?: RequestInit) =>
     Promise.resolve(table[url] ?? fakeResponse({ error: 'unrouted' }, { ok: false, status: 404 })),
   )
   vi.stubGlobal('fetch', fetchMock)

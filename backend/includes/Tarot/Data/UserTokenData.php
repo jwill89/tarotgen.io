@@ -2,7 +2,7 @@
 
 namespace Tarot\Data;
 
-use PDO;
+use Tarot\Structure\UserToken;
 use Tarot\Utility\Clock;
 
 /**
@@ -28,22 +28,18 @@ class UserTokenData extends AbstractData
     }
 
     /**
-     * Return an unused, unexpired token row matching the hash + type, or null.
-     *
-     * @return array{token_id:int,user_id:int}|null
+     * Return an unused, unexpired token matching the hash + type, or null.
      */
-    public function findValid(string $tokenHash, string $type): ?array
+    public function findValid(string $tokenHash, string $type): ?UserToken
     {
-        $sql = 'SELECT token_id, user_id FROM user_tokens
-                WHERE token_hash = :hash AND type = :type
-                  AND used_at IS NULL AND expires_at > :now
-                LIMIT 1';
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $tokenHash, ':type' => $type, ':now' => Clock::now()]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ?: null;
+        return $this->fetchOne(
+            'SELECT token_id, user_id FROM user_tokens
+             WHERE token_hash = :hash AND type = :type
+               AND used_at IS NULL AND expires_at > :now
+             LIMIT 1',
+            [':hash' => $tokenHash, ':type' => $type, ':now' => Clock::now()],
+            UserToken::class
+        );
     }
 
     public function markUsed(int $tokenId): bool

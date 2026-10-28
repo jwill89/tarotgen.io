@@ -13,6 +13,7 @@ import BaseModal from '@/components/BaseModal.vue'
 import IconButton from '@/components/IconButton.vue'
 import BaseSelect from '@/components/BaseSelect.vue'
 import { formatDateTime } from '@/utils/datetime'
+import type { ReadingSummary } from '@/types'
 import {
   PaginationRoot,
   PaginationList,
@@ -22,21 +23,11 @@ import {
   PaginationEllipsis,
 } from 'reka-ui'
 
-interface AdminReading {
-  reading_id: string
-  reading_time: string
-  user_id: number | null
-  display_name: string
-  deck_id: number
-  deck_name: string
-  spread_name: string
-}
-
 const api = useAdminApi()
 const { confirm } = useConfirm()
 const toasts = useToasts()
 
-const allReadings = ref<AdminReading[]>([])
+const allReadings = ref<ReadingSummary[]>([])
 const loading = ref(true)
 const page = ref(1)
 const perPage = ref(50)
@@ -76,7 +67,7 @@ watch(totalPages, (tp) => {
 
 const pagedReadings = computed(() => {
   const start = (safePage.value - 1) * perPage.value
-  return sortedReadings.value.slice(start, start + Number(perPage.value))
+  return sortedReadings.value.slice(start, start + perPage.value)
 })
 
 // Clean readings modal
@@ -89,7 +80,7 @@ const cleanDaySelectOptions = cleanOptions.map((d) => ({ value: d, label: `${d} 
 
 async function fetchReadings() {
   loading.value = true
-  const data = await api.get<{ rows: AdminReading[]; total: number }>(
+  const data = await api.get<{ rows: ReadingSummary[]; total: number }>(
     endpoints.admin.readings.list + '?limit=100000&offset=0',
   )
   if (data) {
@@ -102,11 +93,11 @@ function scrollToTop() {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function viewReading(reading: AdminReading) {
+function viewReading(reading: ReadingSummary) {
   window.open(`/reading/${reading.reading_id}`, '_blank')
 }
 
-async function deleteReading(reading: AdminReading) {
+async function deleteReading(reading: ReadingSummary) {
   const ok = await confirm({
     title: 'Delete Reading',
     message: `Permanently delete reading "${reading.reading_id}"? This cannot be undone.`,

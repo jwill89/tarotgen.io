@@ -503,17 +503,10 @@ async function clearAll() {
   min-height: 236px;
   height: 100%; /* fill the grid row so both panels are exactly equal height */
   overflow: hidden;
-  /* This and the margin below came from Bulma's .panel, which these cards matched
-     by name until its module was dropped (AUDIT §3.3); kept so the page looks
-     the same. */
-  box-shadow: var(--bulma-shadow);
   transition:
     transform 0.3s ease,
     border-color 0.3s ease,
     box-shadow 0.3s ease;
-}
-.panel:not(:last-child) {
-  margin-bottom: 1.5rem;
 }
 .panel:hover {
   transform: translateY(-4px);

@@ -27,7 +27,7 @@ export function useUndoRedo(slots: unknown[], onRestore?: () => void, maxEntries
     if (stack.value[pointer.value] === snap) return // no actual change
 
     // Drop any redo branch, then append the new state.
-    stack.value.splice(Number(pointer.value) + 1)
+    stack.value.splice(pointer.value + 1)
     stack.value.push(snap)
     pointer.value = stack.value.length - 1
 
@@ -44,7 +44,7 @@ export function useUndoRedo(slots: unknown[], onRestore?: () => void, maxEntries
     slots.splice(0, slots.length, ...data)
     onRestore?.()
     // The deep watcher fires during this flush; clear the flag afterwards.
-    nextTick(() => {
+    void nextTick(() => {
       restoring = false
     })
   }

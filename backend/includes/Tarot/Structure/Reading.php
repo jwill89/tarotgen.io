@@ -10,14 +10,14 @@ use OpenApi\Attributes as OA;
  * and the array constructor still hydrate rows, while external code cannot mutate
  * the entity — only the Data/Service layer builds one up via the setters.
  */
-#[OA\Schema(description: 'A saved tarot reading.')]
+#[OA\Schema(description: 'A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead.')]
 class Reading extends AbstractStructure
 {
     #[OA\Property(type: 'string')]
     public private(set) string $reading_id = '';
 
-    /** Serialized to a nested JSON object in the response (see jsonSerialize). */
-    #[OA\Property(type: 'object')]
+    /** Stored as a JSON string; jsonSerialize() sends it as the object itself. */
+    #[OA\Property(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.')]
     public private(set) string $reading_info = '';
 
     #[OA\Property(type: 'string')]
@@ -82,18 +82,6 @@ class Reading extends AbstractStructure
     public function setReadingNotes(?string $reading_notes): self
     {
         $this->reading_notes = $reading_notes;
-        return $this;
-    }
-
-    public function setIsFinal(bool $is_final): self
-    {
-        $this->is_final = $is_final;
-        return $this;
-    }
-
-    public function setPasswordProtected(bool $password_protected): self
-    {
-        $this->password_protected = $password_protected;
         return $this;
     }
 

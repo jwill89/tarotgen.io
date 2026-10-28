@@ -3,6 +3,7 @@
 namespace Tarot\Repository;
 
 use Tarot\Data\PluginAuthCodeData;
+use Tarot\Structure\PluginAuthCode;
 
 readonly class PluginAuthCodeRepository
 {
@@ -15,8 +16,7 @@ readonly class PluginAuthCodeRepository
         return $this->data->store($userId, $codeHash, $codeChallenge, $scope, $expiresAt);
     }
 
-    /** @return array{id:int,user_id:int,code_challenge:string,scope:string}|null */
-    public function findActive(string $codeHash): ?array
+    public function findActive(string $codeHash): ?PluginAuthCode
     {
         return $this->data->findActive($codeHash);
     }

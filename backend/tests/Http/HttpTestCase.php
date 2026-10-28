@@ -68,6 +68,9 @@ abstract class HttpTestCase extends TestCase
 
     private string $errorLog;
 
+    /** @var array<string,mixed> openapi.json, read once for assertDocumented(). */
+    private static array $spec = [];
+
     protected function setUp(): void
     {
         foreach (self::ENV_KEYS as $key) {
@@ -255,6 +258,91 @@ abstract class HttpTestCase extends TestCase
     protected function useSessionCookie(?string $sessionId): void
     {
         $this->sessionId = $sessionId;
+    }
+
+    /**
+     * The payload matches what the committed openapi.json documents for this
+     * response: a schema $ref (one of them, for a oneOf), an array of one, or an
+     * inline object — nested schemas included.
+     *
+     * @param array<mixed> $payload
+     */
+    protected function assertDocumented(string $method, string $path, int $status, array $payload): void
+    {
+        $schema = self::spec()['paths'][$path][$method]['responses'][(string)$status]['content']['application/json']['schema'] ?? null;
+        $this->assertIsArray($schema, "{$method} {$path} documents no JSON body for {$status}");
+
+        $problems = [];
+        foreach ($schema['oneOf'] ?? [$schema] as $candidate) {
+            $found = $this->schemaProblems($candidate, $payload);
+            if ($found === []) {
+                $this->addToAssertionCount(1);
+                return;
+            }
+            $problems[] = ($candidate['$ref'] ?? 'inline schema') . ': ' . implode('; ', $found);
+        }
+        $this->fail("{$method} {$path} {$status} doesn't match its documented schema —\n" . implode("\n", $problems));
+    }
+
+    /**
+     * Everything that makes $payload differ from $schema: a required property
+     * missing, an undocumented one present, or a nested schema that doesn't match.
+     *
+     * @param array<mixed> $schema
+     * @param array<mixed> $payload
+     * @return list<string>
+     */
+    private function schemaProblems(array $schema, array $payload): array
+    {
+        if (isset($schema['$ref'])) {
+            $ref = (string)$schema['$ref'];
+            $schema = self::spec()['components']['schemas'][substr($ref, strrpos($ref, '/') + 1)] ?? null;
+            if (!is_array($schema)) {
+                return ["no schema {$ref}"];
+            }
+        }
+
+        if (($schema['type'] ?? null) === 'array') {
+            if (!array_is_list($payload)) {
+                return ['an object where a list is documented'];
+            }
+            $problems = [];
+            foreach ($payload as $i => $item) {
+                foreach ($this->schemaProblems($schema['items'] ?? [], is_array($item) ? $item : []) as $problem) {
+                    $problems[] = "[{$i}].{$problem}";
+                }
+            }
+            return $problems;
+        }
+
+        $properties = $schema['properties'] ?? [];
+        $problems = [];
+        foreach (array_diff($schema['required'] ?? [], array_keys($payload)) as $missing) {
+            $problems[] = "missing {$missing}";
+        }
+        foreach (array_diff(array_keys($payload), array_keys($properties)) as $extra) {
+            $problems[] = "undocumented {$extra}";
+        }
+        foreach ($properties as $property => $definition) {
+            $nested = isset($definition['$ref']) || isset($definition['items']['$ref']);
+            if (!$nested || !is_array($payload[$property] ?? null)) {
+                continue;
+            }
+            foreach ($this->schemaProblems($definition, $payload[$property]) as $problem) {
+                $problems[] = "{$property}.{$problem}";
+            }
+        }
+        return $problems;
+    }
+
+    /** @return array<string,mixed> */
+    private static function spec(): array
+    {
+        if (self::$spec === []) {
+            $spec = json_decode((string)file_get_contents(dirname(__DIR__, 2) . '/openapi.json'), true, 512, JSON_THROW_ON_ERROR);
+            self::$spec = is_array($spec) ? $spec : [];
+        }
+        return self::$spec;
     }
 
     /** @return App<ContainerInterface|null> */

@@ -12,12 +12,12 @@ import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { ToggleGroupRoot, ToggleGroupItem } from 'reka-ui'
 
 interface SegmentOption {
-  value: string
+  value: T
   label: string
   icon?: IconDefinition
 }
 
-defineProps<{
+const props = defineProps<{
   options: SegmentOption[]
   ariaLabel?: string
 }>()
@@ -25,9 +25,10 @@ defineProps<{
 const model = defineModel<T>({ required: true })
 
 // ToggleGroup type="single" allows deselect (value → ''); a segmented control
-// must always keep a value, so ignore empty updates.
+// must always keep a value, so take only an update naming one of the options.
 function onUpdate(value: unknown): void {
-  if (typeof value === 'string' && value) model.value = value
+  const option = props.options.find((o) => o.value === value)
+  if (option) model.value = option.value
 }
 </script>
 

@@ -43,8 +43,8 @@ final class FavoriteSpreadDataTest extends TestCase
         $list = $this->data->listByUser(1);
 
         $this->assertCount(1, $list);
-        $this->assertSame('public', $list[0]['spread_type']);
-        $this->assertSame(7, (int)$list[0]['spread_id']);
+        $this->assertSame('public', $list[0]->spread_type);
+        $this->assertSame(7, $list[0]->spread_id);
     }
 
     public function testAddIsIdempotent(): void
@@ -73,7 +73,7 @@ final class FavoriteSpreadDataTest extends TestCase
 
         $remaining = $this->data->listByUser(1);
         $this->assertCount(1, $remaining);
-        $this->assertSame('personal', $remaining[0]['spread_type']);
+        $this->assertSame('personal', $remaining[0]->spread_type);
     }
 
     public function testRemoveBySpreadClearsItForEveryUser(): void

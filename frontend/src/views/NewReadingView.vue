@@ -44,14 +44,24 @@ const freeDrawModeOptions = [
   { value: 'placement', label: 'With Placement', icon: byPrefixAndName.fas['hand-pointer'] },
 ]
 
-const form = reactive({
-  deckId: null as number | null,
-  spreadId: null as number | null,
-  userSpreadId: null as number | null,
+interface DrawForm {
+  deckId: number | null
+  spreadId: number | null
+  userSpreadId: number | null
+  numberOfCards: number
+  useReversals: boolean
+  useAdditionalCards: boolean
+  freeDrawMode: 'standard' | 'placement'
+}
+
+const form = reactive<DrawForm>({
+  deckId: null,
+  spreadId: null,
+  userSpreadId: null,
   numberOfCards: 1,
   useReversals: false,
   useAdditionalCards: false,
-  freeDrawMode: 'standard' as 'standard' | 'placement',
+  freeDrawMode: 'standard',
 })
 
 onMounted(() => {
@@ -292,7 +302,7 @@ async function submitNewReading() {
     summary: selectedSpread.value
       ? selectedSpread.value.name
       : String(form.numberOfCards) + (form.numberOfCards === 1 ? ' card' : ' cards'),
-    at: res.data.reading_time ?? new Date().toISOString(),
+    at: res.data.reading_time,
   })
 
   // Free Draw With Placement: redirect to the placement editor instead.

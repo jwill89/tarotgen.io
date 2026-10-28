@@ -3,37 +3,39 @@
 namespace Tarot\Data;
 
 use PDO;
+use Tarot\Structure\Passkey;
+use Tarot\Structure\PasskeyCredential;
 use Tarot\Utility\Clock;
 
 class PasskeyData extends AbstractData
 {
     /**
      * Get all passkeys for a user.
-     * @return array<array{passkey_id:int, credential_id:string, name:string, created_at:string, last_used_at:?string}>
+     *
+     * @return list<Passkey>
      */
     public function getByUser(int $userId): array
     {
-        $stmt = $this->db->prepare(
+        return $this->fetchAllAs(
             'SELECT passkey_id, credential_id, name, created_at, last_used_at
-             FROM user_passkeys WHERE user_id = :uid ORDER BY created_at DESC'
+             FROM user_passkeys WHERE user_id = :uid ORDER BY created_at DESC',
+            [':uid' => $userId],
+            Passkey::class
         );
-        $stmt->execute([':uid' => $userId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Find a passkey by its credential ID (base64url-encoded).
-     * @return array{passkey_id:int, user_id:int, credential_id:string, public_key_pem:string, sign_count:int}|null
+     * Find a passkey by its credential ID (base64url-encoded), with the key and
+     * counter a sign-in verifies against.
      */
-    public function findByCredentialId(string $credentialId): ?array
+    public function findByCredentialId(string $credentialId): ?PasskeyCredential
     {
-        $stmt = $this->db->prepare(
+        return $this->fetchOne(
             'SELECT passkey_id, user_id, credential_id, public_key_pem, sign_count
-             FROM user_passkeys WHERE credential_id = :cid'
+             FROM user_passkeys WHERE credential_id = :cid',
+            [':cid' => $credentialId],
+            PasskeyCredential::class
         );
-        $stmt->execute([':cid' => $credentialId]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-        return $row ?: null;
     }
 
     /**

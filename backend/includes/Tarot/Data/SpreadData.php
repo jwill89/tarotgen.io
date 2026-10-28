@@ -3,14 +3,13 @@
 namespace Tarot\Data;
 
 use JsonException;
-use PDO;
 use Tarot\Structure\Spread;
 
 class SpreadData extends AbstractData
 {
     use NormalizesPositions;
 
-    /** Exactly what hydrate() reads (AUDIT §2.4). */
+    /** Exactly the properties Spread declares (AUDIT §2.4). */
     private const string SELECT_COLS = 'spread_id, name, description, card_count, positions';
 
     /**
@@ -18,25 +17,13 @@ class SpreadData extends AbstractData
      */
     public function retrieve(?int $spread_id = null): array
     {
-        $query = "SELECT " . self::SELECT_COLS . " FROM spreads";
+        $where = $spread_id !== null ? ' WHERE spread_id = :spread_id' : '';
 
-        if ($spread_id !== null) {
-            $query .= " WHERE spread_id = :spread_id";
-        }
-
-        $query .= " ORDER BY name";
-
-        $stmt = $this->db->prepare($query);
-
-        if ($spread_id !== null) {
-            $stmt->bindParam(':spread_id', $spread_id, PDO::PARAM_INT);
-        }
-
-        $stmt->execute();
-        /** @var list<array<string,mixed>> $rows */
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_map($this->hydrate(...), $rows);
+        return $this->fetchAllAs(
+            'SELECT ' . self::SELECT_COLS . ' FROM spreads' . $where . ' ORDER BY name',
+            $spread_id !== null ? [':spread_id' => $spread_id] : [],
+            Spread::class
+        );
     }
 
     /**
@@ -119,24 +106,5 @@ class SpreadData extends AbstractData
     {
         $stmt = $this->db->prepare("DELETE FROM spreads WHERE spread_id = :spread_id");
         return $stmt->execute([':spread_id' => $spread_id]);
-    }
-
-    /**
-     * @throws JsonException
-     */
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): Spread
-    {
-        $positions = json_decode($row['positions'] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
-
-        return new Spread([
-            'spread_id'   => (int)$row['spread_id'],
-            'name'        => (string)$row['name'],
-            'description' => (string)$row['description'],
-            'card_count'  => (int)$row['card_count'],
-            'positions'   => is_array($positions) ? $positions : [],
-        ]);
     }
 }

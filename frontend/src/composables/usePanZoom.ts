@@ -54,7 +54,7 @@ export function usePanZoom(opts?: { min?: number; max?: number; step?: number })
   }
 
   function zoomIn() {
-    setZoom(Number(zoom.value) + ZOOM_STEP)
+    setZoom(zoom.value + ZOOM_STEP)
   }
   function zoomOut() {
     setZoom(zoom.value - ZOOM_STEP)
@@ -108,7 +108,7 @@ export function usePanZoom(opts?: { min?: number; max?: number; step?: number })
       ox = e.clientX - rect.left
       oy = e.clientY - rect.top
     }
-    setZoom(Number(zoom.value) + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), ox, oy)
+    setZoom(zoom.value + (e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP), ox, oy)
   }
 
   /** True when the last pointer interaction was a drag (not a click). */

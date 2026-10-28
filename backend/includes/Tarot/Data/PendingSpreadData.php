@@ -3,7 +3,6 @@
 namespace Tarot\Data;
 
 use JsonException;
-use PDO;
 use Tarot\Structure\PendingSpread;
 
 class PendingSpreadData extends AbstractData
@@ -30,17 +29,11 @@ class PendingSpreadData extends AbstractData
         // Oldest submissions first so the admin works the queue in order.
         $query .= " ORDER BY p.submitted_at ASC, p.pending_id ASC";
 
-        $stmt = $this->db->prepare($query);
-
-        if ($pending_id !== null) {
-            $stmt->bindParam(':pending_id', $pending_id, PDO::PARAM_INT);
-        }
-
-        $stmt->execute();
-        /** @var list<array<string,mixed>> $rows */
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        return array_map($this->hydrate(...), $rows);
+        return $this->fetchAllAs(
+            $query,
+            $pending_id !== null ? [':pending_id' => $pending_id] : [],
+            PendingSpread::class
+        );
     }
 
     /**
@@ -76,27 +69,5 @@ class PendingSpreadData extends AbstractData
     {
         $stmt = $this->db->prepare("DELETE FROM pending_spreads WHERE pending_id = :pending_id");
         return $stmt->execute([':pending_id' => $pending_id]);
-    }
-
-    /**
-     * @throws JsonException
-     */
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): PendingSpread
-    {
-        $positions = json_decode($row['positions'] ?? '[]', true, 512, JSON_THROW_ON_ERROR);
-
-        return new PendingSpread([
-            'pending_id'   => (int)$row['pending_id'],
-            'name'         => (string)$row['name'],
-            'description'  => (string)$row['description'],
-            'card_count'   => (int)$row['card_count'],
-            'positions'    => is_array($positions) ? $positions : [],
-            'submitter'    => (string)$row['submitter'],
-            'user_id'      => $row['user_id'] !== null ? (int)$row['user_id'] : null,
-            'submitted_at' => (string)$row['submitted_at'],
-        ]);
     }
 }

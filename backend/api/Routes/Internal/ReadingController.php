@@ -47,8 +47,11 @@ class ReadingController extends AbstractController
         responses: [
             new OA\Response(
                 response: 200,
-                description: 'The reading, or a { locked, reading_name } stub',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                description: 'The reading, or — when it has a password this requester has not given — the locked stub',
+                content: new OA\JsonContent(oneOf: [
+                    new OA\Schema(ref: '#/components/schemas/ReadingView'),
+                    new OA\Schema(ref: '#/components/schemas/LockedReading'),
+                ])
             ),
             new OA\Response(response: 404, description: 'InvalidReadingID'),
             new OA\Response(response: 429, description: 'Rate limit exceeded'),
@@ -112,7 +115,7 @@ class ReadingController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'The unlocked reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
             ),
             new OA\Response(response: 401, description: 'Incorrect password'),
             new OA\Response(response: 404, description: 'InvalidReadingID'),
@@ -177,7 +180,7 @@ class ReadingController extends AbstractController
             new OA\Response(
                 response: 201,
                 description: 'The created reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
             ),
             new OA\Response(response: 400, description: 'Invalid draw spec'),
             new OA\Response(response: 429, description: 'Rate limit exceeded'),
@@ -221,7 +224,7 @@ class ReadingController extends AbstractController
         responses: [
             new OA\Response(
                 response: 201,
-                description: 'The created reading',
+                description: 'The created reading, as stored (not the viewer payload the other reading commands return)',
                 content: new OA\JsonContent(ref: '#/components/schemas/Reading')
             ),
             new OA\Response(response: 400, description: 'Invalid input'),
@@ -385,7 +388,7 @@ class ReadingController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'The updated reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
             ),
             new OA\Response(response: 400, description: 'Custom readings cannot draw'),
             new OA\Response(response: 403, description: 'Not the owner'),
@@ -458,7 +461,7 @@ class ReadingController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'The finalized reading',
-                content: new OA\JsonContent(ref: '#/components/schemas/Reading')
+                content: new OA\JsonContent(ref: '#/components/schemas/ReadingView')
             ),
             new OA\Response(response: 403, description: 'Not the owner'),
             new OA\Response(response: 404, description: 'Reading not found'),

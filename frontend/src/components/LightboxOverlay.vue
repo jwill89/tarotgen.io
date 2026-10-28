@@ -157,7 +157,7 @@ function zoomTo(newZoom: number, clientX?: number, clientY?: number) {
 }
 
 function zoomInBtn() {
-  withAnimation(() => zoomTo(Number(zoom.value) + 0.75))
+  withAnimation(() => zoomTo(zoom.value + 0.75))
 }
 
 function zoomOutBtn() {

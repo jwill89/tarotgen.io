@@ -10,6 +10,7 @@ import { useSubmissions } from '@/composables/useSubmissions'
 import { useToasts } from '@/composables/useToasts'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls } from '@/utils/cardImages'
+import { cardLabel } from '@/utils/deck'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -107,7 +108,7 @@ onMounted(async () => {
         placed: pos !== undefined,
         cardId: card.card_id,
         reversed: card.reversed,
-        cardName: card.card_name,
+        cardName: cardLabel(card),
       })
     })
   } finally {

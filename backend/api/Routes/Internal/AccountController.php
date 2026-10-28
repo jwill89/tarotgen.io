@@ -481,7 +481,7 @@ class AccountController extends AbstractController
         summary: 'Favorited spreads',
         tags: ['Account'],
         security: [['sessionCookie' => []]],
-        responses: [new OA\Response(response: 200, description: 'Array of favorited spreads', content: new OA\JsonContent(type: 'array', items: new OA\Items(type: 'object')))]
+        responses: [new OA\Response(response: 200, description: 'Array of favorited spreads', content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/FavoriteSpread')))]
     )]
     /** List the current user's favorited spreads. */
     public function myFavorites(Request $request, Response $response): Response|ResponseInterface

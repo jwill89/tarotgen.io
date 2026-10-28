@@ -7,6 +7,7 @@ import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
+import { useToasts } from '@/composables/useToasts'
 import BaseModal from '@/components/BaseModal.vue'
 import IconButton from '@/components/IconButton.vue'
 import NumberField from '@/components/NumberField.vue'
@@ -16,6 +17,7 @@ import type { SpecialCard, Deck } from '@/types'
 
 const api = useAdminApi()
 const { confirm } = useConfirm()
+const toasts = useToasts()
 
 const specialCards = ref<SpecialCard[]>([])
 const decks = ref<Deck[]>([])
@@ -25,7 +27,7 @@ const isNew = ref(false)
 const saving = ref(false)
 
 const deckLookup = computed(() => {
-  const map: Record<number, Deck> = {}
+  const map: Partial<Record<number, Deck>> = {}
   decks.value.forEach((d) => {
     map[d.deck_id] = d
   })
@@ -110,19 +112,27 @@ function closeEdit() {
 
 async function saveCard() {
   if (!editing.value) return
+  const { deck_id: deckId, card_id: cardId } = editing.value
+  if (deckId === undefined) {
+    toasts.error('Choose the deck this card belongs to.')
+    return
+  }
   saving.value = true
   try {
-    const result = isNew.value
-      ? await api.post(
-          endpoints.admin.decks.specialCards(editing.value.deck_id),
-          editing.value,
-          'Special card created.',
-        )
-      : await api.put(
-          endpoints.admin.decks.specialCardById(editing.value.deck_id, editing.value.card_id),
-          editing.value,
-          'Special card updated.',
-        )
+    let result
+    if (isNew.value) {
+      result = await api.post(
+        endpoints.admin.decks.specialCards(deckId),
+        editing.value,
+        'Special card created.',
+      )
+    } else if (cardId !== undefined) {
+      result = await api.put(
+        endpoints.admin.decks.specialCardById(deckId, cardId),
+        editing.value,
+        'Special card updated.',
+      )
+    }
     if (!result) return
     await fetchData()
     closeEdit()

@@ -2,76 +2,68 @@
 
 namespace Tarot\Data;
 
-use PDO;
 use Tarot\Structure\User;
+use Tarot\Structure\UserCredentials;
 use Tarot\Utility\Clock;
 
 class UserData extends AbstractData
 {
     /**
-     * Exactly what hydrate() reads. Notably not password_hash: only
-     * findAuthByEmail() and getPasswordHash() ever select it.
+     * Exactly the properties User declares. Notably not password_hash: only
+     * findAuthByEmail() and getPasswordHash() ever select it. The two flags are
+     * worked out here so the Google id never leaves SQL and listing every user
+     * is one query, not one passkey lookup per user.
      */
     private const string SELECT_COLS = 'user_id, email, display_name, is_active, is_admin, registered_at, '
-        . 'last_login_at, google_id, password_login_disabled';
+        . "last_login_at, COALESCE(google_id, '') <> '' AS google_linked, password_login_disabled, "
+        . 'EXISTS (SELECT 1 FROM user_passkeys p WHERE p.user_id = users.user_id) AS has_passkeys';
 
     /**
      * Every account, newest first — for the admin user-management screen.
      *
-     * @return User[]
+     * @return list<User>
      */
     public function getAll(): array
     {
-        $stmt = $this->query('SELECT ' . self::SELECT_COLS . ' FROM users ORDER BY registered_at DESC, user_id DESC');
-        return array_map($this->hydrate(...), $stmt->fetchAll(PDO::FETCH_ASSOC));
+        return $this->fetchAllAs(
+            'SELECT ' . self::SELECT_COLS . ' FROM users ORDER BY registered_at DESC, user_id DESC',
+            [],
+            User::class
+        );
     }
 
     public function findById(int $userId): ?User
     {
-        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE user_id = :id', [':id' => $userId]);
-        return $row ? $this->hydrate($row) : null;
+        return $this->fetchOne('SELECT ' . self::SELECT_COLS . ' FROM users WHERE user_id = :id', [':id' => $userId], User::class);
     }
 
     public function findByEmail(string $email): ?User
     {
         // The email column is COLLATE NOCASE, so this match is case-insensitive.
-        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE email = :email', [':email' => $email]);
-        return $row ? $this->hydrate($row) : null;
+        return $this->fetchOne('SELECT ' . self::SELECT_COLS . ' FROM users WHERE email = :email', [':email' => $email], User::class);
     }
 
     /**
-     * Raw auth row (including the password hash) for credential verification.
-     * Kept separate from the hydrated User so the hash never reaches callers
-     * that serialize the user.
-     *
-     * @return array{user_id:int,password_hash:string,is_active:int}|null
+     * The password sign-in check for an email. The hash goes into
+     * UserCredentials, where it stays private, never onto the User.
      */
-    public function findAuthByEmail(string $email): ?array
+    public function findAuthByEmail(string $email): ?UserCredentials
     {
-        $row = $this->row(
+        return $this->fetchOne(
             'SELECT user_id, password_hash, is_active FROM users WHERE email = :email',
-            [':email' => $email]
+            [':email' => $email],
+            UserCredentials::class
         );
-
-        if ($row === null) {
-            return null;
-        }
-
-        return [
-            'user_id'       => (int)$row['user_id'],
-            'password_hash' => (string)$row['password_hash'],
-            'is_active'     => (int)$row['is_active'],
-        ];
     }
 
     public function emailExists(string $email): bool
     {
-        return $this->row('SELECT 1 FROM users WHERE email = :email', [':email' => $email]) !== null;
+        return $this->exists('SELECT 1 FROM users WHERE email = :email', [':email' => $email]);
     }
 
     public function displayNameExists(string $displayName): bool
     {
-        return $this->row('SELECT 1 FROM users WHERE display_name = :name', [':name' => $displayName]) !== null;
+        return $this->exists('SELECT 1 FROM users WHERE display_name = :name', [':name' => $displayName]);
     }
 
     public function create(string $email, string $displayName, string $passwordHash): ?User
@@ -141,8 +133,7 @@ class UserData extends AbstractData
 
     public function findByGoogleId(string $googleId): ?User
     {
-        $row = $this->row('SELECT ' . self::SELECT_COLS . ' FROM users WHERE google_id = :gid', [':gid' => $googleId]);
-        return $row ? $this->hydrate($row) : null;
+        return $this->fetchOne('SELECT ' . self::SELECT_COLS . ' FROM users WHERE google_id = :gid', [':gid' => $googleId], User::class);
     }
 
     public function setGoogleId(int $userId, ?string $googleId): bool
@@ -153,7 +144,7 @@ class UserData extends AbstractData
 
     public function googleIdExists(string $googleId): bool
     {
-        return $this->row('SELECT 1 FROM users WHERE google_id = :gid', [':gid' => $googleId]) !== null;
+        return $this->exists('SELECT 1 FROM users WHERE google_id = :gid', [':gid' => $googleId]);
     }
 
     /**
@@ -177,43 +168,15 @@ class UserData extends AbstractData
     }
 
     /**
-     * Fetch a single associative row, or null when there is no match.
+     * Whether the query matches any row.
      *
      * @param array<array-key,mixed> $params
-     * @return array<string,mixed>|null
      */
-    private function row(string $sql, array $params): ?array
+    private function exists(string $sql, array $params): bool
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        return $row ?: null;
-    }
-
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): User
-    {
-        return new User([
-            'user_id'       => (int)$row['user_id'],
-            'email'         => (string)$row['email'],
-            'display_name'  => (string)$row['display_name'],
-            'is_active'     => (bool)(int)$row['is_active'],
-            'is_admin'      => (bool)(int)$row['is_admin'],
-            'registered_at' => (string)$row['registered_at'],
-            'last_login_at' => $row['last_login_at'] !== null ? (string)$row['last_login_at'] : null,
-            'google_linked' => isset($row['google_id']) && $row['google_id'] !== '',
-            'password_login_disabled' => (bool)(int)($row['password_login_disabled'] ?? 0),
-            'has_passkeys'  => $this->userHasPasskeys((int)$row['user_id']),
-        ]);
-    }
-
-    private function userHasPasskeys(int $userId): bool
-    {
-        $stmt = $this->db->prepare('SELECT 1 FROM user_passkeys WHERE user_id = :uid LIMIT 1');
-        $stmt->execute([':uid' => $userId]);
         return $stmt->fetchColumn() !== false;
     }
 

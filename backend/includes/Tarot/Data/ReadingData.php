@@ -2,8 +2,8 @@
 
 namespace Tarot\Data;
 
-use PDO;
 use Tarot\Structure\Reading;
+use Tarot\Structure\ReadingSummary;
 
 class ReadingData extends AbstractData
 {
@@ -18,38 +18,30 @@ class ReadingData extends AbstractData
 
     public function retrieve(string $reading_id): ?Reading
     {
-        $stmt = $this->db->prepare(
-            'SELECT ' . self::SELECT_COLS . ' FROM readings WHERE reading_id = :reading_id'
+        return $this->fetchOne(
+            'SELECT ' . self::SELECT_COLS . ' FROM readings WHERE reading_id = :reading_id',
+            [':reading_id' => $reading_id],
+            Reading::class
         );
-        $stmt->execute([':reading_id' => $reading_id]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        return $row ? $this->hydrate($row) : null;
     }
 
     /**
      * A user's readings, newest first. With a $limit, one page of them (the
      * account page); without, all of them (what the plugin's list still expects).
      *
-     * @return Reading[]
+     * @return list<Reading>
      */
     public function listByUser(int $userId, ?int $limit = null, int $offset = 0): array
     {
         $sql = 'SELECT ' . self::SELECT_COLS . ' FROM readings WHERE user_id = :uid
                 ORDER BY reading_time DESC, reading_id DESC';
+        $params = [':uid' => $userId];
         if ($limit !== null) {
             $sql .= ' LIMIT :limit OFFSET :offset';
+            $params += [':limit' => $limit, ':offset' => $offset];
         }
 
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':uid', $userId, PDO::PARAM_INT);
-        if ($limit !== null) {
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-            $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        }
-        $stmt->execute();
-
-        return array_map([$this, 'hydrate'], $stmt->fetchAll(PDO::FETCH_ASSOC));
+        return $this->fetchAllAs($sql, $params, Reading::class);
     }
 
     public function countByUser(int $userId): int
@@ -207,37 +199,33 @@ class ReadingData extends AbstractData
 
     /**
      * Admin: paginated list of all readings (lightweight — no reading_info body).
+     * The page is cut first, so the JSON is read and the deck looked up only for
+     * the rows shown.
      *
-     * @return array{rows: list<array<string,mixed>>, total: int}
+     * @return array{rows: list<ReadingSummary>, total: int}
      */
     public function listAll(int $limit, int $offset): array
     {
         $total = (int)$this->query('SELECT COUNT(*) FROM readings')->fetchColumn();
 
-        $stmt = $this->db->prepare(
-            "SELECT r.reading_id, r.reading_info, r.reading_time, r.user_id,
-                    u.display_name
-             FROM readings r
-             LEFT JOIN users u ON r.user_id = u.user_id
-             ORDER BY r.reading_time DESC, r.reading_id DESC
-             LIMIT :limit OFFSET :offset"
+        $rows = $this->fetchAllAs(
+            "SELECT page.reading_id, page.reading_time, page.user_id, page.display_name, page.deck_id,
+                    COALESCE(d.name, 'Deck #' || page.deck_id) AS deck_name, page.spread_name
+             FROM (
+                 SELECT r.reading_id, r.reading_time, r.user_id,
+                        COALESCE(u.display_name, 'Guest') AS display_name,
+                        CAST(COALESCE(json_extract(r.reading_info, '$.deck_id'), 0) AS INTEGER) AS deck_id,
+                        COALESCE(json_extract(r.reading_info, '$.spread.name'), '') AS spread_name
+                 FROM readings r
+                 LEFT JOIN users u ON r.user_id = u.user_id
+                 ORDER BY r.reading_time DESC, r.reading_id DESC
+                 LIMIT :limit OFFSET :offset
+             ) page
+             LEFT JOIN decks d ON d.deck_id = page.deck_id
+             ORDER BY page.reading_time DESC, page.reading_id DESC",
+            [':limit' => $limit, ':offset' => $offset],
+            ReadingSummary::class
         );
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-        $stmt->execute();
-
-        $rows = [];
-        foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-            $info = json_decode((string)$row['reading_info'], true, 512, JSON_THROW_ON_ERROR);
-            $rows[] = [
-                'reading_id'   => (string)$row['reading_id'],
-                'reading_time' => (string)$row['reading_time'],
-                'user_id'      => $row['user_id'] !== null ? (int)$row['user_id'] : null,
-                'display_name' => $row['display_name'] !== null ? (string)$row['display_name'] : 'Guest',
-                'deck_id'      => (int)($info['deck_id'] ?? 0),
-                'spread_name'  => (string)($info['spread']['name'] ?? ''),
-            ];
-        }
 
         return ['rows' => $rows, 'total' => $total];
     }
@@ -257,24 +245,5 @@ class ReadingData extends AbstractData
         $stmt->execute([':interval' => "-{$days} days"]);
 
         return $stmt->rowCount();
-    }
-
-    /**
-     * @param array<string,mixed> $row
-     */
-    private function hydrate(array $row): Reading
-    {
-        $reading = new Reading();
-        $reading->setReadingId((string)$row['reading_id']);
-        $reading->setReadingInfo((string)$row['reading_info']);
-        $reading->setReadingTime((string)$row['reading_time']);
-        $reading->setUserId($row['user_id'] !== null ? (int)$row['user_id'] : null);
-        $reading->setHideUser((bool)(int)$row['hide_user']);
-        $reading->setReadingName($row['reading_name'] !== null ? (string)$row['reading_name'] : null);
-        $reading->setReadingNotes($row['reading_notes'] !== null ? (string)$row['reading_notes'] : null);
-        $reading->setIsFinal((bool)(int)($row['is_final'] ?? 0));
-        $reading->setPasswordProtected((bool)(int)$row['password_protected']);
-
-        return $reading;
     }
 }

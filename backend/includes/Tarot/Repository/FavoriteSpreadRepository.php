@@ -3,6 +3,7 @@
 namespace Tarot\Repository;
 
 use Tarot\Data\FavoriteSpreadData;
+use Tarot\Structure\FavoriteSpread;
 
 readonly class FavoriteSpreadRepository
 {
@@ -13,7 +14,7 @@ readonly class FavoriteSpreadRepository
     /**
      * List all favorite entries for a user.
      *
-     * @return array<array{spread_type: string, spread_id: int}>
+     * @return list<FavoriteSpread>
      */
     public function listByUser(int $userId): array
     {

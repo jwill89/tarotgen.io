@@ -2,7 +2,7 @@
 
 namespace Tarot\Data;
 
-use PDO;
+use Tarot\Structure\PluginAuthCode;
 use Tarot\Utility\Clock;
 
 /**
@@ -30,30 +30,17 @@ class PluginAuthCodeData extends AbstractData
     }
 
     /**
-     * An unused, unexpired code row matching the hash, or null.
-     *
-     * @return array{id:int,user_id:int,code_challenge:string,scope:string}|null
+     * An unused, unexpired code matching the hash, or null.
      */
-    public function findActive(string $codeHash): ?array
+    public function findActive(string $codeHash): ?PluginAuthCode
     {
-        $sql = 'SELECT id, user_id, code_challenge, scope FROM plugin_auth_codes
-                WHERE code_hash = :hash AND used_at IS NULL AND expires_at > :now
-                LIMIT 1';
-
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([':hash' => $codeHash, ':now' => Clock::now()]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!is_array($row)) {
-            return null;
-        }
-
-        return [
-            'id'             => (int)$row['id'],
-            'user_id'        => (int)$row['user_id'],
-            'code_challenge' => (string)$row['code_challenge'],
-            'scope'          => (string)$row['scope'],
-        ];
+        return $this->fetchOne(
+            'SELECT id, user_id, code_challenge, scope FROM plugin_auth_codes
+             WHERE code_hash = :hash AND used_at IS NULL AND expires_at > :now
+             LIMIT 1',
+            [':hash' => $codeHash, ':now' => Clock::now()],
+            PluginAuthCode::class
+        );
     }
 
     public function markUsed(int $id): bool

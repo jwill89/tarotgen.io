@@ -13,9 +13,32 @@ use RuntimeException;
  *
  * The PDO handle is injected so the Data layer never reaches for a global
  * singleton, which keeps it isolatable in tests (pass an in-memory SQLite PDO).
+ *
+ * Every row read fetches straight into a class through fetchOne()/fetchAllAs()
+ * (AUDIT §2.5): no FETCH_ASSOC and hand-written hydrate(). So the SELECT must
+ * produce exactly the class's properties:
+ * - List the columns, never `*`: FETCH_CLASS turns a column the class doesn't
+ *   declare into a dynamic property.
+ * - Derive in SQL what SQL can derive (`… IS NOT NULL AS password_protected`,
+ *   `EXISTS (…) AS has_passkeys`), which also keeps the source column in SQL.
+ * - What SQL can't produce, the class converts itself: a JSON column arrives as
+ *   text and the property's set hook decodes it (Spread::$positions).
+ * - A row holding a secret goes into a class that keeps it private
+ *   (UserCredentials); a row only the backend reads gets a Structure with no
+ *   API schema (UserToken).
+ * - FETCH_CLASS assigns with PHP's type rules and no casts, so a nullable
+ *   column needs a nullable property.
+ * Scalars (counts, existence, id lists) use fetchColumn()/FETCH_COLUMN.
  */
 abstract class AbstractData
 {
+    /**
+     * Construct first, then fill in the row. Plain FETCH_CLASS does it the other
+     * way round, so a Structure constructor that set anything would overwrite
+     * what was just fetched.
+     */
+    private const int FETCH_MODE = PDO::FETCH_CLASS | PDO::FETCH_PROPS_LATE;
+
     public function __construct(protected readonly PDO $db)
     {
     }
@@ -49,7 +72,7 @@ abstract class AbstractData
     {
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        $stmt->setFetchMode(PDO::FETCH_CLASS, $class);
+        $stmt->setFetchMode(self::FETCH_MODE, $class);
 
         $row = $stmt->fetch();
 
@@ -72,7 +95,7 @@ abstract class AbstractData
         // FETCH_CLASS yields a sequentially-indexed array — a list<T> by
         // construction, which PDO's signature can't express on its own.
         /** @var list<T> $rows */
-        $rows = $stmt->fetchAll(PDO::FETCH_CLASS, $class);
+        $rows = $stmt->fetchAll(self::FETCH_MODE, $class);
 
         return $rows;
     }

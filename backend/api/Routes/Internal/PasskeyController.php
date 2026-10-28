@@ -306,9 +306,9 @@ class PasskeyController extends AbstractController
                 $clientDataJSON,
                 $authenticatorData,
                 $signature,
-                $passkey['public_key_pem'],
+                $passkey->public_key_pem,
                 new ByteBuffer($challenge),
-                $passkey['sign_count'] > 0 ? $passkey['sign_count'] : null,
+                $passkey->sign_count > 0 ? $passkey->sign_count : null,
                 false, // requireUserVerification
                 true   // requireUserPresent
             );
@@ -319,11 +319,11 @@ class PasskeyController extends AbstractController
         // Update signature counter.
         $newCount = $webAuthn->getSignatureCounter();
         if ($newCount !== null) {
-            $this->passkeys->updateSignCount($passkey['passkey_id'], $newCount);
+            $this->passkeys->updateSignCount($passkey->passkey_id, $newCount);
         }
 
         // Load user and establish session.
-        $user = $this->users->findById($passkey['user_id']);
+        $user = $this->users->findById($passkey->user_id);
         if ($user === null) {
             return $response->withJson(['error' => 'Account not found.'], 401);
         }
@@ -354,7 +354,7 @@ class PasskeyController extends AbstractController
             new OA\Response(
                 response: 200,
                 description: 'Array of passkeys',
-                content: new OA\JsonContent(type: 'array', items: new OA\Items(type: 'object'))
+                content: new OA\JsonContent(type: 'array', items: new OA\Items(ref: '#/components/schemas/Passkey'))
             ),
             new OA\Response(response: 401, description: 'Not authenticated'),
         ]

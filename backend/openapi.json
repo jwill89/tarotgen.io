@@ -530,7 +530,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "type": "object"
+                                        "$ref": "#/components/schemas/FavoriteSpread"
                                     }
                                 }
                             }
@@ -1966,6 +1966,22 @@
                         "content": {
                             "application/json": {
                                 "schema": {
+                                    "required": [
+                                        "rows",
+                                        "total"
+                                    ],
+                                    "properties": {
+                                        "rows": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ReadingSummary"
+                                            }
+                                        },
+                                        "total": {
+                                            "description": "Every stored reading, across all pages.",
+                                            "type": "integer"
+                                        }
+                                    },
                                     "type": "object"
                                 }
                             }
@@ -3368,7 +3384,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "type": "object"
+                                        "$ref": "#/components/schemas/Passkey"
                                     }
                                 }
                             }
@@ -3727,11 +3743,18 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "The reading, or a { locked, reading_name } stub",
+                        "description": "The reading, or — when it has a password this requester has not given — the locked stub",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Reading"
+                                    "oneOf": [
+                                        {
+                                            "$ref": "#/components/schemas/ReadingView"
+                                        },
+                                        {
+                                            "$ref": "#/components/schemas/LockedReading"
+                                        }
+                                    ]
                                 }
                             }
                         }
@@ -3786,7 +3809,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Reading"
+                                    "$ref": "#/components/schemas/ReadingView"
                                 }
                             }
                         }
@@ -3827,7 +3850,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Reading"
+                                    "$ref": "#/components/schemas/ReadingView"
                                 }
                             }
                         }
@@ -3860,7 +3883,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "The created reading",
+                        "description": "The created reading, as stored (not the viewer payload the other reading commands return)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3984,7 +4007,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Reading"
+                                    "$ref": "#/components/schemas/ReadingView"
                                 }
                             }
                         }
@@ -4028,7 +4051,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/Reading"
+                                    "$ref": "#/components/schemas/ReadingView"
                                 }
                             }
                         }
@@ -4485,6 +4508,183 @@
                 },
                 "type": "object"
             },
+            "DrawCard": {
+                "description": "One drawn card, in draw order.",
+                "required": [
+                    "card_id",
+                    "reversed"
+                ],
+                "properties": {
+                    "card_id": {
+                        "description": "The card's number in its deck; a deck's extra cards come after its system's cards.",
+                        "type": "integer"
+                    },
+                    "reversed": {
+                        "description": "Drawn upside down.",
+                        "type": "boolean"
+                    },
+                    "card_name": {
+                        "description": "Absent when the deck has no name for the card (an extra card nobody has named yet).",
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "SpreadSnapshot": {
+                "description": "The layout as it was when the reading was made, so a shared reading still renders after its spread is edited or deleted.",
+                "required": [
+                    "spread_id",
+                    "name",
+                    "description",
+                    "positions"
+                ],
+                "properties": {
+                    "spread_id": {
+                        "description": "The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "description": "The spread's name.",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "Markdown; may be empty.",
+                        "type": "string"
+                    },
+                    "positions": {
+                        "description": "One per drawn card.",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/SpreadPosition"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ReadingInfo": {
+                "description": "What was drawn, from which deck, in which layout.",
+                "required": [
+                    "deck_id",
+                    "draw"
+                ],
+                "properties": {
+                    "deck_id": {
+                        "description": "The deck the cards were drawn from.",
+                        "type": "integer"
+                    },
+                    "origin": {
+                        "description": "How it was made; a custom reading can't draw more cards. Absent on readings made before this was recorded.",
+                        "type": "string",
+                        "enum": [
+                            "generated",
+                            "custom"
+                        ]
+                    },
+                    "spread": {
+                        "$ref": "#/components/schemas/SpreadSnapshot",
+                        "description": "Absent for a free draw that was never placed."
+                    },
+                    "draw": {
+                        "description": "The cards, in draw order.",
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/DrawCard"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "ReadingView": {
+                "description": "A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return.",
+                "required": [
+                    "reading_id",
+                    "reading_info",
+                    "reading_time",
+                    "reading_name",
+                    "reading_notes",
+                    "reader",
+                    "is_owner",
+                    "is_final",
+                    "can_draw_more",
+                    "locked"
+                ],
+                "properties": {
+                    "reading_id": {
+                        "description": "The code in the reading link.",
+                        "type": "string"
+                    },
+                    "reading_info": {
+                        "$ref": "#/components/schemas/ReadingInfo",
+                        "description": "What was drawn."
+                    },
+                    "reading_time": {
+                        "description": "When it was made, UTC (\"Y-m-d H:i:s\").",
+                        "type": "string"
+                    },
+                    "reading_name": {
+                        "description": "The owner's title for it, if any.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reading_notes": {
+                        "description": "The owner's notes (Markdown), if any.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reader": {
+                        "description": "\"Guest\", or the owner's display name unless they chose to hide it.",
+                        "type": "string"
+                    },
+                    "is_owner": {
+                        "description": "Whether the requester owns it.",
+                        "type": "boolean"
+                    },
+                    "is_final": {
+                        "description": "Locked for good against further draws.",
+                        "type": "boolean"
+                    },
+                    "can_draw_more": {
+                        "description": "The requester may draw more cards into it: their own, not final, not custom.",
+                        "type": "boolean"
+                    },
+                    "locked": {
+                        "description": "Always false here; see LockedReading.",
+                        "type": "boolean",
+                        "enum": [
+                            false
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "LockedReading": {
+                "description": "Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock).",
+                "required": [
+                    "locked",
+                    "reading_name"
+                ],
+                "properties": {
+                    "locked": {
+                        "description": "Always true here.",
+                        "type": "boolean",
+                        "enum": [
+                            true
+                        ]
+                    },
+                    "reading_name": {
+                        "description": "The owner's title for it, if any — the only thing shown before unlocking.",
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "CardReport": {
                 "description": "A card users have reported as having a problem with its image.",
                 "required": [
@@ -4820,6 +5020,60 @@
                 },
                 "type": "object"
             },
+            "FavoriteSpread": {
+                "description": "A favourited spread: which table it lives in, and its id there.",
+                "required": [
+                    "spread_type",
+                    "spread_id"
+                ],
+                "properties": {
+                    "spread_type": {
+                        "description": "`public` for an official spread, `personal` for a custom one.",
+                        "type": "string",
+                        "enum": [
+                            "public",
+                            "personal"
+                        ]
+                    },
+                    "spread_id": {
+                        "description": "The spread_id or user_spread_id, according to spread_type.",
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "Passkey": {
+                "description": "A passkey registered to the signed-in user's account.",
+                "required": [
+                    "passkey_id",
+                    "credential_id",
+                    "name",
+                    "created_at",
+                    "last_used_at"
+                ],
+                "properties": {
+                    "passkey_id": {
+                        "type": "integer"
+                    },
+                    "credential_id": {
+                        "description": "The WebAuthn credential id, base64url-encoded.",
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": "string"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
             "PendingSpread": {
                 "description": "A user-submitted spread awaiting moderation.",
                 "required": [
@@ -4918,7 +5172,7 @@
                 "type": "object"
             },
             "Reading": {
-                "description": "A saved tarot reading.",
+                "description": "A saved reading as stored — what the account pages and custom-reading creation return. Viewing a reading returns ReadingView instead.",
                 "required": [
                     "reading_id",
                     "reading_info",
@@ -4935,8 +5189,8 @@
                         "type": "string"
                     },
                     "reading_info": {
-                        "description": "Serialized to a nested JSON object in the response (see jsonSerialize).",
-                        "type": "object"
+                        "$ref": "#/components/schemas/ReadingInfo",
+                        "description": "What was drawn."
                     },
                     "reading_time": {
                         "type": "string"
@@ -4969,6 +5223,49 @@
                     "password_protected": {
                         "description": "Derived flag — true when a view password is set. The hash itself is never exposed.",
                         "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "ReadingSummary": {
+                "description": "A reading as the admin readings list shows it.",
+                "required": [
+                    "reading_id",
+                    "reading_time",
+                    "user_id",
+                    "display_name",
+                    "deck_id",
+                    "deck_name",
+                    "spread_name"
+                ],
+                "properties": {
+                    "reading_id": {
+                        "type": "string"
+                    },
+                    "reading_time": {
+                        "type": "string"
+                    },
+                    "user_id": {
+                        "description": "The owner, or null for a guest reading.",
+                        "type": [
+                            "integer",
+                            "null"
+                        ]
+                    },
+                    "display_name": {
+                        "description": "The owner's display name, or `Guest`.",
+                        "type": "string"
+                    },
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_name": {
+                        "description": "The deck's name, or `Deck #<id>` once the deck is gone.",
+                        "type": "string"
+                    },
+                    "spread_name": {
+                        "description": "The spread name, or empty for a free draw.",
+                        "type": "string"
                     }
                 },
                 "type": "object"

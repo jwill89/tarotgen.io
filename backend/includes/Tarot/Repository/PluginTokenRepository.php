@@ -16,8 +16,7 @@ readonly class PluginTokenRepository
         return $this->data->store($userId, $tokenHash, $label, $scope, $expiresAt);
     }
 
-    /** @return array{id:int,user_id:int}|null */
-    public function findActive(string $tokenHash): ?array
+    public function findActive(string $tokenHash): ?PluginToken
     {
         return $this->data->findActive($tokenHash);
     }

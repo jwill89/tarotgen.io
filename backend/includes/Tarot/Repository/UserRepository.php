@@ -4,6 +4,7 @@ namespace Tarot\Repository;
 
 use Tarot\Data\UserData;
 use Tarot\Structure\User;
+use Tarot\Structure\UserCredentials;
 
 readonly class UserRepository
 {
@@ -27,8 +28,7 @@ readonly class UserRepository
         return $this->data->findByEmail($email);
     }
 
-    /** @return array{user_id:int,password_hash:string,is_active:int}|null */
-    public function findAuthByEmail(string $email): ?array
+    public function findAuthByEmail(string $email): ?UserCredentials
     {
         return $this->data->findAuthByEmail($email);
     }
