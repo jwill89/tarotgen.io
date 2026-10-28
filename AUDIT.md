@@ -115,9 +115,21 @@ five-entry baseline; strict TS + typed ESLint.
     contact-form senders (DB held emails, Argon2id hashes, contact messages,
     reading contents; sessions/tokens are stored hashed and are not replayable).
     `PLUGIN_IDENTITY_SALT` is dead (§2.1) — delete, don't rotate.
-  - **Durable fix (next):** move `.env` and the database **out of the web root**
-    so a missing rule can never expose them again; later, give the vhost a
-    `public/` document root (§1.9).
+  - **Durable fix — DONE 2026-10-28 05:21 UTC** (commit `2a44c27` + droplet
+    change): `Tarot\Config\Paths` resolves `.env` and the DB from
+    `TAROT_DATA_DIR` (fallback `backend/` for dev); `Connection` refuses to
+    create a missing DB. On the droplet: `/var/lib/tarotgen/{.env, db/tarotdb.db}`
+    (root:www-data 640 / www-data 640, dirs 750); `SetEnv TAROT_DATA_DIR` in both
+    tarotgen.io vhosts; `TAROT_DATA_DIR` in `/etc/environment`. Old files archived
+    (root-only) in `/var/backups/tarotgen/web-root-data-20261028-052131/`; the web
+    root's `db/` now holds only migration scripts. Verified: real reading served
+    from the new copy after the old one was gone; Apache session writes land in
+    it; a fresh SSH session's PHP CLI resolves and opens it.
+  - **Follow-ups:** rotated secrets go in **`/var/lib/tarotgen/.env`** (read per
+    request — no reload needed). Delete the archive
+    `web-root-data-20261028-052027/` (a rolled-back first attempt) once §1.1
+    backups exist. Long term, give the vhost a `public/` document root so code,
+    vendor and scripts aren't in it either.
 
 - [ ] **1.1 No database backups exist anywhere.** [critical] [S]
   - **Where:** one SQLite file, one droplet. `scripts/deploy.ps1` deliberately
@@ -136,6 +148,16 @@ five-entry baseline; strict TS + typed ESLint.
   - **Verify:** restore a backup into a temp file, `PRAGMA integrity_check` = ok,
     `SELECT COUNT(*) FROM readings` matches prod within the day. Do the restore
     drill once, for real.
+  - **DONE 2026-10-28 05:27 UTC.** `scripts/server/tarotgen-backup.sh` →
+    `/usr/local/sbin/tarotgen-backup`; `scripts/server/tarotgen.cron` →
+    `/etc/cron.d/tarotgen` (03:17 UTC nightly). Each run: `.backup` as www-data,
+    switched to a self-contained rollback-journal file, `integrity_check`,
+    gzipped root-only (600) into `/var/backups/tarotgen/nightly/`, newest 14 kept
+    (~199 KB each); logs to `journalctl -t tarotgen-backup`. First run + restore
+    drill passed: gunzipped copy integrity ok and **all 24 tables matched the live
+    DB row-for-row** (2,044 readings). Still open: off-site copy (droplet loss),
+    and alerting if a nightly run fails (today a failure is only visible in the
+    journal).
 
 - [ ] **1.2 Dev deck loads emit dynamic-property deprecations; `schema.sql` is stale.** [low] [S]
   - **Correction (prod recon):** prod's `decks` table **does not** have the

@@ -1,0 +1,10 @@
+# TarotGen.io scheduled jobs. Installed on the droplet as /etc/cron.d/tarotgen
+# (root:root 644, LF line endings — cron silently ignores a malformed file).
+# Source: scripts/server/tarotgen.cron in the repo.
+SHELL=/bin/sh
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+TAROT_DATA_DIR=/var/lib/tarotgen
+
+# 03:17 UTC nightly: online backup of the database, newest 14 kept
+# (/var/backups/tarotgen/nightly). Output goes to syslog: journalctl -t tarotgen-backup
+17 3 * * * root /usr/local/sbin/tarotgen-backup >/dev/null 2>&1

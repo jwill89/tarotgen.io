@@ -321,6 +321,15 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
 `$WebRoot/plugin`. It keeps each target to ≤3 SSH connections (the droplet runs
 `ufw limit ssh`).
 
+**Backups.** `/etc/cron.d/tarotgen` runs `/usr/local/sbin/tarotgen-backup` at 03:17
+UTC: an online `.backup` of the DB, integrity-checked, gzipped into
+`/var/backups/tarotgen/nightly/` (root-only, newest 14 kept). Sources live in
+`scripts/server/` (not deployed by `deploy.ps1`; install them by hand, LF line
+endings). Check runs with `journalctl -t tarotgen-backup`. Restore: stop writes,
+`gunzip -c <backup> > /var/lib/tarotgen/db/tarotdb.db` as www-data, delete any
+stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
+`sudo tarotgen-backup`.
+
 ---
 
 ## 7. Database
@@ -340,7 +349,10 @@ target is independent — it uploads `latest.zip` / `icon.png` / `repo.json` to
   working directory. On the droplet the migration scripts still sit in
   `<WebRoot>/db/` (they need `../vendor/autoload.php`; `.htaccess` blocks the
   folder) and reach the real DB through `TAROT_DATA_DIR`, which `/etc/environment`
-  sets for SSH sessions.
+  sets for SSH sessions. **Run anything that writes in the live DB's directory as
+  `www-data`** (`runuser -u www-data -- php db/migrate_x.php`, same for
+  `sqlite3`), so every file created there (a `.backup` copy, a stray new DB)
+  stays owned by the web-server user that has to read and write it.
 - **Rebuilding the schema:** the committed `db/schema.sql` recreates the full
   structure — `sqlite3 db/tarotdb.db < db/schema.sql`. Regenerate it after a
   migration with `php scripts/dump_schema.php` so the committed schema stays in
