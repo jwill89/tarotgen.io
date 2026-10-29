@@ -73,10 +73,10 @@ export default defineConfig({
       include: ['src/**/*.{ts,vue}'],
       exclude: ['src/__tests__/**', 'src/types/**', 'src/**/*.d.ts'],
       reporter: ['text-summary', 'html'],
-      // The floor, a little under what the specs reached when coverage was first
-      // measured (2026-10-28: 10.5 / 6.3 / 12.1 / 10.0%). Raise it as specs land;
-      // never lower it.
-      thresholds: { statements: 10, branches: 6, functions: 12, lines: 10 },
+      // The floor, a little under what the specs reached once components and views
+      // had specs (AUDIT §8, 2026-10-28: 96.7 / 92.5 / 95.0 / 97.5%; it was 10.5%
+      // of lines before). Raise it as specs land; never lower it.
+      thresholds: { statements: 95, branches: 91, functions: 94, lines: 96 },
     },
   },
   build: {

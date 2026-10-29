@@ -46,22 +46,21 @@ const { isLoggedIn } = useUser()
 // internal (ComboboxRoot has no searchTerm model in v2), and the input's text
 // is the selection's name until they type, so it's taken from input events.
 const searchTerm = ref('')
-const freeDrawSelected = ref(props.modelValue === null)
 
 // Sentinel so "No Spread (Free Draw)" is a real, value-keyed Combobox choice.
 const FREE_DRAW_ID = '__free_draw__'
 const FREE_DRAW = { id: FREE_DRAW_ID } as unknown as SpreadOption
 const FREE_DRAW_LABEL = 'No Spread (Free Draw)'
 
-const selected = computed<SpreadOption | undefined>({
-  get: () => props.modelValue ?? (freeDrawSelected.value ? FREE_DRAW : undefined),
+// No spread is free draw, however it came about: a parent resetting the form
+// to null once left the input blank, as the choice was tracked here instead.
+const selected = computed<SpreadOption>({
+  get: () => props.modelValue ?? FREE_DRAW,
   set: (val) => {
-    if (!val || val.id === FREE_DRAW_ID) {
-      freeDrawSelected.value = true
+    if (val.id === FREE_DRAW_ID) {
       emit('update:modelValue', null)
       emit('free-draw')
     } else {
-      freeDrawSelected.value = false
       emit('update:modelValue', val)
     }
   },

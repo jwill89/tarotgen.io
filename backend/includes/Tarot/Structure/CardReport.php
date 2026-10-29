@@ -60,10 +60,4 @@ class CardReport extends AbstractStructure
      */
     #[OAS\Property(schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: CardReportSubmission::class), description: 'Each reason given, newest first. Older reports may have none.'))]
     public private(set) array $submissions = [];
-
-    /** Whether an admin has marked this report handled. */
-    public function isResolved(): bool
-    {
-        return $this->resolved_at !== null;
-    }
 }

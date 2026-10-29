@@ -54,6 +54,14 @@ class ContactData extends AbstractData
         );
     }
 
+    public function exists(int $contact_id): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM contacts WHERE contact_id = :contact_id');
+        $stmt->execute([':contact_id' => $contact_id]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
     /**
      * Mark a contact as read (or unread).
      */

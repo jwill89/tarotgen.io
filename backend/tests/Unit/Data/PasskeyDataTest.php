@@ -82,9 +82,9 @@ final class PasskeyDataTest extends TestCase
         $this->assertNotNull($row);
         $this->assertSame(12, $row->sign_count);
 
-        $stamp = $this->pdo->query('SELECT last_used_at FROM user_passkeys WHERE passkey_id = ' . $id)
-            ->fetchColumn();
-        $this->assertNotNull($stamp, 'last_used_at should be stamped on use');
+        $stamp = $this->pdo->prepare('SELECT last_used_at FROM user_passkeys WHERE passkey_id = :id');
+        $stamp->execute([':id' => $id]);
+        $this->assertNotNull($stamp->fetchColumn(), 'last_used_at should be stamped on use');
     }
 
     public function testRenameIsOwnershipScoped(): void

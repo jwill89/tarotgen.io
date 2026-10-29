@@ -16,8 +16,7 @@ parameters:
         - includes/Tarot
         - api
         - bin
-        # tests/Unit predates this and isn't clean yet; the HTTP tests are.
-        - tests/Http
+        - tests
     # phpstan-strict-rules, phpstan-deprecation-rules and phpstan-phpunit load
     # through phpstan/extension-installer (AUDIT §6.2).
     ignoreErrors:

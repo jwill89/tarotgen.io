@@ -11,18 +11,22 @@ use Slim\Http\Response;
 use Tarot\Config\Env;
 use Tarot\Repository\PasskeyRepository;
 use Tarot\Repository\UserRepository;
+use Tarot\Service\PasskeyDecoys;
+use Tarot\Service\SignInMethods;
+use Tarot\Structure\Passkey;
 use Tarot\Utility\Clock;
 use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
 
 /**
- * WebAuthn/Passkey endpoints:
+ * WebAuthn/Passkey endpoints. The two login routes are public; the rest sit
+ * behind UserAuth (a signed-in, active account).
  *
- *  POST   /auth/passkeys/register/options → Get credential creation options (requires session)
+ *  POST   /auth/passkeys/register/options → Get credential creation options
  *  POST   /auth/passkeys/register         → Complete passkey registration
- *  POST   /auth/passkeys/login/options    → Get assertion options (public, requires email)
- *  POST   /auth/passkeys/login            → Authenticate with passkey
+ *  POST   /auth/passkeys/login/options    → Get assertion options (public, optional email)
+ *  POST   /auth/passkeys/login            → Authenticate with passkey (public)
  *  GET    /auth/passkeys                  → List current user's passkeys
  *  PATCH  /auth/passkeys/{id}             → Rename a passkey
  *  DELETE /auth/passkeys/{id}             → Delete a passkey
@@ -33,6 +37,8 @@ class PasskeyController extends AbstractController
     public function __construct(
         private readonly PasskeyRepository $passkeys,
         private readonly UserRepository $users,
+        private readonly SignInMethods $signInMethods,
+        private readonly PasskeyDecoys $decoys,
     ) {
     }
 
@@ -44,9 +50,21 @@ class PasskeyController extends AbstractController
         tags: ['Passkeys'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OAS\Response(response: 200, description: 'WebAuthn creation options', content: new OAS\MediaType\Json(type: 'object')),
+            new OAS\Response(
+                response: 200,
+                description: 'WebAuthn creation options',
+                content: new OAS\MediaType\Json(
+                    required: ['publicKey'],
+                    properties: [
+                        new OAS\Property(property: 'publicKey', schema: new OAS\Schema(
+                            description: 'The PublicKeyCredentialCreationOptions for navigator.credentials.create(), with its binary fields (challenge, user.id, excludeCredentials[].id) base64url-encoded. excludeCredentials lists the passkeys already on the account.',
+                            type: 'object',
+                            additionalProperties: true
+                        )),
+                    ]
+                )
+            ),
             new OAS\Response(response: 401, description: 'Not authenticated'),
-            new OAS\Response(response: 404, description: 'User not found'),
         ]
     )]
     /**
@@ -54,15 +72,12 @@ class PasskeyController extends AbstractController
      */
     public function registerOptions(Request $request, Response $response): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
+        $userId = $this->authUserId($request);
 
         $user = $this->users->findById($userId);
         if ($user === null) {
-            return $response->withJson(['error' => 'User not found.'], 404);
+            // UserAuth found the account a moment ago, so it was deleted since.
+            return $response->withJson(['error' => 'Not authenticated'], 401);
         }
 
         $webAuthn = $this->createWebAuthn();
@@ -108,7 +123,17 @@ class PasskeyController extends AbstractController
             )
         ),
         responses: [
-            new OAS\Response(response: 201, description: 'Passkey registered'),
+            new OAS\Response(
+                response: 201,
+                description: 'Passkey registered',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'passkey'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'passkey', schema: new OAS\Schema(ref: '#/components/schemas/RegisteredPasskey')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 400, description: 'Missing/invalid attestation'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
         ]
@@ -118,11 +143,7 @@ class PasskeyController extends AbstractController
      */
     public function register(Request $request, Response $response): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
+        $userId = $this->authUserId($request);
 
         $challenge = $_SESSION['webauthn_challenge'] ?? null;
         unset($_SESSION['webauthn_challenge']);
@@ -164,6 +185,12 @@ class PasskeyController extends AbstractController
             : self::base64UrlEncode((string)$data->credentialId);
         $signCount = $data->signatureCounter ?? 0;
 
+        // A credential already on file (WebAuthn §7.1 step 22) would otherwise hit the
+        // unique index as a 500. Browsers skip the excluded ones, but a client needn't.
+        if ($this->passkeys->findByCredentialId($credentialId) !== null) {
+            return $response->withJson(['error' => 'This passkey is already registered.'], 400);
+        }
+
         $passkeyId = $this->passkeys->create(
             $userId,
             $credentialId,
@@ -193,12 +220,26 @@ class PasskeyController extends AbstractController
     #[OAS\Operation\Post(
         path: '/auth/passkeys/login/options',
         summary: "Assertion options; optional email scopes to a user's credentials",
+        description: "With an email, allowCredentials always lists credentials: the account's passkeys, or for an email with none (no account, or an account without passkeys) stand-ins that look the same and stay the same, so the answer doesn't say which emails have accounts. Without one, any discoverable passkey may answer.",
         tags: ['Passkeys'],
         requestBody: new OAS\RequestBody(
             content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email'))])
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'WebAuthn assertion options', content: new OAS\MediaType\Json(type: 'object')),
+            new OAS\Response(
+                response: 200,
+                description: 'WebAuthn assertion options',
+                content: new OAS\MediaType\Json(
+                    required: ['publicKey'],
+                    properties: [
+                        new OAS\Property(property: 'publicKey', schema: new OAS\Schema(
+                            description: "The PublicKeyCredentialRequestOptions for navigator.credentials.get(), with its binary fields (challenge, allowCredentials[].id) base64url-encoded. allowCredentials is present whenever an email was given (the account's passkeys, or stand-ins); without one, any discoverable passkey may answer.",
+                            type: 'object',
+                            additionalProperties: true
+                        )),
+                    ]
+                )
+            ),
         ]
     )]
     public function loginOptions(Request $request, Response $response): Response|ResponseInterface
@@ -211,19 +252,18 @@ class PasskeyController extends AbstractController
         $credentialIds = [];
 
         if ($email !== '') {
-            $user = $this->users->findByEmail($email);
-            if ($user === null) {
-                // Don't reveal whether the account exists — return generic options.
-                // The assertion will fail gracefully later.
-                $credentialIds = [];
-            } else {
-                // Check if password login is disabled, and check passkeys exist
-                $rawIds = $this->passkeys->getCredentialIds($user->user_id);
-                $credentialIds = array_map(
-                    static fn(string $id) => new ByteBuffer(self::base64UrlDecode($id)),
-                    $rawIds
-                );
-            }
+            // The account's passkeys, or stand-ins when there are none to name —
+            // worked out either way, so neither the answer nor its timing says
+            // whether the email has an account. The stand-ins are deterministic,
+            // like real ids, and no authenticator holds them.
+            $decoys = $this->decoys->forEmail($email);
+            $user   = $this->users->findByEmail($email);
+            $real   = $user === null ? [] : array_map(self::base64UrlDecode(...), $this->passkeys->getCredentialIds($user->user_id));
+
+            $credentialIds = array_map(
+                static fn(string $id): ByteBuffer => new ByteBuffer($id),
+                $real !== [] ? $real : $decoys
+            );
         }
 
         $webAuthn = $this->createWebAuthn();
@@ -263,7 +303,7 @@ class PasskeyController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Signed in',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['success', 'user'], properties: [
                     new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
@@ -343,7 +383,8 @@ class PasskeyController extends AbstractController
         // Passkey login implies strong intent — always persist the session.
         $this->persistSession();
 
-        return $response->withJson(['success' => true, 'user' => $user]);
+        // Read again, so last_login_at is this sign-in (as the password login answers).
+        return $response->withJson(['success' => true, 'user' => $this->users->findById($user->user_id) ?? $user]);
     }
 
     // ── Management ───────────────────────────────────────────────────
@@ -367,13 +408,7 @@ class PasskeyController extends AbstractController
      */
     public function list(Request $request, Response $response): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
-
-        return $response->withJson($this->passkeys->getByUser($userId));
+        return $response->withJson($this->passkeys->getByUser($this->authUserId($request)));
     }
 
     /**
@@ -394,7 +429,11 @@ class PasskeyController extends AbstractController
             content: new OAS\MediaType\Json(required: ['name'], properties: [new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string'))])
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Renamed'),
+            new OAS\Response(
+                response: 200,
+                description: 'Renamed',
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+            ),
             new OAS\Response(response: 401, description: 'Not authenticated'),
             new OAS\Response(response: 404, description: 'Passkey not found'),
             new OAS\Response(response: 422, description: 'Name is required'),
@@ -402,11 +441,7 @@ class PasskeyController extends AbstractController
     )]
     public function rename(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
+        $userId = $this->authUserId($request);
 
         $passkeyId = (int)($args['id'] ?? 0);
         $body = $this->parsedBody($request);
@@ -430,7 +465,8 @@ class PasskeyController extends AbstractController
      */
     #[OAS\Operation\Delete(
         path: '/auth/passkeys/{id}',
-        summary: 'Delete a passkey (blocked if it is the last one while password login is disabled)',
+        summary: 'Delete a passkey (refused when it is the last way to sign in)',
+        description: 'The last passkey can go only while the account can still sign in another way: a password (set, with password login on) or a linked Google account.',
         tags: ['Passkeys'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
@@ -438,30 +474,26 @@ class PasskeyController extends AbstractController
         ],
         responses: [
             new OAS\Response(response: 204, description: 'Deleted'),
-            new OAS\Response(response: 400, description: 'Cannot delete the last passkey'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
             new OAS\Response(response: 404, description: 'Passkey not found'),
+            new OAS\Response(response: 409, description: 'The last way to sign in; the message says what to set up first'),
         ]
     )]
     public function delete(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
+        $userId    = $this->authUserId($request);
+        $passkeyId = (int)($args['id'] ?? 0);
+        $mine      = array_map(static fn(Passkey $passkey): int => $passkey->passkey_id, $this->passkeys->getByUser($userId));
+
+        // Ownership first: another account's passkey is simply not found,
+        // whatever this account's own settings are.
+        if (!in_array($passkeyId, $mine, true)) {
+            return $response->withJson(['error' => 'Passkey not found.'], 404);
         }
 
-        $passkeyId = (int)($args['id'] ?? 0);
-
-        // If password login is disabled, ensure at least one passkey remains.
-        $user = $this->users->findById($userId);
-        if ($user !== null && $user->password_login_disabled) {
-            $count = $this->passkeys->countByUser($userId);
-            if ($count <= 1) {
-                return $response->withJson([
-                    'error' => 'Cannot delete your last passkey while password login is disabled. Re-enable password login first.',
-                ], 400);
-            }
+        $refusal = $this->signInMethods->refuseDeletingPasskey($userId);
+        if ($refusal !== null) {
+            return $response->withJson(['error' => $refusal], 409);
         }
 
         if (!$this->passkeys->delete($passkeyId, $userId)) {
@@ -473,7 +505,7 @@ class PasskeyController extends AbstractController
 
     #[OAS\Operation\Patch(
         path: '/auth/passkeys/password-login',
-        summary: 'Toggle password login on/off (requires ≥1 passkey before disabling)',
+        summary: 'Toggle password login on/off (turning it off needs a passkey or a linked Google account)',
         tags: ['Passkeys'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         requestBody: new OAS\RequestBody(
@@ -481,9 +513,20 @@ class PasskeyController extends AbstractController
             content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'disable', schema: new OAS\Schema(type: 'boolean'))])
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Updated'),
-            new OAS\Response(response: 400, description: 'Must have a passkey before disabling'),
+            new OAS\Response(
+                response: 200,
+                description: 'Updated',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'password_login_disabled', 'user'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'password_login_disabled', schema: new OAS\Schema(description: 'The setting now in force.', type: 'boolean')),
+                        new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User', description: 'The account as it now stands.')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 409, description: 'Turning it off would leave no way to sign in; the message says what to set up first'),
         ]
     )]
     /**
@@ -491,23 +534,14 @@ class PasskeyController extends AbstractController
      */
     public function togglePasswordLogin(Request $request, Response $response): Response|ResponseInterface
     {
-        $this->startSession();
-        $userId = $this->sessionUserId();
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
+        $userId = $this->authUserId($request);
 
         $body = $this->parsedBody($request);
         $disable = Input::bool($body['disable'] ?? null);
 
-        if ($disable) {
-            // Must have at least one passkey (or Google linked) to disable password.
-            $count = $this->passkeys->countByUser($userId);
-            if ($count < 1) {
-                return $response->withJson([
-                    'error' => 'You must register at least one passkey before disabling password login.',
-                ], 400);
-            }
+        $refusal = $disable ? $this->signInMethods->refuseDisablingPasswordLogin($userId) : null;
+        if ($refusal !== null) {
+            return $response->withJson(['error' => $refusal], 409);
         }
 
         $this->users->setPasswordLoginDisabled($userId, $disable);
@@ -536,11 +570,6 @@ class PasskeyController extends AbstractController
     private function startSession(): void
     {
         Session::start();
-    }
-
-    private function sessionUserId(): int
-    {
-        return Session::userId() ?? 0;
     }
 
     private static function base64UrlEncode(string $data): string

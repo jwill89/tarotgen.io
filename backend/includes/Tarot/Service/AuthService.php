@@ -7,11 +7,12 @@ use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserTokenRepository;
 use Tarot\Structure\User;
 use Tarot\Utility\Clock;
+use Tarot\Utility\DbSessionHandler;
 
 /**
- * Account lifecycle: registration (+ activation token/email), activation, and
- * password login. Keeps all the rules in one place so the controller stays a
- * thin HTTP adapter.
+ * Account lifecycle: registration (+ activation token/email), activation,
+ * password login, password change and reset, and deletion. Keeps all the rules
+ * in one place so the controller stays a thin HTTP adapter.
  */
 class AuthService
 {
@@ -27,10 +28,24 @@ class AuthService
     private const int DISPLAY_NAME_MIN = 3;
     private const int DISPLAY_NAME_MAX = 30;
 
+    /**
+     * What a sign-in with no password to check is checked against instead (an
+     * unknown email, or an account made through Google), by hashing algorithm:
+     * hashes of random text, made with that algorithm's current default cost so
+     * the check takes as long as a real one. (Keyed by the algorithms' names,
+     * not PASSWORD_ARGON2ID, which a PHP built without Argon2 doesn't define.)
+     */
+    private const array STAND_IN_HASHES = [
+        'argon2id' => '$argon2id$v=19$m=65536,t=4,p=1$bWJ1b3BsUEMzZElHZnFRNA$X9aLMZUcpqn+yu2PUwPZxBtVCxQlUam7vwtGBSBVhnc',
+        '2y'       => '$2y$12$rCTmNfTMGa3duqqLowPcCej7Fwg5UCEI8TA4gmnyQ1h5ugtk0W19e',
+    ];
+
     public function __construct(
         private readonly UserRepository $users,
         private readonly UserTokenRepository $tokens,
         private readonly Mailer $mailer,
+        private readonly DbSessionHandler $sessions,
+        private readonly AccountProtection $protection,
     ) {
     }
 
@@ -44,8 +59,24 @@ class AuthService
     }
 
     /**
+     * The hash a sign-in with no password behind it is checked against, for the
+     * algorithm passwordAlgo() picks: made at that algorithm's current default
+     * cost, so checking it takes as long as checking a fresh password's hash.
+     */
+    public static function standInHash(): string
+    {
+        return self::STAND_IN_HASHES[self::passwordAlgo()] ?? self::STAND_IN_HASHES['2y'];
+    }
+
+    /**
      * Register a new account. On success a user is created (inactive) and an
      * activation email is sent.
+     *
+     * An email that already has an account succeeds too, as far as the caller
+     * can tell: nothing is created, and the address's owner is emailed that
+     * someone tried (so sign-up can't be used to find out who has an account).
+     * Only a new account comes back with `user` and `activation_link`. A taken
+     * display name is still an error: names are public anyway.
      *
      * @return array{
      *   ok: bool,
@@ -65,18 +96,28 @@ class AuthService
             return ['ok' => false, 'errors' => $errors];
         }
 
-        // Uniqueness checks (columns are COLLATE NOCASE, so case-insensitive).
-        if ($this->users->emailExists($email)) {
-            $errors[] = 'An account with that email address already exists.';
-        }
+        // Uniqueness (the columns are COLLATE NOCASE, so case-insensitive).
         if ($this->users->displayNameExists($displayName)) {
-            $errors[] = 'That display name is already taken.';
-        }
-        if ($errors !== []) {
-            return ['ok' => false, 'errors' => $errors];
+            return ['ok' => false, 'errors' => ['That display name is already taken.']];
         }
 
+        // Hashed whether or not the account gets made, so a taken email takes as
+        // long to answer as a new one.
         $hash = password_hash($password, self::passwordAlgo());
+
+        $existing = $this->users->findByEmail($email);
+        if ($existing !== null) {
+            $base    = rtrim(Env::get('APP_URL', 'https://tarotgen.io'), '/');
+            $emailed = $this->mailer->sendRegistrationAttempt(
+                $existing->email,
+                $existing->display_name,
+                $base . '/login',
+                $base . '/forgot-password'
+            );
+
+            return ['ok' => true, 'emailed' => $emailed];
+        }
+
         $user = $this->users->create($email, $displayName, $hash);
 
         if ($user === null) {
@@ -149,7 +190,15 @@ class AuthService
         $email = strtolower(trim($email));
         $auth  = $this->users->findAuthByEmail($email);
 
-        if ($auth === null || !$auth->verify($password)) {
+        if ($auth === null || !$auth->hasPassword()) {
+            // No account, or one made through Google with no password yet. Spend
+            // the time a password check takes anyway, so the answer's timing
+            // doesn't say which emails have accounts.
+            password_verify($password, self::standInHash());
+            return ['status' => 'invalid'];
+        }
+
+        if (!$auth->verify($password)) {
             return ['status' => 'invalid'];
         }
 
@@ -207,8 +256,10 @@ class AuthService
      * Complete a password reset from a raw token. The new password must satisfy
      * the policy; a weak password is reported without consuming the token so the
      * user can retry with the same link. On success the password is updated, the
-     * token consumed, and — since clicking the emailed link proves control of the
-     * inbox — the account is also marked active.
+     * token consumed, every session of the account ended (whoever knew the old
+     * password is signed out; linked plugins keep their tokens), and — since
+     * clicking the emailed link proves control of the inbox — the account is
+     * also marked active.
      *
      * @return array{status:'ok'|'invalid'|'weak', error?:string}
      */
@@ -237,6 +288,7 @@ class AuthService
         $this->users->updatePasswordHash($userId, password_hash($newPassword, self::passwordAlgo()));
         $this->tokens->markUsed($token->token_id);
         $this->users->activate($userId);
+        $this->sessions->destroyForUser($userId);
 
         return ['status' => 'ok'];
     }
@@ -275,7 +327,9 @@ class AuthService
     }
 
     /**
-     * Change a user's password after verifying their current one.
+     * Change a user's password after verifying their current one. Every other
+     * session of the account ends; the one whose id is $keepSessionId (the
+     * browser making the change) stays. Linked plugins keep their tokens.
      *
      * @return array{ok:bool, error?:string}
      */
@@ -285,6 +339,7 @@ class AuthService
         string $currentPassword,
         #[\SensitiveParameter]
         string $newPassword,
+        ?string $keepSessionId = null,
     ): array {
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($currentPassword, $hash)) {
@@ -297,24 +352,43 @@ class AuthService
         }
 
         $this->users->updatePasswordHash($userId, password_hash($newPassword, self::passwordAlgo()));
+        $this->sessions->destroyForUser($userId, $keepSessionId);
         return ['ok' => true];
     }
 
     /**
-     * Delete a user's own account after verifying their password. Their readings
-     * are removed automatically by the ON DELETE CASCADE foreign key.
+     * Delete a user's own account after verifying their password — unless it's
+     * a protected account (AccountProtection), which can't be deleted.
      *
      * @return array{ok:bool, error?:string}
      */
     public function deleteAccount(int $userId, #[\SensitiveParameter] string $password): array
     {
+        $user = $this->users->findById($userId);
+        $refusal = $user === null ? null : $this->protection->refuseSelfDeletion($user);
+        if ($refusal !== null) {
+            return ['ok' => false, 'error' => $refusal];
+        }
+
         $hash = $this->users->getPasswordHash($userId);
         if ($hash === null || !password_verify($password, $hash)) {
             return ['ok' => false, 'error' => 'Password is incorrect.'];
         }
 
-        $this->users->delete($userId);
+        $this->removeAccount($userId);
         return ['ok' => true];
+    }
+
+    /**
+     * Delete an account and end its sessions. Its readings, spreads, passkeys
+     * and plugin tokens go with it by the ON DELETE CASCADE foreign keys; the
+     * sessions table has none (a request still in flight must be able to save
+     * its session), so they're ended here.
+     */
+    public function removeAccount(int $userId): void
+    {
+        $this->users->delete($userId);
+        $this->sessions->destroyForUser($userId);
     }
 
     /**

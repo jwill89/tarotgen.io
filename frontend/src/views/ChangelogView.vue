@@ -4,7 +4,7 @@ import { useChangelog } from '@/composables/useChangelog'
 import { renderMarkdown } from '@/utils/markdown'
 import PageHeader from '@/components/PageHeader.vue'
 
-const { entries, fetchChangelog } = useChangelog()
+const { entries, loaded, error, fetchChangelog } = useChangelog()
 
 onMounted(fetchChangelog)
 
@@ -37,7 +37,10 @@ function formatDate(date: string): string {
               </article>
             </div>
 
-            <p v-if="entries.length === 0" class="has-text-grey">No changelog entries yet.</p>
+            <template v-if="entries.length === 0">
+              <p v-if="error" class="has-text-danger">Couldn't load the changelog. {{ error }}</p>
+              <p v-else-if="loaded" class="has-text-grey">No changelog entries yet.</p>
+            </template>
           </div>
         </div>
       </div>

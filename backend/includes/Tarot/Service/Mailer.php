@@ -68,6 +68,34 @@ class Mailer
         return $this->send($toEmail, $toName, $subject, $htmlBody, $textBody);
     }
 
+    /**
+     * Tell the owner of an address that someone tried to sign up with it. Sign-up
+     * answers that attempt exactly like a new account (so it can't be used to
+     * find out who has one); this is how the real owner hears about it. Returns
+     * true only when actually sent via SMTP.
+     */
+    public function sendRegistrationAttempt(string $toEmail, string $toName, string $signInLink, string $resetLink): bool
+    {
+        $subject = 'Someone tried to sign up with your email on TarotGen.io';
+
+        $textBody = "Someone just tried to create a TarotGen.io account with this email address, "
+            . "but you already have one.\n\n"
+            . "If it was you, sign in here:\n{$signInLink}\n\n"
+            . "Forgotten your password? Reset it here:\n{$resetLink}\n\n"
+            . "If it wasn't you, you can ignore this email. Nothing about your account has changed.";
+
+        $safeSignIn = htmlspecialchars($signInLink, ENT_QUOTES, 'UTF-8');
+        $safeReset  = htmlspecialchars($resetLink, ENT_QUOTES, 'UTF-8');
+        $htmlBody = '<p>Someone just tried to create a <strong>TarotGen.io</strong> account with this email '
+            . 'address, but you already have one.</p>'
+            . '<p>If it was you, <a href="' . $safeSignIn . '">sign in</a>, or '
+            . '<a href="' . $safeReset . '">reset your password</a> if you have forgotten it.</p>'
+            . '<p style="color:#666;font-size:13px">If it wasn\'t you, you can ignore this email. '
+            . 'Nothing about your account has changed.</p>';
+
+        return $this->send($toEmail, $toName, $subject, $htmlBody, $textBody);
+    }
+
     /** Send a simple diagnostic email to verify SMTP configuration. */
     public function sendTest(string $toEmail): bool
     {

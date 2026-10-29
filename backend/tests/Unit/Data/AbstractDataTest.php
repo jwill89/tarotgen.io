@@ -34,12 +34,15 @@ final class AbstractDataTest extends TestCase
         $this->data = new ExposedData($this->pdo);
     }
 
+    /** @return array<string, mixed> */
     private function row(int $id = 1): array
     {
         $stmt = $this->pdo->prepare('SELECT * FROM widgets WHERE id = :id');
         $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertIsArray($row, "No widget #{$id}");
 
-        return $stmt->fetch(PDO::FETCH_ASSOC);
+        return $row;
     }
 
     public function testUpdatesOnlyAllowedColumns(): void

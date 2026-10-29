@@ -1,0 +1,247 @@
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { stubApi, testUser } from './helpers/app'
+import type { User } from '@/types'
+
+/*
+ * The app's router, guards included. Its last-revalidation time and the signed-in
+ * user are module state, so each test loads a fresh copy of both: `signIn`
+ * below sets the user on that copy, not on the one helpers/app imported.
+ */
+async function freshApp(user: User | null = null) {
+  vi.resetModules()
+  const { default: router, markAuthChecked } = await import('@/router')
+  const { useUser } = await import('@/composables/useUser')
+  useUser().currentUser.value = user
+  return { router, markAuthChecked, useUser }
+}
+
+const meta = (name: string) =>
+  document.head.querySelector(`meta[name="${name}"]`)?.getAttribute('content')
+const canonical = () => document.head.querySelector('link[rel="canonical"]')?.getAttribute('href')
+
+const ME = 'GET /auth/me'
+
+describe('router guards', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('sends a signed-out visitor from an account page to login, and back after', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/account/readings?page=2')
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/account/readings?page=2')
+  })
+
+  it('sends a signed-out visitor from an admin page to login, and back after', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/admin/decks')
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/admin/decks')
+  })
+
+  it("sends a signed-in user who isn't an admin home from the admin pages", async () => {
+    const { router, markAuthChecked } = await freshApp(testUser())
+    markAuthChecked()
+
+    await router.push('/admin')
+
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(router.currentRoute.value.query).toEqual({})
+  })
+
+  it('lets an admin into the admin pages', async () => {
+    const { router, markAuthChecked } = await freshApp(testUser({ is_admin: true }))
+    markAuthChecked()
+
+    await router.push('/admin/users')
+
+    expect(router.currentRoute.value.name).toBe('admin-users')
+  })
+
+  it('lets a signed-in user into their account pages', async () => {
+    const { router, markAuthChecked } = await freshApp(testUser())
+    markAuthChecked()
+
+    await router.push('/account/settings')
+
+    expect(router.currentRoute.value.name).toBe('account-settings')
+  })
+
+  it.each(['/login', '/register'])('sends a signed-in user away from %s', async (path) => {
+    const { router, markAuthChecked } = await freshApp(testUser())
+    markAuthChecked()
+
+    await router.push(path)
+
+    expect(router.currentRoute.value.name).toBe('home')
+  })
+
+  it('lets anyone reach the public pages', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/contact')
+
+    expect(router.currentRoute.value.name).toBe('contact')
+  })
+})
+
+describe('router session revalidation', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-28T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('checks the session with the server before a signed-in navigation', async () => {
+    const api = stubApi({ [ME]: { body: { user: testUser() } } })
+    const { router } = await freshApp(testUser())
+
+    await router.push('/account')
+
+    expect(api).toHaveBeenCalledTimes(1)
+    expect(router.currentRoute.value.name).toBe('dashboard')
+  })
+
+  it('sends a user whose session expired to login instead of a broken account page', async () => {
+    stubApi({ [ME]: { status: 401, body: { error: 'Not authenticated' } } })
+    const { router, useUser } = await freshApp(testUser())
+
+    await router.push('/account/spreads')
+
+    expect(useUser().currentUser.value).toBeNull()
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/account/spreads')
+  })
+
+  it('takes a revoked admin flag into account at once', async () => {
+    stubApi({ [ME]: { body: { user: testUser({ is_admin: false }) } } })
+    const { router } = await freshApp(testUser({ is_admin: true }))
+
+    await router.push('/admin')
+
+    expect(router.currentRoute.value.name).toBe('home')
+  })
+
+  it('checks at most once a minute', async () => {
+    const api = stubApi({ [ME]: { body: { user: testUser() } } })
+    const { router } = await freshApp(testUser())
+
+    await router.push('/account')
+    vi.setSystemTime(Date.now() + 30_000)
+    await router.push('/account/readings')
+    expect(api).toHaveBeenCalledTimes(1)
+
+    vi.setSystemTime(Date.now() + 31_000)
+    await router.push('/account/settings')
+    expect(api).toHaveBeenCalledTimes(2)
+  })
+
+  it('skips the check right after the app has just made one', async () => {
+    const api = stubApi({})
+    const { router, markAuthChecked } = await freshApp(testUser())
+
+    markAuthChecked()
+    await router.push('/account')
+
+    expect(api).not.toHaveBeenCalled()
+  })
+
+  it("doesn't call the server for a signed-out visitor", async () => {
+    const api = stubApi({})
+    const { router } = await freshApp()
+
+    await router.push('/contact')
+
+    expect(api).not.toHaveBeenCalled()
+  })
+})
+
+describe('router page head', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    document.head.innerHTML = ''
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  it('titles each page after the route and describes it for search engines', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/changelog')
+
+    expect(document.title).toBe('Changelog | TarotGen.io Tarot Generator')
+    expect(meta('description')).toBe('See the latest updates, features, and fixes for TarotGen.io.')
+    expect(canonical()).toBe('https://tarotgen.io/changelog')
+    expect(meta('robots')).toBe('index, follow')
+  })
+
+  it('keeps the site title alone on the home page', async () => {
+    const { router } = await freshApp()
+    await router.push('/contact')
+
+    await router.push('/')
+
+    expect(document.title).toBe('TarotGen.io Tarot Generator')
+    expect(canonical()).toBe('https://tarotgen.io/')
+  })
+
+  it('keeps private pages out of search results', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/login')
+
+    expect(document.title).toBe('Login | TarotGen.io Tarot Generator')
+    expect(meta('robots')).toBe('noindex, nofollow')
+  })
+
+  it('starts every page at the top', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/privacy')
+    await vi.waitFor(() => expect(window.scrollTo).toHaveBeenCalled())
+
+    expect(vi.mocked(window.scrollTo).mock.calls.at(-1)?.[0]).toMatchObject({ top: 0 })
+  })
+})
+
+describe('route table', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => {})
+  })
+
+  it('opens a shared ?rid= link as that reading', async () => {
+    const { router } = await freshApp()
+
+    await router.push('/?rid=abc123')
+
+    expect(router.currentRoute.value.name).toBe('reading')
+    expect(router.currentRoute.value.params.id).toBe('abc123')
+  })
+
+  it.each([
+    ['/submit-spread', 'submit-spread'],
+    ['/admin/login', 'login'],
+    ['/no/such/page', 'home'],
+  ])('sends the old or unknown URL %s to %s', async (from, name) => {
+    const { router } = await freshApp()
+
+    await router.push(from)
+
+    expect(router.currentRoute.value.name).toBe(name)
+  })
+})

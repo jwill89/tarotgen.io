@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, onMounted } from 'vue'
+import { local } from '@/utils/storage'
 
+// Predates the `tarot.` namespace in STORAGE_KEYS; renaming it would show the
+// banner again to everyone who has dismissed it.
 const STORAGE_KEY = 'cookie_notice_dismissed'
 const visible = ref(false)
 
+// Through the guarded wrapper: with storage blocked or full, a raw access threw,
+// and "Got it" then never hid the banner.
 onMounted(() => {
-  if (!localStorage.getItem(STORAGE_KEY)) {
+  if (local.get<unknown>(STORAGE_KEY, null) === null) {
     visible.value = true
   }
 })
 
 function dismiss() {
-  localStorage.setItem(STORAGE_KEY, '1')
+  local.set(STORAGE_KEY, 1)
   visible.value = false
 }
 </script>

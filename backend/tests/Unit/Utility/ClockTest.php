@@ -52,15 +52,19 @@ final class ClockTest extends TestCase
 
     public function testInIsOffsetFromNowInTheSameZone(): void
     {
-        $this->assertSame(
-            3600,
-            strtotime(Clock::in(3600) . ' UTC') - strtotime(Clock::now() . ' UTC'),
-        );
+        $later = strtotime(Clock::in(3600) . ' UTC');
+        $now   = strtotime(Clock::now() . ' UTC');
+        $this->assertIsInt($later);
+        $this->assertIsInt($now);
+
+        $this->assertSame(3600, $later - $now);
     }
 
     public function testTodayIsTheUtcDate(): void
     {
-        $this->assertSame((string)$this->db->query("SELECT date('now')")->fetchColumn(), Clock::today());
+        $today = $this->db->prepare("SELECT date('now')");
+        $today->execute();
+        $this->assertSame((string)$today->fetchColumn(), Clock::today());
     }
 
     public function testDataLayerWritesUtcTimestamps(): void

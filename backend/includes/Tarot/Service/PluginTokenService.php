@@ -130,6 +130,16 @@ class PluginTokenService
     }
 
     /**
+     * The user an active raw token belongs to, or null. Unlike resolveBearer() it
+     * doesn't count as a use: the token just issued reads "never used" until the
+     * plugin first sends it.
+     */
+    public function ownerOf(string $token): ?int
+    {
+        return $this->tokens->findActive($this->hash($token))?->user_id;
+    }
+
+    /**
      * A user's linked plugin tokens (for the "Connected Apps" list).
      *
      * @return list<PluginToken>

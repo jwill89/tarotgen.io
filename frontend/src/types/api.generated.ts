@@ -61,7 +61,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete the account after re-entering the password (cascades readings) */
+        /**
+         * Delete the account after re-entering the password (cascades readings)
+         * @description Ends every session of the account. An account without a password (made by signing in with Google) sets one first, through a password-reset link. A protected account (PROTECTED_ADMIN_EMAILS) cannot be deleted.
+         */
         delete: operations["f494bd5d0850bf24d66ae14b041e3bb3"];
         options?: never;
         head?: never;
@@ -83,7 +86,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Change the account password */
+        /**
+         * Change the account password
+         * @description Ends every other session of the account; the browser making the change stays signed in, under a new session id. Linked plugins keep their tokens (they're revoked under Connected Apps).
+         */
         post: operations["70ac3d9471f6b7020edd89bfa6393c36"];
         delete?: never;
         options?: never;
@@ -799,14 +805,16 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete a user account */
+        /**
+         * Delete a user account
+         * @description Ends every session of the account too. Refused (403) for your own account (Account Settings deletes that) and for a protected one.
+         */
         delete: operations["2f285a84747ba2bd307c9ccde339c3a5"];
         options?: never;
         head?: never;
         /**
          * Partially update a user account
-         * @description Partial update of an account. Currently the only editable field is the
-         *     `is_admin` flag (previously the dedicated POST …/admin action).
+         * @description Removing the admin flag is refused (403) on your own account and on a protected one.
          */
         patch: operations["5b441e2758c8a9fc3e812694cf86a4e4"];
         trace?: never;
@@ -946,7 +954,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A single deck */
+        /** A single deck (one still awaiting approval only to an admin) */
         get: operations["77514664c8ab4ae75bdf7be42489b661"];
         put?: never;
         post?: never;
@@ -964,7 +972,7 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List every card available in a deck (for the custom-reading picker)
+         * List every card available in a deck (for the custom-reading picker; a deck awaiting approval only to an admin)
          * @description List every card available in a deck as {card_id, name}, so the custom
          *     reading screen can offer a picker. Mirrors the reading engine's card
          *     resolution.
@@ -1010,8 +1018,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * A single deck system with its cards
-         * @description Public: get a single deck system with its cards.
+         * A single deck system with its cards (one still awaiting approval only to an admin)
+         * @description Public: get a single deck system with its cards. One still awaiting
+         *     approval is shown only to an admin; anyone else gets the answer for an
+         *     unknown id, so pending submissions can't be found by probing ids.
          */
         get: operations["bc7cfc91f621470189981f4ff529c799"];
         put?: never;
@@ -1074,7 +1084,7 @@ export interface paths {
         put?: never;
         /**
          * Unlink Google from the current account
-         * @description Unlink Google from the currently logged-in account.
+         * @description Only while the account can still sign in another way: a password (set, with password login on) or a passkey.
          */
         post: operations["f8948158ac3bd6844a2eae03c72c562d"];
         delete?: never;
@@ -1134,9 +1144,7 @@ export interface paths {
         put?: never;
         /**
          * Assertion options; optional email scopes to a user's credentials
-         * @description Generate assertion options for passkey login.
-         *     Accepts optional email to scope to a specific user's credentials,
-         *     or no email for a discoverable-credential (resident key) flow.
+         * @description With an email, allowCredentials always lists credentials: the account's passkeys, or for an email with none (no account, or an account without passkeys) stand-ins that look the same and stay the same, so the answer doesn't say which emails have accounts. Without one, any discoverable passkey may answer.
          */
         post: operations["59834f0fd79251a07923def0d9118df8"];
         delete?: never;
@@ -1196,8 +1204,8 @@ export interface paths {
         put?: never;
         post?: never;
         /**
-         * Delete a passkey (blocked if it is the last one while password login is disabled)
-         * @description Delete a passkey.
+         * Delete a passkey (refused when it is the last way to sign in)
+         * @description The last passkey can go only while the account can still sign in another way: a password (set, with password login on) or a linked Google account.
          */
         delete: operations["ba3bc4c7b907f6c53e9b361ea4e79ee6"];
         options?: never;
@@ -1223,7 +1231,7 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Toggle password login on/off (requires ≥1 passkey before disabling)
+         * Toggle password login on/off (turning it off needs a passkey or a linked Google account)
          * @description Toggle password login enabled/disabled.
          */
         patch: operations["70778fa07ca73639c4b6466288c18676"];
@@ -1255,7 +1263,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Exchange a PKCE authorization code for a plugin Bearer token */
+        /** Exchange a PKCE authorization code for a plugin Bearer token. Rate-limited: 10 attempts/IP/minute. */
         post: operations["9cee09bafbc85842806ed3b5d8696f77"];
         delete?: never;
         options?: never;
@@ -1478,7 +1486,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Create an account (inactive until email activation). Rate-limited: 5/IP/hour. */
+        /**
+         * Create an account (inactive until email activation). Rate-limited: 5/IP/hour.
+         * @description An email that already has an account gets the same 201 and message as a new one (no account enumeration): nothing is created, and that address is emailed a notice that someone tried to sign up with it. A display name that is taken is still refused (names are public).
+         */
         post: operations["ad99e4939452f71308786370a3ed004a"];
         delete?: never;
         options?: never;
@@ -1529,7 +1540,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Complete a password reset */
+        /**
+         * Complete a password reset
+         * @description Sets the new password, marks the account active, and ends every session of the account, so whoever knew the old password is signed out everywhere. Linked plugins keep their tokens (they're revoked under Connected Apps).
+         */
         post: operations["1fb4bc9555f6546ebf8546a28aa1c9d3"];
         delete?: never;
         options?: never;
@@ -1592,6 +1606,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @description A user account as the admin user list shows it. */
+        AdminUser: components["schemas"]["User"] & {
+            /** @description Listed in PROTECTED_ADMIN_EMAILS: its admin access can't be removed and it can't be deleted. */
+            is_protected: boolean;
+        };
         /** @description One card slot in a spread layout. */
         SpreadPosition: {
             /** @description 1-based: the nth card drawn goes here. */
@@ -1679,6 +1698,58 @@ export interface components {
         DeckSystemWithCards: components["schemas"]["DeckSystem"] & {
             /** @description The named cards, in card order. */
             cards: components["schemas"]["DeckSystemCard"][];
+        };
+        /** @description The passkey just registered: its row as the account page lists it (Passkey), without credential_id. */
+        RegisteredPasskey: {
+            passkey_id: number;
+            /** @description The name given, or "My Passkey". */
+            name: string;
+            /** @description When it was registered, UTC ("Y-m-d H:i:s"). */
+            created_at: string;
+            /** @description Always null: it has not signed in yet. */
+            last_used_at: string | null;
+        };
+        /** @description Usage analytics over the stored readings, for the admin dashboard. */
+        UsageStats: {
+            /** @description How many readings are stored, and how many of them are recent. */
+            totals: {
+                /** @description Every stored reading. */
+                readings: number;
+                /** @description Made in the last 7 days. */
+                last7: number;
+                /** @description Made in the last 30 days. */
+                last30: number;
+            };
+            /** @description Every stored reading, by the layout it was given. */
+            byType: {
+                /** @description A free draw never placed in a layout. */
+                freeDraw: number;
+                /** @description Laid out in a public spread. */
+                spread: number;
+                /** @description Laid out in a personal spread, a custom reading, or a placed free draw (spread_id 0). */
+                custom: number;
+            };
+            /** @description The (at most 10) decks with the most readings, most first. */
+            topDecks: {
+                deck_id: number;
+                /** @description "Deck #{deck_id}" for a deck deleted since. */
+                name: string;
+                /** @description Readings drawn from it. */
+                count: number;
+            }[];
+            /** @description The (at most 10) public spreads with the most readings, by name, most first. */
+            topSpreads: {
+                /** @description The spread's name as the readings recorded it ("Untitled" if none). */
+                name: string;
+                /** @description Readings laid out in it. */
+                count: number;
+            }[];
+            /** @description Readings per UTC day over the last 14 days, oldest first; a day with none is left out. */
+            daily: {
+                /** @description "Y-m-d", UTC. */
+                date: string;
+                count: number;
+            }[];
         };
         /** @description A card users have reported as having a problem with its image. */
         CardReport: {
@@ -1884,6 +1955,8 @@ export interface components {
             registered_at: string;
             last_login_at: string | null;
             google_linked: boolean;
+            /** @description Whether the account has a password at all. An account made by signing in with Google has none until the user sets one through a password-reset link. */
+            has_password: boolean;
             password_login_disabled: boolean;
             has_passkeys: boolean;
         };
@@ -2036,7 +2109,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Wrong password */
+            /** @description Wrong password, or a protected account */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -2067,8 +2140,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        user?: components["schemas"]["User"];
+                        success: boolean;
+                        user: components["schemas"]["User"];
                     };
                 };
             };
@@ -2104,7 +2177,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description A confirmation to show the user. */
+                        message: string;
+                    };
+                };
             };
             /** @description Wrong current password or weak new password */
             422: {
@@ -2151,7 +2230,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The created spread */
+            /** @description The created spread (card_count is the number of positions) */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -2160,7 +2239,7 @@ export interface operations {
                     "application/json": components["schemas"]["UserSpread"];
                 };
             };
-            /** @description Name and positions required */
+            /** @description Name and positions required, or a position that is not an object */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2184,7 +2263,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description The updated spread */
+            /** @description The updated spread (card_count is the number of positions) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -2192,6 +2271,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["UserSpread"];
                 };
+            };
+            /** @description No changes provided, a blank name, or positions that are empty or not objects */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Spread not found */
             404: {
@@ -2245,7 +2331,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
             };
             /** @description Spread not found */
             404: {
@@ -2293,12 +2383,16 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Added */
+            /** @description Added (or already a favorite) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
             };
             /** @description Invalid spread type or ID */
             400: {
@@ -2346,13 +2440,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Array of favorited decks */
+            /** @description The ids of the favorited decks, oldest favorite first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Deck"][];
+                    "application/json": number[];
                 };
             };
         };
@@ -2372,14 +2466,18 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Added */
+            /** @description Added (or already a favorite) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
             };
-            /** @description Invalid deck ID */
+            /** @description Invalid deck ID: no such deck, or one not yet approved */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2461,12 +2559,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
+                        success: boolean;
                     };
                 };
             };
             /** @description Invalid report ID */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Report not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2519,6 +2624,13 @@ export interface operations {
                     "application/json": components["schemas"]["ChangelogEntry"];
                 };
             };
+            /** @description Title is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Failed to create changelog entry */
             500: {
                 headers: {
@@ -2554,6 +2666,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ChangelogEntry"];
                 };
+            };
+            /** @description Title is blank */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Changelog entry not found or no valid fields */
             404: {
@@ -2631,12 +2750,19 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
+                        success: boolean;
                     };
                 };
             };
             /** @description Invalid contact ID */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Contact not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2659,7 +2785,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": components["schemas"]["UsageStats"];
                 };
             };
         };
@@ -2679,7 +2805,24 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        /** @description Row counts for the dashboard tiles. */
+                        counts: {
+                            /** @description Approved and pending. */
+                            deckSystems: number;
+                            /** @description Approved and pending. */
+                            decks: number;
+                            specialCards: number;
+                            /** @description Public spreads. */
+                            spreads: number;
+                            readings: number;
+                            changelog: number;
+                            users: number;
+                            /** @description Contact messages not yet marked read. */
+                            unreadContacts: number;
+                        };
+                        stats: components["schemas"]["UsageStats"];
+                    };
                 };
             };
         };
@@ -2698,7 +2841,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        authenticated: boolean;
+                    };
+                };
             };
         };
     };
@@ -2750,8 +2897,15 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
-            /** @description Failed to create deck */
-            500: {
+            /** @description Name is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A deck with that name already exists */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2826,10 +2980,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        deck_id?: number;
-                        generated?: number;
-                        skipped?: number;
-                        failed?: number;
+                        deck_id: number;
+                        generated: number;
+                        skipped: number;
+                        failed: number;
                     };
                 };
             };
@@ -2858,10 +3012,10 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        decks?: number;
-                        generated?: number;
-                        skipped?: number;
-                        failed?: number;
+                        decks: number;
+                        generated: number;
+                        skipped: number;
+                        failed: number;
                     };
                 };
             };
@@ -2923,8 +3077,22 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
+            /** @description Name is required (a name sent blank) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Deck not found or no valid fields */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another deck already has that name */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2981,8 +3149,15 @@ export interface operations {
                     "application/json": components["schemas"]["SpecialCard"];
                 };
             };
-            /** @description Failed to create special card */
-            500: {
+            /** @description Deck not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The deck already has a special card with that card_id */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3152,8 +3327,22 @@ export interface operations {
                     "application/json": components["schemas"]["DeckSystem"];
                 };
             };
+            /** @description Name or short name is required (one sent blank) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Deck system not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another deck system already has that name */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3290,7 +3479,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        deleted?: number;
+                        deleted: number;
                     };
                 };
             };
@@ -3348,6 +3537,13 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
+            /** @description Name is required */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Failed to create spread */
             500: {
                 headers: {
@@ -3383,6 +3579,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Spread"];
                 };
+            };
+            /** @description Name is required (a name sent blank) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Spread not found or no valid fields */
             404: {
@@ -3453,6 +3656,13 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
+            /** @description Pending spread not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Failed to approve spread */
             500: {
                 headers: {
@@ -3504,7 +3714,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"][];
+                    "application/json": components["schemas"]["AdminUser"][];
                 };
             };
         };
@@ -3527,7 +3737,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
+                        success: boolean;
                     };
                 };
             };
@@ -3553,6 +3763,13 @@ export interface operations {
         responses: {
             /** @description Deleted */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Your own account, or a protected one */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3590,8 +3807,15 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["User"];
+                    "application/json": components["schemas"]["AdminUser"];
                 };
+            };
+            /** @description Removing your own admin flag, or a protected account's */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description User not found */
             404: {
@@ -3613,13 +3837,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Activation resent */
+            /** @description A new activation link was issued (replacing any earlier one) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        success: boolean;
+                        /** @description Whether the activation email was sent. */
+                        emailed: boolean;
+                        /** @description The new activation link. Sent only outside production, and only when the email was not sent. */
+                        activation_link?: string;
+                    };
                 };
             };
             /** @description Could not resend activation */
@@ -3659,7 +3889,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        status?: string;
+                        status: string;
                     };
                 };
             };
@@ -3670,7 +3900,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        status?: string;
+                        status: string;
                     };
                 };
             };
@@ -3755,7 +3985,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        turnstile_sitekey?: string | null;
+                        turnstile_sitekey: string | null;
                     };
                 };
             };
@@ -3775,6 +4005,8 @@ export interface operations {
                     /** Format: email */
                     email: string;
                     message: string;
+                    /** @description Required when Turnstile is configured */
+                    turnstile_token?: string;
                 };
             };
         };
@@ -3786,11 +4018,11 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
+                        success: boolean;
                     };
                 };
             };
-            /** @description Missing/invalid fields */
+            /** @description Missing/invalid fields, or captcha failed */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3868,6 +4100,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A deck with that name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     "77514664c8ab4ae75bdf7be42489b661": {
@@ -3890,7 +4129,7 @@ export interface operations {
                     "application/json": components["schemas"]["Deck"];
                 };
             };
-            /** @description InvalidDeckID */
+            /** @description InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3922,7 +4161,7 @@ export interface operations {
                     }[];
                 };
             };
-            /** @description InvalidDeckID */
+            /** @description InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3994,6 +4233,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description A deck system with that name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     bc7cfc91f621470189981f4ff529c799: {
@@ -4016,7 +4262,7 @@ export interface operations {
                     "application/json": components["schemas"]["DeckSystemWithCards"];
                 };
             };
-            /** @description Deck system not found */
+            /** @description Deck system not found, or awaiting approval and the viewer is not an admin */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -4096,20 +4342,20 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        user?: components["schemas"]["User"];
+                        success: boolean;
+                        user: components["schemas"]["User"];
                     };
                 };
             };
-            /** @description Account has no password set */
-            400: {
+            /** @description Not authenticated */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not authenticated */
-            401: {
+            /** @description Google is the last way to sign in; the message says what to set up first */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4132,18 +4378,16 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        /** @description The PublicKeyCredentialCreationOptions for navigator.credentials.create(), with its binary fields (challenge, user.id, excludeCredentials[].id) base64url-encoded. excludeCredentials lists the passkeys already on the account. */
+                        publicKey: {
+                            [key: string]: unknown;
+                        };
+                    };
                 };
             };
             /** @description Not authenticated */
             401: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description User not found */
-            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4173,7 +4417,12 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        passkey: components["schemas"]["RegisteredPasskey"];
+                    };
+                };
             };
             /** @description Missing/invalid attestation */
             400: {
@@ -4213,7 +4462,12 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": Record<string, never>;
+                    "application/json": {
+                        /** @description The PublicKeyCredentialRequestOptions for navigator.credentials.get(), with its binary fields (challenge, allowCredentials[].id) base64url-encoded. allowCredentials is present whenever an email was given (the account's passkeys, or stand-ins); without one, any discoverable passkey may answer. */
+                        publicKey: {
+                            [key: string]: unknown;
+                        };
+                    };
                 };
             };
         };
@@ -4243,8 +4497,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        user?: components["schemas"]["User"];
+                        success: boolean;
+                        user: components["schemas"]["User"];
                     };
                 };
             };
@@ -4316,13 +4570,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Cannot delete the last passkey */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
             /** @description Not authenticated */
             401: {
                 headers: {
@@ -4332,6 +4579,13 @@ export interface operations {
             };
             /** @description Passkey not found */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The last way to sign in; the message says what to set up first */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4361,7 +4615,11 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
             };
             /** @description Not authenticated */
             401: {
@@ -4406,17 +4664,25 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description The setting now in force. */
+                        password_login_disabled: boolean;
+                        /** @description The account as it now stands. */
+                        user: components["schemas"]["User"];
+                    };
+                };
             };
-            /** @description Must have a passkey before disabling */
-            400: {
+            /** @description Not authenticated */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Not authenticated */
-            401: {
+            /** @description Turning it off would leave no way to sign in; the message says what to set up first */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4451,7 +4717,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        redirect_uri?: string;
+                        redirect_uri: string;
                     };
                 };
             };
@@ -4494,15 +4760,22 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        token?: string;
-                        token_type?: string;
-                        scope?: string;
-                        display_name?: string;
+                        token: string;
+                        token_type: string;
+                        scope: string;
+                        display_name: string;
                     };
                 };
             };
             /** @description Invalid or expired authorization code */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4649,7 +4922,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Draw spec: deck, spread or card count, and options */
+        /** @description Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. */
         requestBody: {
             content: {
                 "application/json": Record<string, never>;
@@ -4665,7 +4938,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReadingView"];
                 };
             };
-            /** @description Invalid draw spec */
+            /** @description Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4703,7 +4976,7 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"];
                 };
             };
-            /** @description Invalid input */
+            /** @description Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4737,8 +5010,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        reading_id?: string;
+                        success: boolean;
+                        reading_id: string;
                     };
                 };
             };
@@ -4906,7 +5179,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
+                        success: boolean;
                     };
                 };
             };
@@ -4974,14 +5247,22 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Account created */
+            /** @description Account created (or, for an email that already has one, answered as if it had been) */
             201: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description What to do next, to show the user. */
+                        message: string;
+                        /** @description The link that activates the new account. Sent only outside production, only for an account just created, and only when the activation email could not be sent. */
+                        activation_link?: string;
+                    };
+                };
             };
-            /** @description Validation/uniqueness failure */
+            /** @description Validation failure, or a display name that is taken */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -5017,7 +5298,13 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description A confirmation to show the user. */
+                        message: string;
+                    };
+                };
             };
             /** @description Invalid/expired token */
             400: {
@@ -5049,7 +5336,15 @@ export interface operations {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description The same wording either way, to show the user. */
+                        message: string;
+                        /** @description The password-reset link. Sent only outside production, only for an account that exists, and only when the email could not be sent. */
+                        reset_link?: string;
+                    };
+                };
             };
             /** @description Rate limit exceeded */
             429: {
@@ -5077,12 +5372,18 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password updated; account marked active */
+            /** @description Password updated; account marked active; its sessions ended */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description A confirmation to show the user. */
+                        message: string;
+                    };
+                };
             };
             /** @description Invalid/expired token */
             400: {
@@ -5128,8 +5429,8 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        success?: boolean;
-                        user?: components["schemas"]["User"];
+                        success: boolean;
+                        user: components["schemas"]["User"];
                     };
                 };
             };
@@ -5140,7 +5441,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Invalid credentials */
+            /** @description Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password) */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -5172,12 +5473,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Signed out */
+            /** @description Signed out (also when there was no session) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        success: boolean;
+                    };
+                };
             };
         };
     };
@@ -5197,7 +5502,7 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
-                        user?: components["schemas"]["User"];
+                        user: components["schemas"]["User"];
                     };
                 };
             };

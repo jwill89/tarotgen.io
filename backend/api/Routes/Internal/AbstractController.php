@@ -32,6 +32,16 @@ abstract class AbstractController
     }
 
     /**
+     * The signed-in user's id on a route behind UserAuth or AccountAuth, which
+     * resolve it (from the session or a plugin token) and check the account.
+     */
+    protected function authUserId(ServerRequestInterface $request): int
+    {
+        $id = $request->getAttribute('auth_user_id');
+        return is_int($id) && $id > 0 ? $id : 0;
+    }
+
+    /**
      * The real client IP for this request. Resolved through Cloudflare
      * (CF-Connecting-IP, trusted only from Cloudflare edge ranges) so that
      * IP rate-limiting keys on the visitor, not the CDN edge. See {@see ClientIp}.

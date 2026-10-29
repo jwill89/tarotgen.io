@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\DeckSystemRepository;
@@ -16,6 +17,7 @@ class DeckSystemController extends AbstractController
     public function __construct(
         private readonly DeckSystemRepository $systems,
         private readonly UserRepository $users,
+        private readonly AdminAuth $admin,
     ) {
     }
 
@@ -47,13 +49,15 @@ class DeckSystemController extends AbstractController
     }
 
     /**
-     * Public: get a single deck system with its cards.
+     * Public: get a single deck system with its cards. One still awaiting
+     * approval is shown only to an admin; anyone else gets the answer for an
+     * unknown id, so pending submissions can't be found by probing ids.
      *
      * @param array<string,string> $args
      */
     #[OAS\Operation\Get(
         path: '/deck-systems/{id}',
-        summary: 'A single deck system with its cards',
+        summary: 'A single deck system with its cards (one still awaiting approval only to an admin)',
         tags: ['Deck Systems'],
         parameters: [
             new OAS\Parameter(name: 'id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
@@ -64,15 +68,15 @@ class DeckSystemController extends AbstractController
                 description: 'The deck system plus its cards array',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystemWithCards')
             ),
-            new OAS\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 404, description: 'Deck system not found, or awaiting approval and the viewer is not an admin'),
         ]
     )]
     public function getSystem(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $id = (int)($args['id'] ?? 0);
 
-        $system = $this->systems->get($id);
-        if (!($system instanceof DeckSystem)) {
+        $system = $this->visibleSystem($id);
+        if ($system === null) {
             return $response->withJson(['error' => 'Deck system not found'], 404);
         }
 
@@ -81,8 +85,9 @@ class DeckSystemController extends AbstractController
         $data = $system->jsonSerializeWithout('submitted_by');
         $data['cards'] = array_map(fn($c) => $c->jsonSerialize(), $cards);
 
+        // An admin's view of a pending system must never be kept by a shared cache.
         return $response->withJson($data)
-            ->withHeader('Cache-Control', 'public, max-age=300');
+            ->withHeader('Cache-Control', $system->approved ? 'public, max-age=300' : 'private, no-store');
     }
 
     #[OAS\Operation\Post(
@@ -113,6 +118,7 @@ class DeckSystemController extends AbstractController
             ),
             new OAS\Response(response: 400, description: 'Validation failure'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 409, description: 'A deck system with that name already exists'),
         ]
     )]
     /**
@@ -122,15 +128,16 @@ class DeckSystemController extends AbstractController
     {
         Session::start();
 
+        // The account is a DB-backed fact, re-checked each request as UserAuth and
+        // AdminAuth do: a deleted account's leftover session can't submit, and
+        // admins' submissions are auto-approved.
         $userId = Session::userId();
-        if ($userId === null) {
+        $user   = $userId === null ? null : $this->users->findById($userId);
+        if ($user === null || !$user->is_active) {
             return $response->withJson(['error' => 'Not authenticated'], 401);
         }
 
-        // Admin status is a DB-backed fact (re-checked each request, as the
-        // AdminAuth middleware does) — admins' submissions are auto-approved.
-        $user    = $this->users->findById($userId);
-        $isAdmin = $user !== null && $user->is_active && $user->is_admin;
+        $isAdmin = $user->is_admin;
         $params  = $this->parsedBody($request);
 
         $name      = trim((string)($params['name'] ?? ''));
@@ -167,11 +174,12 @@ class DeckSystemController extends AbstractController
             'short_name'   => $shortName,
             'total_cards'  => $totalCards,
             'approved'     => $isAdmin,
-            'submitted_by' => $userId,
+            'submitted_by' => $user->user_id,
         ]);
 
+        // Null only when the name is taken (deck_systems.name is UNIQUE; short_name isn't).
         if ($system === null) {
-            return $response->withJson(['error' => 'Failed to create deck system. Name or short name may already be in use.'], 500);
+            return $response->withJson(['error' => 'A deck system with that name already exists.'], 409);
         }
 
         // Store the cards
@@ -192,5 +200,23 @@ class DeckSystemController extends AbstractController
         $this->systems->saveCards($system->deck_system_id, $cardData);
 
         return $response->withJson($system, 201);
+    }
+
+    /**
+     * The system a visitor may see by id: an approved one to anyone, one still
+     * awaiting approval only to an admin, otherwise null. The admin check runs
+     * for a missing system too: it can start a session (and send its cookie),
+     * and the two 404s must not differ even in that.
+     */
+    private function visibleSystem(int $id): ?DeckSystem
+    {
+        $system = $this->systems->get($id);
+        if ($system instanceof DeckSystem && $system->approved) {
+            return $system;
+        }
+
+        $isAdmin = $this->admin->sessionIsAdmin();
+
+        return $system instanceof DeckSystem && $isAdmin ? $system : null;
     }
 }

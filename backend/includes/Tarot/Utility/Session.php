@@ -105,6 +105,16 @@ final class Session
     }
 
     /**
+     * Give the current session a new id without signing anyone out — after a
+     * password change, so a copy of the old cookie stops working. A remembered
+     * session stays remembered.
+     */
+    public static function rotate(): void
+    {
+        self::regenerate(persistent: ($_SESSION['remember_me'] ?? false) === true);
+    }
+
+    /**
      * Mark the current session for 30-day persistence ("remember me"). Call
      * this AFTER start() and regenerate().
      */
@@ -116,6 +126,13 @@ final class Session
         // DbSessionHandler::lifetime), so flagging it above is enough; here we
         // just extend the browser cookie to match the 30-day window.
         self::sendCookie(self::REMEMBER_ME_LIFETIME);
+    }
+
+    /** The current session's id, or null when no session has started. */
+    public static function id(): ?string
+    {
+        $id = session_id();
+        return $id === false || $id === '' ? null : $id;
     }
 
     /**

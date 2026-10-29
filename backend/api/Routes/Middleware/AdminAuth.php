@@ -23,15 +23,8 @@ readonly class AdminAuth
 
     public function __invoke(Request $request, Handler $handler): ResponseInterface
     {
-        Session::start();
-
-        $userId = Session::userId();
-
-        if ($userId !== null) {
-            $user = $this->users->findById($userId);
-            if ($user !== null && $user->is_active && $user->is_admin) {
-                return $handler->handle($request);
-            }
+        if ($this->sessionIsAdmin()) {
+            return $handler->handle($request);
         }
 
         $response = new Response();
@@ -39,5 +32,24 @@ readonly class AdminAuth
         return $response
             ->withStatus(401)
             ->withHeader('Content-Type', 'application/json');
+    }
+
+    /**
+     * Whether this request's session belongs to an active admin account: the
+     * check the admin routes are gated on, shared with the public routes that
+     * show an admin more than a visitor (an unapproved submission). Session
+     * only, as for the admin routes: a plugin token never carries admin rights.
+     */
+    public function sessionIsAdmin(): bool
+    {
+        Session::start();
+
+        $userId = Session::userId();
+        if ($userId === null) {
+            return false;
+        }
+
+        $user = $this->users->findById($userId);
+        return $user !== null && $user->is_active && $user->is_admin;
     }
 }

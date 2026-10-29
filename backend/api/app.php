@@ -218,20 +218,24 @@ return function (ContainerInterface $container, bool $is_production): App {
     $app->group('/auth/google', function (RouteCollectorProxy $group) {
         $group->get('[/]', GoogleAuthController::class . ':redirect');
         $group->get('/callback[/]', GoogleAuthController::class . ':callback');
-        $group->post('/unlink[/]', GoogleAuthController::class . ':unlink');
+        $group->post('/unlink[/]', GoogleAuthController::class . ':unlink')->add(UserAuth::class);
     });
 
-    // Passkeys / WebAuthn (registration requires auth; login is public)
+    // Passkeys / WebAuthn. Signing in with one is for signed-out visitors.
+    $app->group('/auth/passkeys', function (RouteCollectorProxy $group) {
+        $group->post('/login/options[/]', PasskeyController::class . ':loginOptions');
+        $group->post('/login[/]', PasskeyController::class . ':login');
+    });
+
+    // Registering and managing them is the signed-in account's own business.
     $app->group('/auth/passkeys', function (RouteCollectorProxy $group) {
         $group->post('/register/options[/]', PasskeyController::class . ':registerOptions');
         $group->post('/register[/]', PasskeyController::class . ':register');
-        $group->post('/login/options[/]', PasskeyController::class . ':loginOptions');
-        $group->post('/login[/]', PasskeyController::class . ':login');
         $group->get('[/]', PasskeyController::class . ':list');
         $group->patch('/password-login[/]', PasskeyController::class . ':togglePasswordLogin');
         $group->patch('/{id}[/]', PasskeyController::class . ':rename');
         $group->delete('/{id}[/]', PasskeyController::class . ':delete');
-    });
+    })->add(UserAuth::class);
 
     // ── Admin Routes (require a logged-in, active, is_admin user account) ─────────
     $app->group('/admin', function (RouteCollectorProxy $group) {

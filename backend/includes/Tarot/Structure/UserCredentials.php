@@ -22,6 +22,12 @@ final class UserCredentials
         return password_verify($password, $this->password_hash);
     }
 
+    /** False for an account made by signing in with Google, until a password is set. */
+    public function hasPassword(): bool
+    {
+        return $this->password_hash !== '';
+    }
+
     /** Whether the hash was made with older settings than $algo (rehash on sign-in). */
     public function needsRehash(string|int|null $algo): bool
     {

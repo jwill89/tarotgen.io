@@ -154,6 +154,9 @@ const {
 } = useUndoRedo(slots.value, () => {
   emit('restore', slots.value.length)
 })
+// Baseline on the slots as loaded (callers fill them before mounting): with an
+// empty history the first change became its first entry and could not be undone.
+resetHistory()
 
 // Keep the selection valid whenever the array shrinks (caller resize or restore).
 watch(

@@ -288,6 +288,7 @@ function skipToContent() {
                 tabindex="0"
                 @click="doUserLogout"
                 @keyup.enter="doUserLogout"
+                @keydown.space.prevent="doUserLogout"
               >
                 Log Out
               </a>
@@ -310,8 +311,8 @@ function skipToContent() {
             Copyright &copy; {{ currentYear }}. Coded by
             <a href="https://www.mathdad.me"><strong>MathDad</strong></a
             >.<br />
-            This site is a tool for readers and those learning, it is not mean to replace the need a
-            reader. Please use responsibly!<br />
+            This site is a tool for readers and those learning; it is not meant to replace the need
+            for a reader. Please use responsibly!<br />
             <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
             <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
             <router-link :to="{ name: 'changelog' }"> Changelog</router-link> |

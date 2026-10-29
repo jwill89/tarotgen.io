@@ -39,6 +39,14 @@ final class PendingSpreadDataTest extends TestCase
         $this->data = new PendingSpreadData($this->pdo);
     }
 
+    /**
+     * @return array{
+     *   name: string,
+     *   description: string,
+     *   card_count: int,
+     *   positions: list<array{order: int, title: string, x: int, y: int, rotation: int}>
+     * }
+     */
     private function payload(): array
     {
         return ['name' => 'My Spread', 'description' => '', 'card_count' => 1, 'positions' => [
@@ -57,6 +65,7 @@ final class PendingSpreadDataTest extends TestCase
     public function testLoggedInSubmissionResolvesToDisplayName(): void
     {
         $created = $this->data->store($this->payload(), 1);
+        $this->assertNotNull($created);
         $this->assertSame('Stargazer', $created->submitter);
         $this->assertSame(1, $created->user_id);
 

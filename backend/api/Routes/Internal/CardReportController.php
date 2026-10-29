@@ -67,12 +67,12 @@ class CardReportController extends AbstractController
             new OAS\Response(
                 response: 201,
                 description: 'Report recorded',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
+                content: new OAS\MediaType\Json(required: ['status'], properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
             ),
             new OAS\Response(
                 response: 200,
                 description: 'Already reported this card recently (counter not bumped)',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
+                content: new OAS\MediaType\Json(required: ['status'], properties: [new OAS\Property(property: 'status', schema: new OAS\Schema(type: 'string'))])
             ),
             new OAS\Response(
                 response: 400,

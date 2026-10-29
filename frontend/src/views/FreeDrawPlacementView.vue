@@ -199,11 +199,11 @@ async function saveSpread() {
     }
 
     if (spreadSaveMode.value === 'personal' && isLoggedIn.value) {
-      const spread = await createUserSpread(payload)
-      if (spread) {
+      const saved = await createUserSpread(payload)
+      if (saved.ok) {
         toasts.success('Spread saved to your personal collection!')
       } else {
-        toasts.error('Failed to save personal spread.')
+        toasts.error(saved.error)
       }
     } else {
       const res = await submitSpread(payload)

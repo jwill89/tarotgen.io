@@ -29,6 +29,7 @@ final class StatsServiceTest extends TestCase
         $this->pdo->exec("INSERT INTO decks (deck_id, name) VALUES (1, 'Rider-Waite'), (2, 'Thoth')");
     }
 
+    /** @param array<string, mixed> $info the reading_info payload */
     private function insertReading(string $id, array $info): void
     {
         $stmt = $this->pdo->prepare(

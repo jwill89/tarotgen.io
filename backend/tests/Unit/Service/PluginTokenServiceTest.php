@@ -139,7 +139,7 @@ final class PluginTokenServiceTest extends TestCase
 
         $tokens = $this->service->listForUser(42);
         $this->assertCount(1, $tokens);
-        $this->assertTrue($tokens[0]->isActive());
+        $this->assertNull($tokens[0]->revoked_at);
 
         $this->assertTrue($this->service->revoke(42, $tokens[0]->id));
         $this->assertNull($this->service->resolveBearer('Bearer ' . $token));

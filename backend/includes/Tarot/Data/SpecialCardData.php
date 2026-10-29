@@ -2,6 +2,7 @@
 
 namespace Tarot\Data;
 
+use PDOException;
 use Tarot\Structure\SpecialCard;
 
 class SpecialCardData extends AbstractData
@@ -60,6 +61,9 @@ class SpecialCardData extends AbstractData
     }
 
     /**
+     * Null when the deck already has a special card with that card_id (the
+     * table's primary key), which callers report rather than crash on.
+     *
      * @param array<string,mixed> $data
      */
     public function store(array $data): ?SpecialCard
@@ -73,17 +77,24 @@ class SpecialCardData extends AbstractData
              VALUES
                 (:deck_id, :card_id, :name, :keywords, :meaning, :advice, :keywords_reversed, :meaning_reversed, :advice_reversed)"
         );
-        $stmt->execute([
-            ':deck_id'           => $deck_id,
-            ':card_id'           => $card_id,
-            ':name'              => $data['name'] ?? '',
-            ':keywords'          => $data['keywords'] ?? '',
-            ':meaning'           => $data['meaning'] ?? '',
-            ':advice'            => $data['advice'] ?? '',
-            ':keywords_reversed' => $data['keywords_reversed'] ?? '',
-            ':meaning_reversed'  => $data['meaning_reversed'] ?? '',
-            ':advice_reversed'   => $data['advice_reversed'] ?? '',
-        ]);
+        try {
+            $stmt->execute([
+                ':deck_id'           => $deck_id,
+                ':card_id'           => $card_id,
+                ':name'              => $data['name'] ?? '',
+                ':keywords'          => $data['keywords'] ?? '',
+                ':meaning'           => $data['meaning'] ?? '',
+                ':advice'            => $data['advice'] ?? '',
+                ':keywords_reversed' => $data['keywords_reversed'] ?? '',
+                ':meaning_reversed'  => $data['meaning_reversed'] ?? '',
+                ':advice_reversed'   => $data['advice_reversed'] ?? '',
+            ]);
+        } catch (PDOException $e) {
+            if (str_contains($e->getMessage(), 'UNIQUE constraint failed: special_cards.deck_id, special_cards.card_id')) {
+                return null;
+            }
+            throw $e;
+        }
 
         return $this->retrieve($deck_id, $card_id);
     }

@@ -76,18 +76,15 @@ const {
 async function fetchData() {
   // Special cards are now nested under decks (`/decks/{id}/special-cards`), so
   // there is no single "all cards" endpoint — fetch decks first, then each
-  // deck's special cards and flatten. When a deck filter is active, fetch only
-  // that deck to avoid the fan-out.
+  // deck's special cards and flatten. Always every deck, even with a deck
+  // filter on: the filter is applied client-side, and fetching only the
+  // filtered deck replaced the whole list with it, so switching back to
+  // "All Decks" after a save or delete showed that one deck's cards.
   const dk = await api.get<Deck[]>(endpoints.admin.decks.list)
   if (dk) decks.value = dk
 
-  const targetDecks =
-    filterDeckId.value === null
-      ? decks.value
-      : decks.value.filter((d) => d.deck_id === filterDeckId.value)
-
   const results = await Promise.all(
-    targetDecks.map((d) => api.get<SpecialCard[]>(endpoints.admin.decks.specialCards(d.deck_id))),
+    decks.value.map((d) => api.get<SpecialCard[]>(endpoints.admin.decks.specialCards(d.deck_id))),
   )
   specialCards.value = results.flatMap((r) => r ?? [])
 }

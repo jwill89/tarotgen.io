@@ -8,17 +8,19 @@ import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useToasts } from '@/composables/useToasts'
 import { useDataTable } from '@/composables/useDataTable'
+import { useUser } from '@/composables/useUser'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import IconButton from '@/components/IconButton.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import { formatDateTime } from '@/utils/datetime'
-import type { User } from '@/types'
+import type { AdminUser } from '@/types'
 
 const api = useAdminApi()
 const { confirm } = useConfirm()
 const toasts = useToasts()
+const { currentUser } = useUser()
 
-const users = ref<User[]>([])
+const users = ref<AdminUser[]>([])
 const busyId = ref<number | null>(null)
 
 const {
@@ -42,11 +44,20 @@ const {
 })
 
 async function fetchUsers() {
-  const data = await api.get<User[]>(endpoints.admin.users.list)
+  const data = await api.get<AdminUser[]>(endpoints.admin.users.list)
   if (data) users.value = data
 }
 
-async function activate(user: User) {
+/**
+ * Your own account (Account Settings is where you leave) and a protected one
+ * can't be demoted or deleted: the server refuses, so neither is offered. A
+ * refusal that happens anyway comes back as a toast with the server's reason.
+ */
+function isLocked(user: AdminUser): boolean {
+  return user.is_protected || user.user_id === currentUser.value?.user_id
+}
+
+async function activate(user: AdminUser) {
   busyId.value = user.user_id
   const result = await api.post(
     endpoints.admin.users.activate(user.user_id),
@@ -57,7 +68,7 @@ async function activate(user: User) {
   if (result) await fetchUsers()
 }
 
-async function resend(user: User) {
+async function resend(user: AdminUser) {
   busyId.value = user.user_id
   const result = await api.post<{ success: boolean; emailed: boolean; activation_link?: string }>(
     endpoints.admin.users.resendActivation(user.user_id),
@@ -79,7 +90,7 @@ async function resend(user: User) {
   }
 }
 
-async function toggleAdmin(user: User) {
+async function toggleAdmin(user: AdminUser) {
   const makingAdmin = !user.is_admin
   const ok = await confirm({
     title: makingAdmin ? 'Grant admin' : 'Revoke admin',
@@ -92,7 +103,7 @@ async function toggleAdmin(user: User) {
   if (!ok) return
 
   busyId.value = user.user_id
-  const result = await api.patch<User>(
+  const result = await api.patch<AdminUser>(
     endpoints.admin.users.byId(user.user_id),
     { is_admin: makingAdmin },
     makingAdmin
@@ -103,7 +114,7 @@ async function toggleAdmin(user: User) {
   if (result) await fetchUsers()
 }
 
-async function remove(user: User) {
+async function remove(user: AdminUser) {
   const ok = await confirm({
     title: 'Delete account',
     message: `Permanently delete ${user.display_name} (${user.email})? This also deletes ALL of their saved readings and cannot be undone.`,
@@ -196,6 +207,11 @@ onMounted(fetchUsers)
                     ><FontAwesomeIcon :icon="byPrefixAndName.fas['key']"
                   /></span>
                 </Tooltip>
+                <Tooltip v-if="user.is_protected" text="Protected: can't be demoted or deleted">
+                  <span class="icon has-text-grey ml-1"
+                    ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']"
+                  /></span>
+                </Tooltip>
               </td>
               <td>
                 <span v-if="user.is_active" class="status-tag is-on">Active</span>
@@ -222,6 +238,7 @@ onMounted(fetchUsers)
                     @click="resend(user)"
                   />
                   <IconButton
+                    v-if="!user.is_admin || !isLocked(user)"
                     :icon="byPrefixAndName.fas['user-shield']"
                     :label="user.is_admin ? 'Revoke Admin' : 'Make Admin'"
                     :intent="user.is_admin ? 'warning' : 'default'"
@@ -229,6 +246,7 @@ onMounted(fetchUsers)
                     @click="toggleAdmin(user)"
                   />
                   <IconButton
+                    v-if="!isLocked(user)"
                     :icon="byPrefixAndName.fas['trash']"
                     label="Delete"
                     intent="danger"

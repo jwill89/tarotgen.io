@@ -68,9 +68,7 @@ export function usePasskeys() {
     }
   }
 
-  async function registerPasskey(
-    name: string,
-  ): Promise<{ ok: boolean; error?: string; passkey?: Passkey }> {
+  async function registerPasskey(name: string): Promise<{ ok: boolean; error?: string }> {
     try {
       // 1. Get creation options from server.
       const options = await apiRequest<CreationOptionsJson>(
@@ -97,7 +95,7 @@ export function usePasskeys() {
       const attestationResponse = credential.response as AuthenticatorAttestationResponse
 
       // 3. Send attestation to server.
-      const registered = await apiRequest<{ passkey: Passkey }>(
+      const registered = await apiRequest(
         endpoints.passkeys.register,
         sendJson('POST', {
           clientDataJSON: bufferToBase64Url(attestationResponse.clientDataJSON),
@@ -108,9 +106,10 @@ export function usePasskeys() {
       )
       if (!registered.ok) return { ok: false, error: registered.error }
 
-      passkeys.value.unshift(registered.data.passkey)
-      await fetchMe() // Refresh user to pick up has_passkeys
-      return { ok: true, passkey: registered.data.passkey }
+      // The reply describes the new key only in part (no credential id), so the
+      // list is reloaded rather than patched; the user, to pick up has_passkeys.
+      await Promise.all([listPasskeys(), fetchMe()])
+      return { ok: true }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'NotAllowedError') {
         return { ok: false, error: 'Passkey creation was cancelled or not allowed.' }
@@ -145,7 +144,7 @@ export function usePasskeys() {
       const assertionResponse = assertion.response as AuthenticatorAssertionResponse
 
       // 3. Send assertion to server.
-      const signedIn = await apiRequest<{ user: User | null }>(
+      const signedIn = await apiRequest<{ user: User }>(
         endpoints.passkeys.login,
         sendJson('POST', {
           id: bufferToBase64Url(assertion.rawId),
@@ -157,7 +156,7 @@ export function usePasskeys() {
       )
       if (!signedIn.ok) return { ok: false, error: signedIn.error }
 
-      currentUser.value = signedIn.data.user ?? null
+      currentUser.value = signedIn.data.user
       return { ok: true }
     } catch (e: unknown) {
       if (e instanceof DOMException && e.name === 'NotAllowedError') {
@@ -192,13 +191,13 @@ export function usePasskeys() {
   }
 
   async function togglePasswordLogin(disable: boolean): Promise<{ ok: boolean; error?: string }> {
-    const res = await apiRequest<{ user?: User }>(
+    const res = await apiRequest<{ user: User }>(
       endpoints.passkeys.passwordLogin,
       sendJson('PATCH', { disable }),
       'Could not update setting.',
     )
     if (!res.ok) return { ok: false, error: res.error }
-    if (res.data.user) currentUser.value = res.data.user
+    currentUser.value = res.data.user
     return { ok: true }
   }
 

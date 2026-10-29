@@ -75,10 +75,12 @@ class AdminContactController extends AbstractController
                 response: 200,
                 description: 'Updated',
                 content: new OAS\MediaType\Json(
+                    required: ['success'],
                     properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))]
                 )
             ),
             new OAS\Response(response: 400, description: 'Invalid contact ID'),
+            new OAS\Response(response: 404, description: 'Contact not found'),
         ]
     )]
     public function updateContact(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -87,6 +89,10 @@ class AdminContactController extends AbstractController
 
         if ($contact_id < 1) {
             return $response->withJson(['error' => 'Invalid contact ID'], 400);
+        }
+
+        if (!$this->contacts->exists($contact_id)) {
+            return $response->withJson(['error' => 'Contact not found'], 404);
         }
 
         $params = $this->parsedBody($request);

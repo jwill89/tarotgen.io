@@ -3,9 +3,11 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\DeckRepository;
+use Tarot\Repository\UserRepository;
 use Tarot\Service\CardNameResolver;
 use Tarot\Structure\Deck;
 use Tarot\Utility\Session;
@@ -16,6 +18,8 @@ class DeckController extends AbstractController
     public function __construct(
         private readonly DeckRepository $decks,
         private readonly CardNameResolver $cardNames,
+        private readonly UserRepository $users,
+        private readonly AdminAuth $admin,
     ) {
     }
 
@@ -36,7 +40,7 @@ class DeckController extends AbstractController
     )]
     #[OAS\Operation\Get(
         path: '/decks/{deck_id}',
-        summary: 'A single deck',
+        summary: 'A single deck (one still awaiting approval only to an admin)',
         tags: ['Decks'],
         parameters: [
             new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
@@ -47,41 +51,31 @@ class DeckController extends AbstractController
                 description: 'The deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OAS\Response(response: 404, description: 'InvalidDeckID'),
+            new OAS\Response(response: 404, description: 'InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin'),
         ]
     )]
     public function getDeck(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $deck_id = $args['deck_id'] ?? null;
 
-        $status = 200;
-
         // Public responses omit submitted_by: it's a user id, needed only by the
         // admin deck list (AdminDeckController), not by anyone browsing decks.
-        if ($deck_id !== null) {
-            $deck = $this->decks->get((int)$deck_id);
-            if ($deck instanceof Deck) {
-                $data = $deck->jsonSerializeWithout('submitted_by');
-            } else {
-                $data   = ['error' => 'InvalidDeckID'];
-                $status = 404;
-            }
-        } else {
+        if ($deck_id === null) {
             // Public listing: only usable decks
             $data = array_map(
                 static fn(Deck $d): array => $d->jsonSerializeWithout('submitted_by'),
                 $this->decks->getUsable()
             );
+
+            return $this->cacheable($response->withJson($data), true);
         }
 
-        $response = $response->withJson($data, $status);
-
-        // Deck metadata changes rarely; allow a short shared cache.
-        if ($status === 200) {
-            $response = $response->withHeader('Cache-Control', 'public, max-age=300');
+        $deck = $this->visibleDeck((int)$deck_id);
+        if ($deck === null) {
+            return $response->withJson(['error' => 'InvalidDeckID'], 404);
         }
 
-        return $response;
+        return $this->cacheable($response->withJson($deck->jsonSerializeWithout('submitted_by')), $deck->approved);
     }
 
     /**
@@ -93,7 +87,7 @@ class DeckController extends AbstractController
      */
     #[OAS\Operation\Get(
         path: '/decks/{deck_id}/cards',
-        summary: 'List every card available in a deck (for the custom-reading picker)',
+        summary: 'List every card available in a deck (for the custom-reading picker; a deck awaiting approval only to an admin)',
         tags: ['Decks'],
         parameters: [
             new OAS\Parameter(name: 'deck_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
@@ -110,15 +104,13 @@ class DeckController extends AbstractController
                     ])
                 )
             ),
-            new OAS\Response(response: 404, description: 'InvalidDeckID'),
+            new OAS\Response(response: 404, description: 'InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin'),
         ]
     )]
     public function getDeckCards(Request $request, Response $response, array $args): Response|ResponseInterface
     {
-        $deck_id = (int)($args['deck_id'] ?? 0);
-
-        $deck = $this->decks->get($deck_id);
-        if (!($deck instanceof Deck)) {
+        $deck = $this->visibleDeck((int)($args['deck_id'] ?? 0));
+        if ($deck === null) {
             return $response->withJson(['error' => 'InvalidDeckID'], 404);
         }
 
@@ -134,8 +126,7 @@ class DeckController extends AbstractController
             $cards[] = ['card_id' => $card_id, 'name' => $name];
         }
 
-        return $response->withJson($cards)
-            ->withHeader('Cache-Control', 'public, max-age=300');
+        return $this->cacheable($response->withJson($cards), $deck->approved);
     }
 
     #[OAS\Operation\Post(
@@ -164,6 +155,7 @@ class DeckController extends AbstractController
             ),
             new OAS\Response(response: 400, description: 'Name and artist are required'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 409, description: 'A deck with that name already exists'),
         ]
     )]
     /**
@@ -174,8 +166,11 @@ class DeckController extends AbstractController
     {
         Session::start();
 
+        // The account is re-checked, as UserAuth does: deleting an account leaves
+        // its sessions behind, and they mustn't keep submitting.
         $userId = Session::userId();
-        if ($userId === null) {
+        $user   = $userId === null ? null : $this->users->findById($userId);
+        if ($user === null || !$user->is_active) {
             return $response->withJson(['error' => 'Not authenticated'], 401);
         }
 
@@ -196,13 +191,42 @@ class DeckController extends AbstractController
             'additional_cards' => (int)($params['additional_cards'] ?? 0),
             'approved'         => false,
             'usable'           => false,
-            'submitted_by'     => $userId,
+            'submitted_by'     => $user->user_id,
         ]);
 
+        // Null only when the name is taken (decks.name is UNIQUE).
         if ($deck === null) {
-            return $response->withJson(['error' => 'Failed to submit deck.'], 500);
+            return $response->withJson(['error' => 'A deck with that name already exists.'], 409);
         }
 
         return $response->withJson($deck, 201);
+    }
+
+    /**
+     * The deck a visitor may see by id: an approved one to anyone, one still
+     * awaiting approval only to an admin. Anyone else gets null, answered as an
+     * unknown id, so pending submissions can't be found by probing ids. The
+     * admin check runs for a missing deck too: it can start a session (and send
+     * its cookie), and the two answers must not differ even in that.
+     */
+    private function visibleDeck(int $deckId): ?Deck
+    {
+        $deck = $this->decks->get($deckId);
+        if ($deck instanceof Deck && $deck->approved) {
+            return $deck;
+        }
+
+        $isAdmin = $this->admin->sessionIsAdmin();
+
+        return $deck instanceof Deck && $isAdmin ? $deck : null;
+    }
+
+    /**
+     * Deck metadata changes rarely, so what anyone may see gets a short shared
+     * cache. What only an admin may see must never be kept by a shared cache.
+     */
+    private function cacheable(ResponseInterface $response, bool $public): ResponseInterface
+    {
+        return $response->withHeader('Cache-Control', $public ? 'public, max-age=300' : 'private, no-store');
     }
 }

@@ -52,12 +52,18 @@ class ReadingService
     /**
      * Generate a randomized reading from a deck (optionally shaped by a spread).
      *
+     * A personal spread (`user_spread_id`) shapes the reading only for its owner:
+     * anyone else's id, a guest's included, is treated like one that doesn't
+     * exist (ignored), as the ids are sequential and would otherwise lend out
+     * every user's spreads.
+     *
      * @param array<string,mixed> $params Raw request fields.
+     * @param bool $isAdmin Whether the caller may draw from a deck still awaiting approval.
      * @throws ApiException When the deck is invalid or the reading can't be saved.
      * @throws RandomException
      * @throws JsonException
      */
-    public function generate(array $params, ?int $userId = null): Reading
+    public function generate(array $params, ?int $userId = null, bool $isAdmin = false): Reading
     {
         $number_of_cards = max(1, (int)($params['number_of_cards'] ?? 1));
         $deck_id         = (int)($params['deck_id'] ?? 1);
@@ -75,8 +81,8 @@ class ReadingService
                 $spread          = $loaded;
                 $number_of_cards = max(1, $spread->card_count);
             }
-        } elseif ($user_spread_id !== null && $user_spread_id !== '' && (int)$user_spread_id > 0) {
-            $loaded = $this->userSpreads->findById((int)$user_spread_id);
+        } elseif ($userId !== null && $user_spread_id !== null && $user_spread_id !== '' && (int)$user_spread_id > 0) {
+            $loaded = $this->userSpreads->get($userId, (int)$user_spread_id);
             if ($loaded instanceof UserSpread) {
                 // Wrap user spread into the same shape used for snapshots.
                 $spread          = $this->userSpreadAsSpread($loaded);
@@ -84,10 +90,7 @@ class ReadingService
             }
         }
 
-        $deck = $this->decks->get($deck_id);
-        if (!($deck instanceof Deck)) {
-            throw new ApiException('InvalidDeckID', 400);
-        }
+        $deck = $this->deckForNewReading($deck_id, $isAdmin);
 
         $total_cards = $deck->getEffectiveTotalCards();
 
@@ -145,6 +148,9 @@ class ReadingService
      * to its draw, never re-dealing a card already present. Returns the updated
      * reading_info array for the caller to persist; it does not save anything
      * itself (so the controller can scope the write to the owner).
+     *
+     * The reading's own deck is used even if it has since lost its approval:
+     * the owner already has the reading, and its deck id is no probe.
      *
      * The new cards are appended to the end of the draw. For a spread reading
      * they have no position yet — the client opens the placement editor to slot
@@ -223,11 +229,12 @@ class ReadingService
      * never trusted from the client.
      *
      * @param array<string,mixed> $params Raw request fields.
+     * @param bool $isAdmin Whether the caller may use a deck still awaiting approval.
      * @throws ApiException On any validation failure or save error.
      * @throws RandomException
      * @throws JsonException
      */
-    public function createCustom(array $params, ?int $userId = null): Reading
+    public function createCustom(array $params, ?int $userId = null, bool $isAdmin = false): Reading
     {
         $deck_id = (int)($params['deck_id'] ?? 0);
 
@@ -248,10 +255,7 @@ class ReadingService
             throw new ApiException('At least one card is required.', 400);
         }
 
-        $deck = $this->decks->get($deck_id);
-        if (!($deck instanceof Deck)) {
-            throw new ApiException('InvalidDeckID', 400);
-        }
+        $deck = $this->deckForNewReading($deck_id, $isAdmin);
 
         $available = max(1, $deck->getEffectiveTotalCards() + $deck->additional_cards);
 
@@ -338,6 +342,24 @@ class ReadingService
         ];
 
         return $this->persist($reading_data, $this->buildOwnerOptions($userId, $params), 500);
+    }
+
+    /**
+     * The deck a new reading may use: an approved one, or for an admin one still
+     * awaiting approval too. Anything else is refused exactly as an unknown id
+     * is, so a pending submission can't be found here by probing deck ids any
+     * more than through GET /decks/{id}.
+     *
+     * @throws ApiException
+     */
+    private function deckForNewReading(int $deckId, bool $isAdmin): Deck
+    {
+        $deck = $this->decks->get($deckId);
+        if (!($deck instanceof Deck) || (!$deck->approved && !$isAdmin)) {
+            throw new ApiException('InvalidDeckID', 400);
+        }
+
+        return $deck;
     }
 
     /**

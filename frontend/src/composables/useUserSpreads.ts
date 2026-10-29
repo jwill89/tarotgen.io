@@ -1,6 +1,6 @@
 import { ref, type Ref } from 'vue'
 import type { UserSpread } from '@/types'
-import { apiFetch, apiRequest, sendJson } from './apiClient'
+import { apiFetch, apiRequest, sendJson, type ApiResult } from './apiClient'
 import { endpoints } from '@/api/endpoints'
 
 const userSpreads: Ref<UserSpread[]> = ref([])
@@ -11,29 +11,36 @@ export function useUserSpreads() {
     if (data) userSpreads.value = data
   }
 
+  /** The whole result, so a refused save can say why (the server's message). */
   async function createUserSpread(payload: {
     name: string
     description: string
     card_count: number
     positions: unknown[]
-  }): Promise<UserSpread | null> {
-    const res = await apiRequest<UserSpread>(endpoints.account.spreads, sendJson('POST', payload))
-    if (!res.ok) return null
-    userSpreads.value = [res.data, ...userSpreads.value]
-    return res.data
+  }): Promise<ApiResult<UserSpread>> {
+    const res = await apiRequest<UserSpread>(
+      endpoints.account.spreads,
+      sendJson('POST', payload),
+      'Failed to save the spread. Please try again.',
+    )
+    if (res.ok) userSpreads.value = [res.data, ...userSpreads.value]
+    return res
   }
 
+  /** The whole result, so a refused edit can say why (the server's message). */
   async function updateUserSpread(
     id: number,
     payload: { name?: string; description?: string; card_count?: number; positions?: unknown[] },
-  ): Promise<UserSpread | null> {
+  ): Promise<ApiResult<UserSpread>> {
     const res = await apiRequest<UserSpread>(
       endpoints.account.spreadById(id),
       sendJson('PUT', payload),
+      'Failed to save changes. Please try again.',
     )
-    if (!res.ok) return null
-    userSpreads.value = userSpreads.value.map((s) => (s.user_spread_id === id ? res.data : s))
-    return res.data
+    if (res.ok) {
+      userSpreads.value = userSpreads.value.map((s) => (s.user_spread_id === id ? res.data : s))
+    }
+    return res
   }
 
   async function deleteUserSpread(id: number): Promise<boolean> {

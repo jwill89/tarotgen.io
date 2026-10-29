@@ -5,9 +5,11 @@ namespace Routes\Internal;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
+use Tarot\Exception\NameTakenException;
 use Tarot\Repository\DeckRepository;
 use Tarot\Repository\SpecialCardRepository;
 use Tarot\Service\CardImageService;
+use Tarot\Structure\Deck;
 use OpenApi\Spec as OAS;
 
 /**
@@ -17,6 +19,8 @@ use OpenApi\Spec as OAS;
  */
 class AdminDeckController extends AbstractController
 {
+    private const string NAME_TAKEN = 'A deck with that name already exists';
+
     public function __construct(
         private readonly DeckRepository $decks,
         private readonly SpecialCardRepository $specialCards,
@@ -84,19 +88,26 @@ class AdminDeckController extends AbstractController
                 description: 'Created deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
-            new OAS\Response(response: 500, description: 'Failed to create deck'),
+            new OAS\Response(response: 400, description: 'Name is required'),
+            new OAS\Response(response: 409, description: 'A deck with that name already exists'),
         ]
     )]
     public function createDeck(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
+
+        if (trim((string)($params['name'] ?? '')) === '') {
+            return $response->withJson(['error' => 'Name is required'], 400);
+        }
+
         // Admin-created decks are auto-approved but NOT auto-usable.
         $params['approved'] = true;
         $params['usable']   = false;
         $deck = $this->decks->create($params);
 
+        // Null only when the name is taken (decks.name is UNIQUE).
         if ($deck === null) {
-            return $response->withJson(['error' => 'Failed to create deck'], 500);
+            return $response->withJson(['error' => self::NAME_TAKEN], 409);
         }
 
         return $response->withJson($deck, 201);
@@ -152,7 +163,7 @@ class AdminDeckController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Per-card counts: generated, skipped (already current), failed',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['deck_id', 'generated', 'skipped', 'failed'], properties: [
                     new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'generated', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'skipped', schema: new OAS\Schema(type: 'integer')),
@@ -186,7 +197,7 @@ class AdminDeckController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Per-card totals across decks: generated, skipped (already current), failed',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['decks', 'generated', 'skipped', 'failed'], properties: [
                     new OAS\Property(property: 'decks', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'generated', schema: new OAS\Schema(type: 'integer')),
                     new OAS\Property(property: 'skipped', schema: new OAS\Schema(type: 'integer')),
@@ -236,7 +247,9 @@ class AdminDeckController extends AbstractController
                 description: 'Updated deck',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Deck')
             ),
+            new OAS\Response(response: 400, description: 'Name is required (a name sent blank)'),
             new OAS\Response(response: 404, description: 'Deck not found or no valid fields'),
+            new OAS\Response(response: 409, description: 'Another deck already has that name'),
         ]
     )]
     public function updateDeck(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -244,7 +257,16 @@ class AdminDeckController extends AbstractController
         $deck_id = (int)($args['deck_id'] ?? 0);
         $params = $this->parsedBody($request);
 
-        $deck = $this->decks->update($deck_id, $params);
+        // A rename may not blank the name, any more than a create may leave it out.
+        if (array_key_exists('name', $params) && trim((string)$params['name']) === '') {
+            return $response->withJson(['error' => 'Name is required'], 400);
+        }
+
+        try {
+            $deck = $this->decks->update($deck_id, $params);
+        } catch (NameTakenException) {
+            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+        }
 
         if ($deck === null) {
             return $response->withJson(['error' => 'Deck not found or no valid fields'], 404);
@@ -344,18 +366,25 @@ class AdminDeckController extends AbstractController
                 description: 'Created special card',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/SpecialCard')
             ),
-            new OAS\Response(response: 500, description: 'Failed to create special card'),
+            new OAS\Response(response: 404, description: 'Deck not found'),
+            new OAS\Response(response: 409, description: 'The deck already has a special card with that card_id'),
         ]
     )]
     public function createSpecialCard(Request $request, Response $response, array $args): Response|ResponseInterface
     {
+        $deck_id = (int)($args['deck_id'] ?? 0);
+        if (!($this->decks->get($deck_id) instanceof Deck)) {
+            return $response->withJson(['error' => 'Deck not found'], 404);
+        }
+
         $params = $this->parsedBody($request);
         // The deck is identified by the path, not the body.
-        $params['deck_id'] = (int)($args['deck_id'] ?? 0);
-        $card = $this->specialCards->create($params);
+        $params['deck_id'] = $deck_id;
 
+        // Null only when the card_id is taken in this deck (its primary key).
+        $card = $this->specialCards->create($params);
         if ($card === null) {
-            return $response->withJson(['error' => 'Failed to create special card'], 500);
+            return $response->withJson(['error' => 'This deck already has a special card with that card ID'], 409);
         }
 
         return $response->withJson($card, 201);

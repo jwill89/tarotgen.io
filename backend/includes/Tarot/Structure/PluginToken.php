@@ -38,10 +38,4 @@ class PluginToken extends AbstractStructure
 
     #[OAS\Property(schema: new OAS\Schema(type: 'string', nullable: true))]
     public private(set) ?string $revoked_at = null;
-
-    /** Whether this token is currently usable (not revoked). */
-    public function isActive(): bool
-    {
-        return $this->revoked_at === null;
-    }
 }

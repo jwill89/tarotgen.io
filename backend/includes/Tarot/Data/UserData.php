@@ -10,12 +10,13 @@ class UserData extends AbstractData
 {
     /**
      * Exactly the properties User declares. Notably not password_hash: only
-     * findAuthByEmail() and getPasswordHash() ever select it. The two flags are
-     * worked out here so the Google id never leaves SQL and listing every user
-     * is one query, not one passkey lookup per user.
+     * findAuthByEmail() and getPasswordHash() ever select it. The three flags are
+     * worked out here so the Google id and the hash never leave SQL and listing
+     * every user is one query, not one passkey lookup per user.
      */
     private const string SELECT_COLS = 'user_id, email, display_name, is_active, is_admin, registered_at, '
-        . "last_login_at, COALESCE(google_id, '') <> '' AS google_linked, password_login_disabled, "
+        . "last_login_at, COALESCE(google_id, '') <> '' AS google_linked, password_hash <> '' AS has_password, "
+        . 'password_login_disabled, '
         . 'EXISTS (SELECT 1 FROM user_passkeys p WHERE p.user_id = users.user_id) AS has_passkeys';
 
     /**

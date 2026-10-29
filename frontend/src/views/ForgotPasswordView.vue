@@ -11,11 +11,19 @@ const loading = ref(false)
 const done = ref(false)
 const message = ref('')
 const resetLink = ref('')
+const error = ref('')
 
 async function submit() {
+  error.value = ''
   loading.value = true
   try {
     const res = await requestPasswordReset(email.value)
+    if (!res.ok) {
+      // A refusal (rate limit) or a network failure: nothing was sent, so say
+      // so and keep the form for a retry, rather than a success notice.
+      error.value = res.message ?? 'Request failed.'
+      return
+    }
     done.value = true
     message.value =
       res.message ?? 'If an account exists for that email, a reset link has been sent.'
@@ -58,6 +66,8 @@ async function submit() {
                   /></span>
                 </div>
               </div>
+
+              <div v-if="error" class="notification is-danger is-light">{{ error }}</div>
 
               <div class="field">
                 <button

@@ -6,6 +6,7 @@ namespace Tarot\Tests\Unit\Exception;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use ReflectionClass;
 use RuntimeException;
 use Tarot\Exception\ApiException;
 
@@ -29,7 +30,9 @@ final class ApiExceptionTest extends TestCase
 
     public function testIsRuntimeException(): void
     {
-        $this->assertInstanceOf(RuntimeException::class, new ApiException('x'));
+        // The declaration already says so (PHPStan proves an instanceof check);
+        // this pins the parent class so changing it is a visible test change.
+        $this->assertTrue(new ReflectionClass(ApiException::class)->isSubclassOf(RuntimeException::class));
     }
 
     public function testPreservesPreviousThrowable(): void

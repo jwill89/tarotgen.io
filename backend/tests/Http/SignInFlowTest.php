@@ -81,17 +81,36 @@ final class SignInFlowTest extends HttpTestCase
         $this->assertJsonResponse(401, $this->get('/auth/me'));
     }
 
-    public function testADuplicateAccountIsRefused(): void
+    public function testADuplicateAccountIsRefusedForItsDisplayNameOnly(): void
     {
         $account = ['email' => self::EMAIL, 'display_name' => 'Reader', 'password' => $this->password];
         $this->assertJsonResponse(201, $this->post('/auth/register', $account));
 
         $again = $this->assertJsonResponse(422, $this->post('/auth/register', $account));
 
-        $this->assertSame(
-            ['errors' => ['An account with that email address already exists.', 'That display name is already taken.']],
-            $again
-        );
+        // Not that the email has an account: anyone could ask that (AuthRegistrationTest).
+        $this->assertSame(['errors' => ['That display name is already taken.']], $again);
+        $this->assertSame(1, $this->rowCount('users'));
+    }
+
+    public function testEachSessionRowRecordsWhoIsSignedIn(): void
+    {
+        $this->post('/auth/register', ['email' => self::EMAIL, 'display_name' => 'Reader', 'password' => $this->password]);
+        $this->db->exec('UPDATE users SET is_active = 1');
+        $this->assertJsonResponse(401, $this->get('/auth/me'));
+        $this->assertSame([['user_id' => null]], $this->rows('SELECT user_id FROM sessions'));
+
+        $this->assertJsonResponse(200, $this->signIn($this->password));
+        $userId = $this->rows('SELECT user_id FROM users')[0]['user_id'] ?? null;
+        $this->assertIsInt($userId);
+        $this->assertSame([['user_id' => $userId]], $this->rows('SELECT user_id FROM sessions'));
+
+        // An unchanged session only has its expiry refreshed, and still says whose it is.
+        $this->assertJsonResponse(200, $this->get('/auth/me'));
+        $this->assertSame([['user_id' => $userId]], $this->rows('SELECT user_id FROM sessions'));
+
+        $this->assertJsonResponse(200, $this->post('/auth/logout'));
+        $this->assertSame([['user_id' => null]], $this->rows('SELECT user_id FROM sessions'));
     }
 
     private function signIn(string $password): \Psr\Http\Message\ResponseInterface

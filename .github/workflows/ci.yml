@@ -138,12 +138,81 @@ jobs:
       - name: Current PHP idioms, no dead code (Rector)
         run: composer rector:check
 
-      # A threshold waits for AUDIT §8.7; the summary shows the trend.
-      - name: Tests (PHPUnit) + coverage
-        run: composer test -- --coverage-text --only-summary-for-coverage-text
+      # Fails below the coverage floor in bin/coverage-check.php (AUDIT §8.7).
+      - name: Tests (PHPUnit) + coverage floor
+        run: composer test:coverage
 
       - name: Static analysis (PHPStan)
         run: composer stan
+
+  # The smoke run (AUDIT §8.6): the built SPA and the real API behind PHP, routed
+  # as production routes them, on a seeded throwaway database
+  # (frontend/playwright.config.ts, frontend/e2e/).
+  e2e:
+    name: Smoke (Playwright)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive # npm ci installs the eslint-config submodule too
+          token: ${{ secrets.ESLINT_CONFIG_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # As in the frontend job.
+      - name: Configure Font Awesome Pro registry
+        env:
+          FONTAWESOME_NPM_TOKEN: ${{ secrets.FONTAWESOME_NPM_TOKEN }}
+        run: |
+          if [ -z "$FONTAWESOME_NPM_TOKEN" ]; then
+            echo "::error::FONTAWESOME_NPM_TOKEN secret is not set — npm ci cannot install the Font Awesome Pro kit."
+            exit 1
+          fi
+          {
+            echo "@awesome.me:registry=https://npm.fontawesome.com/"
+            echo "@fortawesome:registry=https://npm.fontawesome.com/"
+            echo "//npm.fontawesome.com/:_authToken=${FONTAWESOME_NPM_TOKEN}"
+          } > .npmrc
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ctype, curl, filter, gd, mbstring, pdo, pdo_sqlite, session, simplexml, openssl, gmp
+          coverage: none
+          tools: composer
+
+      # Runtime packages only, as the deploy installs them.
+      - name: Install PHP dependencies
+        working-directory: backend
+        run: composer install --no-dev --no-interaction --no-progress --prefer-dist
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Smoke test
+        run: npm run test:e2e
+
+      - name: Keep the trace of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-traces
+          path: frontend/test-results
+          retention-days: 7
 
   # The deploy scripts, with PSScriptAnalyzer as PSScriptAnalyzerSettings.psd1 sets it.
   scripts:
@@ -169,7 +238,7 @@ jobs:
   # released is skipped, so ordinary pushes are a no-op.
   release:
     name: Tag + release (main, on version bump)
-    needs: [frontend, backend, scripts]
+    needs: [frontend, backend, e2e, scripts]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:

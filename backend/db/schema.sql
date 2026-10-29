@@ -75,7 +75,7 @@ CREATE TABLE sessions (
         id      TEXT    PRIMARY KEY,
         data    TEXT    NOT NULL DEFAULT '',
         expires INTEGER NOT NULL
-    );
+    , user_id INTEGER DEFAULT NULL);
 
 CREATE TABLE "special_cards" (
             deck_id           INTEGER NOT NULL,
@@ -221,6 +221,8 @@ CREATE INDEX idx_readings_time ON readings (reading_time, reading_id);
 CREATE INDEX idx_readings_user_time ON readings (user_id, reading_time, reading_id);
 
 CREATE INDEX idx_sessions_expires ON sessions(expires);
+
+CREATE INDEX idx_sessions_user ON sessions (user_id);
 
 CREATE INDEX idx_user_spreads_user ON user_spreads (user_id);
 

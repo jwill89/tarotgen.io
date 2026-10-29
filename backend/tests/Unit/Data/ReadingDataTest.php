@@ -47,6 +47,15 @@ final class ReadingDataTest extends TestCase
         return $r;
     }
 
+    /** The stored reading $id, failing the test when there is none. */
+    private function retrieved(string $id): Reading
+    {
+        $reading = $this->data->retrieve($id);
+        $this->assertNotNull($reading, "No reading '{$id}'");
+
+        return $reading;
+    }
+
     public function testListByUserPagesNewestFirstAndCounts(): void
     {
         $insert = $this->pdo->prepare(
@@ -111,14 +120,15 @@ final class ReadingDataTest extends TestCase
         $this->data->store($r);
 
         $loaded = $this->data->retrieve('notes1');
+        $this->assertNotNull($loaded);
         $this->assertSame('# Heading\n\nSome **markdown** notes.', $loaded->reading_notes);
 
         // Owner can edit; clearing sets it back to null.
         $this->data->updateMeta('notes1', 3, ['reading_notes' => 'Updated notes']);
-        $this->assertSame('Updated notes', $this->data->retrieve('notes1')->reading_notes);
+        $this->assertSame('Updated notes', $this->retrieved('notes1')->reading_notes);
 
         $this->data->updateMeta('notes1', 3, ['reading_notes' => null]);
-        $this->assertNull($this->data->retrieve('notes1')->reading_notes);
+        $this->assertNull($this->retrieved('notes1')->reading_notes);
     }
 
     public function testVerifyPassword(): void
@@ -162,16 +172,21 @@ final class ReadingDataTest extends TestCase
 
         // Wrong owner can't lock it.
         $this->assertNull($this->data->markFinal('lockme', 99));
-        $this->assertFalse($this->data->retrieve('lockme')->is_final);
+        $this->assertFalse($this->retrieved('lockme')->is_final);
 
         // The owner can, and a repeat call still reports the (final) state.
-        $this->assertTrue($this->data->markFinal('lockme', 5)->is_final);
-        $this->assertTrue($this->data->markFinal('lockme', 5)->is_final);
+        $locked = $this->data->markFinal('lockme', 5);
+        $this->assertNotNull($locked);
+        $this->assertTrue($locked->is_final);
+
+        $relocked = $this->data->markFinal('lockme', 5);
+        $this->assertNotNull($relocked);
+        $this->assertTrue($relocked->is_final);
     }
 
     private function assertFalseOrNullFinal(string $id): void
     {
-        $this->assertFalse($this->data->retrieve($id)->is_final);
+        $this->assertFalse($this->retrieved($id)->is_final);
     }
 
     public function testUpdateReadingInfoAppendsDraw(): void
@@ -212,6 +227,7 @@ final class ReadingDataTest extends TestCase
         $this->assertTrue($updated->password_protected);
 
         $cleared = $this->data->updateMeta('owned', 1, ['password_hash' => null]);
+        $this->assertNotNull($cleared);
         $this->assertFalse($cleared->password_protected);
     }
 }

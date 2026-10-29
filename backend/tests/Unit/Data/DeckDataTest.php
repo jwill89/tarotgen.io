@@ -57,6 +57,19 @@ final class DeckDataTest extends TestCase
         $this->data = new DeckData($this->pdo);
     }
 
+    /**
+     * Store a deck the test builds on, failing the test if the insert doesn't.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private function storeDeck(array $fields): Deck
+    {
+        $deck = $this->data->store($fields);
+        $this->assertNotNull($deck);
+
+        return $deck;
+    }
+
     public function testStorePreservesRealMillimetreAspectWithoutTruncating(): void
     {
         // Regression: the old clamp ceiling of 100 truncated a real card's mm
@@ -79,27 +92,30 @@ final class DeckDataTest extends TestCase
 
     public function testUpdateClampsAspectToAPositiveSaneRange(): void
     {
-        $deck = $this->data->store(['name' => 'Deck']);
+        $deck = $this->storeDeck(['name' => 'Deck']);
         $id = $deck->deck_id;
 
         // Non-positive floors to 0.1 (never 0 or negative → no "/ 0" ratio).
         $floored = $this->data->update($id, ['card_aspect_w' => 0, 'card_aspect_h' => -3]);
+        $this->assertNotNull($floored);
         $this->assertSame(0.1, $floored->card_aspect_w);
         $this->assertSame(0.1, $floored->card_aspect_h);
 
         // Absurdly large values cap at the generous ceiling rather than overflow.
         $capped = $this->data->update($id, ['card_aspect_w' => 999999, 'card_aspect_h' => 1e9]);
+        $this->assertNotNull($capped);
         $this->assertSame(100000.0, $capped->card_aspect_w);
         $this->assertSame(100000.0, $capped->card_aspect_h);
 
         // A realistic mm value in the middle is preserved exactly.
         $mm = $this->data->update($id, ['card_aspect_h' => 120]);
+        $this->assertNotNull($mm);
         $this->assertSame(120.0, $mm->card_aspect_h);
     }
 
     public function testUpdateOnlyWritesAllowListedColumns(): void
     {
-        $deck = $this->data->store(['name' => 'Original', 'additional_cards' => 0]);
+        $deck = $this->storeDeck(['name' => 'Original', 'additional_cards' => 0]);
         $id = $deck->deck_id;
 
         // 'name' and 'additional_cards' are allowed; 'submitted_by' and an unknown
@@ -115,7 +131,10 @@ final class DeckDataTest extends TestCase
         $this->assertSame('Renamed', $updated->name);
         $this->assertSame(5, $updated->additional_cards);
         // submitted_by stays NULL (was never set, and update can't touch it).
-        $row = $this->pdo->query('SELECT submitted_by FROM decks WHERE deck_id = ' . $id)->fetch(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->prepare('SELECT submitted_by FROM decks WHERE deck_id = :id');
+        $stmt->execute([':id' => $id]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $this->assertIsArray($row);
         $this->assertNull($row['submitted_by']);
     }
 
@@ -136,7 +155,7 @@ final class DeckDataTest extends TestCase
 
     public function testUpdateReturnsNullWhenNoAllowedFieldsProvided(): void
     {
-        $deck = $this->data->store(['name' => 'Deck']);
+        $deck = $this->storeDeck(['name' => 'Deck']);
         $result = $this->data->update($deck->deck_id, ['evil_column' => 'x']);
         $this->assertNull($result);
     }

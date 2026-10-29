@@ -11,11 +11,6 @@ readonly class SpecialCardRepository
     {
     }
 
-    public function get(int $deck_id, int $card_id): ?SpecialCard
-    {
-        return $this->data->retrieve($deck_id, $card_id);
-    }
-
     /**
      * @param list<int> $card_ids
      * @return list<SpecialCard>

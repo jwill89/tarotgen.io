@@ -41,7 +41,7 @@ abstract class HttpTestCase extends TestCase
     private const array ENV_KEYS = [
         'APP_ENV', 'APP_URL', 'APP_ORIGIN', 'CSP_MODE', 'SMTP_HOST',
         'CLOUDFLARE_TURNSTILE_SITEKEY', 'CLOUDFLARE_TURNSTILE_SECRET',
-        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI',
+        'GOOGLE_CLIENT_ID', 'GOOGLE_CLIENT_SECRET', 'GOOGLE_REDIRECT_URI', 'PROTECTED_ADMIN_EMAILS',
     ];
 
     protected PDO $db;
@@ -138,6 +138,17 @@ abstract class HttpTestCase extends TestCase
     protected function service(string $id): object
     {
         return $this->container->get($id);
+    }
+
+    /**
+     * Put a stand-in in the container (an object that talks to the outside world,
+     * like Google or SMTP). Applies from the next request on; set it before anything
+     * that depends on it is first resolved, since resolved services are cached.
+     */
+    protected function replaceService(string $id, object $instance): void
+    {
+        $this->container->set($id, $instance);
+        $this->app = null;
     }
 
     /**

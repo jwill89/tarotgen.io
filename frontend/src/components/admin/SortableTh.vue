@@ -1,6 +1,8 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { byPrefixAndName } from '@/fontawesome'
-defineProps<{
+
+const props = defineProps<{
   label: string
   sortKey: string
   activeKey: string | null
@@ -8,22 +10,35 @@ defineProps<{
 }>()
 
 const emit = defineEmits<{ sort: [string] }>()
+
+// Only the column the table is sorted by says so; the rest carry no aria-sort.
+const ariaSort = computed(() =>
+  props.activeKey === props.sortKey
+    ? props.dir === 'asc'
+      ? 'ascending'
+      : 'descending'
+    : undefined,
+)
 </script>
 
 <template>
-  <th class="sortable-th" @click="emit('sort', sortKey)">
-    <span>{{ label }}</span>
-    <span class="icon is-small sort-icon">
-      <FontAwesomeIcon
-        :icon="
-          activeKey === sortKey
-            ? dir === 'asc'
-              ? byPrefixAndName.fas['sort-up']
-              : byPrefixAndName.fas['sort-down']
-            : byPrefixAndName.fas['sort']
-        "
-      />
-    </span>
+  <!-- The cell takes the click, so all of it sorts; the button inside is what
+       keyboard users reach, and its Enter/Space click bubbles up to here. -->
+  <th class="sortable-th" :aria-sort="ariaSort" @click="emit('sort', sortKey)">
+    <button type="button" class="sortable-th__button">
+      <span>{{ label }}</span>
+      <span class="icon is-small sort-icon">
+        <FontAwesomeIcon
+          :icon="
+            activeKey === sortKey
+              ? dir === 'asc'
+                ? byPrefixAndName.fas['sort-up']
+                : byPrefixAndName.fas['sort-down']
+              : byPrefixAndName.fas['sort']
+          "
+        />
+      </span>
+    </button>
   </th>
 </template>
 
@@ -36,6 +51,27 @@ const emit = defineEmits<{ sort: [string] }>()
 
 .sortable-th:hover {
   color: var(--myst-gold);
+}
+
+/* Looks like the header text it replaced. */
+.sortable-th__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: inherit;
+}
+
+.sortable-th__button:focus-visible {
+  outline: 1px solid var(--myst-hair-gold);
+  outline-offset: 3px;
+  border-radius: 2px;
 }
 
 .sort-icon {

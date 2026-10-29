@@ -29,6 +29,7 @@ class ConfigController extends AbstractController
                 response: 200,
                 description: 'Non-secret config the SPA needs before rendering',
                 content: new OAS\MediaType\Json(
+                    required: ['turnstile_sitekey'],
                     properties: [
                         new OAS\Property(property: 'turnstile_sitekey', schema: new OAS\Schema(type: 'string', nullable: true)),
                     ]

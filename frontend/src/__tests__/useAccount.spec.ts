@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAccount } from '@/composables/useAccount'
 import { useUser } from '@/composables/useUser'
 import type { User } from '@/types'
+import { stubApi, signIn, testUser } from './helpers/app'
 
 function pageResponse(body: unknown, total: string | null, { ok = true, status = 200 } = {}) {
   return {
@@ -95,5 +96,92 @@ describe('useAccount changes', () => {
     )
 
     expect(await useAccount().unlinkGoogle()).toEqual({ ok: false, error: reason })
+  })
+})
+
+describe('useAccount readings', () => {
+  it("passes on the server's reason when a change is refused", async () => {
+    stubApi({
+      'PATCH /account/readings/a': {
+        status: 422,
+        body: { error: 'Password must be at least 4 characters.' },
+      },
+    })
+
+    expect(await useAccount().updateReading('a', { password: 'x' })).toEqual({
+      ok: false,
+      error: 'Password must be at least 4 characters.',
+    })
+  })
+
+  it('escapes the reading id in the URL', async () => {
+    const api = stubApi({ 'DELETE /account/readings/a%2Fb': { status: 204 } })
+
+    expect(await useAccount().deleteReading('a/b')).toEqual({ ok: true })
+    expect(api).toHaveBeenCalledTimes(1)
+  })
+
+  it('says why a reading could not be deleted', async () => {
+    stubApi({ 'DELETE /account/readings/a': { status: 404 } })
+
+    expect(await useAccount().deleteReading('a')).toEqual({
+      ok: false,
+      error: 'Could not delete reading.',
+    })
+  })
+})
+
+describe('useAccount profile', () => {
+  beforeEach(() => signIn(testUser({ display_name: 'Reader' })))
+
+  it('renames the user and shows the new name everywhere at once', async () => {
+    const api = stubApi({
+      'PATCH /account': { body: { user: testUser({ display_name: 'Morgan' }) } },
+    })
+
+    expect(await useAccount().changeDisplayName('Morgan')).toEqual({ ok: true })
+
+    expect(JSON.parse(String(api.mock.calls[0]?.[1]?.body))).toEqual({ display_name: 'Morgan' })
+    expect(useUser().currentUser.value?.display_name).toBe('Morgan')
+  })
+
+  it('keeps the old name when the new one is refused', async () => {
+    stubApi({ 'PATCH /account': { status: 422, body: { error: 'Display name is taken.' } } })
+
+    expect(await useAccount().changeDisplayName('Admin')).toEqual({
+      ok: false,
+      error: 'Display name is taken.',
+    })
+    expect(useUser().currentUser.value?.display_name).toBe('Reader')
+  })
+
+  it('changes the password with the current one as proof', async () => {
+    const api = stubApi({ 'POST /account/change-password': { body: { message: 'Changed.' } } })
+
+    expect(await useAccount().changePassword('old pass', 'a new passphrase')).toEqual({ ok: true })
+    expect(JSON.parse(String(api.mock.calls[0]?.[1]?.body))).toEqual({
+      current_password: 'old pass',
+      new_password: 'a new passphrase',
+    })
+  })
+
+  it('says why the password was not changed', async () => {
+    stubApi({
+      'POST /account/change-password': {
+        status: 403,
+        body: { error: 'Current password is incorrect.' },
+      },
+    })
+
+    expect(await useAccount().changePassword('wrong', 'a new passphrase')).toEqual({
+      ok: false,
+      error: 'Current password is incorrect.',
+    })
+  })
+
+  it('unlinks Google', async () => {
+    stubApi({ 'POST /auth/google/unlink': { body: { message: 'Unlinked.' } } })
+
+    expect(await useAccount().unlinkGoogle()).toEqual({ ok: true })
   })
 })

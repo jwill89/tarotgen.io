@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, useTemplateRef } from 'vue'
 import { useUser } from '@/composables/useUser'
 import { useToasts } from '@/composables/useToasts'
 import { useContact } from '@/composables/useContact'
 import MarkdownEditor from '@/components/MarkdownEditor.vue'
 import PageHeader from '@/components/PageHeader.vue'
+import TurnstileWidget from '@/components/TurnstileWidget.vue'
 
 const { currentUser, isLoggedIn } = useUser()
 const { success: toastSuccess, error: toastError } = useToasts()
@@ -16,6 +17,10 @@ const email = ref('')
 const message = ref('')
 const submitting = ref(false)
 const submitted = ref(false)
+
+const turnstileToken = ref('')
+const turnstileEnabled = ref(false)
+const turnstile = useTemplateRef('turnstile')
 
 onMounted(() => {
   if (currentUser.value) {
@@ -31,15 +36,16 @@ async function submit() {
   }
 
   submitting.value = true
-  const result = await sendMessage({
-    name: name.value,
-    email: email.value,
-    message: message.value,
-  })
+  const result = await sendMessage(
+    { name: name.value, email: email.value, message: message.value },
+    turnstileToken.value,
+  )
   submitting.value = false
 
   if (!result.ok) {
     toastError(result.error)
+    // The challenge token is single-use; reset so the visitor can retry.
+    turnstile.value?.reset()
     return
   }
 
@@ -49,6 +55,8 @@ async function submit() {
 
 function resetForm() {
   message.value = ''
+  // Spent on the message just sent: the form's fresh widget asks for a new one.
+  turnstileToken.value = ''
   submitted.value = false
 }
 </script>
@@ -125,13 +133,19 @@ function resetForm() {
             />
           </div>
 
+          <TurnstileWidget
+            ref="turnstile"
+            v-model="turnstileToken"
+            v-model:enabled="turnstileEnabled"
+          />
+
           <div class="field">
             <div class="control">
               <button
                 type="submit"
                 class="button is-primary"
                 :class="{ 'is-loading': submitting }"
-                :disabled="submitting"
+                :disabled="submitting || (turnstileEnabled && !turnstileToken)"
               >
                 <span class="icon"
                   ><FontAwesomeIcon :icon="byPrefixAndName.fas['paper-plane']"

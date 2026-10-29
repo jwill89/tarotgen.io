@@ -40,6 +40,12 @@ class User extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $google_linked = false;
 
+    #[OAS\Property(schema: new OAS\Schema(
+        description: 'Whether the account has a password at all. An account made by signing in with Google has none until the user sets one through a password-reset link.',
+        type: 'boolean'
+    ))]
+    public private(set) bool $has_password = false;
+
     #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $password_login_disabled = false;
 

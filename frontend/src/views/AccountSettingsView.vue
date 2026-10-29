@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAccount } from '@/composables/useAccount'
 import { useUser } from '@/composables/useUser'
@@ -21,7 +21,7 @@ const {
   deleteAccount,
   unlinkGoogle: unlinkGoogleAccount,
 } = useAccount()
-const { currentUser, fetchMe } = useUser()
+const { currentUser, fetchMe, requestPasswordReset } = useUser()
 const { confirm } = useConfirm()
 const toasts = useToasts()
 const {
@@ -52,6 +52,54 @@ async function saveName() {
   }
 }
 
+// Ways to sign in. The server keeps at least one at all times (password login
+// off, deleting a passkey and unlinking Google are refused when it would leave
+// none), so the controls below don't offer what it would refuse.
+const hasPassword = computed(() => currentUser.value?.has_password ?? true)
+const passwordWorks = computed(
+  () => hasPassword.value && !(currentUser.value?.password_login_disabled ?? false),
+)
+const googleLinked = computed(() => currentUser.value?.google_linked ?? false)
+const canDisablePasswordLogin = computed(
+  () => (currentUser.value?.has_passkeys ?? false) || googleLinked.value,
+)
+const canUnlinkGoogle = computed(
+  () => passwordWorks.value || (currentUser.value?.has_passkeys ?? false),
+)
+/** What turns a password into a way to sign in: setting one, or turning its login back on. */
+const passwordFix = computed(() =>
+  hasPassword.value ? 'turn password login back on' : 'set a password',
+)
+/** Whether a passkey may go: another passkey, a working password or Google stays. */
+const canRemovePasskey = computed(
+  () => passkeys.value.length > 1 || passwordWorks.value || googleLinked.value,
+)
+
+// Setting a first password (an account made through Google has none): the
+// emailed reset link is the proof of identity, as for a forgotten one.
+const setLinkSending = ref(false)
+const setLinkSent = ref(false)
+const setLinkDev = ref('')
+const setLinkError = ref('')
+
+async function emailSetPasswordLink() {
+  const email = currentUser.value?.email
+  if (!email) return
+  setLinkError.value = ''
+  setLinkSending.value = true
+  try {
+    const res = await requestPasswordReset(email)
+    if (res.ok) {
+      setLinkSent.value = true
+      setLinkDev.value = res.resetLink ?? ''
+    } else {
+      setLinkError.value = res.message ?? 'Could not send the link. Please try again.'
+    }
+  } finally {
+    setLinkSending.value = false
+  }
+}
+
 // Password
 const currentPassword = ref('')
 const newPassword = ref('')
@@ -69,7 +117,7 @@ async function savePassword() {
   try {
     const res = await changePassword(currentPassword.value, newPassword.value)
     if (res.ok) {
-      toasts.success('Password changed.')
+      toasts.success('Password changed. Your other sessions were signed out.')
       currentPassword.value = ''
       newPassword.value = ''
       confirmPassword.value = ''
@@ -315,7 +363,41 @@ async function revokePluginToken(token: PluginToken) {
           </div>
 
           <!-- Password -->
-          <div class="settings-panel mb-5">
+          <div v-if="!hasPassword" class="settings-panel mb-5">
+            <h2 class="title is-5">Password</h2>
+            <p class="mb-3">
+              {{
+                googleLinked
+                  ? 'Your account signs in with Google and has no password yet.'
+                  : 'Your account has no password yet.'
+              }}
+              To set one, we'll email a link to <strong>{{ currentUser?.email }}</strong
+              >. Setting it signs you out everywhere, so you'll sign in again with the new password.
+            </p>
+            <div v-if="setLinkError" class="notification is-danger is-light">
+              {{ setLinkError }}
+            </div>
+            <div v-if="setLinkSent && !setLinkDev" class="notification is-success is-light">
+              Link sent. Open the email we just sent to set your password; the link works for an
+              hour.
+            </div>
+            <div v-if="setLinkDev" class="myst-callout mb-3">
+              <p class="mb-2">
+                <strong>Dev shortcut:</strong> email isn't configured here, so set it directly:
+              </p>
+              <a class="button is-small is-link" :href="setLinkDev">Set my password</a>
+            </div>
+            <button
+              class="button is-success"
+              type="button"
+              :class="{ 'is-loading': setLinkSending }"
+              @click="emailSetPasswordLink"
+            >
+              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['envelope']" /></span>
+              <span>Email me a link to set a password</span>
+            </button>
+          </div>
+          <div v-else class="settings-panel mb-5">
             <h2 class="title is-5">Change Password</h2>
             <form @submit.prevent="savePassword">
               <div class="field">
@@ -374,11 +456,16 @@ async function revokePluginToken(token: PluginToken) {
               <button
                 class="button is-warning"
                 :class="{ 'is-loading': unlinking }"
+                :disabled="!canUnlinkGoogle"
                 @click="unlinkGoogle"
               >
                 <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fab['google']" /></span>
                 <span>Unlink Google</span>
               </button>
+              <p v-if="!canUnlinkGoogle" class="help">
+                Google is your only way to sign in. To unlink it, first {{ passwordFix }} or add a
+                passkey.
+              </p>
             </template>
             <template v-else>
               <p class="mb-3">Link your Google account to enable one-click sign in.</p>
@@ -432,6 +519,7 @@ async function revokePluginToken(token: PluginToken) {
                     <button
                       class="button is-small is-danger is-light"
                       aria-label="Remove"
+                      :disabled="!canRemovePasskey"
                       @click="removePasskey(pk.passkey_id, pk.name)"
                     >
                       <span class="icon"
@@ -441,6 +529,10 @@ async function revokePluginToken(token: PluginToken) {
                   </Tooltip>
                 </div>
               </div>
+              <p v-if="!canRemovePasskey" class="help">
+                This passkey is your only way to sign in. To remove it, first {{ passwordFix }} or
+                link your Google account.
+              </p>
             </div>
             <p v-else-if="!passkeysLoading" class="has-text-grey mb-4">
               No passkeys registered yet.
@@ -470,39 +562,48 @@ async function revokePluginToken(token: PluginToken) {
               </div>
             </div>
 
-            <!-- Password login toggle -->
-            <hr />
-            <div class="field">
-              <span class="label">Password Login</span>
-              <p class="mb-2 is-size-7 has-text-grey">
-                If you have at least one passkey, you can disable password login for extra security.
-                You can always re-enable it here. This does not affect Google sign-in.
-              </p>
-              <button
-                class="button"
-                :class="[
-                  currentUser?.password_login_disabled ? 'is-success' : 'is-warning',
-                  { 'is-loading': passkeyTogglingPw },
-                ]"
-                :disabled="!currentUser?.has_passkeys && !currentUser?.password_login_disabled"
-                @click="handleTogglePasswordLogin"
-              >
-                <span class="icon">
-                  <FontAwesomeIcon
-                    :icon="
-                      currentUser?.password_login_disabled
-                        ? byPrefixAndName.fas['lock-open']
-                        : byPrefixAndName.fas['lock']
-                    "
-                  />
-                </span>
-                <span>{{
-                  currentUser?.password_login_disabled
-                    ? 'Re-enable Password Login'
-                    : 'Disable Password Login'
-                }}</span>
-              </button>
-            </div>
+            <!-- Password login toggle (pointless without a password to sign in with) -->
+            <template v-if="hasPassword || currentUser?.password_login_disabled">
+              <hr />
+              <div class="field">
+                <span class="label">Password Login</span>
+                <p class="mb-2 is-size-7 has-text-grey">
+                  If you have a passkey or a linked Google account, you can disable password login
+                  for extra security. You can always re-enable it here. This does not affect Google
+                  sign-in.
+                </p>
+                <button
+                  class="button"
+                  :class="[
+                    currentUser?.password_login_disabled ? 'is-success' : 'is-warning',
+                    { 'is-loading': passkeyTogglingPw },
+                  ]"
+                  :disabled="!canDisablePasswordLogin && !currentUser?.password_login_disabled"
+                  @click="handleTogglePasswordLogin"
+                >
+                  <span class="icon">
+                    <FontAwesomeIcon
+                      :icon="
+                        currentUser?.password_login_disabled
+                          ? byPrefixAndName.fas['lock-open']
+                          : byPrefixAndName.fas['lock']
+                      "
+                    />
+                  </span>
+                  <span>{{
+                    currentUser?.password_login_disabled
+                      ? 'Re-enable Password Login'
+                      : 'Disable Password Login'
+                  }}</span>
+                </button>
+                <p
+                  v-if="!canDisablePasswordLogin && !currentUser?.password_login_disabled"
+                  class="help"
+                >
+                  Add a passkey or link your Google account first, so you can still sign in.
+                </p>
+              </div>
+            </template>
           </div>
 
           <!-- Connected Apps (Dalamud plugin) -->
@@ -549,26 +650,34 @@ async function revokePluginToken(token: PluginToken) {
               Permanently delete your account and <strong>all of your readings</strong>. This cannot
               be undone.
             </p>
-            <div class="field">
-              <label class="label" for="del-pw">Confirm your password</label>
-              <input
-                id="del-pw"
-                v-model="deletePassword"
-                class="input"
-                type="password"
-                autocomplete="current-password"
-                placeholder="Your password"
-              />
-            </div>
-            <div v-if="deleteError" class="notification is-danger is-light">{{ deleteError }}</div>
-            <button
-              class="button is-danger"
-              :class="{ 'is-loading': deleting }"
-              @click="removeAccount"
-            >
-              <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
-              <span>Delete My Account</span>
-            </button>
+            <p v-if="!hasPassword">
+              Deleting your account needs your password, and it doesn't have one yet. Set one first
+              with <strong>Email me a link to set a password</strong> under Password, above.
+            </p>
+            <template v-else>
+              <div class="field">
+                <label class="label" for="del-pw">Confirm your password</label>
+                <input
+                  id="del-pw"
+                  v-model="deletePassword"
+                  class="input"
+                  type="password"
+                  autocomplete="current-password"
+                  placeholder="Your password"
+                />
+              </div>
+              <div v-if="deleteError" class="notification is-danger is-light">
+                {{ deleteError }}
+              </div>
+              <button
+                class="button is-danger"
+                :class="{ 'is-loading': deleting }"
+                @click="removeAccount"
+              >
+                <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['trash']" /></span>
+                <span>Delete My Account</span>
+              </button>
+            </template>
           </div>
         </div>
       </div>

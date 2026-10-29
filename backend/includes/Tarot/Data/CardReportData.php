@@ -105,6 +105,14 @@ class CardReportData extends AbstractData
         return $reports;
     }
 
+    public function exists(int $reportId): bool
+    {
+        $stmt = $this->db->prepare('SELECT 1 FROM card_reports WHERE report_id = :id');
+        $stmt->execute([':id' => $reportId]);
+
+        return $stmt->fetchColumn() !== false;
+    }
+
     /** Mark a report handled (resolved) or reopen it. True when a row changed. */
     public function setResolved(int $reportId, bool $resolved): bool
     {

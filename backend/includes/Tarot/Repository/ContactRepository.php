@@ -27,6 +27,11 @@ readonly class ContactRepository
         return $this->data->store($data);
     }
 
+    public function exists(int $contact_id): bool
+    {
+        return $this->data->exists($contact_id);
+    }
+
     public function markRead(int $contact_id, bool $read = true): bool
     {
         return $this->data->markRead($contact_id, $read);

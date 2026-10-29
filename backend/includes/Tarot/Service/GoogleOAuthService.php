@@ -64,19 +64,13 @@ class GoogleOAuthService
             'grant_type'    => 'authorization_code',
         ];
 
-        $ch = curl_init(self::TOKEN_URL);
-        curl_setopt_array($ch, [
-            CURLOPT_POST           => true,
-            CURLOPT_POSTFIELDS     => http_build_query($payload),
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_HTTPHEADER     => ['Content-Type: application/x-www-form-urlencoded'],
+        $response = $this->send(self::TOKEN_URL, [
+            CURLOPT_POST       => true,
+            CURLOPT_POSTFIELDS => http_build_query($payload),
+            CURLOPT_HTTPHEADER => ['Content-Type: application/x-www-form-urlencoded'],
         ]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if ($httpCode !== 200 || !is_string($response)) {
+        if ($response === null) {
             return null;
         }
 
@@ -103,17 +97,9 @@ class GoogleOAuthService
      */
     public function fetchUserInfo(string $accessToken): ?array
     {
-        $ch = curl_init(self::USERINFO_URL);
-        curl_setopt_array($ch, [
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_TIMEOUT        => 10,
-            CURLOPT_HTTPHEADER     => ["Authorization: Bearer {$accessToken}"],
-        ]);
+        $response = $this->send(self::USERINFO_URL, [CURLOPT_HTTPHEADER => ["Authorization: Bearer {$accessToken}"]]);
 
-        $response = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        if ($httpCode !== 200 || !is_string($response)) {
+        if ($response === null) {
             return null;
         }
 
@@ -129,9 +115,31 @@ class GoogleOAuthService
         return [
             'sub'            => $data['sub'],
             'email'          => $data['email'],
-            'email_verified' => (bool)($data['email_verified'] ?? false),
+            // Only a real true (or "true", as some Google endpoints spell booleans):
+            // a (bool) cast read the string "false" as verified.
+            'email_verified' => in_array($data['email_verified'] ?? false, [true, 'true'], true),
             'name'           => (string)($data['name'] ?? ''),
             'picture'        => (string)($data['picture'] ?? ''),
         ];
+    }
+
+    /**
+     * One request to Google: the body of a 200 response, or null. Its own method
+     * so the tests can answer in Google's place.
+     *
+     * @param array<int,mixed> $options curl options on top of the shared ones
+     */
+    protected function send(string $url, array $options): ?string
+    {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, $options + [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT        => 10,
+        ]);
+
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        return $httpCode === 200 && is_string($response) ? $response : null;
     }
 }

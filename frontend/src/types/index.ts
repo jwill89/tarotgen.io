@@ -6,11 +6,13 @@ type Schemas = components['schemas']
  * Entities the API sends exactly as a backend Structure come from the spec
  * (`npm run gen:types` regenerates api.generated.ts from backend/openapi.json,
  * and CI fails if it is stale), so a field added or retyped in PHP reaches the
- * frontend without a hand copy to update. Payloads a controller assembles itself
- * (a reading as viewed, the account's reading list, the stats overview) and
- * client-side shapes are written by hand further down.
+ * frontend without a hand copy to update. So do the payloads a controller
+ * assembles itself that the spec names as a schema (a reading as viewed, the
+ * dashboard's usage stats). Client-side shapes are written by hand further down.
  */
 export type User = Schemas['User']
+/** A user as the admin Users page lists one: with whether it's protected (PROTECTED_ADMIN_EMAILS). */
+export type AdminUser = Schemas['AdminUser']
 export type Passkey = Schemas['Passkey']
 export type PluginToken = Schemas['PluginToken']
 export type Deck = Schemas['Deck']
@@ -39,6 +41,9 @@ export type AccountReading = Schemas['Reading']
 export type ReadingSummary = Schemas['ReadingSummary']
 export type ReadingInfo = Schemas['ReadingInfo']
 export type DrawCard = Schemas['DrawCard']
+
+/** Admin dashboard usage analytics (GET /admin/stats, and `stats` in GET /admin/summary). */
+export type UsageStats = Schemas['UsageStats']
 
 /** A selectable card within a deck (id + display name) for the custom reading picker. */
 export interface DeckCard {
@@ -70,13 +75,4 @@ export interface ReadingCard extends DrawCard {
   /** Master PNG scan — the fallback while a deck's web images aren't generated. */
   pngUrl: string
   thumbUrl: string
-}
-
-/** Admin dashboard usage analytics. */
-export interface UsageStats {
-  totals: { readings: number; last7: number; last30: number }
-  byType: { freeDraw: number; spread: number; custom: number }
-  topDecks: { deck_id: number; name: string; count: number }[]
-  topSpreads: { name: string; count: number }[]
-  daily: { date: string; count: number }[]
 }

@@ -107,6 +107,7 @@ class AdminReadingController extends AbstractController
                 response: 200,
                 description: 'Number of deleted readings',
                 content: new OAS\MediaType\Json(
+                    required: ['deleted'],
                     properties: [new OAS\Property(property: 'deleted', schema: new OAS\Schema(type: 'integer'))]
                 )
             ),

@@ -7,6 +7,7 @@ namespace Tarot\Tests\Unit\Service;
 use PDO;
 use PDOException;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\MockObject\Stub;
 use PHPUnit\Framework\TestCase;
 use Tarot\Exception\ApiException;
 use Tarot\Repository\DeckRepository;
@@ -23,11 +24,11 @@ use Tarot\Structure\UserSpread;
 #[CoversClass(ReadingService::class)]
 final class ReadingServiceTest extends TestCase
 {
-    private ReadingRepository $readings;
-    private DeckRepository $decks;
-    private SpreadRepository $spreads;
-    private UserSpreadRepository $userSpreads;
-    private CardNameResolver $cardNames;
+    private ReadingRepository&Stub $readings;
+    private DeckRepository&Stub $decks;
+    private SpreadRepository&Stub $spreads;
+    private UserSpreadRepository&Stub $userSpreads;
+    private CardNameResolver&Stub $cardNames;
 
     protected function setUp(): void
     {
@@ -58,10 +59,17 @@ final class ReadingServiceTest extends TestCase
         $this->readings->method('save')->willReturnCallback(static fn(Reading $r): Reading => $r);
     }
 
-    /** Decode the reading_info JSON of a saved reading. */
+    /**
+     * Decode the reading_info JSON of a saved reading.
+     *
+     * @return array<string, mixed>
+     */
     private function decodeInfo(Reading $reading): array
     {
-        return json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
+        $info = json_decode($reading->reading_info, true, 512, JSON_THROW_ON_ERROR);
+        $this->assertIsArray($info);
+
+        return $info;
     }
 
     /**
@@ -147,7 +155,7 @@ final class ReadingServiceTest extends TestCase
         $this->decks->method('get')->willReturn([]); // not a Deck
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('InvalidDeckID');
+        $this->expectExceptionMessageIs('InvalidDeckID');
 
         try {
             $this->service()->generate(['deck_id' => 999]);
@@ -231,7 +239,7 @@ final class ReadingServiceTest extends TestCase
     public function testGenerateUsesUserSpreadCardCountAndSnapshotsLayout(): void
     {
         $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 10]));
-        $this->userSpreads->method('findById')->willReturn(new UserSpread([
+        $this->userSpreads->method('get')->willReturn(new UserSpread([
             'user_spread_id' => 7,
             'name'           => 'My Personal Spread',
             'card_count'     => 3,
@@ -248,7 +256,7 @@ final class ReadingServiceTest extends TestCase
             'deck_id'         => 1,
             'number_of_cards' => 9, // should be overridden by the user spread
             'user_spread_id'  => 7,
-        ]);
+        ], userId: 42);
         $info = $this->decodeInfo($reading);
 
         $this->assertCount(3, $info['draw']);
@@ -257,6 +265,59 @@ final class ReadingServiceTest extends TestCase
         // A personal spread is snapshotted as a non-public spread (id 0).
         $this->assertSame(0, $info['spread']['spread_id']);
         $this->assertCount(3, $info['spread']['positions']);
+    }
+
+    public function testAPersonalSpreadIsLookedUpOnlyAmongTheCallersOwn(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 10]));
+        $this->cardNames->method('resolve')->willReturn(array_combine(range(1, 10), array_fill(0, 10, 'X')));
+        $this->persistSucceeds();
+        $userSpreads = $this->createMock(UserSpreadRepository::class);
+        // Someone else's spread isn't among the caller's: no spread comes back.
+        $userSpreads->expects($this->once())->method('get')->with(42, 7)->willReturn(null);
+        $this->userSpreads = $userSpreads;
+
+        $reading = $this->service()->generate(['deck_id' => 1, 'number_of_cards' => 2, 'user_spread_id' => 7], userId: 42);
+
+        // Ignored, like an id that doesn't exist: a plain draw of the asked count.
+        $info = $this->decodeInfo($reading);
+        $this->assertCount(2, $info['draw']);
+        $this->assertArrayNotHasKey('spread', $info);
+    }
+
+    public function testAGuestsPersonalSpreadIdIsIgnoredWithoutALookup(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
+        $this->persistSucceeds();
+        $userSpreads = $this->createMock(UserSpreadRepository::class);
+        $userSpreads->expects($this->never())->method('get');
+        $this->userSpreads = $userSpreads;
+
+        $reading = $this->service()->generate(['deck_id' => 1, 'user_spread_id' => 7]);
+
+        $this->assertArrayNotHasKey('spread', $this->decodeInfo($reading));
+    }
+
+    public function testADeckAwaitingApprovalIsRefusedLikeAnUnknownOneUnlessTheCallerIsAnAdmin(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3, 'approved' => false]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
+        $this->persistSucceeds();
+
+        foreach ([
+            'generate' => fn(bool $isAdmin): Reading => $this->service()->generate(['deck_id' => 1], 42, $isAdmin),
+            'custom'   => fn(bool $isAdmin): Reading => $this->service()->createCustom(['deck_id' => 1, 'cards' => [['card_id' => 1]]], 42, $isAdmin),
+        ] as $kind => $make) {
+            try {
+                $make(false);
+                $this->fail("{$kind}: expected InvalidDeckID");
+            } catch (ApiException $e) {
+                $this->assertSame(['InvalidDeckID', 400], [$e->getMessage(), $e->getStatusCode()], $kind);
+            }
+
+            $this->assertSame(1, $this->decodeInfo($make(true))['deck_id'], $kind);
+        }
     }
 
     public function testGenerateThrowsWithStatus404WhenSaveFails(): void
@@ -340,12 +401,22 @@ final class ReadingServiceTest extends TestCase
         $this->service()->drawAdditional($info, ['count' => 1]);
     }
 
+    public function testDrawAdditionalKeepsUsingAReadingsDeckThatLostItsApproval(): void
+    {
+        $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 3, 'approved' => false]));
+        $this->cardNames->method('resolve')->willReturn([1 => 'A', 2 => 'B', 3 => 'C']);
+
+        $updated = $this->service()->drawAdditional(['deck_id' => 1, 'draw' => [['card_id' => 1]]], ['count' => 1]);
+
+        $this->assertCount(2, $updated['draw']);
+    }
+
     public function testDrawAdditionalThrowsOnInvalidDeck(): void
     {
         $this->decks->method('get')->willReturn([]); // not a Deck
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('InvalidDeckID');
+        $this->expectExceptionMessageIs('InvalidDeckID');
 
         $this->service()->drawAdditional(['deck_id' => 999, 'draw' => []], ['count' => 1]);
     }
@@ -355,7 +426,7 @@ final class ReadingServiceTest extends TestCase
     public function testCreateCustomRejectsEmptyCardList(): void
     {
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('At least one card is required.');
+        $this->expectExceptionMessageIs('At least one card is required.');
 
         $this->service()->createCustom(['deck_id' => 1, 'cards' => []]);
     }
@@ -365,7 +436,7 @@ final class ReadingServiceTest extends TestCase
         $this->decks->method('get')->willReturn([]); // not a Deck
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('InvalidDeckID');
+        $this->expectExceptionMessageIs('InvalidDeckID');
 
         $this->service()->createCustom([
             'deck_id' => 999,
@@ -378,7 +449,7 @@ final class ReadingServiceTest extends TestCase
         $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('A selected card is not part of this deck.');
+        $this->expectExceptionMessageIs('A selected card is not part of this deck.');
 
         $this->service()->createCustom([
             'deck_id' => 1,
@@ -391,7 +462,7 @@ final class ReadingServiceTest extends TestCase
         $this->decks->method('get')->willReturn(new Deck(['deck_id' => 1, 'system_total_cards' => 5]));
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('Each card can only be used once in a reading.');
+        $this->expectExceptionMessageIs('Each card can only be used once in a reading.');
 
         $this->service()->createCustom([
             'deck_id' => 1,
@@ -405,7 +476,7 @@ final class ReadingServiceTest extends TestCase
         $this->cardNames->method('resolve')->willReturn([]); // nothing resolves
 
         $this->expectException(ApiException::class);
-        $this->expectExceptionMessage('A selected card could not be found.');
+        $this->expectExceptionMessageIs('A selected card could not be found.');
 
         $this->service()->createCustom([
             'deck_id' => 1,

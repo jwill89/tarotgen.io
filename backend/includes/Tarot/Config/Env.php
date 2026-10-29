@@ -72,10 +72,27 @@ final class Env
     }
 
     /**
-     * Whether the application is running in production mode.
+     * Whether the application is running in production mode. The one place that
+     * decides it: `APP_ENV=Production` or a stray space (a value from the server
+     * environment isn't trimmed by load()) must not quietly mean "development",
+     * which shows error details and drops the Secure cookie flag.
      */
     public static function isProduction(): bool
     {
-        return self::get('APP_ENV') === 'production';
+        return strtolower(trim(self::get('APP_ENV', ''))) === 'production';
+    }
+
+    /**
+     * A comma-separated setting as a list: each entry trimmed, empty ones
+     * dropped. Unset or empty is an empty list.
+     *
+     * @return list<string>
+     */
+    public static function commaSeparated(string $key): array
+    {
+        return array_values(array_filter(
+            array_map(trim(...), explode(',', self::get($key, ''))),
+            static fn(string $entry): bool => $entry !== ''
+        ));
     }
 }

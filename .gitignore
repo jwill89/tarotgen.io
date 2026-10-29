@@ -12,6 +12,10 @@
 /frontend/node_modules/
 /frontend/dist/
 /frontend/coverage/
+/frontend/test-results/
+/frontend/playwright-report/
+# The Playwright smoke run copies the built SPA here, where og.php reads it.
+/backend/dist/
 # Holds the FontAwesome private-registry auth token — never commit.
 /frontend/.npmrc
 

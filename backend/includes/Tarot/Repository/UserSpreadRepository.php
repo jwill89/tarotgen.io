@@ -21,17 +21,14 @@ readonly class UserSpreadRepository
         return $this->data->retrieve($userId);
     }
 
-    /** Get a single user spread scoped to the owner. */
+    /**
+     * One of a user's spreads, or null when it isn't theirs. There is no
+     * unscoped lookup: a personal spread is only ever its owner's to use.
+     */
     public function get(int $userId, int $userSpreadId): ?UserSpread
     {
         $results = $this->data->retrieve($userId, $userSpreadId);
         return $results[0] ?? null;
-    }
-
-    /** Find a user spread by ID without user scoping (for reading generation). */
-    public function findById(int $userSpreadId): ?UserSpread
-    {
-        return $this->data->findById($userSpreadId);
     }
 
     /**

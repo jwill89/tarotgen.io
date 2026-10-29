@@ -8,6 +8,7 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\GoogleOAuthService;
+use Tarot\Service\SignInMethods;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
 
@@ -26,6 +27,7 @@ class GoogleAuthController extends AbstractController
     public function __construct(
         private readonly GoogleOAuthService $google,
         private readonly UserRepository $users,
+        private readonly SignInMethods $signInMethods,
     ) {
     }
 
@@ -156,19 +158,20 @@ class GoogleAuthController extends AbstractController
     #[OAS\Operation\Post(
         path: '/auth/google/unlink',
         summary: 'Unlink Google from the current account',
+        description: 'Only while the account can still sign in another way: a password (set, with password login on) or a passkey.',
         tags: ['Authentication'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
             new OAS\Response(
                 response: 200,
                 description: 'Unlinked',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['success', 'user'], properties: [
                     new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
-            new OAS\Response(response: 400, description: 'Account has no password set'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
+            new OAS\Response(response: 409, description: 'Google is the last way to sign in; the message says what to set up first'),
         ]
     )]
     /**
@@ -176,24 +179,11 @@ class GoogleAuthController extends AbstractController
      */
     public function unlink(Request $request, Response $response): Response|ResponseInterface
     {
-        $this->startSession();
+        $userId = $this->authUserId($request);
 
-        $userId = (int)($_SESSION['user_id'] ?? 0);
-        if ($userId < 1) {
-            return $response->withJson(['error' => 'Not authenticated.'], 401);
-        }
-
-        $user = $this->users->findById($userId);
-        if ($user === null) {
-            return $response->withJson(['error' => 'User not found.'], 404);
-        }
-
-        // Don't allow unlinking if the user has no password (Google-only account).
-        $hash = $this->users->getPasswordHash($userId);
-        if ($hash === null || $hash === '') {
-            return $response->withJson([
-                'error' => 'Cannot unlink Google — your account has no password set. Please set a password first.',
-            ], 400);
+        $refusal = $this->signInMethods->refuseUnlinkingGoogle($userId);
+        if ($refusal !== null) {
+            return $response->withJson(['error' => $refusal], 409);
         }
 
         $this->users->setGoogleId($userId, null);

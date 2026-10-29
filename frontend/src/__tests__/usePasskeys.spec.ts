@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { usePasskeys } from '@/composables/usePasskeys'
 import { useUser } from '@/composables/useUser'
 import type { User } from '@/types'
@@ -34,8 +34,18 @@ describe('usePasskeys.registerPasskey', () => {
         },
       }),
       '/api/auth/passkeys/register': fakeResponse({
+        success: true,
         passkey: { passkey_id: 9, name: 'Laptop', created_at: 'now', last_used_at: null },
       }),
+      '/api/auth/passkeys': fakeResponse([
+        {
+          passkey_id: 9,
+          credential_id: 'BwgJ',
+          name: 'Laptop',
+          created_at: 'now',
+          last_used_at: null,
+        },
+      ]),
       '/api/auth/me': fakeResponse({ user }),
     })
     const create = vi.fn().mockResolvedValue({
@@ -153,5 +163,223 @@ describe('usePasskeys management', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toMatch(/Network error/)
+  })
+})
+
+const creationOptions = () =>
+  fakeResponse({
+    publicKey: { challenge: 'AQID', rp: { name: 'T' }, user: { id: 'BAUG' }, pubKeyCredParams: [] },
+  })
+const requestOptions = () => fakeResponse({ publicKey: { challenge: 'AQID' } })
+const attestation = { response: { clientDataJSON: bytes(1), attestationObject: bytes(2) } }
+const assertion = {
+  rawId: bytes(1),
+  response: { clientDataJSON: bytes(2), authenticatorData: bytes(3), signature: bytes(4) },
+}
+
+describe('usePasskeys.registerPasskey failures', () => {
+  it('reports a prompt the user closed', async () => {
+    routes({ '/api/auth/passkeys/register/options': creationOptions() })
+    vi.stubGlobal('navigator', { credentials: { create: vi.fn().mockResolvedValue(null) } })
+
+    expect(await usePasskeys().registerPasskey('Laptop')).toEqual({
+      ok: false,
+      error: 'Passkey creation was cancelled.',
+    })
+  })
+
+  it("adds nothing when the server won't accept the new key", async () => {
+    routes({
+      '/api/auth/passkeys/register/options': creationOptions(),
+      '/api/auth/passkeys/register': fakeResponse(
+        { error: 'Attestation could not be verified.' },
+        { ok: false, status: 400 },
+      ),
+    })
+    vi.stubGlobal('navigator', { credentials: { create: vi.fn().mockResolvedValue(attestation) } })
+    const passkeys = usePasskeys()
+
+    expect(await passkeys.registerPasskey('Laptop')).toEqual({
+      ok: false,
+      error: 'Attestation could not be verified.',
+    })
+    expect(passkeys.passkeys.value).toEqual([])
+  })
+
+  it('reports an authenticator error it does not recognise', async () => {
+    routes({ '/api/auth/passkeys/register/options': creationOptions() })
+    vi.stubGlobal('navigator', {
+      credentials: {
+        create: vi.fn().mockRejectedValue(new DOMException('bad', 'InvalidStateError')),
+      },
+    })
+
+    expect(await usePasskeys().registerPasskey('Laptop')).toEqual({
+      ok: false,
+      error: 'An unexpected error occurred during passkey registration.',
+    })
+  })
+})
+
+describe('usePasskeys.loginWithPasskey failures', () => {
+  beforeEach(() => {
+    useUser().currentUser.value = null
+  })
+
+  it('asks for options without an email when none was typed (discoverable keys)', async () => {
+    const fetchMock = routes({
+      '/api/auth/passkeys/login/options': fakeResponse(
+        { error: 'Passkeys are unavailable.' },
+        { ok: false, status: 503 },
+      ),
+    })
+
+    expect(await usePasskeys().loginWithPasskey()).toEqual({
+      ok: false,
+      error: 'Passkeys are unavailable.',
+    })
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ email: '' }))
+  })
+
+  it('reports a prompt the user closed', async () => {
+    routes({ '/api/auth/passkeys/login/options': requestOptions() })
+    vi.stubGlobal('navigator', { credentials: { get: vi.fn().mockResolvedValue(null) } })
+
+    expect(await usePasskeys().loginWithPasskey()).toEqual({
+      ok: false,
+      error: 'Passkey authentication was cancelled.',
+    })
+  })
+
+  it('reports a refused prompt', async () => {
+    routes({ '/api/auth/passkeys/login/options': requestOptions() })
+    vi.stubGlobal('navigator', {
+      credentials: { get: vi.fn().mockRejectedValue(new DOMException('no', 'NotAllowedError')) },
+    })
+
+    expect(await usePasskeys().loginWithPasskey()).toEqual({
+      ok: false,
+      error: 'Passkey authentication was cancelled or not allowed.',
+    })
+  })
+
+  it('reports an authenticator error it does not recognise', async () => {
+    routes({ '/api/auth/passkeys/login/options': requestOptions() })
+    vi.stubGlobal('navigator', { credentials: { get: vi.fn().mockRejectedValue(new Error('?')) } })
+
+    expect(await usePasskeys().loginWithPasskey()).toEqual({
+      ok: false,
+      error: 'An unexpected error occurred during passkey login.',
+    })
+  })
+
+  it('stays signed out when the server rejects the assertion', async () => {
+    routes({
+      '/api/auth/passkeys/login/options': requestOptions(),
+      '/api/auth/passkeys/login': fakeResponse(
+        { error: 'Unknown passkey.' },
+        { ok: false, status: 401 },
+      ),
+    })
+    vi.stubGlobal('navigator', { credentials: { get: vi.fn().mockResolvedValue(assertion) } })
+
+    expect(await usePasskeys().loginWithPasskey()).toEqual({
+      ok: false,
+      error: 'Unknown passkey.',
+    })
+    expect(useUser().currentUser.value).toBeNull()
+  })
+})
+
+describe('usePasskeys list and settings', () => {
+  it('shows it is loading until the list arrives', async () => {
+    let answer: (r: Response) => void = () => {}
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => new Promise<Response>((resolve) => (answer = resolve))),
+    )
+    const passkeys = usePasskeys()
+
+    const loaded = passkeys.listPasskeys()
+    expect(passkeys.loading.value).toBe(true)
+    answer(fakeResponse([{ passkey_id: 3, name: 'Phone' }]))
+    await loaded
+
+    expect(passkeys.loading.value).toBe(false)
+    expect(passkeys.passkeys.value.map((p) => p.name)).toEqual(['Phone'])
+  })
+
+  it('renames the key locally once the server agrees', async () => {
+    const fetchMock = routes({
+      '/api/auth/passkeys': fakeResponse([{ passkey_id: 3, name: 'Old' }]),
+      '/api/auth/passkeys/3': fakeResponse(null, { status: 204 }),
+    })
+    const passkeys = usePasskeys()
+    await passkeys.listPasskeys()
+
+    expect(await passkeys.renamePasskey(3, 'Phone')).toEqual({ ok: true })
+
+    expect(passkeys.passkeys.value[0]?.name).toBe('Phone')
+    const sent = fetchMock.mock.calls.find(([url]) => url === '/api/auth/passkeys/3')
+    expect(sent?.[1]).toMatchObject({ method: 'PATCH', body: JSON.stringify({ name: 'Phone' }) })
+  })
+
+  it('removes a deleted key and refreshes whether the user still has any', async () => {
+    const fetchMock = routes({
+      '/api/auth/passkeys': fakeResponse([
+        { passkey_id: 3, name: 'Phone' },
+        { passkey_id: 4, name: 'Laptop' },
+      ]),
+      '/api/auth/passkeys/3': fakeResponse(null, { status: 204 }),
+      '/api/auth/me': fakeResponse({ user }),
+    })
+    const passkeys = usePasskeys()
+    await passkeys.listPasskeys()
+
+    expect(await passkeys.deletePasskey(3)).toEqual({ ok: true })
+
+    expect(passkeys.passkeys.value.map((p) => p.passkey_id)).toEqual([4])
+    expect(fetchMock.mock.calls.map(([url]) => url)).toContain('/api/auth/me')
+  })
+
+  it('turns password login off and takes the updated user', async () => {
+    const fetchMock = routes({
+      '/api/auth/passkeys/password-login': fakeResponse({
+        user: { ...user, password_login_disabled: true },
+      }),
+    })
+    useUser().currentUser.value = user
+
+    expect(await usePasskeys().togglePasswordLogin(true)).toEqual({ ok: true })
+
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'PATCH',
+      body: JSON.stringify({ disable: true }),
+    })
+    expect(useUser().currentUser.value?.password_login_disabled).toBe(true)
+  })
+
+  it('keeps password login as it was when the server refuses', async () => {
+    routes({
+      '/api/auth/passkeys/password-login': fakeResponse(
+        { error: 'That would leave you no way to sign in. First add a passkey.' },
+        { ok: false, status: 409 },
+      ),
+    })
+    useUser().currentUser.value = user
+
+    expect(await usePasskeys().togglePasswordLogin(true)).toEqual({
+      ok: false,
+      error: 'That would leave you no way to sign in. First add a passkey.',
+    })
+    expect(useUser().currentUser.value).toEqual(user)
+  })
+
+  it('offers passkeys only where the browser has WebAuthn', () => {
+    // happy-dom has navigator.credentials but no PublicKeyCredential.
+    expect(usePasskeys().isSupported()).toBe(false)
+
+    vi.stubGlobal('PublicKeyCredential', vi.fn())
+    expect(usePasskeys().isSupported()).toBe(true)
   })
 })

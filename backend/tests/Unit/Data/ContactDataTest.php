@@ -149,6 +149,7 @@ final class ContactDataTest extends TestCase
             'message' => '  Hello  ',
         ]);
 
+        $this->assertNotNull($contact);
         $this->assertSame(200, mb_strlen($contact->name));
         $this->assertSame('Hello', $contact->message);
     }

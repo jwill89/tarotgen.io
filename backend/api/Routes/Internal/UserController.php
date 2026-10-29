@@ -15,11 +15,8 @@ use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
 
 /**
- * Public account endpoints: register, activate, login, logout, and "me".
- *
- * These are intentionally separate from the shared-password admin auth: a user
- * session is keyed on $_SESSION['user_id'], while admin uses
- * $_SESSION['admin_authenticated'], so the two can coexist without interfering.
+ * Public account endpoints: register, activate, forgotten password, login,
+ * logout, and "me". A session is signed in by $_SESSION['user_id'].
  */
 class UserController extends AbstractController
 {
@@ -45,6 +42,7 @@ class UserController extends AbstractController
     #[OAS\Operation\Post(
         path: '/auth/register',
         summary: 'Create an account (inactive until email activation). Rate-limited: 5/IP/hour.',
+        description: 'An email that already has an account gets the same 201 and message as a new one (no account enumeration): nothing is created, and that address is emailed a notice that someone tried to sign up with it. A display name that is taken is still refused (names are public).',
         tags: ['Authentication'],
         requestBody: new OAS\RequestBody(
             required: true,
@@ -58,8 +56,19 @@ class UserController extends AbstractController
             )
         ),
         responses: [
-            new OAS\Response(response: 201, description: 'Account created'),
-            new OAS\Response(response: 422, description: 'Validation/uniqueness failure'),
+            new OAS\Response(
+                response: 201,
+                description: 'Account created (or, for an email that already has one, answered as if it had been)',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'message'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'What to do next, to show the user.', type: 'string')),
+                        new OAS\Property(property: 'activation_link', schema: new OAS\Schema(description: 'The link that activates the new account. Sent only outside production, only for an account just created, and only when the activation email could not be sent.', type: 'string')),
+                    ]
+                )
+            ),
+            new OAS\Response(response: 422, description: 'Validation failure, or a display name that is taken'),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
@@ -92,10 +101,10 @@ class UserController extends AbstractController
         ];
 
         // In non-production, when no SMTP is configured the email can't be sent,
-        // so surface the activation link directly to keep dev/testing usable.
-        $isProduction = Env::isProduction();
-        if (!$isProduction && !($result['emailed'] ?? false)) {
-            $payload['activation_link'] = $result['activation_link'] ?? null;
+        // so surface a new account's activation link directly to keep dev/testing
+        // usable. (An email that already had an account has no link to show.)
+        if (!Env::isProduction() && isset($result['activation_link']) && !($result['emailed'] ?? false)) {
+            $payload['activation_link'] = $result['activation_link'];
             $payload['message'] .= ' (Email is not configured in this environment — use the activation link below.)';
         }
 
@@ -111,7 +120,17 @@ class UserController extends AbstractController
             content: new OAS\MediaType\Json(required: ['token'], properties: [new OAS\Property(property: 'token', schema: new OAS\Schema(type: 'string'))])
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Account activated'),
+            new OAS\Response(
+                response: 200,
+                description: 'Account activated',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'message'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'A confirmation to show the user.', type: 'string')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 400, description: 'Invalid/expired token'),
         ]
     )]
@@ -141,7 +160,18 @@ class UserController extends AbstractController
             content: new OAS\MediaType\Json(required: ['email'], properties: [new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email'))])
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Identical response whether or not the account exists'),
+            new OAS\Response(
+                response: 200,
+                description: 'Identical response whether or not the account exists',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'message'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'The same wording either way, to show the user.', type: 'string')),
+                        new OAS\Property(property: 'reset_link', schema: new OAS\Schema(description: 'The password-reset link. Sent only outside production, only for an account that exists, and only when the email could not be sent.', type: 'string')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
@@ -182,6 +212,7 @@ class UserController extends AbstractController
     #[OAS\Operation\Post(
         path: '/auth/reset-password',
         summary: 'Complete a password reset',
+        description: "Sets the new password, marks the account active, and ends every session of the account, so whoever knew the old password is signed out everywhere. Linked plugins keep their tokens (they're revoked under Connected Apps).",
         tags: ['Authentication'],
         requestBody: new OAS\RequestBody(
             required: true,
@@ -194,7 +225,17 @@ class UserController extends AbstractController
             )
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Password updated; account marked active'),
+            new OAS\Response(
+                response: 200,
+                description: 'Password updated; account marked active; its sessions ended',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'message'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'A confirmation to show the user.', type: 'string')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 400, description: 'Invalid/expired token'),
             new OAS\Response(response: 422, description: 'New password too weak (token not consumed)'),
         ]
@@ -241,13 +282,13 @@ class UserController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Signed in; sets the session cookie',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['success', 'user'], properties: [
                     new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
             ),
             new OAS\Response(response: 400, description: 'Captcha failed'),
-            new OAS\Response(response: 401, description: 'Invalid credentials'),
+            new OAS\Response(response: 401, description: 'Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password)'),
             new OAS\Response(response: 403, description: 'Inactive or password-login disabled'),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
@@ -316,7 +357,13 @@ class UserController extends AbstractController
         path: '/auth/logout',
         summary: 'Clear the session',
         tags: ['Authentication'],
-        responses: [new OAS\Response(response: 200, description: 'Signed out')]
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'Signed out (also when there was no session)',
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+            ),
+        ]
     )]
     public function logout(Request $request, Response $response): Response|ResponseInterface
     {
@@ -337,7 +384,7 @@ class UserController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'The current user',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User'))])
+                content: new OAS\MediaType\Json(required: ['user'], properties: [new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User'))])
             ),
             new OAS\Response(response: 401, description: 'Not authenticated'),
         ]

@@ -98,7 +98,7 @@ export function useAccount() {
     return { ok: true }
   }
 
-  /** Detach the linked Google account (refused while the account has no password). */
+  /** Detach the linked Google account (refused while it's the account's only way to sign in). */
   async function unlinkGoogle(): Promise<{ ok: boolean; error?: string }> {
     const res = await apiRequest(
       endpoints.authGoogle.unlink,

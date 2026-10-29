@@ -5,6 +5,7 @@ namespace Routes\Internal;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
+use Tarot\Exception\NameTakenException;
 use Tarot\Repository\DeckSystemRepository;
 use Tarot\Structure\DeckSystem;
 use OpenApi\Spec as OAS;
@@ -15,6 +16,8 @@ use OpenApi\Spec as OAS;
  */
 class AdminDeckSystemController extends AbstractController
 {
+    private const string NAME_TAKEN = 'A deck system with that name already exists';
+
     public function __construct(
         private readonly DeckSystemRepository $deckSystems,
     ) {
@@ -154,7 +157,9 @@ class AdminDeckSystemController extends AbstractController
                 description: 'Updated deck system',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/DeckSystem')
             ),
+            new OAS\Response(response: 400, description: 'Name or short name is required (one sent blank)'),
             new OAS\Response(response: 404, description: 'Deck system not found'),
+            new OAS\Response(response: 409, description: 'Another deck system already has that name'),
         ]
     )]
     public function updateDeckSystem(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -170,7 +175,19 @@ class AdminDeckSystemController extends AbstractController
             return $response->withJson(['error' => 'Deck system not found'], 404);
         }
 
-        $system = $this->deckSystems->update($id, $params) ?? $existing;
+        // A rename may not blank either name, any more than a submission may leave it out.
+        foreach (['name' => 'Name', 'short_name' => 'Short name'] as $field => $label) {
+            if (array_key_exists($field, $params) && trim((string)$params[$field]) === '') {
+                return $response->withJson(['error' => "{$label} is required"], 400);
+            }
+        }
+
+        // A taken name is refused before the cards are touched, so nothing changes.
+        try {
+            $system = $this->deckSystems->update($id, $params) ?? $existing;
+        } catch (NameTakenException) {
+            return $response->withJson(['error' => self::NAME_TAKEN], 409);
+        }
 
         // If cards were supplied, update them
         $cards = $params['cards'] ?? null;

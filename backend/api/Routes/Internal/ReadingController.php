@@ -3,6 +3,7 @@
 namespace Routes\Internal;
 
 use Psr\Http\Message\ResponseInterface;
+use Routes\Middleware\AdminAuth;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use JsonException;
@@ -31,6 +32,7 @@ class ReadingController extends AbstractController
         private readonly ReadingService $readingService,
         private readonly UserRepository $users,
         private readonly PluginTokenService $pluginTokens,
+        private readonly AdminAuth $admin,
     ) {
     }
 
@@ -173,7 +175,8 @@ class ReadingController extends AbstractController
         tags: ['Readings'],
         requestBody: new OAS\RequestBody(
             required: true,
-            description: 'Draw spec: deck, spread or card count, and options',
+            description: 'Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for '
+                . 'its owner (signed in, or by plugin token): anyone else\'s is ignored, like an id that does not exist.',
             content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
@@ -182,7 +185,7 @@ class ReadingController extends AbstractController
                 description: 'The created reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OAS\Response(response: 400, description: 'Invalid draw spec'),
+            new OAS\Response(response: 400, description: 'Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws)'),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
@@ -200,7 +203,7 @@ class ReadingController extends AbstractController
 
         try {
             $userId  = $this->currentUserId($request);
-            $reading = $this->readingService->generate($this->parsedBody($request), $userId);
+            $reading = $this->readingService->generate($this->parsedBody($request), $userId, $this->isAdmin($userId));
             // Return the viewer-aware payload (like getReading) so a linked owner
             // sees is_owner=true and can immediately finalize their new reading.
             $isOwner = $userId !== null && $reading->user_id === $userId;
@@ -227,13 +230,14 @@ class ReadingController extends AbstractController
                 description: 'The created reading, as stored (not the viewer payload the other reading commands return)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OAS\Response(response: 400, description: 'Invalid input'),
+            new OAS\Response(response: 400, description: 'Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it)'),
         ]
     )]
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
-            $reading = $this->readingService->createCustom($this->parsedBody($request), $this->currentUserId($request));
+            $userId  = $this->currentUserId($request);
+            $reading = $this->readingService->createCustom($this->parsedBody($request), $userId, $this->isAdmin($userId));
             return $response->withJson($reading, 201);
         } catch (ApiException $e) {
             return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
@@ -269,7 +273,7 @@ class ReadingController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Saved',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['success', 'reading_id'], properties: [
                     new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
                     new OAS\Property(property: 'reading_id', schema: new OAS\Schema(type: 'string')),
                 ])
@@ -538,6 +542,17 @@ class ReadingController extends AbstractController
 
         $owner = $this->users->findById($reading->user_id);
         return $owner->display_name ?? 'Guest';
+    }
+
+    /**
+     * Whether the acting user is an admin, who may use a deck still awaiting
+     * approval. A guest can't be, so the lookup is skipped for them; and it is
+     * the admin routes' own check, on the session only (a plugin token, which
+     * also gives a user id, never carries admin rights).
+     */
+    private function isAdmin(?int $userId): bool
+    {
+        return $userId !== null && $this->admin->sessionIsAdmin();
     }
 
     private function currentUserId(Request $request): ?int

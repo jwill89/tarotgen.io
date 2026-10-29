@@ -17,15 +17,19 @@ const SEND_FAILED = 'Failed to send your message. Please try again.'
  * real request and response handling, not a copy of it (AUDIT §5.5). Every
  * failure — server message, rate limit, network — comes back as a user-ready
  * `error` string; this never throws.
+ *
+ * `turnstileToken` is the solved Turnstile challenge, which the server requires
+ * whenever Turnstile is configured (empty otherwise), as sign-in does.
  */
 export function useContact() {
-  async function sendMessage(msg: ContactMessage): Promise<ContactResult> {
+  async function sendMessage(msg: ContactMessage, turnstileToken = ''): Promise<ContactResult> {
     const res = await apiRequest(
       endpoints.contacts,
       sendJson('POST', {
         name: msg.name.trim(),
         email: msg.email.trim(),
         message: msg.message.trim(),
+        turnstile_token: turnstileToken,
       }),
       SEND_FAILED,
     )

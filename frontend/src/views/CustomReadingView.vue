@@ -204,6 +204,8 @@ function resetForm() {
   slots.value.length = 0
   slots.value.push(newSlot())
   editorKey.value++
+  // Or a password from before the reset would still lock the next reading.
+  ownerOptions.value?.reset()
 }
 
 async function submit() {

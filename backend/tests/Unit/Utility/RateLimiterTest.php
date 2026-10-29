@@ -41,7 +41,8 @@ final class RateLimiterTest extends TestCase
     /** Mirrors RateLimiter::file(): the namespace is sanitised to [A-Za-z0-9_]. */
     private function backingFile(): string
     {
-        $safe = preg_replace('/[^A-Za-z0-9_]/', '_', $this->namespace) ?: 'default';
+        $safe = preg_replace('/[^A-Za-z0-9_]/', '_', $this->namespace);
+        $safe = $safe === null || $safe === '' ? 'default' : $safe;
         return sys_get_temp_dir() . '/tarot_rl_' . $safe . '.json';
     }
 

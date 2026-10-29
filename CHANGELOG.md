@@ -21,12 +21,17 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
-A full visual overhaul and the infrastructure cleanups that came with it. The
-app moves from the old mystical-purple theme to an **elevated celestial
-minimalism** look, its interactive UI is now built on **Reka UI** headless
-primitives, and several long-standing rough edges (FontAwesome bandwidth, a
-slow authenticated page load, dead theme code) are resolved. Card reports now
-carry a reason, so admins know what each reported card needs.
+## [5.0.0] — 2026-10-28
+
+A new look and a rebuilt foundation, and the baseline new features are
+versioned from. The app moves from the old mystical-purple theme to an
+**elevated celestial minimalism** look, with its interactive UI on **Reka UI**
+headless primitives. Underneath, a full codebase audit: private data out of the
+web root, nightly backups, an enforced Content-Security-Policy, faster images
+and CSS, every dependency brought current, and new tooling and CI. The test
+suite grew from about 370 tests to over 1,700, with coverage floors and an
+end-to-end smoke run, and the tests found and fixed more than thirty bugs.
+Card reports now carry a reason, so admins know what each reported card needs.
 
 ### Added
 
@@ -41,6 +46,9 @@ carry a reason, so admins know what each reported card needs.
   (0.6.0) has the same form; older plugin builds can still report, without a
   reason. **Run `php db/migrate_card_report_submissions.php` before deploying the
   backend** (it adds `card_report_submissions` and `card_reports.round`).
+- **Nightly database backups**, integrity-checked and kept for 14 days, and a
+  **retention job** that removes guest readings after a year (readings made while
+  signed in are never touched), as the privacy page states.
 
 ### Changed
 
@@ -69,6 +77,11 @@ carry a reason, so admins know what each reported card needs.
   live counts, insights up top) instead of the old stat-card grid.
 - The three spread-canvas editors (admin, Recreate Draw, Arrange) were
   consolidated onto one shared `SpreadCanvasEditor` component.
+- **My Readings loads a page at a time** instead of every reading at once.
+- Every API error is a JSON `{ "error": … }`, Slim's own 404/405 included, and the
+  API reference at `/api/docs` now describes every endpoint's response as sent.
+- The admin API is split per resource (nine controllers instead of one of 1,500
+  lines), and all frontend API calls go through one client.
 
 ### Performance
 
@@ -79,6 +92,10 @@ carry a reason, so admins know what each reported card needs.
   fsync. On the client, the spread-selector fetch waterfall was flattened
   (public list + personal spreads + favorites now load together) and the
   favorites / favorite-decks fetches are de-duplicated.
+- **Card images are cached** at the edge and in the browser, and the lightbox and
+  image export use generated full-size **WebP** instead of the master PNG scans.
+- The CSS bundle shrank by 29% (a modular Bulma build), thumbnails load lazily,
+  and readings are indexed by time.
 
 ### Removed
 
@@ -88,6 +105,49 @@ carry a reason, so admins know what each reported card needs.
   self-hosted display face now drives all heading type.
 - Dead Bulma navbar-dropdown CSS (the nav is a Reka `DropdownMenu` now), two
   empty `<style scoped>` blocks, and a duplicated `.spread-canvas` rule.
+- The retired plugin share relay's four tables and six indexes, the legacy deck
+  columns, and an unused second type system on the frontend.
+
+### Security
+
+> **Before deploying the backend, run `php db/migrate_sessions_user_id.php`**
+> (as `www-data`, after `sudo tarotgen-backup`). The new session code records
+> whose session each is; without the column no session can be saved.
+
+- **Changing your password signs out your other devices**, and a password reset
+  signs out every session; deleting an account (yours, or by an admin) ends its
+  sessions. Linked plugins keep working; revoke them under Connected Apps.
+- **No more account enumeration.** Registering with an address that already has
+  an account answers like any sign-up (the owner gets an email instead), a
+  password login for an unknown address takes as long as a wrong password, and
+  passkey sign-in options look alike for every address.
+- **Admins can't remove their own admin rights or delete themselves**, and
+  accounts listed in `PROTECTED_ADMIN_EMAILS` can't be demoted or deleted by
+  anyone.
+- **You can never lock yourself out.** Password, passkeys and Google: switching
+  password login off, deleting your last passkey or unlinking Google is refused
+  when it would leave no way to sign in (password login can now be switched off
+  with only Google linked). Accounts made with Google and no password are shown
+  how to set one, by an emailed link.
+- `APP_ENV` is read case-insensitively, so `Production` can't run as development.
+- **Private data lives outside the web root.** The database and `.env` moved to
+  a separate data directory (`TAROT_DATA_DIR`), and the web server refuses the
+  code and tooling directories outright.
+- **An enforced Content-Security-Policy** on every page, with a fresh nonce per
+  response, instead of a report-only one.
+- The FFXIV plugin's account-link check accepts only real loopback addresses
+  (a crafted `\@127.0.0.1` URL could pass the server's check before).
+- A deleted account's leftover session can no longer submit anything.
+- **Personal spreads are private to their owner.** A reading could be made from
+  anyone's personal spread by its id; now only the owner (or their linked
+  plugin) can use it, and anyone else gets the same answer as for an unknown id.
+- **Unapproved submissions are visible only to admins.** Pending decks and deck
+  systems could be read by id; now everyone else gets a 404, and readings can't
+  be drawn from a pending deck.
+- The contact form is protected by Turnstile (when configured), and the
+  plugin's token exchange is rate-limited.
+- Security advisories fixed in the dependencies: DOMPurify, ProseMirror,
+  TipTap, `slim/slim` (route arguments decoded twice) and `symfony/yaml`.
 
 ### Fixed
 
@@ -99,6 +159,49 @@ carry a reason, so admins know what each reported card needs.
   (old purple panels + old-gold borders), the Markdown editor's sub-AA
   placeholder, decorative aqua on the plugin feature icons, and a scatter of
   stale `var(--token, <old-value>)` fallbacks — all brought onto the new palette.
+- **Deck and spread search never filtered:** typing in either picker showed
+  every entry. It filters now, and Enter picks the first match.
+- **Every deck list failed** once a deck system still in use was deleted, or a
+  deck's artist or purchase link was cleared.
+- **Deleting someone else's personal spread** was refused in effect but answered
+  "deleted", and removed every user's favourites of it.
+- **Reset on New Draw and Recreate Draw kept the owner options**, so a password
+  typed earlier still locked the next reading.
+- Forgot Password reported success when the request had failed; the changelog
+  page said "no entries yet" while loading and when it couldn't load.
+- Requests that should be refused with a reason are, instead of failing with a
+  server error or a false success: duplicate deck and deck-system names (409),
+  unknown ids (404: approving a missing submission, a special card for a missing
+  deck, contact and card-report updates), required names and titles left out
+  (400), favouriting an unknown deck, registering a passkey that's already on
+  file, and a contact message or spread submitted from a deleted account's
+  session.
+- A personal spread saved with malformed or no positions stored a 0-card spread;
+  its card count now always follows its positions.
+- A plugin token showed as "last used" from the moment it was issued.
+- Admin: the special-cards list lost the other decks after a save while
+  filtered; table sorting now works from the keyboard.
+- A PHP warning on every login and logout; timestamps mixed PHP's time zone with
+  SQLite's UTC; a reading-id collision was a server error; the spread picker
+  blanked after a reset; the first edit on a spread canvas couldn't be undone;
+  the Turnstile script loaded once per widget; the cookie notice couldn't be
+  dismissed with storage blocked; Space didn't log out from the mobile menu.
+
+### Developer experience
+
+- **Tests:** about 1,700 (from about 370): HTTP tests for every API controller,
+  component and view tests for the whole frontend, and a Playwright smoke run
+  on the built app (draw, report a card, find it as admin). CI fails below a
+  coverage floor: currently 93.6% of backend lines and 97.5% of frontend lines.
+- **Static analysis and linting:** PHPStan level 8 with strict rules over the app
+  and its tests, Rector, PHP CS Fixer, composer-unused and require-checker; on
+  the frontend Knip, Stylelint with a palette rule, and template accessibility
+  linting (every form control is labelled); analyzers with warnings as errors for
+  the plugin; CodeQL and Dependabot.
+- **Dependencies current:** swagger-php 7, Vitest 5, happy-dom 21, PHPUnit 13.4,
+  Vue 3.5 and Vite 8 (TypeScript stays on 6 until Vue's tooling supports 7).
+- **Deploys** upload one checksummed tarball per target over two SSH
+  connections instead of file by file.
 
 ## [4.1.0] — 2026-07-04
 
@@ -537,7 +640,8 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v4.1.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.0.0...HEAD
+[5.0.0]: https://github.com/jwill89/tarot-site/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/jwill89/tarot-site/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/jwill89/tarot-site/compare/v3.4.0...v4.0.0
 [3.4.0]: https://github.com/jwill89/tarot-site/compare/v3.3.0...v3.4.0

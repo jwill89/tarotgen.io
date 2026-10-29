@@ -8,6 +8,7 @@ use Slim\Http\Response;
 use Tarot\Repository\FavoriteSpreadRepository;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadRepository;
+use Tarot\Structure\PendingSpread;
 use OpenApi\Spec as OAS;
 
 /**
@@ -61,12 +62,18 @@ class AdminSpreadController extends AbstractController
                 description: 'Created spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
+            new OAS\Response(response: 400, description: 'Name is required'),
             new OAS\Response(response: 500, description: 'Failed to create spread'),
         ]
     )]
     public function createSpread(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
+
+        if (trim((string)($params['name'] ?? '')) === '') {
+            return $response->withJson(['error' => 'Name is required'], 400);
+        }
+
         $spread = $this->spreads->create($params);
 
         if ($spread === null) {
@@ -102,6 +109,7 @@ class AdminSpreadController extends AbstractController
                 description: 'Updated spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
+            new OAS\Response(response: 400, description: 'Name is required (a name sent blank)'),
             new OAS\Response(response: 404, description: 'Spread not found or no valid fields'),
         ]
     )]
@@ -109,6 +117,11 @@ class AdminSpreadController extends AbstractController
     {
         $spread_id = (int)($args['spread_id'] ?? 0);
         $params = $this->parsedBody($request);
+
+        // A rename may not blank the name, any more than a create may leave it out.
+        if (array_key_exists('name', $params) && trim((string)$params['name']) === '') {
+            return $response->withJson(['error' => 'Name is required'], 400);
+        }
 
         $spread = $this->spreads->update($spread_id, $params);
 
@@ -187,12 +200,17 @@ class AdminSpreadController extends AbstractController
                 description: 'Approved spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
+            new OAS\Response(response: 404, description: 'Pending spread not found'),
             new OAS\Response(response: 500, description: 'Failed to approve spread'),
         ]
     )]
     public function approvePendingSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $pending_id = (int)($args['pending_id'] ?? 0);
+
+        if (!($this->pendingSpreads->get($pending_id) instanceof PendingSpread)) {
+            return $response->withJson(['error' => 'Pending spread not found'], 404);
+        }
 
         $spread = $this->pendingSpreads->approve($pending_id);
 

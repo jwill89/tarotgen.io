@@ -29,6 +29,11 @@ readonly class CardReportRepository
         return $this->data->retrieve($includeResolved);
     }
 
+    public function exists(int $reportId): bool
+    {
+        return $this->data->exists($reportId);
+    }
+
     public function setResolved(int $reportId, bool $resolved): bool
     {
         return $this->data->setResolved($reportId, $resolved);

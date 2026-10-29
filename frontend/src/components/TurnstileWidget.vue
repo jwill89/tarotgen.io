@@ -1,21 +1,6 @@
-<script setup lang="ts">
-import { ref, toValue, onMounted, onBeforeUnmount } from 'vue'
-import { apiFetch } from '@/composables/apiClient'
-import { endpoints } from '@/api/endpoints'
-
-/**
- * Cloudflare Turnstile widget. Self-configuring: it fetches the public site key
- * from `/api/config` and renders only when Turnstile is enabled server-side, so
- * environments without keys (e.g. local dev) simply show nothing.
- *
- * Two-way bindings:
- *   v-model            → the challenge token (empty until solved/after expiry)
- *   v-model:enabled    → whether Turnstile is configured (lets the parent gate submit)
- *
- * Exposes reset() so the parent can clear a spent token after a failed attempt
- * (Turnstile tokens are single-use).
- */
-
+<script lang="ts">
+// The loader lives here, not in <script setup>, which runs once per widget: as
+// it was there, every widget appended its own copy of Cloudflare's script.
 interface TurnstileApi {
   render: (el: HTMLElement, opts: Record<string, unknown>) => string
   reset: (id?: string) => void
@@ -50,6 +35,25 @@ function loadScript(): Promise<void> {
   })
   return scriptPromise
 }
+</script>
+
+<script setup lang="ts">
+import { ref, toValue, onMounted, onBeforeUnmount } from 'vue'
+import { apiFetch } from '@/composables/apiClient'
+import { endpoints } from '@/api/endpoints'
+
+/**
+ * Cloudflare Turnstile widget. Self-configuring: it fetches the public site key
+ * from `/api/config` and renders only when Turnstile is enabled server-side, so
+ * environments without keys (e.g. local dev) simply show nothing.
+ *
+ * Two-way bindings:
+ *   v-model            → the challenge token (empty until solved/after expiry)
+ *   v-model:enabled    → whether Turnstile is configured (lets the parent gate submit)
+ *
+ * Exposes reset() so the parent can clear a spent token after a failed attempt
+ * (Turnstile tokens are single-use).
+ */
 
 const token = defineModel<string>({ default: '' })
 const enabled = defineModel<boolean>('enabled', { default: false })

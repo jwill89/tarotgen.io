@@ -5,6 +5,7 @@ namespace Routes\Internal;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
+use Tarot\Repository\DeckRepository;
 use Tarot\Repository\FavoriteDeckRepository;
 use Tarot\Repository\FavoriteSpreadRepository;
 use Tarot\Repository\PendingSpreadRepository;
@@ -12,6 +13,7 @@ use Tarot\Repository\ReadingRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserSpreadRepository;
 use Tarot\Service\AuthService;
+use Tarot\Structure\Deck;
 use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
@@ -33,6 +35,7 @@ class AccountController extends AbstractController
         private readonly PendingSpreadRepository $pendingSpreads,
         private readonly FavoriteSpreadRepository $favorites,
         private readonly FavoriteDeckRepository $favoriteDecks,
+        private readonly DeckRepository $decks,
     ) {
     }
 
@@ -210,7 +213,7 @@ class AccountController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'The updated account',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['success', 'user'], properties: [
                     new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
                     new OAS\Property(property: 'user', schema: new OAS\Schema(ref: '#/components/schemas/User')),
                 ])
@@ -235,6 +238,7 @@ class AccountController extends AbstractController
     #[OAS\Operation\Post(
         path: '/account/change-password',
         summary: 'Change the account password',
+        description: "Ends every other session of the account; the browser making the change stays signed in, under a new session id. Linked plugins keep their tokens (they're revoked under Connected Apps).",
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         requestBody: new OAS\RequestBody(
@@ -248,7 +252,17 @@ class AccountController extends AbstractController
             )
         ),
         responses: [
-            new OAS\Response(response: 200, description: 'Password updated'),
+            new OAS\Response(
+                response: 200,
+                description: 'Password updated',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'message'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'message', schema: new OAS\Schema(description: 'A confirmation to show the user.', type: 'string')),
+                    ]
+                )
+            ),
             new OAS\Response(response: 422, description: 'Wrong current password or weak new password'),
         ]
     )]
@@ -258,10 +272,14 @@ class AccountController extends AbstractController
         $current = (string)($body['current_password'] ?? '');
         $new     = (string)($body['new_password'] ?? '');
 
-        $result = $this->auth->changePassword($this->userId($request), $current, $new);
+        $result = $this->auth->changePassword($this->userId($request), $current, $new, Session::id());
         if (!$result['ok']) {
             return $response->withJson(['error' => $result['error'] ?? 'Could not change password.'], 422);
         }
+
+        // Every other session just ended; this one carries on under a new id, so
+        // a copy of its old cookie is no good either.
+        Session::rotate();
 
         return $response->withJson(['success' => true, 'message' => 'Your password has been updated.']);
     }
@@ -269,6 +287,7 @@ class AccountController extends AbstractController
     #[OAS\Operation\Delete(
         path: '/account',
         summary: 'Delete the account after re-entering the password (cascades readings)',
+        description: 'Ends every session of the account. An account without a password (made by signing in with Google) sets one first, through a password-reset link. A protected account (PROTECTED_ADMIN_EMAILS) cannot be deleted.',
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         requestBody: new OAS\RequestBody(
@@ -277,7 +296,7 @@ class AccountController extends AbstractController
         ),
         responses: [
             new OAS\Response(response: 204, description: 'Account deleted'),
-            new OAS\Response(response: 403, description: 'Wrong password'),
+            new OAS\Response(response: 403, description: 'Wrong password, or a protected account'),
         ]
     )]
     public function deleteAccount(Request $request, Response $response): Response|ResponseInterface
@@ -335,10 +354,10 @@ class AccountController extends AbstractController
         responses: [
             new OAS\Response(
                 response: 201,
-                description: 'The created spread',
+                description: 'The created spread (card_count is the number of positions)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/UserSpread')
             ),
-            new OAS\Response(response: 400, description: 'Name and positions required'),
+            new OAS\Response(response: 400, description: 'Name and positions required, or a position that is not an object'),
         ]
     )]
     /** Create a new personal spread. */
@@ -353,6 +372,10 @@ class AccountController extends AbstractController
                 ['error' => 'A spread name and at least one card position are required.'],
                 400
             );
+        }
+
+        if (self::hasNonObjectPosition($positions)) {
+            return $response->withJson(['error' => 'Invalid position data.'], 400);
         }
 
         $created = $this->userSpreads->create($this->userId($request), $params);
@@ -381,18 +404,39 @@ class AccountController extends AbstractController
         responses: [
             new OAS\Response(
                 response: 200,
-                description: 'The updated spread',
+                description: 'The updated spread (card_count is the number of positions)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/UserSpread')
             ),
+            new OAS\Response(response: 400, description: 'No changes provided, a blank name, or positions that are empty or not objects'),
             new OAS\Response(response: 404, description: 'Spread not found'),
         ]
     )]
     public function updateSpread(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $spreadId = (int)($args['user_spread_id'] ?? 0);
-        $params   = $this->parsedBody($request);
+        $changes  = array_intersect_key($this->parsedBody($request), array_flip(['name', 'description', 'positions']));
 
-        $updated = $this->userSpreads->update($this->userId($request), $spreadId, $params);
+        if ($changes === []) {
+            return $response->withJson(['error' => 'No changes provided.'], 400);
+        }
+
+        // Saved trimmed, so a blank name would leave the spread nameless — which
+        // creating one refuses.
+        if (array_key_exists('name', $changes) && (!is_scalar($changes['name']) || trim((string)$changes['name']) === '')) {
+            return $response->withJson(['error' => 'A spread needs a name.'], 400);
+        }
+
+        if (array_key_exists('positions', $changes)) {
+            $positions = $changes['positions'];
+            if (!is_array($positions) || $positions === []) {
+                return $response->withJson(['error' => 'A spread needs at least one card position.'], 400);
+            }
+            if (self::hasNonObjectPosition($positions)) {
+                return $response->withJson(['error' => 'Invalid position data.'], 400);
+            }
+        }
+
+        $updated = $this->userSpreads->update($this->userId($request), $spreadId, $changes);
         if ($updated === null) {
             return $response->withJson(['error' => 'Spread not found.'], 404);
         }
@@ -447,7 +491,11 @@ class AccountController extends AbstractController
             new OAS\Parameter(name: 'user_spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
         responses: [
-            new OAS\Response(response: 201, description: 'Submitted for review'),
+            new OAS\Response(
+                response: 201,
+                description: 'Submitted for review',
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+            ),
             new OAS\Response(response: 404, description: 'Spread not found'),
         ]
     )]
@@ -505,7 +553,11 @@ class AccountController extends AbstractController
             )
         ),
         responses: [
-            new OAS\Response(response: 201, description: 'Added'),
+            new OAS\Response(
+                response: 201,
+                description: 'Added (or already a favorite)',
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+            ),
             new OAS\Response(response: 400, description: 'Invalid spread type or ID'),
         ]
     )]
@@ -569,8 +621,8 @@ class AccountController extends AbstractController
         responses: [
             new OAS\Response(
                 response: 200,
-                description: 'Array of favorited decks',
-                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Deck'))
+                description: 'The ids of the favorited decks, oldest favorite first',
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(type: 'integer'))
             ),
         ]
     )]
@@ -589,8 +641,12 @@ class AccountController extends AbstractController
             content: new OAS\MediaType\Json(required: ['deck_id'], properties: [new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer'))])
         ),
         responses: [
-            new OAS\Response(response: 201, description: 'Added'),
-            new OAS\Response(response: 400, description: 'Invalid deck ID'),
+            new OAS\Response(
+                response: 201,
+                description: 'Added (or already a favorite)',
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+            ),
+            new OAS\Response(response: 400, description: 'Invalid deck ID: no such deck, or one not yet approved'),
         ]
     )]
     public function addFavoriteDeck(Request $request, Response $response): Response|ResponseInterface
@@ -598,7 +654,11 @@ class AccountController extends AbstractController
         $params = $this->parsedBody($request);
         $deckId = (int)($params['deck_id'] ?? 0);
 
-        if ($deckId < 1) {
+        // An unknown deck (e.g. one deleted while the page was open) would fail the
+        // favourite's foreign key, which surfaced as a 500. A pending submission
+        // gets the same answer: only admins may learn that its id exists.
+        $deck = $deckId < 1 ? null : $this->decks->get($deckId);
+        if (!$deck instanceof Deck || !$deck->approved) {
             return $response->withJson(['error' => 'Invalid deck ID.'], 400);
         }
 
@@ -634,6 +694,17 @@ class AccountController extends AbstractController
         $this->favoriteDecks->remove($this->userId($request), $deckId);
 
         return $response->withStatus(204);
+    }
+
+    /**
+     * A spread position is an object; anything else in the list would be dropped
+     * on save, leaving a spread with fewer cards (or none) than the client sent.
+     *
+     * @param array<mixed> $positions
+     */
+    private static function hasNonObjectPosition(array $positions): bool
+    {
+        return array_any($positions, static fn(mixed $position): bool => !is_array($position));
     }
 
     private function userId(Request $request): int

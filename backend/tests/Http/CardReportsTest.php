@@ -36,7 +36,9 @@ final class CardReportsTest extends HttpTestCase
             'reason' => 'other', 'details' => 'Upside down',
         ]);
 
-        $this->assertSame(['status' => 'reported'], $this->assertJsonResponse(201, $response));
+        $reported = $this->assertJsonResponse(201, $response);
+        $this->assertDocumented('post', '/card-reports', 201, $reported);
+        $this->assertSame(['status' => 'reported'], $reported);
         $this->assertSame(
             [['card_id' => 0, 'card_name' => 'The Fool', 'report_count' => 1, 'reason' => 'other', 'details' => 'Upside down']],
             $this->reports()
@@ -61,7 +63,9 @@ final class CardReportsTest extends HttpTestCase
 
         $again = $this->post('/card-reports', $report);
 
-        $this->assertSame(['status' => 'already_reported'], $this->assertJsonResponse(200, $again));
+        $already = $this->assertJsonResponse(200, $again);
+        $this->assertDocumented('post', '/card-reports', 200, $already);
+        $this->assertSame(['status' => 'already_reported'], $already);
         $this->assertCount(1, $this->reports());
         $this->assertSame(1, $this->reports()[0]['report_count']);
     }

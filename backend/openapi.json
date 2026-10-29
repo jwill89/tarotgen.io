@@ -217,7 +217,11 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "user"
+                                    ]
                                 }
                             }
                         }
@@ -237,6 +241,7 @@
                     "Account"
                 ],
                 "summary": "Delete the account after re-entering the password (cascades readings)",
+                "description": "Ends every session of the account. An account without a password (made by signing in with Google) sets one first, through a password-reset link. A protected account (PROTECTED_ADMIN_EMAILS) cannot be deleted.",
                 "operationId": "f494bd5d0850bf24d66ae14b041e3bb3",
                 "requestBody": {
                     "content": {
@@ -262,7 +267,7 @@
                         "description": "Account deleted"
                     },
                     "403": {
-                        "description": "Wrong password"
+                        "description": "Wrong password, or a protected account"
                     }
                 },
                 "security": [
@@ -278,6 +283,7 @@
                     "Account"
                 ],
                 "summary": "Change the account password",
+                "description": "Ends every other session of the account; the browser making the change stays signed in, under a new session id. Linked plugins keep their tokens (they're revoked under Connected Apps).",
                 "operationId": "70ac3d9471f6b7020edd89bfa6393c36",
                 "requestBody": {
                     "content": {
@@ -305,7 +311,27 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Password updated"
+                        "description": "Password updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "description": "A confirmation to show the user."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "422": {
                         "description": "Wrong current password or weak new password"
@@ -381,7 +407,7 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "The created spread",
+                        "description": "The created spread (card_count is the number of positions)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -391,7 +417,7 @@
                         }
                     },
                     "400": {
-                        "description": "Name and positions required"
+                        "description": "Name and positions required, or a position that is not an object"
                     }
                 },
                 "security": [
@@ -430,7 +456,7 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "The updated spread",
+                        "description": "The updated spread (card_count is the number of positions)",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -438,6 +464,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "No changes provided, a blank name, or positions that are empty or not objects"
                     },
                     "404": {
                         "description": "Spread not found"
@@ -501,7 +530,22 @@
                 ],
                 "responses": {
                     "201": {
-                        "description": "Submitted for review"
+                        "description": "Submitted for review",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "404": {
                         "description": "Spread not found"
@@ -578,7 +622,22 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Added"
+                        "description": "Added (or already a favorite)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Invalid spread type or ID"
@@ -645,13 +704,13 @@
                 "operationId": "500d622501da7d4d3a6095afe2bd3211",
                 "responses": {
                     "200": {
-                        "description": "Array of favorited decks",
+                        "description": "The ids of the favorited decks, oldest favorite first",
                         "content": {
                             "application/json": {
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/Deck"
+                                        "type": "integer"
                                     }
                                 }
                             }
@@ -690,10 +749,25 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Added"
+                        "description": "Added (or already a favorite)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "400": {
-                        "description": "Invalid deck ID"
+                        "description": "Invalid deck ID: no such deck, or one not yet approved"
                     }
                 },
                 "security": [
@@ -817,13 +891,19 @@
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
                         "description": "Invalid report ID"
+                    },
+                    "404": {
+                        "description": "Report not found"
                     }
                 },
                 "security": [
@@ -899,6 +979,9 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Title is required"
+                    },
                     "500": {
                         "description": "Failed to create changelog entry"
                     }
@@ -955,6 +1038,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Title is blank"
                     },
                     "404": {
                         "description": "Changelog entry not found or no valid fields"
@@ -1082,13 +1168,19 @@
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
                         "description": "Invalid contact ID"
+                    },
+                    "404": {
+                        "description": "Contact not found"
                     }
                 },
                 "security": [
@@ -1111,7 +1203,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "$ref": "#/components/schemas/UsageStats"
                                 }
                             }
                         }
@@ -1138,7 +1230,60 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                        "counts": {
+                                            "type": "object",
+                                            "description": "Row counts for the dashboard tiles.",
+                                            "properties": {
+                                                "deckSystems": {
+                                                    "type": "integer",
+                                                    "description": "Approved and pending."
+                                                },
+                                                "decks": {
+                                                    "type": "integer",
+                                                    "description": "Approved and pending."
+                                                },
+                                                "specialCards": {
+                                                    "type": "integer"
+                                                },
+                                                "spreads": {
+                                                    "type": "integer",
+                                                    "description": "Public spreads."
+                                                },
+                                                "readings": {
+                                                    "type": "integer"
+                                                },
+                                                "changelog": {
+                                                    "type": "integer"
+                                                },
+                                                "users": {
+                                                    "type": "integer"
+                                                },
+                                                "unreadContacts": {
+                                                    "type": "integer",
+                                                    "description": "Contact messages not yet marked read."
+                                                }
+                                            },
+                                            "required": [
+                                                "deckSystems",
+                                                "decks",
+                                                "specialCards",
+                                                "spreads",
+                                                "readings",
+                                                "changelog",
+                                                "users",
+                                                "unreadContacts"
+                                            ]
+                                        },
+                                        "stats": {
+                                            "$ref": "#/components/schemas/UsageStats"
+                                        }
+                                    },
+                                    "required": [
+                                        "counts",
+                                        "stats"
+                                    ]
                                 }
                             }
                         }
@@ -1160,7 +1305,22 @@
                 "operationId": "e52148b0b360f8626366cc3bf1aeab78",
                 "responses": {
                     "200": {
-                        "description": "Admin session is valid"
+                        "description": "Admin session is valid",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "authenticated": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "authenticated"
+                                    ]
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -1245,8 +1405,11 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "Failed to create deck"
+                    "400": {
+                        "description": "Name is required"
+                    },
+                    "409": {
+                        "description": "A deck with that name already exists"
                     }
                 },
                 "security": [
@@ -1361,7 +1524,13 @@
                                         "failed": {
                                             "type": "integer"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "deck_id",
+                                        "generated",
+                                        "skipped",
+                                        "failed"
+                                    ]
                                 }
                             }
                         }
@@ -1404,7 +1573,13 @@
                                         "failed": {
                                             "type": "integer"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "decks",
+                                        "generated",
+                                        "skipped",
+                                        "failed"
+                                    ]
                                 }
                             }
                         }
@@ -1467,8 +1642,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Name is required (a name sent blank)"
+                    },
                     "404": {
                         "description": "Deck not found or no valid fields"
+                    },
+                    "409": {
+                        "description": "Another deck already has that name"
                     }
                 },
                 "security": [
@@ -1594,8 +1775,11 @@
                             }
                         }
                     },
-                    "500": {
-                        "description": "Failed to create special card"
+                    "404": {
+                        "description": "Deck not found"
+                    },
+                    "409": {
+                        "description": "The deck already has a special card with that card_id"
                     }
                 },
                 "security": [
@@ -1855,8 +2039,14 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Name or short name is required (one sent blank)"
+                    },
                     "404": {
                         "description": "Deck system not found"
+                    },
+                    "409": {
+                        "description": "Another deck system already has that name"
                     }
                 },
                 "security": [
@@ -2066,7 +2256,10 @@
                                         "deleted": {
                                             "type": "integer"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "deleted"
+                                    ]
                                 }
                             }
                         }
@@ -2151,6 +2344,9 @@
                             }
                         }
                     },
+                    "400": {
+                        "description": "Name is required"
+                    },
                     "500": {
                         "description": "Failed to create spread"
                     }
@@ -2210,6 +2406,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Name is required (a name sent blank)"
                     },
                     "404": {
                         "description": "Spread not found or no valid fields"
@@ -2306,6 +2505,9 @@
                             }
                         }
                     },
+                    "404": {
+                        "description": "Pending spread not found"
+                    },
                     "500": {
                         "description": "Failed to approve spread"
                     }
@@ -2364,7 +2566,7 @@
                                 "schema": {
                                     "type": "array",
                                     "items": {
-                                        "$ref": "#/components/schemas/User"
+                                        "$ref": "#/components/schemas/AdminUser"
                                     }
                                 }
                             }
@@ -2406,7 +2608,10 @@
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
                                 }
                             }
                         }
@@ -2428,7 +2633,7 @@
                     "Admin · Users"
                 ],
                 "summary": "Partially update a user account",
-                "description": "Partial update of an account. Currently the only editable field is the\n`is_admin` flag (previously the dedicated POST …/admin action).",
+                "description": "Removing the admin flag is refused (403) on your own account and on a protected one.",
                 "operationId": "5b441e2758c8a9fc3e812694cf86a4e4",
                 "parameters": [
                     {
@@ -2461,10 +2666,13 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/User"
+                                    "$ref": "#/components/schemas/AdminUser"
                                 }
                             }
                         }
+                    },
+                    "403": {
+                        "description": "Removing your own admin flag, or a protected account's"
                     },
                     "404": {
                         "description": "User not found"
@@ -2481,6 +2689,7 @@
                     "Admin · Users"
                 ],
                 "summary": "Delete a user account",
+                "description": "Ends every session of the account too. Refused (403) for your own account (Account Settings deletes that) and for a protected one.",
                 "operationId": "2f285a84747ba2bd307c9ccde339c3a5",
                 "parameters": [
                     {
@@ -2495,6 +2704,9 @@
                 "responses": {
                     "204": {
                         "description": "Deleted"
+                    },
+                    "403": {
+                        "description": "Your own account, or a protected one"
                     },
                     "404": {
                         "description": "User not found"
@@ -2526,11 +2738,28 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Activation resent",
+                        "description": "A new activation link was issued (replacing any earlier one)",
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "emailed": {
+                                            "type": "boolean",
+                                            "description": "Whether the activation email was sent."
+                                        },
+                                        "activation_link": {
+                                            "type": "string",
+                                            "description": "The new activation link. Sent only outside production, and only when the email was not sent."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "emailed"
+                                    ]
                                 }
                             }
                         }
@@ -2598,7 +2827,10 @@
                                         "status": {
                                             "type": "string"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "status"
+                                    ]
                                 }
                             }
                         }
@@ -2613,7 +2845,10 @@
                                         "status": {
                                             "type": "string"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "status"
+                                    ]
                                 }
                             }
                         }
@@ -2706,7 +2941,10 @@
                                                 "null"
                                             ]
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "turnstile_sitekey"
+                                    ]
                                 }
                             }
                         }
@@ -2737,6 +2975,10 @@
                                     },
                                     "message": {
                                         "type": "string"
+                                    },
+                                    "turnstile_token": {
+                                        "type": "string",
+                                        "description": "Required when Turnstile is configured"
                                     }
                                 },
                                 "required": [
@@ -2760,13 +3002,16 @@
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
-                        "description": "Missing/invalid fields"
+                        "description": "Missing/invalid fields, or captcha failed"
                     },
                     "429": {
                         "description": "Rate limit exceeded"
@@ -2851,6 +3096,9 @@
                     },
                     "401": {
                         "description": "Not authenticated"
+                    },
+                    "409": {
+                        "description": "A deck with that name already exists"
                     }
                 },
                 "security": [
@@ -2865,7 +3113,7 @@
                 "tags": [
                     "Decks"
                 ],
-                "summary": "A single deck",
+                "summary": "A single deck (one still awaiting approval only to an admin)",
                 "operationId": "77514664c8ab4ae75bdf7be42489b661",
                 "parameters": [
                     {
@@ -2889,7 +3137,7 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidDeckID"
+                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin"
                     }
                 }
             }
@@ -2899,7 +3147,7 @@
                 "tags": [
                     "Decks"
                 ],
-                "summary": "List every card available in a deck (for the custom-reading picker)",
+                "summary": "List every card available in a deck (for the custom-reading picker; a deck awaiting approval only to an admin)",
                 "description": "List every card available in a deck as {card_id, name}, so the custom\nreading screen can offer a picker. Mirrors the reading engine's card\nresolution.",
                 "operationId": "bb79a67ed79d6c8d5d0dc4674f91230c",
                 "parameters": [
@@ -2935,7 +3183,7 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidDeckID"
+                        "description": "InvalidDeckID: no such deck, or one awaiting approval and the viewer is not an admin"
                     }
                 }
             }
@@ -3024,6 +3272,9 @@
                     },
                     "401": {
                         "description": "Not authenticated"
+                    },
+                    "409": {
+                        "description": "A deck system with that name already exists"
                     }
                 },
                 "security": [
@@ -3038,8 +3289,8 @@
                 "tags": [
                     "Deck Systems"
                 ],
-                "summary": "A single deck system with its cards",
-                "description": "Public: get a single deck system with its cards.",
+                "summary": "A single deck system with its cards (one still awaiting approval only to an admin)",
+                "description": "Public: get a single deck system with its cards. One still awaiting\napproval is shown only to an admin; anyone else gets the answer for an\nunknown id, so pending submissions can't be found by probing ids.",
                 "operationId": "bc7cfc91f621470189981f4ff529c799",
                 "parameters": [
                     {
@@ -3063,7 +3314,7 @@
                         }
                     },
                     "404": {
-                        "description": "Deck system not found"
+                        "description": "Deck system not found, or awaiting approval and the viewer is not an admin"
                     }
                 }
             }
@@ -3143,7 +3394,7 @@
                     "Authentication"
                 ],
                 "summary": "Unlink Google from the current account",
-                "description": "Unlink Google from the currently logged-in account.",
+                "description": "Only while the account can still sign in another way: a password (set, with password login on) or a passkey.",
                 "operationId": "f8948158ac3bd6844a2eae03c72c562d",
                 "responses": {
                     "200": {
@@ -3159,16 +3410,20 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "user"
+                                    ]
                                 }
                             }
                         }
                     },
-                    "400": {
-                        "description": "Account has no password set"
-                    },
                     "401": {
                         "description": "Not authenticated"
+                    },
+                    "409": {
+                        "description": "Google is the last way to sign in; the message says what to set up first"
                     }
                 },
                 "security": [
@@ -3192,16 +3447,23 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                        "publicKey": {
+                                            "type": "object",
+                                            "description": "The PublicKeyCredentialCreationOptions for navigator.credentials.create(), with its binary fields (challenge, user.id, excludeCredentials[].id) base64url-encoded. excludeCredentials lists the passkeys already on the account.",
+                                            "additionalProperties": true
+                                        }
+                                    },
+                                    "required": [
+                                        "publicKey"
+                                    ]
                                 }
                             }
                         }
                     },
                     "401": {
                         "description": "Not authenticated"
-                    },
-                    "404": {
-                        "description": "User not found"
                     }
                 },
                 "security": [
@@ -3246,7 +3508,26 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Passkey registered"
+                        "description": "Passkey registered",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "passkey": {
+                                            "$ref": "#/components/schemas/RegisteredPasskey"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "passkey"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Missing/invalid attestation"
@@ -3268,7 +3549,7 @@
                     "Passkeys"
                 ],
                 "summary": "Assertion options; optional email scopes to a user's credentials",
-                "description": "Generate assertion options for passkey login.\nAccepts optional email to scope to a specific user's credentials,\nor no email for a discoverable-credential (resident key) flow.",
+                "description": "With an email, allowCredentials always lists credentials: the account's passkeys, or for an email with none (no account, or an account without passkeys) stand-ins that look the same and stay the same, so the answer doesn't say which emails have accounts. Without one, any discoverable passkey may answer.",
                 "operationId": "59834f0fd79251a07923def0d9118df8",
                 "requestBody": {
                     "content": {
@@ -3291,7 +3572,17 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object"
+                                    "type": "object",
+                                    "properties": {
+                                        "publicKey": {
+                                            "type": "object",
+                                            "description": "The PublicKeyCredentialRequestOptions for navigator.credentials.get(), with its binary fields (challenge, allowCredentials[].id) base64url-encoded. allowCredentials is present whenever an email was given (the account's passkeys, or stand-ins); without one, any discoverable passkey may answer.",
+                                            "additionalProperties": true
+                                        }
+                                    },
+                                    "required": [
+                                        "publicKey"
+                                    ]
                                 }
                             }
                         }
@@ -3351,7 +3642,11 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "user"
+                                    ]
                                 }
                             }
                         }
@@ -3439,7 +3734,22 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Renamed"
+                        "description": "Renamed",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Not authenticated"
@@ -3461,8 +3771,8 @@
                 "tags": [
                     "Passkeys"
                 ],
-                "summary": "Delete a passkey (blocked if it is the last one while password login is disabled)",
-                "description": "Delete a passkey.",
+                "summary": "Delete a passkey (refused when it is the last way to sign in)",
+                "description": "The last passkey can go only while the account can still sign in another way: a password (set, with password login on) or a linked Google account.",
                 "operationId": "ba3bc4c7b907f6c53e9b361ea4e79ee6",
                 "parameters": [
                     {
@@ -3478,14 +3788,14 @@
                     "204": {
                         "description": "Deleted"
                     },
-                    "400": {
-                        "description": "Cannot delete the last passkey"
-                    },
                     "401": {
                         "description": "Not authenticated"
                     },
                     "404": {
                         "description": "Passkey not found"
+                    },
+                    "409": {
+                        "description": "The last way to sign in; the message says what to set up first"
                     }
                 },
                 "security": [
@@ -3500,7 +3810,7 @@
                 "tags": [
                     "Passkeys"
                 ],
-                "summary": "Toggle password login on/off (requires ≥1 passkey before disabling)",
+                "summary": "Toggle password login on/off (turning it off needs a passkey or a linked Google account)",
                 "description": "Toggle password login enabled/disabled.",
                 "operationId": "70778fa07ca73639c4b6466288c18676",
                 "requestBody": {
@@ -3520,13 +3830,38 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Updated"
-                    },
-                    "400": {
-                        "description": "Must have a passkey before disabling"
+                        "description": "Updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "password_login_disabled": {
+                                            "type": "boolean",
+                                            "description": "The setting now in force."
+                                        },
+                                        "user": {
+                                            "$ref": "#/components/schemas/User",
+                                            "description": "The account as it now stands."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "password_login_disabled",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "401": {
                         "description": "Not authenticated"
+                    },
+                    "409": {
+                        "description": "Turning it off would leave no way to sign in; the message says what to set up first"
                     }
                 },
                 "security": [
@@ -3584,7 +3919,10 @@
                                         "redirect_uri": {
                                             "type": "string"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "redirect_uri"
+                                    ]
                                 }
                             }
                         }
@@ -3608,7 +3946,7 @@
                 "tags": [
                     "Plugin"
                 ],
-                "summary": "Exchange a PKCE authorization code for a plugin Bearer token",
+                "summary": "Exchange a PKCE authorization code for a plugin Bearer token. Rate-limited: 10 attempts/IP/minute.",
                 "operationId": "9cee09bafbc85842806ed3b5d8696f77",
                 "requestBody": {
                     "content": {
@@ -3652,13 +3990,22 @@
                                         "display_name": {
                                             "type": "string"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "token_type",
+                                        "scope",
+                                        "display_name"
+                                    ]
                                 }
                             }
                         }
                     },
                     "400": {
                         "description": "Invalid or expired authorization code"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -3834,7 +4181,7 @@
                 "summary": "Generate a random reading from a draw spec",
                 "operationId": "d8750b5a23fd03c315941e4facfd28ee",
                 "requestBody": {
-                    "description": "Draw spec: deck, spread or card count, and options",
+                    "description": "Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist.",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -3856,7 +4203,7 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid draw spec"
+                        "description": "Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws)"
                     },
                     "429": {
                         "description": "Rate limit exceeded"
@@ -3893,7 +4240,7 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid input"
+                        "description": "Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it)"
                     }
                 }
             }
@@ -3954,7 +4301,11 @@
                                         "reading_id": {
                                             "type": "string"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "reading_id"
+                                    ]
                                 }
                             }
                         }
@@ -4134,7 +4485,10 @@
                                         "success": {
                                             "type": "boolean"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
                                 }
                             }
                         }
@@ -4188,6 +4542,7 @@
                     "Authentication"
                 ],
                 "summary": "Create an account (inactive until email activation). Rate-limited: 5/IP/hour.",
+                "description": "An email that already has an account gets the same 201 and message as a new one (no account enumeration): nothing is created, and that address is emailed a notice that someone tried to sign up with it. A display name that is taken is still refused (names are public).",
                 "operationId": "ad99e4939452f71308786370a3ed004a",
                 "requestBody": {
                     "content": {
@@ -4220,10 +4575,34 @@
                 },
                 "responses": {
                     "201": {
-                        "description": "Account created"
+                        "description": "Account created (or, for an email that already has one, answered as if it had been)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "description": "What to do next, to show the user."
+                                        },
+                                        "activation_link": {
+                                            "type": "string",
+                                            "description": "The link that activates the new account. Sent only outside production, only for an account just created, and only when the activation email could not be sent."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "422": {
-                        "description": "Validation/uniqueness failure"
+                        "description": "Validation failure, or a display name that is taken"
                     },
                     "429": {
                         "description": "Rate limit exceeded"
@@ -4258,7 +4637,27 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Account activated"
+                        "description": "Account activated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "description": "A confirmation to show the user."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Invalid/expired token"
@@ -4294,7 +4693,31 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Identical response whether or not the account exists"
+                        "description": "Identical response whether or not the account exists",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "description": "The same wording either way, to show the user."
+                                        },
+                                        "reset_link": {
+                                            "type": "string",
+                                            "description": "The password-reset link. Sent only outside production, only for an account that exists, and only when the email could not be sent."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "429": {
                         "description": "Rate limit exceeded"
@@ -4308,6 +4731,7 @@
                     "Authentication"
                 ],
                 "summary": "Complete a password reset",
+                "description": "Sets the new password, marks the account active, and ends every session of the account, so whoever knew the old password is signed out everywhere. Linked plugins keep their tokens (they're revoked under Connected Apps).",
                 "operationId": "1fb4bc9555f6546ebf8546a28aa1c9d3",
                 "requestBody": {
                     "content": {
@@ -4334,7 +4758,27 @@
                 },
                 "responses": {
                     "200": {
-                        "description": "Password updated; account marked active"
+                        "description": "Password updated; account marked active; its sessions ended",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "description": "A confirmation to show the user."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
                     },
                     "400": {
                         "description": "Invalid/expired token"
@@ -4397,7 +4841,11 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "user"
+                                    ]
                                 }
                             }
                         }
@@ -4406,7 +4854,7 @@
                         "description": "Captcha failed"
                     },
                     "401": {
-                        "description": "Invalid credentials"
+                        "description": "Invalid credentials (an unknown email, or an account without a password, takes as long to answer as a wrong password)"
                     },
                     "403": {
                         "description": "Inactive or password-login disabled"
@@ -4426,7 +4874,22 @@
                 "operationId": "4270df40a09756890af53dba5e2fca63",
                 "responses": {
                     "200": {
-                        "description": "Signed out"
+                        "description": "Signed out (also when there was no session)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "required": [
+                                        "success"
+                                    ]
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -4449,7 +4912,10 @@
                                         "user": {
                                             "$ref": "#/components/schemas/User"
                                         }
-                                    }
+                                    },
+                                    "required": [
+                                        "user"
+                                    ]
                                 }
                             }
                         }
@@ -4468,6 +4934,26 @@
     },
     "components": {
         "schemas": {
+            "AdminUser": {
+                "description": "A user account as the admin user list shows it.",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/User"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "is_protected": {
+                                "type": "boolean",
+                                "description": "Listed in PROTECTED_ADMIN_EMAILS: its admin access can't be removed and it can't be deleted."
+                            }
+                        },
+                        "required": [
+                            "is_protected"
+                        ]
+                    }
+                ]
+            },
             "SpreadPosition": {
                 "type": "object",
                 "description": "One card slot in a spread layout.",
@@ -4706,6 +5192,161 @@
                             "cards"
                         ]
                     }
+                ]
+            },
+            "RegisteredPasskey": {
+                "type": "object",
+                "description": "The passkey just registered: its row as the account page lists it (Passkey), without credential_id.",
+                "properties": {
+                    "passkey_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "description": "The name given, or \"My Passkey\"."
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "description": "When it was registered, UTC (\"Y-m-d H:i:s\")."
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Always null: it has not signed in yet."
+                    }
+                },
+                "required": [
+                    "passkey_id",
+                    "name",
+                    "created_at",
+                    "last_used_at"
+                ]
+            },
+            "UsageStats": {
+                "type": "object",
+                "description": "Usage analytics over the stored readings, for the admin dashboard.",
+                "properties": {
+                    "totals": {
+                        "type": "object",
+                        "description": "How many readings are stored, and how many of them are recent.",
+                        "properties": {
+                            "readings": {
+                                "type": "integer",
+                                "description": "Every stored reading."
+                            },
+                            "last7": {
+                                "type": "integer",
+                                "description": "Made in the last 7 days."
+                            },
+                            "last30": {
+                                "type": "integer",
+                                "description": "Made in the last 30 days."
+                            }
+                        },
+                        "required": [
+                            "readings",
+                            "last7",
+                            "last30"
+                        ]
+                    },
+                    "byType": {
+                        "type": "object",
+                        "description": "Every stored reading, by the layout it was given.",
+                        "properties": {
+                            "freeDraw": {
+                                "type": "integer",
+                                "description": "A free draw never placed in a layout."
+                            },
+                            "spread": {
+                                "type": "integer",
+                                "description": "Laid out in a public spread."
+                            },
+                            "custom": {
+                                "type": "integer",
+                                "description": "Laid out in a personal spread, a custom reading, or a placed free draw (spread_id 0)."
+                            }
+                        },
+                        "required": [
+                            "freeDraw",
+                            "spread",
+                            "custom"
+                        ]
+                    },
+                    "topDecks": {
+                        "type": "array",
+                        "description": "The (at most 10) decks with the most readings, most first.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "deck_id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "\"Deck #{deck_id}\" for a deck deleted since."
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "description": "Readings drawn from it."
+                                }
+                            },
+                            "required": [
+                                "deck_id",
+                                "name",
+                                "count"
+                            ]
+                        }
+                    },
+                    "topSpreads": {
+                        "type": "array",
+                        "description": "The (at most 10) public spreads with the most readings, by name, most first.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "name": {
+                                    "type": "string",
+                                    "description": "The spread's name as the readings recorded it (\"Untitled\" if none)."
+                                },
+                                "count": {
+                                    "type": "integer",
+                                    "description": "Readings laid out in it."
+                                }
+                            },
+                            "required": [
+                                "name",
+                                "count"
+                            ]
+                        }
+                    },
+                    "daily": {
+                        "type": "array",
+                        "description": "Readings per UTC day over the last 14 days, oldest first; a day with none is left out.",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "date": {
+                                    "type": "string",
+                                    "description": "\"Y-m-d\", UTC."
+                                },
+                                "count": {
+                                    "type": "integer"
+                                }
+                            },
+                            "required": [
+                                "date",
+                                "count"
+                            ]
+                        }
+                    }
+                },
+                "required": [
+                    "totals",
+                    "byType",
+                    "topDecks",
+                    "topSpreads",
+                    "daily"
                 ]
             },
             "CardReport": {
@@ -5418,6 +6059,10 @@
                     "google_linked": {
                         "type": "boolean"
                     },
+                    "has_password": {
+                        "type": "boolean",
+                        "description": "Whether the account has a password at all. An account made by signing in with Google has none until the user sets one through a password-reset link."
+                    },
                     "password_login_disabled": {
                         "type": "boolean"
                     },
@@ -5434,6 +6079,7 @@
                     "registered_at",
                     "last_login_at",
                     "google_linked",
+                    "has_password",
                     "password_login_disabled",
                     "has_passkeys"
                 ]

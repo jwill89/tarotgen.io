@@ -12,6 +12,13 @@ use Tarot\Data\AbstractData;
  */
 final class ExposedData extends AbstractData
 {
+    /**
+     * @param array<string,mixed> $data
+     * @param list<string>        $allowed
+     * @param array<string,mixed> $where
+     * @param list<string>        $intCols
+     * @param list<string>        $boolCols
+     */
     public function callApplyUpdate(
         string $table,
         array $data,

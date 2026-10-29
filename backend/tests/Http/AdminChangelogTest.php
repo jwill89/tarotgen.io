@@ -16,6 +16,19 @@ use Routes\Internal\ChangelogController;
 #[CoversClass(ChangelogController::class)]
 final class AdminChangelogTest extends HttpTestCase
 {
+    public function testTheAdminListShowsEveryEntryNewestFirst(): void
+    {
+        $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
+        foreach (['2026-09-01' => 'Older', '2026-10-28' => 'Newest', '2026-10-01' => 'Middle'] as $date => $title) {
+            $this->assertJsonResponse(201, $this->post('/admin/changelog', ['title' => $title, 'body' => '', 'entry_date' => $date]));
+        }
+
+        $list = $this->assertJsonResponse(200, $this->get('/admin/changelog'));
+
+        $this->assertDocumented('get', '/admin/changelog', 200, $list);
+        $this->assertSame(['Newest', 'Middle', 'Older'], array_column($list, 'title'));
+    }
+
     public function testAnAdminCreatesEditsAndDeletesAnEntry(): void
     {
         $admin = $this->createUser('admin@example.test', admin: true);
@@ -49,6 +62,26 @@ final class AdminChangelogTest extends HttpTestCase
         $response = $this->request('PUT', '/admin/changelog/999', ['title' => 'Nothing here']);
 
         $this->assertSame(['error' => 'Changelog entry not found or no valid fields'], $this->assertJsonResponse(404, $response));
+    }
+
+    public function testAnEntryNeedsATitle(): void
+    {
+        $admin = $this->createUser('admin@example.test', admin: true);
+        $this->signInAs($admin->user_id);
+        $required = ['error' => 'Title is required'];
+
+        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/changelog', ['body' => 'No title'])));
+        $this->assertSame($required, $this->assertJsonResponse(400, $this->post('/admin/changelog', ['title' => '  ', 'body' => 'Blank title'])));
+        $this->assertSame(0, $this->rowCount('changelog'));
+
+        $created = $this->assertJsonResponse(201, $this->post('/admin/changelog', ['title' => 'Kept', 'body' => 'Before']));
+        $id = $created['entry_id'];
+        $this->assertIsInt($id);
+
+        $this->assertSame($required, $this->assertJsonResponse(400, $this->request('PUT', "/admin/changelog/{$id}", ['title' => '', 'body' => 'After'])));
+        // Leaving the title out keeps it.
+        $edited = $this->assertJsonResponse(200, $this->request('PUT', "/admin/changelog/{$id}", ['body' => 'After']));
+        $this->assertSame(['Kept', 'After'], [$edited['title'], $edited['body']]);
     }
 
     public function testOnlyAnAdminCanWrite(): void

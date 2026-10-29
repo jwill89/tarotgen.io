@@ -7,6 +7,7 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadRepository;
+use Tarot\Repository\UserRepository;
 use Tarot\Structure\Spread;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
@@ -21,6 +22,7 @@ class SpreadController extends AbstractController
     public function __construct(
         private readonly SpreadRepository $spreads,
         private readonly PendingSpreadRepository $pending,
+        private readonly UserRepository $users,
     ) {
     }
 
@@ -95,7 +97,7 @@ class SpreadController extends AbstractController
             new OAS\Response(
                 response: 201,
                 description: 'Accepted into the pending queue',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
             new OAS\Response(response: 400, description: 'Validation failure'),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
@@ -141,10 +143,16 @@ class SpreadController extends AbstractController
         return $response->withJson(['success' => true], 201);
     }
 
-    /** The logged-in user's id, or null for a guest submission. */
+    /**
+     * The logged-in user's id, or null for a guest submission. A deleted account
+     * leaves its sessions behind, and its id would fail the foreign key: that
+     * submission goes in as a guest's rather than being lost to a 500.
+     */
     private function currentUserId(): ?int
     {
         Session::start();
-        return Session::userId();
+        $userId = Session::userId();
+
+        return $userId !== null && $this->users->findById($userId) !== null ? $userId : null;
     }
 }

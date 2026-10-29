@@ -65,9 +65,10 @@ class AdminCardReportController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Updated',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
             new OAS\Response(response: 400, description: 'Invalid report ID'),
+            new OAS\Response(response: 404, description: 'Report not found'),
         ]
     )]
     public function updateCardReport(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -76,6 +77,10 @@ class AdminCardReportController extends AbstractController
 
         if ($reportId < 1) {
             return $response->withJson(['error' => 'Invalid report ID'], 400);
+        }
+
+        if (!$this->cardReports->exists($reportId)) {
+            return $response->withJson(['error' => 'Report not found'], 404);
         }
 
         $params = $this->parsedBody($request);

@@ -2,6 +2,8 @@
 
 namespace Tarot\Data;
 
+use PDOException;
+use Tarot\Exception\NameTakenException;
 use Tarot\Structure\DeckSystem;
 use Tarot\Structure\DeckSystemCard;
 
@@ -58,6 +60,9 @@ class DeckSystemData extends AbstractData
     }
 
     /**
+     * Null when the system couldn't be created — notably when its name is taken
+     * (deck_systems.name is UNIQUE), which callers report rather than crash on.
+     *
      * @param array<string,mixed> $data
      */
     public function store(array $data): ?DeckSystem
@@ -66,13 +71,20 @@ class DeckSystemData extends AbstractData
                 VALUES (:name, :short_name, :total_cards, :approved, :submitted_by)";
 
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([
-            ':name'         => $data['name'] ?? '',
-            ':short_name'   => $data['short_name'] ?? '',
-            ':total_cards'  => (int)($data['total_cards'] ?? 78),
-            ':approved'     => (int)($data['approved'] ?? false),
-            ':submitted_by' => $data['submitted_by'] ?? null,
-        ]);
+        try {
+            $stmt->execute([
+                ':name'         => $data['name'] ?? '',
+                ':short_name'   => $data['short_name'] ?? '',
+                ':total_cards'  => (int)($data['total_cards'] ?? 78),
+                ':approved'     => (int)($data['approved'] ?? false),
+                ':submitted_by' => $data['submitted_by'] ?? null,
+            ]);
+        } catch (PDOException $e) {
+            if (self::isNameTaken($e)) {
+                return null;
+            }
+            throw $e;
+        }
 
         $id = (int)$this->db->lastInsertId();
         $result = $this->retrieve($id);
@@ -81,7 +93,10 @@ class DeckSystemData extends AbstractData
     }
 
     /**
+     * Null when the system doesn't exist or $data holds no editable field.
+     *
      * @param array<string,mixed> $data
+     * @throws NameTakenException When the new name is another system's.
      */
     public function update(int $id, array $data): ?DeckSystem
     {
@@ -89,12 +104,25 @@ class DeckSystemData extends AbstractData
         $boolCols = ['approved'];
         $intCols  = ['total_cards'];
 
-        if (!$this->applyUpdate('deck_systems', $data, $allowed, ['deck_system_id' => $id], $intCols, $boolCols)) {
-            return null;
+        try {
+            if (!$this->applyUpdate('deck_systems', $data, $allowed, ['deck_system_id' => $id], $intCols, $boolCols)) {
+                return null;
+            }
+        } catch (PDOException $e) {
+            if (self::isNameTaken($e)) {
+                throw new NameTakenException('A deck system with that name already exists.', 0, $e);
+            }
+            throw $e;
         }
 
         $result = $this->retrieve($id);
         return $result[0] ?? null;
+    }
+
+    /** deck_systems.name is UNIQUE (short_name isn't): the one constraint error callers report. */
+    private static function isNameTaken(PDOException $e): bool
+    {
+        return str_contains($e->getMessage(), 'UNIQUE constraint failed: deck_systems.name');
     }
 
     public function delete(int $id): bool

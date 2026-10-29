@@ -74,6 +74,10 @@
         "rector": "rector process",
         "rector:check": "rector process --dry-run",
         "stan": "phpstan analyse --memory-limit=512M",
-        "test": "phpunit"
+        "test": "phpunit",
+        "test:coverage": [
+            "@php -d xdebug.mode=coverage vendor/bin/phpunit --coverage-clover .phpunit.cache/clover.xml --coverage-text --only-summary-for-coverage-text",
+            "@php bin/coverage-check.php .phpunit.cache/clover.xml"
+        ]
     }
 }

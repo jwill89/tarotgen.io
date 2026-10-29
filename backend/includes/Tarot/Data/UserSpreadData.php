@@ -32,22 +32,11 @@ class UserSpreadData extends AbstractData
     }
 
     /**
-     * Retrieve a single spread by its ID without user scoping (for use in readings).
-     */
-    public function findById(int $userSpreadId): ?UserSpread
-    {
-        return $this->fetchOne(
-            'SELECT ' . self::SELECT_COLS . ' FROM user_spreads WHERE user_spread_id = :id',
-            [':id' => $userSpreadId],
-            UserSpread::class
-        );
-    }
-
-    /**
-     * @throws JsonException
-     */
-    /**
+     * A personal spread's card_count is always its number of positions: a reading
+     * from it draws card_count cards, so a client's own count isn't taken.
+     *
      * @param array<string,mixed> $data
+     * @throws JsonException
      */
     public function store(int $userId, array $data): ?UserSpread
     {
@@ -61,7 +50,7 @@ class UserSpreadData extends AbstractData
             ':user_id'     => $userId,
             ':name'        => mb_substr(trim((string)($data['name'] ?? '')), 0, 200),
             ':description' => (string)($data['description'] ?? ''),
-            ':card_count'  => (int)($data['card_count'] ?? count($positions)),
+            ':card_count'  => count($positions),
             ':positions'   => json_encode($positions, JSON_THROW_ON_ERROR),
         ]);
 
@@ -71,10 +60,10 @@ class UserSpreadData extends AbstractData
     }
 
     /**
-     * @throws JsonException
-     */
-    /**
+     * New positions bring their count along as card_count (see store()).
+     *
      * @param array<string,mixed> $data
+     * @throws JsonException
      */
     public function update(int $userId, int $userSpreadId, array $data): ?UserSpread
     {
@@ -95,16 +84,8 @@ class UserSpreadData extends AbstractData
             $positions = $this->normalizePositions($data['positions']);
             $fields[] = 'positions = :positions';
             $params[':positions'] = json_encode($positions, JSON_THROW_ON_ERROR);
-
-            if (!array_key_exists('card_count', $data)) {
-                $fields[] = 'card_count = :card_count';
-                $params[':card_count'] = count($positions);
-            }
-        }
-
-        if (array_key_exists('card_count', $data)) {
             $fields[] = 'card_count = :card_count';
-            $params[':card_count'] = (int)$data['card_count'];
+            $params[':card_count'] = count($positions);
         }
 
         if ($fields === []) {
@@ -122,11 +103,18 @@ class UserSpreadData extends AbstractData
         return $result[0] ?? null;
     }
 
+    /**
+     * Delete one of a user's spreads. True only when a row was removed: the
+     * caller then drops every favourite of it, so a false "deleted" for someone
+     * else's spread would wipe its owner's favourites.
+     */
     public function delete(int $userId, int $userSpreadId): bool
     {
         $stmt = $this->db->prepare(
             "DELETE FROM user_spreads WHERE user_spread_id = :user_spread_id AND user_id = :user_id"
         );
-        return $stmt->execute([':user_spread_id' => $userSpreadId, ':user_id' => $userId]);
+        $stmt->execute([':user_spread_id' => $userSpreadId, ':user_id' => $userId]);
+
+        return $stmt->rowCount() > 0;
     }
 }

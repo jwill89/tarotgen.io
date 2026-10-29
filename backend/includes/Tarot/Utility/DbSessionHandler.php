@@ -24,6 +24,14 @@ use Throwable;
  * runs on a small fraction of requests and sweeps expired rows. A scheduled
  * `DELETE FROM sessions WHERE expires < strftime('%s','now')` remains an
  * optional belt-and-suspenders, but is not required.
+ *
+ * Each row also records whose session it is (`user_id`, null when signed out),
+ * so a password change or reset, or deleting the account, can end that user's
+ * other sessions (destroyForUser). It's taken from $_SESSION when PHP saves the
+ * session — the same array PHP encodes into $data at that moment, read the way
+ * lifetime() reads remember_me — rather than by parsing $data, whose format
+ * depends on session.serialize_handler. No foreign key: a request still in
+ * flight when its account is deleted must be able to finish its session write.
  */
 final readonly class DbSessionHandler implements SessionHandlerInterface, SessionUpdateTimestampHandlerInterface
 {
@@ -73,20 +81,21 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
         }
     }
 
-    /** Insert or update the session payload with a fresh sliding expiry. */
+    /** Insert or update the session payload with a fresh sliding expiry and its owner. */
     #[\Override]
     public function write(string $id, string $data): bool
     {
         try {
             $stmt = $this->db->prepare(
-                'INSERT INTO sessions (id, data, expires) VALUES (:id, :data, :exp)
-                 ON CONFLICT(id) DO UPDATE SET data = excluded.data, expires = excluded.expires'
+                'INSERT INTO sessions (id, data, expires, user_id) VALUES (:id, :data, :exp, :user)
+                 ON CONFLICT(id) DO UPDATE SET data = excluded.data, expires = excluded.expires, user_id = excluded.user_id'
             );
 
             return $stmt->execute([
                 ':id'   => $this->key($id),
                 ':data' => $data,
                 ':exp'  => time() + $this->lifetime(),
+                ':user' => Session::userId(),
             ]);
         } catch (Throwable $e) {
             error_log('DbSessionHandler::write failed: ' . $e->getMessage());
@@ -105,6 +114,19 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
             error_log('DbSessionHandler::destroy failed: ' . $e->getMessage());
             return false;
         }
+    }
+
+    /**
+     * End every session of $userId, except the one whose (raw) id is $exceptId —
+     * the browser making the change, when it should stay signed in. Returns how
+     * many were ended.
+     */
+    public function destroyForUser(int $userId, ?string $exceptId = null): int
+    {
+        $stmt = $this->db->prepare('DELETE FROM sessions WHERE user_id = :user AND id <> :except');
+        $stmt->execute([':user' => $userId, ':except' => $exceptId === null ? '' : $this->key($exceptId)]);
+
+        return $stmt->rowCount();
     }
 
     /** Sweep expired rows. Called by PHP's probabilistic GC (see Session::start). */
@@ -151,20 +173,27 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
         try {
             $key    = $this->key($id);
             $newExp = time() + $this->lifetime();
+            $userId = Session::userId();
 
             // Only slide the expiry when it has drifted by more than WRITE_THROTTLE
             // seconds. Reading the current expiry is a WAL-concurrent read; on most
             // requests the session still has almost its full lifetime left, so we
             // return here and skip the write entirely — no writer-lock contention.
-            $sel = $this->db->prepare('SELECT expires FROM sessions WHERE id = :id');
+            // Unless the row names the wrong user (one written before the column
+            // existed, say): destroyForUser() must find it, so that's fixed now.
+            $sel = $this->db->prepare('SELECT expires, user_id FROM sessions WHERE id = :id');
             $sel->execute([':id' => $key]);
-            $current = $sel->fetchColumn();
-            if ($current !== false && ($newExp - (int)$current) < self::WRITE_THROTTLE) {
+            $current = $sel->fetch(PDO::FETCH_NUM);
+            if (
+                is_array($current)
+                && ($newExp - (int)$current[0]) < self::WRITE_THROTTLE
+                && ($current[1] === null ? null : (int)$current[1]) === $userId
+            ) {
                 return true;
             }
 
-            $this->db->prepare('UPDATE sessions SET expires = :exp WHERE id = :id')
-                ->execute([':exp' => $newExp, ':id' => $key]);
+            $this->db->prepare('UPDATE sessions SET expires = :exp, user_id = :user WHERE id = :id')
+                ->execute([':exp' => $newExp, ':user' => $userId, ':id' => $key]);
             return true;
         } catch (Throwable $e) {
             error_log('DbSessionHandler::updateTimestamp failed: ' . $e->getMessage());

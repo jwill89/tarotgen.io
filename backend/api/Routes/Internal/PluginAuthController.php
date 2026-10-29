@@ -7,6 +7,7 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
+use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
 
@@ -20,6 +21,11 @@ use OpenApi\Spec as OAS;
  */
 class PluginAuthController extends AbstractController
 {
+    // Code exchanges: 10 per IP per minute, every attempt counted, as a reading's
+    // password attempts are. Linking makes one exchange; a run of them is guessing.
+    private const int TOKEN_MAX_PER_WINDOW = 10;
+    private const int TOKEN_WINDOW_SECONDS = 60;
+
     public function __construct(
         private readonly PluginTokenService $pluginTokens,
         private readonly UserRepository $users,
@@ -47,7 +53,7 @@ class PluginAuthController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Loopback redirect target carrying the authorization code',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'redirect_uri', schema: new OAS\Schema(type: 'string'))])
+                content: new OAS\MediaType\Json(required: ['redirect_uri'], properties: [new OAS\Property(property: 'redirect_uri', schema: new OAS\Schema(type: 'string'))])
             ),
             new OAS\Response(response: 400, description: 'Invalid challenge or non-loopback redirect_uri'),
             new OAS\Response(response: 401, description: 'Not authenticated'),
@@ -87,7 +93,7 @@ class PluginAuthController extends AbstractController
 
     #[OAS\Operation\Post(
         path: '/plugin/token',
-        summary: 'Exchange a PKCE authorization code for a plugin Bearer token',
+        summary: 'Exchange a PKCE authorization code for a plugin Bearer token. Rate-limited: 10 attempts/IP/minute.',
         tags: ['Plugin'],
         requestBody: new OAS\RequestBody(
             required: true,
@@ -103,7 +109,7 @@ class PluginAuthController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'The issued token (returned once)',
-                content: new OAS\MediaType\Json(properties: [
+                content: new OAS\MediaType\Json(required: ['token', 'token_type', 'scope', 'display_name'], properties: [
                     new OAS\Property(property: 'token', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'token_type', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'scope', schema: new OAS\Schema(type: 'string')),
@@ -111,10 +117,19 @@ class PluginAuthController extends AbstractController
                 ])
             ),
             new OAS\Response(response: 400, description: 'Invalid or expired authorization code'),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
     public function token(Request $request, Response $response): Response|ResponseInterface
     {
+        $limiter = new RateLimiter('plugin_token', self::TOKEN_MAX_PER_WINDOW, self::TOKEN_WINDOW_SECONDS);
+        $ip      = $this->clientIp($request);
+
+        if ($limiter->isLimited($ip)) {
+            return $response->withJson(['error' => 'Too many attempts. Please try again later.'], 429);
+        }
+        $limiter->hit($ip);
+
         $body     = $this->parsedBody($request);
         $code     = (string)($body['code'] ?? '');
         $verifier = (string)($body['code_verifier'] ?? '');
@@ -127,7 +142,7 @@ class PluginAuthController extends AbstractController
         // Resolve the just-issued token to its owner so the plugin can show
         // "Linked as ‹name›" without a separate identity endpoint.
         $displayName = '';
-        $userId = $this->pluginTokens->resolveBearer('Bearer ' . $token);
+        $userId = $this->pluginTokens->ownerOf($token);
         if ($userId !== null) {
             $user = $this->users->findById($userId);
             if ($user !== null) {
@@ -188,24 +203,15 @@ class PluginAuthController extends AbstractController
         return $response->withStatus(204);
     }
 
-    /** The authenticated user id, set by the AccountAuth/UserAuth middleware. */
-    private function authUserId(Request $request): int
-    {
-        $id = $request->getAttribute('auth_user_id');
-        return is_int($id) && $id > 0 ? $id : 0;
-    }
-
-    /** Whether a URL points at the local loopback interface (per RFC 8252). */
+    /**
+     * Whether a URL points at the local loopback interface (per RFC 8252).
+     *
+     * Matched as text, the way the SPA checks it, so the host is the one a browser
+     * will visit: parse_url() reads `http://evil.example\@127.0.0.1/` as 127.0.0.1,
+     * while a browser treats the backslash as a slash and goes to evil.example.
+     */
     private function isLoopbackUri(string $url): bool
     {
-        $scheme = parse_url($url, PHP_URL_SCHEME);
-        $host   = parse_url($url, PHP_URL_HOST);
-
-        if ($scheme !== 'http' || !is_string($host)) {
-            return false;
-        }
-
-        $host = strtolower($host);
-        return in_array($host, ['127.0.0.1', 'localhost', '::1', '[::1]'], true);
+        return preg_match('#^http://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:/|\z)#i', $url) === 1;
     }
 }

@@ -43,6 +43,7 @@ final class UserSpreadDataTest extends TestCase
         $this->data = new UserSpreadData($this->pdo);
     }
 
+    /** @return list<array{order: int, title: string, x: int, y: int, rotation: int}> */
     private function samplePositions(int $n = 2): array
     {
         $out = [];
@@ -50,6 +51,19 @@ final class UserSpreadDataTest extends TestCase
             $out[] = ['order' => $i, 'title' => "P$i", 'x' => 50, 'y' => 50, 'rotation' => 0];
         }
         return $out;
+    }
+
+    /**
+     * Store a spread the test builds on, failing the test if the insert doesn't.
+     *
+     * @param array<string, mixed> $fields
+     */
+    private function storeSpread(int $userId, array $fields): UserSpread
+    {
+        $spread = $this->data->store($userId, $fields);
+        $this->assertNotNull($spread);
+
+        return $spread;
     }
 
     public function testStoreAndRetrieveRoundTrips(): void
@@ -63,14 +77,14 @@ final class UserSpreadDataTest extends TestCase
         $this->assertInstanceOf(UserSpread::class, $created);
         $this->assertSame('Three Card', $created->name);
         $this->assertSame(1, $created->user_id);
-        // card_count defaults to the position count when not supplied.
+        // card_count is always the position count.
         $this->assertSame(3, $created->card_count);
         $this->assertCount(3, $created->positions);
     }
 
     public function testRetrieveIsScopedToTheOwningUser(): void
     {
-        $mine = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
+        $mine = $this->storeSpread(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
         $this->data->store(2, ['name' => 'Theirs', 'positions' => $this->samplePositions()]);
 
         $listForUser1 = $this->data->retrieve(1);
@@ -82,25 +96,16 @@ final class UserSpreadDataTest extends TestCase
         $this->assertCount(1, $this->data->retrieve(1, $mine->user_spread_id));
     }
 
-    public function testFindByIdIgnoresOwnership(): void
+    public function testUpdateRecountsCardsWhenPositionsChange(): void
     {
-        // Used when generating a reading from any personal spread.
-        $created = $this->data->store(5, ['name' => 'Anyone', 'positions' => $this->samplePositions()]);
-        $found = $this->data->findById($created->user_spread_id);
-        $this->assertInstanceOf(UserSpread::class, $found);
-        $this->assertSame(5, $found->user_id);
-        $this->assertNull($this->data->findById(99999));
-    }
-
-    public function testUpdateRecountsCardsWhenPositionsChangeButNotCardCountGiven(): void
-    {
-        $created = $this->data->store(1, ['name' => 'Start', 'positions' => $this->samplePositions(2)]);
+        $created = $this->storeSpread(1, ['name' => 'Start', 'positions' => $this->samplePositions(2)]);
 
         $updated = $this->data->update(1, $created->user_spread_id, [
             'name'      => 'Grown',
             'positions' => $this->samplePositions(5),
         ]);
 
+        $this->assertNotNull($updated);
         $this->assertSame('Grown', $updated->name);
         $this->assertSame(5, $updated->card_count); // recomputed from positions
         $this->assertCount(5, $updated->positions);
@@ -108,31 +113,31 @@ final class UserSpreadDataTest extends TestCase
 
     public function testUpdateCannotTouchAnotherUsersSpread(): void
     {
-        $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
+        $created = $this->storeSpread(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
 
         // User 2 attempts to rename user 1's spread → no matching row, no change.
         $result = $this->data->update(2, $created->user_spread_id, ['name' => 'Hijacked']);
         $this->assertNull($result);
-        $this->assertSame('Mine', $this->data->findById($created->user_spread_id)->name);
+        $this->assertSame(['Mine'], array_map(static fn(UserSpread $s): string => $s->name, $this->data->retrieve(1, $created->user_spread_id)));
     }
 
     public function testUpdateWithNoFieldsReturnsNull(): void
     {
-        $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
+        $created = $this->storeSpread(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
         $this->assertNull($this->data->update(1, $created->user_spread_id, []));
     }
 
     public function testDeleteIsOwnershipScoped(): void
     {
-        $created = $this->data->store(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
+        $created = $this->storeSpread(1, ['name' => 'Mine', 'positions' => $this->samplePositions()]);
         $id = $created->user_spread_id;
 
         // Wrong owner can't delete it.
-        $this->data->delete(2, $id);
-        $this->assertNotNull($this->data->findById($id));
+        $this->assertFalse($this->data->delete(2, $id));
+        $this->assertSame([$id], array_map(static fn(UserSpread $s): int => $s->user_spread_id, $this->data->retrieve(1, $id)));
 
         // Correct owner can.
-        $this->data->delete(1, $id);
-        $this->assertNull($this->data->findById($id));
+        $this->assertTrue($this->data->delete(1, $id));
+        $this->assertSame([], $this->data->retrieve(1, $id));
     }
 }

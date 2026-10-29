@@ -50,10 +50,15 @@ final class TurnstileServiceTest extends TestCase
         $_ENV['CLOUDFLARE_TURNSTILE_SECRET'] = '1x0000000000000000000000000000000AA';
     }
 
-    /** A TurnstileService whose siteverify call returns a canned response. */
+    /**
+     * A TurnstileService whose siteverify call returns a canned response.
+     *
+     * @param array<string, mixed>|null $siteVerifyResult
+     */
     private function serviceReturning(?array $siteVerifyResult): TurnstileService
     {
         return new class ($siteVerifyResult) extends TurnstileService {
+            /** @param array<string, mixed>|null $result */
             public function __construct(private readonly ?array $result)
             {
             }

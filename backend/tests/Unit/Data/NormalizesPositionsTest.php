@@ -12,31 +12,36 @@ use Tarot\Data\NormalizesPositions;
 final class NormalizesPositionsTest extends TestCase
 {
     /**
-     * Expose the trait's private normalizePositions() through a public shim so
-     * we can exercise it in isolation.
+     * Run the trait's private normalizePositions() through a public shim so we
+     * can exercise it in isolation.
+     *
+     * @return list<array{order: int, title: string, x: float, y: float, rotation: int}>
      */
-    private function subject(): object
+    private function normalize(mixed $positions): array
     {
-        return new class {
+        $shim = new class {
             use NormalizesPositions;
 
+            /** @return list<array{order: int, title: string, x: float, y: float, rotation: int}> */
             public function run(mixed $positions): array
             {
                 return $this->normalizePositions($positions);
             }
         };
+
+        return $shim->run($positions);
     }
 
     public function testNonArrayInputReturnsEmptyArray(): void
     {
-        $this->assertSame([], $this->subject()->run('not-an-array'));
-        $this->assertSame([], $this->subject()->run(null));
-        $this->assertSame([], $this->subject()->run(42));
+        $this->assertSame([], $this->normalize('not-an-array'));
+        $this->assertSame([], $this->normalize(null));
+        $this->assertSame([], $this->normalize(42));
     }
 
     public function testNonArrayEntriesAreSkipped(): void
     {
-        $result = $this->subject()->run(['nope', 123, ['order' => 1]]);
+        $result = $this->normalize(['nope', 123, ['order' => 1]]);
 
         $this->assertCount(1, $result);
         $this->assertSame(1, $result[0]['order']);
@@ -44,7 +49,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testCoordinatesAreClampedToZeroHundred(): void
     {
-        $result = $this->subject()->run([
+        $result = $this->normalize([
             ['x' => -10, 'y' => 250],
         ]);
 
@@ -54,7 +59,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testCoordinatesAreRoundedToTwoDecimals(): void
     {
-        $result = $this->subject()->run([
+        $result = $this->normalize([
             ['x' => 12.34567, 'y' => 88.005],
         ]);
 
@@ -64,7 +69,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testRotationIsNormalizedIntoZeroTo359(): void
     {
-        $result = $this->subject()->run([
+        $result = $this->normalize([
             ['rotation' => 360],
             ['rotation' => 450],
             ['rotation' => -90],
@@ -79,7 +84,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testTitleIsTrimmedAndCappedAt100Chars(): void
     {
-        $result = $this->subject()->run([
+        $result = $this->normalize([
             ['title' => '  padded  '],
             ['title' => str_repeat('a', 150)],
         ]);
@@ -90,7 +95,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testDefaultsAreAppliedForMissingFields(): void
     {
-        $result = $this->subject()->run([[]]);
+        $result = $this->normalize([[]]);
 
         $this->assertSame(
             ['order' => 0, 'title' => '', 'x' => 50.0, 'y' => 50.0, 'rotation' => 0],
@@ -100,7 +105,7 @@ final class NormalizesPositionsTest extends TestCase
 
     public function testOutputKeysAreReindexedSequentially(): void
     {
-        $result = $this->subject()->run([
+        $result = $this->normalize([
             5 => ['order' => 1],
             9 => ['order' => 2],
         ]);

@@ -6,6 +6,8 @@ use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\ContactRepository;
+use Tarot\Repository\UserRepository;
+use Tarot\Service\TurnstileService;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
@@ -18,6 +20,8 @@ class ContactController extends AbstractController
 
     public function __construct(
         private readonly ContactRepository $contacts,
+        private readonly UserRepository $users,
+        private readonly TurnstileService $turnstile,
     ) {
     }
 
@@ -33,6 +37,7 @@ class ContactController extends AbstractController
                     new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'email', schema: new OAS\Schema(type: 'string', format: 'email')),
                     new OAS\Property(property: 'message', schema: new OAS\Schema(type: 'string')),
+                    new OAS\Property(property: 'turnstile_token', schema: new OAS\Schema(type: 'string', description: 'Required when Turnstile is configured')),
                 ]
             )
         ),
@@ -40,9 +45,9 @@ class ContactController extends AbstractController
             new OAS\Response(
                 response: 201,
                 description: 'Submitted',
-                content: new OAS\MediaType\Json(properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
+                content: new OAS\MediaType\Json(required: ['success'], properties: [new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean'))])
             ),
-            new OAS\Response(response: 400, description: 'Missing/invalid fields'),
+            new OAS\Response(response: 400, description: 'Missing/invalid fields, or captcha failed'),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
@@ -79,6 +84,17 @@ class ContactController extends AbstractController
             return $response->withJson(['error' => 'Please provide a valid email address.'], 400);
         }
 
+        // Bot guard, as on sign-in: when Turnstile is configured, a valid challenge
+        // token is required before anything is stored. Checked after the cheap field
+        // checks, so a malformed request costs no call to Cloudflare. A failed
+        // challenge is a refused message: like the others, it isn't counted.
+        if ($this->turnstile->isConfigured()) {
+            $token = (string)($params['turnstile_token'] ?? '');
+            if (!$this->turnstile->verify($token, $ip)) {
+                return $response->withJson(['error' => 'Captcha verification failed. Please try again.'], 400);
+            }
+        }
+
         $userId = $this->currentUserId();
 
         $contact = $this->contacts->create([
@@ -98,10 +114,16 @@ class ContactController extends AbstractController
         return $response->withJson(['success' => true], 201);
     }
 
-    /** The logged-in user's id, or null for a guest submission. */
+    /**
+     * The logged-in user's id, or null for a guest submission. A deleted account
+     * leaves its sessions behind, and its id would fail the foreign key: that
+     * visitor's message goes in as a guest's rather than being lost to a 500.
+     */
     private function currentUserId(): ?int
     {
         Session::start();
-        return Session::userId();
+        $userId = Session::userId();
+
+        return $userId !== null && $this->users->findById($userId) !== null ? $userId : null;
     }
 }

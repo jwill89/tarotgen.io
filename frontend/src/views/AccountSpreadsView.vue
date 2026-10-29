@@ -55,12 +55,12 @@ async function saveEdit(payload: {
   positions: SpreadPosition[]
 }) {
   if (!editingSpread.value) return
-  const updated = await updateUserSpread(editingSpread.value.user_spread_id, payload)
-  if (updated) {
+  const res = await updateUserSpread(editingSpread.value.user_spread_id, payload)
+  if (res.ok) {
     toasts.success('Spread updated successfully.')
     closeEditor()
   } else {
-    editorRef.value?.setError('Failed to save changes. Please try again.')
+    editorRef.value?.setError(res.error)
   }
 }
 

@@ -33,7 +33,7 @@ It is a **single-page app (SPA) frontend + REST API backend**:
 | Frontend    | Vue `^3.5`, vue-router `^5.1`, TypeScript `~6.0` (`vue-tsc ^3.3`), Vite `^8`, Bulma `^1.0`, Reka UI `^2.10` |
 | Editor/MD   | TipTap `^3.25` (`@tiptap/*`), `marked`, `dompurify`, `turndown` |
 | Icons       | FontAwesome **Pro v7**, self-hosted via the per-style packages (`@fortawesome/pro-{solid,regular,duotone}-svg-icons` + free `@fortawesome/free-brands-svg-icons`) + `@fortawesome/fontawesome-svg-core`. Needs `.npmrc` to install — see §6. |
-| FE testing  | Vitest `^4` with `happy-dom`, coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`) |
+| FE testing  | Vitest `^5` with `happy-dom` + `@vue/test-utils` (components/views), coverage via `@vitest/coverage-v8` (floor in `vite.config.ts`); Playwright `^1` smoke run (`e2e/`) |
 | FE linting  | ESLint `^10` (flat config: `eslint-plugin-vue`, `@vue/eslint-config-typescript`, `eslint-plugin-vuejs-accessibility`), Stylelint `^17` (recommended + Vue/SCSS, palette rule), Knip (unused code/deps), Prettier |
 | Backend     | PHP `>=8.5`, Slim 4 (`slim/slim`, `slim/http`, `slim/psr7`), `php-di/slim-bridge` |
 | Auth/email  | `lbuchs/webauthn` (passkeys), `phpmailer/phpmailer` (SMTP) |
@@ -61,6 +61,7 @@ flattens both into the live server's single flat web root.
 │   ├── eslint-config/      # Git submodule holding that shared config (`git submodule update --init`).
 │   ├── stylelint.config.js # Stylelint: recommended configs + the palette rule (§5).
 │   ├── knip.ts             # Knip: unused files/exports/deps; entry points it can't infer.
+│   ├── playwright.config.ts # The smoke run (§8); e2e/ holds its spec and PHP server scripts.
 │   ├── .nvmrc              # Node version (CI reads it too).
 │   ├── tsconfig*.json       # TS project config.
 │   ├── .npmrc              # FontAwesome Pro registry token (gitignored).
@@ -99,7 +100,7 @@ flattens both into the live server's single flat web root.
 │   ├── includes/Tarot/     # Domain code (PSR-4 `Tarot\`): Config, Database, Data,
 │   │                       #   Repository, Service, Structure, Exception, Utility.
 │   ├── tests/{Unit,Http}/  # PHPUnit tests (namespace `Tarot\Tests\`) — see §8.
-│   ├── bin/openapi.php     # `composer docs`: builds openapi.json (dev-only, not deployed).
+│   ├── bin/                # Dev-only, not deployed: openapi.php (`composer docs`), coverage-check.php.
 │   ├── scripts/            # PHP/Python CLI utils (make_admin.php, gen_icons.php, indexnow.php, *.py).
 │   ├── db/                 # SQLite DB + one-off migration scripts (gitignored).
 │   ├── assets/decks/{id}/  # Per-deck card images (Card_XXXX.png, Card_Back.png) (gitignored).
@@ -200,7 +201,20 @@ upgrade, change the version and recompute the sha384 of that exact file.
 - Sessions use PHP sessions hardened in `index.php` (HttpOnly, SameSite=Lax,
   Secure in production). Admin access requires a **user account with the
   `is_admin` flag** — there is no shared admin password. Grant it with
-  `php scripts/make_admin.php you@example.com`.
+  `php scripts/make_admin.php you@example.com`. No admin can remove their own
+  flag or delete themselves, and the accounts in `PROTECTED_ADMIN_EMAILS` can't
+  be demoted or deleted by anyone (`AccountProtection`).
+- Each `sessions` row records its `user_id` (`DbSessionHandler`), so a password
+  change ends the user's other sessions, a reset ends all of them, and deleting
+  an account ends its sessions (`DbSessionHandler::destroyForUser`).
+- **Always one way to sign in** (`SignInMethods`): password (set and not
+  switched off), passkeys, Google. Switching password login off, deleting the
+  last passkey or unlinking Google is refused (409) when it would leave none.
+- No account enumeration: registration answers the same for a taken email
+  (the owner is emailed), login runs a dummy hash check for an unknown email,
+  and passkey login options give an unknown email stand-in credential ids
+  (`PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key`, created on
+  first use).
 - `OriginGuard` middleware is CSRF defense-in-depth (rejects cross-origin
   state-changing requests). Added last so it runs outermost.
 - CORS is **opt-in** via `APP_ORIGIN` (never `*` with credentialed cookies).
@@ -262,9 +276,10 @@ little PHP per navigation):
   it after the backend spec changes (CI fails if it's stale). `src/types/index.ts`
   re-exports every entity the API sends as a backend `Structure` from it (`User`,
   `Deck`, `Spread`, `CardReport`, …), so a PHP property change reaches the frontend
-  types with no hand copy. Payloads a controller assembles itself (`Reading` as
-  viewed, `AccountReading`, `UsageStats`, …) and client-only shapes are still
-  written by hand there — keep those in sync with the controller output.
+  types with no hand copy. So do the payloads a controller assembles itself once
+  the spec names them as a schema (`ReadingView`, `UsageStats`, `DeckSystemWithCards`
+  in `OpenApiSpec.php`). Only client-side shapes are written by hand there. The HTTP
+  tests' `assertDocumented()` keeps the spec honest about what each endpoint sends.
 - **Routing/guards:** `src/router/index.ts`. Route `meta` flags drive guards:
   `admin` (requires `is_admin`), `userOnly` (requires login),
   `userGuest` (redirect away if logged in). Page titles come from `meta.title`.
@@ -332,6 +347,7 @@ npm run knip           # unused files, exports and dependencies (knip.ts)
 npm test               # vitest run (single pass)
 npm run test:watch     # vitest watch mode
 npm run test:coverage  # vitest + coverage; fails below the floor in vite.config.ts
+npm run test:e2e       # Playwright smoke run on the built app (npm run build first; see §8)
 npm run gen:types      # regenerate src/types/api.generated.ts from backend/openapi.json
 ```
 
@@ -346,6 +362,7 @@ cd backend
 composer install       # install PHP deps
 composer dev           # PHP built-in server on :80 via dev-router.php (the API backend)
 composer test          # run PHPUnit (auto-discovers backend/phpunit.xml)
+composer test:coverage # PHPUnit + coverage; fails below the floor in bin/coverage-check.php
 composer stan          # PHPStan static analysis (backend/phpstan.neon, level 8, --memory-limit=512M baked in)
 composer lint          # php-cs-fixer check (the code style CI enforces)
 composer lint:fix      # php-cs-fixer fix (apply it)
@@ -497,9 +514,27 @@ scripts/retention.php --dry-run`.
 
 ## 8. Testing conventions
 
-- **Frontend (Vitest):** specs live in `src/__tests__/*.spec.ts`. Config in
-  `vite.config.ts` (`environment: happy-dom`, `restoreMocks`, `unstubGlobals`,
-  setup file `vitest.setup.ts`). Test composables and utils as units.
+- **Frontend (Vitest):** specs live flat in `src/__tests__/*.spec.ts`, named after
+  the unit. Config in `vite.config.ts` (`environment: happy-dom`, `restoreMocks`,
+  `unstubGlobals`, setup file `vitest.setup.ts`). Composables and utils are tested
+  as units; components and views with `@vue/test-utils` through
+  `src/__tests__/helpers/app.ts`: `mountWithApp` (as `main.ts` mounts: the global
+  FontAwesome components and a router on the real route table,
+  `src/router/routes.ts`, without the guards; attached to `document.body`, where
+  Reka portals dialogs, tooltips and combobox lists, so query `document.body` for
+  those), `afterEach(cleanup)`, `stubApi({ 'GET /decks': { body: [...] } })` (an
+  unexpected call fails the test, so a spec states every call its view makes),
+  `testUser` and `signIn`. Module-level state (the signed-in user, toasts,
+  favourites) lasts a whole spec file: reset it in `beforeEach`.
+  `npm run test:coverage` fails below the floor in `vite.config.ts`.
+- **Smoke run (Playwright, `npm run test:e2e`, CI job "Smoke"):** `e2e/smoke.spec.ts`
+  draws a reading, reports a card and finds the report as admin, on the **built**
+  app: `npm run build` first. `playwright.config.ts` starts PHP's built-in server
+  with `e2e/server/router.php` (`backend/.htaccess`'s routing: the SPA through
+  `og.php` and its CSP, `/api` through the Slim app), after `e2e/server/prepare.php`
+  seeds a throwaway `TAROT_DATA_DIR` (temp dir) and copies `dist/` to
+  `backend/dist/` (gitignored), where `og.php` reads the shell. Locally on Windows
+  it drives the installed Edge; CI installs Chromium.
 - **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites. Config
   (`phpunit.xml`) treats warnings/deprecations/notices as failures
   (`failOnWarning/Deprecation/Notice`) — keep tests clean.
@@ -518,6 +553,11 @@ scripts/retention.php --dry-run`.
     test (no SMTP, Turnstile or OAuth; not production) and each test gets its own
     client IP so the file-backed rate limiters don't collide. Use these for
     status codes, error bodies, auth and anything that crosses layers.
+    `replaceService()` swaps in a stand-in for something that talks to the outside
+    world (Google, SMTP) before the first request.
+  - PHPStan analyses `tests/` too, at the same level as the app.
+    `composer test:coverage` (CI) fails when line or method coverage drops below
+    the floor in `bin/coverage-check.php`; locally it needs Xdebug or pcov.
 - Add/extend tests when you change logic in services, repositories, composables,
   or utils.
 
@@ -534,9 +574,12 @@ scripts/retention.php --dry-run`.
   Nothing private may live in the web root (AUDIT.md §1.0).
 - Separately, a gitignored **`.npmrc`** at `frontend/` must hold the FontAwesome
   Pro registry auth token for `npm install` to resolve the icon packages (see §6).
-- Key vars: `APP_ENV` (`development`/`production`), `APP_ORIGIN` (CORS),
-  `APP_URL` (links in emails), `SMTP_*` / `MAIL_*` (transactional email),
-  `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` (optional OAuth).
+- Key vars: `APP_ENV` (`development`/`production`, case-insensitive),
+  `APP_ORIGIN` (CORS), `APP_URL` (links in emails), `SMTP_*` / `MAIL_*`
+  (transactional email), `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI` (optional
+  OAuth), `CLOUDFLARE_TURNSTILE_*` (login and contact form, optional),
+  `PROTECTED_ADMIN_EMAILS` (comma-separated accounts no one can demote or
+  delete; set it on production).
 - When `APP_ENV=production`: detailed errors are hidden, session cookies get the
   Secure flag, and the DI container is compiled. Never leak stack traces in prod.
 - When SMTP is unconfigured outside production, the activation link is returned

@@ -28,7 +28,7 @@ class AdminDashboardController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Usage statistics',
-                content: new OAS\MediaType\Json(type: 'object')
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/UsageStats')
             ),
         ]
     )]
@@ -50,7 +50,27 @@ class AdminDashboardController extends AbstractController
             new OAS\Response(
                 response: 200,
                 description: 'Dashboard counts + stats',
-                content: new OAS\MediaType\Json(type: 'object')
+                content: new OAS\MediaType\Json(
+                    required: ['counts', 'stats'],
+                    properties: [
+                        new OAS\Property(property: 'counts', schema: new OAS\Schema(
+                            description: 'Row counts for the dashboard tiles.',
+                            type: 'object',
+                            required: ['deckSystems', 'decks', 'specialCards', 'spreads', 'readings', 'changelog', 'users', 'unreadContacts'],
+                            properties: [
+                                new OAS\Property(property: 'deckSystems', schema: new OAS\Schema(description: 'Approved and pending.', type: 'integer')),
+                                new OAS\Property(property: 'decks', schema: new OAS\Schema(description: 'Approved and pending.', type: 'integer')),
+                                new OAS\Property(property: 'specialCards', schema: new OAS\Schema(type: 'integer')),
+                                new OAS\Property(property: 'spreads', schema: new OAS\Schema(description: 'Public spreads.', type: 'integer')),
+                                new OAS\Property(property: 'readings', schema: new OAS\Schema(type: 'integer')),
+                                new OAS\Property(property: 'changelog', schema: new OAS\Schema(type: 'integer')),
+                                new OAS\Property(property: 'users', schema: new OAS\Schema(type: 'integer')),
+                                new OAS\Property(property: 'unreadContacts', schema: new OAS\Schema(description: 'Contact messages not yet marked read.', type: 'integer')),
+                            ]
+                        )),
+                        new OAS\Property(property: 'stats', schema: new OAS\Schema(ref: '#/components/schemas/UsageStats')),
+                    ]
+                )
             ),
         ]
     )]
@@ -72,7 +92,11 @@ class AdminDashboardController extends AbstractController
         tags: ['Admin · Dashboard'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         responses: [
-            new OAS\Response(response: 200, description: 'Admin session is valid'),
+            new OAS\Response(
+                response: 200,
+                description: 'Admin session is valid',
+                content: new OAS\MediaType\Json(required: ['authenticated'], properties: [new OAS\Property(property: 'authenticated', schema: new OAS\Schema(type: 'boolean'))])
+            ),
         ]
     )]
     public function checkAuth(Request $request, Response $response): Response|ResponseInterface

@@ -87,7 +87,6 @@ final class ProductionSchemaReadsTest extends TestCase
         $this->assertNotNull($spread);
         $this->assertCount(1, $spreads->retrieve($user->user_id));
         $this->assertCount(1, $spreads->retrieve($user->user_id, $spread->user_spread_id));
-        $this->assertNotNull($spreads->findById($spread->user_spread_id));
     }
 
     public function testSpreadAndChangelogReads(): void

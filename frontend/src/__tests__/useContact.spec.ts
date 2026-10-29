@@ -22,8 +22,25 @@ describe('useContact.sendMessage', () => {
     expect(fetchMock).toHaveBeenCalledWith('/api/contacts', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: 'Alice', email: 'alice@example.test', message: 'Hello there' }),
+      body: JSON.stringify({
+        name: 'Alice',
+        email: 'alice@example.test',
+        message: 'Hello there',
+        turnstile_token: '',
+      }),
     })
+  })
+
+  it('sends the solved Turnstile challenge along', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({ success: true }, { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await useContact().sendMessage(message, 'cf-token')
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/contacts',
+      expect.objectContaining({ body: expect.stringContaining('"turnstile_token":"cf-token"') }),
+    )
   })
 
   it("passes the server's validation message through", async () => {

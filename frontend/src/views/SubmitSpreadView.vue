@@ -33,9 +33,9 @@ async function submitSpread(payload: {
   positions: SpreadPosition[]
 }) {
   if (saveMode.value === 'personal') {
-    const spread = await createUserSpread(payload)
-    if (!spread) {
-      editorRef.value?.setError('Failed to save the spread. Please try again.')
+    const saved = await createUserSpread(payload)
+    if (!saved.ok) {
+      editorRef.value?.setError(saved.error)
       return
     }
     toasts.success('Spread saved to your personal collection!')

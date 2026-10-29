@@ -31,7 +31,7 @@ verification are listed at the end so nobody re-chases them.
 
 ## Status (2026-10-28, end of day)
 
-**35 items done, 33 open — 12 of the open ones are §9 product features.**
+**40 items done, 28 open — 12 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
@@ -43,13 +43,13 @@ verification are listed at the end so nobody re-chases them.
 | 5 | Standards | 9 | 0 | — (`eslint-plugin-vuejs-accessibility` is tracked in §6.1) |
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
-| 8 | Tests | 2 | 5 | More HTTP tests, Data classes, 7 composables, component tests, Playwright, coverage |
+| 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
 | 9 | Product | 0 | 12 | All |
 
-**Edited but not yet committed/deployed** (as of this writing): all of §7.2–7.4.
-Needs a backend deploy (`composer.lock` changed, so it runs `composer install`;
-`openapi.json`) and a frontend deploy (the combobox search fix, regenerated
-types). The plugin change waits for its next release.
+**Edited but not yet committed/deployed** (as of this writing): all of §8 and
+the decisions it raised, as version 5.0.0. **Run `db/migrate_sessions_user_id.php`
+on prod before the backend deploy**, then deploy both. The plugin's
+ProtectedData bump (§7.4) waits for its next release.
 
 ## Decisions and production facts (2026-10-28)
 
@@ -1551,10 +1551,13 @@ plugin is never compiled in CI, and no bot watches dependencies.
 ## 8. Tests
 
 At audit time: backend 240 tests / 638 assertions (unit only); frontend 132
-tests across 17 specs (utils + composables only). **Now (2026-10-28, end of
-day): backend 301 tests / 1,163 assertions (unit + 34 HTTP); frontend 166 tests
-across 24 specs** (still utils + composables only). Coverage is still not
-measured anywhere (`coverage: none` in CI).
+tests across 17 specs (utils + composables only). **After §8 (2026-10-28):
+backend 752 tests / 7,187 assertions, 95.7% of lines and 89.1% of methods
+covered (from 55.6% / 47.9%); frontend 1,063 tests across 95 specs, 97.5% of
+lines (from 10.5%); plus a Playwright smoke run.** Both CI jobs fail below a
+coverage floor. The tests found more than thirty bugs, all fixed (see "Found by
+the §8 tests" below), and raised policy questions the owner then decided ("Open
+from §8", implemented).
 
 - [x] **8.1 No HTTP-level tests at all.** [high] [M]
   All 14 controllers and all three auth middleware (`UserAuth`, `AdminAuth`,
@@ -1609,16 +1612,47 @@ measured anywhere (`coverage: none` in CI).
   - *Since:* `ReadingPayloadsTest` (4 tests, §4.4 follow-up) checks every
     reading endpoint's response against its documented schema — 34 HTTP tests
     in all.
-- [ ] **8.2 Untested Data classes:** `ChangelogData`, `SpecialCardData`,
+  - **The next targets — DONE 2026-10-28.** Every controller now has HTTP tests
+    (about 350 more): account ownership (one user can't read, change, delete,
+    favourite or submit another's readings, spreads or tokens), the reading
+    lifecycle (password-protected readings, draw more, finalize, placement,
+    custom readings, rate limits), the plugin's PKCE link (loopback-only
+    redirects, verifier, single use, expiry, what the token opens), every admin
+    controller's round trips and approvals, public submissions, registration,
+    activation, password reset, login (enumeration, rate limits, Turnstile,
+    remember-me), Google sign-in/link/unlink (with a stand-in for Google via the
+    new `replaceService()`), and passkeys including a **full WebAuthn ceremony**
+    (the test acts as the authenticator, through lbuchs' real verification).
+    Controllers are at 90–100% of lines; what's left is unreachable defence.
+    `assertDocumented()` now runs on every documented 2xx body and understands
+    `allOf`; the endpoints whose bodies the spec didn't describe (17 of them, and
+    `GET /account/favorite-decks`, documented as `Deck[]` but sending ids) are
+    documented, so the frontend types for them come from the spec.
+  - **`tests/Unit` is under PHPStan now** (184 findings fixed, no suppressions),
+    so all of `tests/` is analysed at level 8 + strict rules. `phpunit.xml` fails
+    on PHPUnit's own deprecations, notices and warnings too, so a move to
+    PHPUnit 14 (13.4.5 is the newest stable) is a bump and a run.
+- [x] **8.2 Untested Data classes:** `ChangelogData`, `SpecialCardData`,
   `FavoriteDeckData`. [low] [S] Same in-memory pattern as `CardReportDataTest`.
-- [ ] **8.3 Zero component/view tests on the frontend.** [medium] [M]
+  - **DONE 2026-10-28:** unit tests for all three (100% each), plus `Env`,
+    `Connection`'s pragmas and `Mailer` without SMTP.
+- [x] **8.3 Zero component/view tests on the frontend.** [medium] [M]
   Add `@vue/test-utils` and start with the interactive components:
   `CardReportDialog`, `LightboxOverlay` (keyboard + report gating),
   `DeckComboBox`, `ConfirmDialog`, `ToggleSwitch`, `SegmentedControl`.
   - The combobox search went unnoticed from the Reka migration until §7.3's
     browser check; a test that types into `DeckComboBox` / `SpreadComboBox` and
     reads the options would have failed from day one.
-- [ ] **8.4 Untested composables:** `useAccount`, `useChangelog`,
+  - **DONE 2026-10-28.** `@vue/test-utils` and a shared harness
+    (`src/__tests__/helpers/`: `mountWithApp` on the real route table, typed
+    props, `stubApi` that fails a test on any call it didn't declare, `page.ts`
+    for whole pages). Every component and every view now has a spec (about 700
+    tests): the shared components, the reading views (`ReadingView` alone ~50),
+    the account and auth views, the admin views, the submission views and
+    `App.vue`, plus the router guards. The `DeckComboBox` spec fails 3 of 5
+    against the old search bug. `router/routes.ts` now holds the route table so
+    specs build a router on it without the guards.
+- [x] **8.4 Untested composables:** `useAccount`, `useChangelog`,
   `useFavoriteDecks`, `useFavoriteSpreads`, `usePanZoom`, `usePasskeys`
   (272 lines; mock `navigator.credentials`), `usePluginLink`,
   `useReadingExport` (393 lines; canvas — at least the layout math),
@@ -1628,12 +1662,107 @@ measured anywhere (`coverage: none` in CI).
     `useSubmissions`). **Still untested:** `useChangelog`, `useFavoriteSpreads`,
     `usePanZoom`, `usePluginLink`, `useReadingExport`, `useSpreads`.
     (`utils/seo.ts` and `utils/deck.ts` got specs in §7.3.)
+  - **DONE 2026-10-28:** every composable is at 100% of lines, `useReadingExport`
+    included (a recording fake canvas). `endpoints.spec` checks every path in
+    `api/endpoints.ts` exists in `backend/openapi.json`; `PrivacyPolicyView.spec`
+    checks the page's retention and backup periods against `retention.php` and
+    `tarotgen-backup.sh`, which AGENTS.md says to change together.
 - [x] **8.5 Replace `contactForm.spec.ts`** (§5.5). [low] [S]
-- [ ] **8.6 One Playwright smoke run in CI:** home → new draw → reading →
+- [x] **8.6 One Playwright smoke run in CI:** home → new draw → reading →
   lightbox → report a problem → (seeded admin) Errored Cards shows it. [medium] [M]
   This app is interaction-heavy; one end-to-end path catches whole classes of
   regressions the unit layer can't.
-- [ ] **8.7 Coverage in both CI jobs with thresholds.** [low] [S]
+  - **DONE 2026-10-28** (`npm run test:e2e`, CI job "Smoke"), exactly that path,
+    on the **built** app: PHP's built-in server routed as `backend/.htaccess`
+    routes (`e2e/server/router.php`), so pages go through `og.php` and its CSP,
+    on a seeded throwaway `TAROT_DATA_DIR` (`e2e/server/prepare.php`). It fails on
+    any page error or CSP refusal. Locally it drives the installed Edge; CI
+    installs Chromium. AGENTS.md §8 has the details.
+- [x] **8.7 Coverage in both CI jobs with thresholds.** [low] [S]
+  - **DONE 2026-10-28.** Frontend: the floor in `vite.config.ts` is now 95 / 91 /
+    94 / 96% (statements / branches / functions / lines). Backend: `composer
+    test:coverage` (CI) fails below 94% of lines or 87% of methods
+    (`bin/coverage-check.php`; PHPUnit has no threshold of its own).
+
+### Found by the §8 tests — fixed
+
+Each has a test that fails without its fix.
+
+- **Deleting a deck system still used by a deck, or setting a deck's artist or
+  purchase URL to null, made every deck read answer 500** (a NULL into a
+  non-null `Deck` property): `/decks`, `/admin/decks`, everything. The SELECT
+  now COALESCEs them.
+- **`DELETE /account/spreads/{someone else's id}` answered 204 and deleted every
+  user's favourites of that spread** (`UserSpreadData::delete()` returned
+  `execute()`, always true). Now 404, nothing removed.
+- **Pressing Reset on New Draw / Recreate Draw kept the owner options**: a
+  password typed earlier still locked the next reading.
+- **The plugin's loopback check** read `http://evil.example\@127.0.0.1/` as
+  127.0.0.1 (a browser goes to evil.example). Not exploitable on its own (the
+  SPA checks too, and OriginGuard), but the server check is the real defence;
+  it now matches the SPA's pattern.
+- A deleted account's leftover session could still submit decks and deck
+  systems, and its contact messages and spread submissions failed as a 500
+  (they now go in as a guest's).
+- 500s where the client should hear why: favouriting an unknown deck,
+  registering a passkey already on file, a duplicate deck or deck-system name.
+- Forgot Password showed the green "sent" notice when the request failed
+  (rate limit, offline), and hid the form.
+- The admin special-cards list, filtered to one deck, kept only that deck after
+  a save or delete.
+- The spread picker went blank instead of "No Spread (Free Draw)" after a reset;
+  the first edit on a spread canvas couldn't be undone; every Turnstile widget
+  loaded its own copy of Cloudflare's script; the cookie banner couldn't be
+  dismissed with storage blocked; admin table sorting didn't work from the
+  keyboard (now a button with `aria-sort`; checked visually); Space didn't log
+  out from the mobile menu; the changelog said "no entries yet" while loading
+  and when the request failed; the passkey list took in the registration reply,
+  which has no credential id (it's reloaded now); a footer typo.
+- Refusals that came out as 500s or false successes now say why: duplicate deck
+  and deck-system names (409, renames included), unknown ids (404: approving a
+  missing submission, special cards for a missing deck, contact and card-report
+  updates), required names and titles missing or blanked (400); personal spreads
+  with malformed or no positions (400; the card count follows the positions);
+  saving a personal spread now shows the server's reason.
+- Passkey management and Google unlink checked only for a session id, not the
+  account behind it: now behind `UserAuth`. Google's `email_verified` read the
+  string `"false"` as verified. A plugin token showed as used from issuance; a
+  passkey sign-in returned a stale `last_login_at`.
+- Dead code the coverage report turned up: `CardReport::isResolved()`,
+  `PluginToken::isActive()`, `SpecialCardRepository::get()`.
+
+### Open from §8 — owner's decisions: DONE 2026-10-28
+
+The tests found these policy questions; the owner decided each, and all are
+implemented with tests:
+
+- **Sessions end on a password change** (the other devices; this browser gets a
+  new id) **and on a reset** (all of them), **and when an account is deleted**
+  (by its owner or an admin). Plugin tokens survive (Connected Apps revokes
+  them). Needs `db/migrate_sessions_user_id.php` on prod **before** the backend
+  deploy: `sessions.user_id`, back-filled from existing sessions.
+- **Personal spreads are usable only by their owner** (or the owner's linked
+  plugin); anyone else gets what an unknown id gets.
+- **Unapproved decks and deck systems are admin-only**: 404 to everyone else by
+  id, and no readings from a pending deck; admins' responses aren't cached.
+- **Enumeration closed**: registration with a taken email answers like a new one
+  and emails the owner; password login on an unknown email runs a dummy hash
+  check; passkey login options list stand-in credential ids (keyed by a secret
+  in `<data dir>/db/passkey-decoy.key`, created on first use) for an unknown
+  email, so every address looks alike.
+- **Admins can't remove their own admin flag or delete themselves**, and the
+  accounts in `PROTECTED_ADMIN_EMAILS` (`.env`) can't be demoted or deleted by
+  anyone, their own account page included (403).
+- **Always one way to sign in** (`SignInMethods`): password login can be
+  switched off with a passkey or Google linked; deleting the last passkey or
+  unlinking Google is refused (409) when it would leave none. Google-only
+  accounts see how to set a password by an emailed reset link.
+- `/plugin/token` is rate-limited (10 a minute per IP); the contact form has
+  Turnstile when it's configured; `APP_ENV` is read case-insensitively.
+
+Still noticed, not decided: an approved deck that uses a pending deck system
+shows that system's card names; a card report for a pending deck's card is
+accepted (so reporting a broken image keeps working).
 
 ---
 
@@ -1696,11 +1825,8 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 2. ~~**Dependencies:**~~ done 2026-10-28 (§7). TypeScript 7 waits for vue-tsc
    (owner); `scrollBehavior` → `ScrollRestoration` waits for it to leave
    `vue-router/experimental` (owner's call, §7.3).
-3. **Tests, on the updated stack (PHPUnit too, if a newer one is out):** §8.1's
-   next targets (account ownership, reading flows, plugin PKCE, the other admin
-   controllers), §8.2, §8.4's remainder, then §8.3 component tests and §8.6
-   Playwright; §8.7 coverage thresholds for the backend (the frontend floor is in,
-   §6.1) and raising both.
+3. ~~**Tests**~~ done 2026-10-28 (§8). PHPUnit 13.4.5 is the newest stable.
+   The owner's decisions it found are listed under "Open from §8".
 4. **Open from §6.1:** keyboard favouriting (a design call).
 5. **Features:** §9.1 → §9.4 first.
 ---

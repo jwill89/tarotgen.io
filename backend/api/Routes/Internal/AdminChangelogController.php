@@ -13,6 +13,8 @@ use OpenApi\Spec as OAS;
  */
 class AdminChangelogController extends AbstractController
 {
+    private const string TITLE_REQUIRED = 'Title is required';
+
     public function __construct(
         private readonly ChangelogRepository $changelog,
     ) {
@@ -60,12 +62,18 @@ class AdminChangelogController extends AbstractController
                 description: 'Created changelog entry',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ChangelogEntry')
             ),
+            new OAS\Response(response: 400, description: 'Title is required'),
             new OAS\Response(response: 500, description: 'Failed to create changelog entry'),
         ]
     )]
     public function createChangelogEntry(Request $request, Response $response): Response|ResponseInterface
     {
         $params = $this->parsedBody($request);
+
+        if (self::blankTitle($params['title'] ?? null)) {
+            return $response->withJson(['error' => self::TITLE_REQUIRED], 400);
+        }
+
         $entry = $this->changelog->create($params);
 
         if ($entry === null) {
@@ -101,6 +109,7 @@ class AdminChangelogController extends AbstractController
                 description: 'Updated changelog entry',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ChangelogEntry')
             ),
+            new OAS\Response(response: 400, description: 'Title is blank'),
             new OAS\Response(response: 404, description: 'Changelog entry not found or no valid fields'),
         ]
     )]
@@ -108,6 +117,11 @@ class AdminChangelogController extends AbstractController
     {
         $entry_id = (int)($args['entry_id'] ?? 0);
         $params = $this->parsedBody($request);
+
+        // An edit may leave the title out (it stays as it was), but not blank it.
+        if (array_key_exists('title', $params) && self::blankTitle($params['title'])) {
+            return $response->withJson(['error' => self::TITLE_REQUIRED], 400);
+        }
 
         $entry = $this->changelog->update($entry_id, $params);
 
@@ -144,5 +158,10 @@ class AdminChangelogController extends AbstractController
         }
 
         return $response->withStatus(204);
+    }
+
+    private static function blankTitle(mixed $title): bool
+    {
+        return trim((string)$title) === '';
     }
 }

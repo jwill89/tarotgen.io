@@ -35,7 +35,8 @@ final class CardImageServiceTest extends TestCase
         if (!is_dir($dir)) {
             return;
         }
-        foreach (scandir($dir) ?: [] as $entry) {
+        $entries = scandir($dir);
+        foreach ($entries === false ? [] : $entries as $entry) {
             if ($entry === '.' || $entry === '..') {
                 continue;
             }
@@ -45,6 +46,19 @@ final class CardImageServiceTest extends TestCase
         @rmdir($dir);
     }
 
+    /**
+     * The paths glob() finds for $pattern; none when it reports an error, which
+     * some platforms also do for "no match".
+     *
+     * @return list<string>
+     */
+    private static function filesMatching(string $pattern): array
+    {
+        $paths = glob($pattern);
+
+        return $paths === false ? [] : $paths;
+    }
+
     private function makeCard(int $deckId, int $cardId): string
     {
         $dir = $this->root . '/' . $deckId;
@@ -52,7 +66,9 @@ final class CardImageServiceTest extends TestCase
             mkdir($dir, 0o775, true);
         }
         $im = imagecreatetruecolor(600, 1032);
-        imagefill($im, 0, 0, imagecolorallocate($im, 80, 40, 160));
+        $purple = imagecolorallocate($im, 80, 40, 160);
+        $this->assertIsInt($purple);
+        imagefill($im, 0, 0, $purple);
         $path = sprintf('%s/Card_%04d.png', $dir, $cardId);
         imagepng($im, $path);
 
@@ -140,8 +156,8 @@ final class CardImageServiceTest extends TestCase
         $result = @$this->service->generateForDeck(9);
 
         $this->assertSame(['deck_id' => 9, 'generated' => 0, 'skipped' => 0, 'failed' => 1], $result);
-        $this->assertSame([], glob($this->root . '/9/*.webp*') ?: []);
-        $this->assertSame([], glob($this->root . '/9/thumbs/*') ?: []);
+        $this->assertSame([], self::filesMatching($this->root . '/9/*.webp*'));
+        $this->assertSame([], self::filesMatching($this->root . '/9/thumbs/*'));
     }
 
     public function testMissingDeckFolderYieldsZeroCounts(): void

@@ -262,6 +262,8 @@ function resetForm() {
   selectedSpreadOption.value = null
   freeDrawChosen.value = true
   positionTitles.value = []
+  // Or a password from before the reset would still lock the next reading.
+  ownerOptions.value?.reset()
 }
 
 async function submitNewReading() {

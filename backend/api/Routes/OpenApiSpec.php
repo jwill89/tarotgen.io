@@ -157,6 +157,85 @@ use OpenApi\Utils\Pipeline;
         ),
     ]
 )]
+// What registering a passkey answers with. PasskeyController builds it from what
+// it just stored, which is a Passkey less its credential id.
+#[OAS\Schema(
+    component: 'RegisteredPasskey',
+    description: 'The passkey just registered: its row as the account page lists it (Passkey), without credential_id.',
+    required: ['passkey_id', 'name', 'created_at', 'last_used_at'],
+    properties: [
+        new OAS\Property(property: 'passkey_id', schema: new OAS\Schema(type: 'integer')),
+        new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'The name given, or "My Passkey".', type: 'string')),
+        new OAS\Property(property: 'created_at', schema: new OAS\Schema(description: 'When it was registered, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'last_used_at', schema: new OAS\Schema(description: 'Always null: it has not signed in yet.', type: 'string', nullable: true)),
+    ]
+)]
+// The admin dashboard's usage overview (GET /admin/stats, and `stats` in
+// GET /admin/summary). StatsService aggregates it from the readings table.
+#[OAS\Schema(
+    component: 'UsageStats',
+    description: 'Usage analytics over the stored readings, for the admin dashboard.',
+    required: ['totals', 'byType', 'topDecks', 'topSpreads', 'daily'],
+    properties: [
+        new OAS\Property(property: 'totals', schema: new OAS\Schema(
+            description: 'How many readings are stored, and how many of them are recent.',
+            type: 'object',
+            required: ['readings', 'last7', 'last30'],
+            properties: [
+                new OAS\Property(property: 'readings', schema: new OAS\Schema(description: 'Every stored reading.', type: 'integer')),
+                new OAS\Property(property: 'last7', schema: new OAS\Schema(description: 'Made in the last 7 days.', type: 'integer')),
+                new OAS\Property(property: 'last30', schema: new OAS\Schema(description: 'Made in the last 30 days.', type: 'integer')),
+            ]
+        )),
+        new OAS\Property(property: 'byType', schema: new OAS\Schema(
+            description: 'Every stored reading, by the layout it was given.',
+            type: 'object',
+            required: ['freeDraw', 'spread', 'custom'],
+            properties: [
+                new OAS\Property(property: 'freeDraw', schema: new OAS\Schema(description: 'A free draw never placed in a layout.', type: 'integer')),
+                new OAS\Property(property: 'spread', schema: new OAS\Schema(description: 'Laid out in a public spread.', type: 'integer')),
+                new OAS\Property(property: 'custom', schema: new OAS\Schema(description: 'Laid out in a personal spread, a custom reading, or a placed free draw (spread_id 0).', type: 'integer')),
+            ]
+        )),
+        new OAS\Property(property: 'topDecks', schema: new OAS\Schema(
+            description: 'The (at most 10) decks with the most readings, most first.',
+            type: 'array',
+            items: new OAS\Schema\Items(
+                type: 'object',
+                required: ['deck_id', 'name', 'count'],
+                properties: [
+                    new OAS\Property(property: 'deck_id', schema: new OAS\Schema(type: 'integer')),
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: '"Deck #{deck_id}" for a deck deleted since.', type: 'string')),
+                    new OAS\Property(property: 'count', schema: new OAS\Schema(description: 'Readings drawn from it.', type: 'integer')),
+                ]
+            )
+        )),
+        new OAS\Property(property: 'topSpreads', schema: new OAS\Schema(
+            description: 'The (at most 10) public spreads with the most readings, by name, most first.',
+            type: 'array',
+            items: new OAS\Schema\Items(
+                type: 'object',
+                required: ['name', 'count'],
+                properties: [
+                    new OAS\Property(property: 'name', schema: new OAS\Schema(description: 'The spread\'s name as the readings recorded it ("Untitled" if none).', type: 'string')),
+                    new OAS\Property(property: 'count', schema: new OAS\Schema(description: 'Readings laid out in it.', type: 'integer')),
+                ]
+            )
+        )),
+        new OAS\Property(property: 'daily', schema: new OAS\Schema(
+            description: 'Readings per UTC day over the last 14 days, oldest first; a day with none is left out.',
+            type: 'array',
+            items: new OAS\Schema\Items(
+                type: 'object',
+                required: ['date', 'count'],
+                properties: [
+                    new OAS\Property(property: 'date', schema: new OAS\Schema(description: '"Y-m-d", UTC.', type: 'string')),
+                    new OAS\Property(property: 'count', schema: new OAS\Schema(type: 'integer')),
+                ]
+            )
+        )),
+    ]
+)]
 final class OpenApiSpec
 {
     /**

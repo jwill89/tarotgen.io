@@ -79,13 +79,23 @@ minted via a browser loopback + PKCE consent flow and is individually revocable.
   callback pass through.
 - **CORS** — same-origin by default; cross-origin is enabled only when `APP_ORIGIN` is
   configured (never `*` with credentials).
-- **Account enumeration — a recorded decision, not an oversight.**
-  `POST /auth/register` says when an email or display name is already taken, so
-  someone can tell that an address has an account. `POST /auth/forgot-password`
-  deliberately does **not** (same response either way). Registration keeps the
-  helpful message because a silent failure would strand real users, display names
-  are public anyway, and the endpoint is rate-limited (5 per IP per hour). Don't
-  "fix" either endpoint toward the other without revisiting this trade-off.
+- **No account enumeration.** Nothing tells an outsider whether an email has an
+  account. `POST /auth/register` with a taken email answers exactly like a new
+  sign-up (201, same message), creates nothing, and emails that address's owner a
+  notice instead; `POST /auth/forgot-password` answers the same either way; a
+  password sign-in with an unknown email takes as long as a wrong password; and
+  `POST /auth/passkeys/login/options` with an email lists credentials whether or
+  not it has passkeys (stand-ins when it has none). Only a taken **display name**
+  is reported, since names are public anyway.
+- **Refusals that protect accounts.** `403` when an admin tries to demote or
+  delete their own account, or any account listed in `PROTECTED_ADMIN_EMAILS`
+  (which can't delete itself either). `409` when a change would leave an account
+  no way to sign in (turning password login off, deleting the last passkey,
+  unlinking Google); the message says what to set up first.
+- **Sessions end with the password.** Changing it ends the account's other
+  sessions (the browser that changed it continues under a new session id);
+  resetting it, or deleting the account, ends all of them. Plugin tokens are
+  revoked separately (Connected Apps).
 
 Logging in is done via the auth endpoints (`POST /api/auth/login`, passkeys, or
 Google) — there is no separate admin login.

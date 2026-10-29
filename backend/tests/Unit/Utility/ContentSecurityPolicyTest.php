@@ -16,7 +16,10 @@ final class ContentSecurityPolicyTest extends TestCase
     {
         $out = [];
         foreach (explode(';', $policy) as $part) {
-            $words = preg_split('/\s+/', trim($part)) ?: [];
+            $words = preg_split('/\s+/', trim($part));
+            if ($words === false) {
+                continue;
+            }
             $name = array_shift($words);
             if ($name !== null && $name !== '') {
                 $out[$name] = implode(' ', $words);
