@@ -26,7 +26,7 @@ jobs:
           # submodule fetches on github.com). Falls back to GITHUB_TOKEN locally.
           token: ${{ secrets.ESLINT_CONFIG_TOKEN || github.token }}
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/.nvmrc
           cache: npm
@@ -160,7 +160,7 @@ jobs:
           submodules: recursive # npm ci installs the eslint-config submodule too
           token: ${{ secrets.ESLINT_CONFIG_TOKEN || github.token }}
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version-file: frontend/.nvmrc
           cache: npm
