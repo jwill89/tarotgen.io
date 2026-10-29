@@ -9,9 +9,12 @@
 # clones the repo with its submodules, through the `github` registry below).
 version: 2
 registries:
+  # The repo's .npmrc is gitignored (it holds the token), so the scope says which
+  # packages come from here; Dependabot writes its own .npmrc from it.
   fontawesome:
     type: npm-registry
     url: https://npm.fontawesome.com
+    scope: '@fortawesome'
     token: ${{ secrets.FONTAWESOME_NPM_TOKEN }}
   github:
     type: git
