@@ -31,7 +31,7 @@ verification are listed at the end so nobody re-chases them.
 
 ## Status (2026-10-28, end of day)
 
-**40 items done, 28 open — 12 of the open ones are §9 product features.**
+**53 items done, 16 open — 13 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@ verification are listed at the end so nobody re-chases them.
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
-| 9 | Product | 0 | 12 | All |
+| 9 | Product | 0 | 13 | All, smallest first (§9 is in build order) |
 
 **Edited but not yet committed/deployed** (as of this writing): all of §8 and
 the decisions it raised, as version 5.0.0. **Run `db/migrate_sessions_user_id.php`
@@ -1768,47 +1768,69 @@ accepted (so reporting a broken image keeps working).
 
 ## 9. Product gaps (tools for readers — no interpretations)
 
-Ranked by value against cost. Each is a thin slice over existing data.
+**Ordered smallest change first** (re-ordered 2026-10-29): the order they're
+likely to be built. Tags are [value] [size]. Each is a thin slice over existing
+data, and each ships with its tests (AGENTS.md §8, §10): the coverage floors
+only go up.
 
-- [ ] **9.1 Journal fields and findability.** [high] [M]
-  Add `question` (what was asked) and `querent` (who it was for, free text) to
-  readings, plus tags; then search, filter (deck, spread, tag, date range,
-  text in notes/question) and paging in **My Readings**. Readers keep journals;
-  today a reading has a name and notes, and the list is already unbounded (§2.6).
-- [ ] **9.2 Card frequency for an account.** [high] [S]
+### Small
+
+- [ ] **9.1 "Sign out everywhere."** [medium] [S]
+  A button in Account Settings over a small `POST /account/sessions/end-others`.
+  `DbSessionHandler::destroyForUser()` (§8) already ends every session but this
+  one; the change-password flow uses it. (Split out of the old privacy item.)
+- [ ] **9.2 Admin: close the card-report loop.** [low] [S]
+  An open-reports count on the dashboard (the Errored Cards nav item shows none
+  today: "no server-side count", `admin/DashboardView.vue`), and a "re-scanned →
+  regenerate" action on Errored Cards rows wired to the existing
+  `POST /admin/decks/{id}/images`, so a report is closed in one click.
+- [ ] **9.3 Reversal rate setting** (none / light / standard / heavy, e.g.
+  0/15/27/50%) instead of a boolean. [medium] [S]
+  `ReadingService::REVERSAL_TURN_PROBABILITY` already parameterises it; plumb a
+  per-request value with a server-side clamp, and a segmented control on New
+  Draw.
+- [ ] **9.4 Card frequency for an account.** [high] [S]
   "Which cards keep turning up" over the user's own readings (optionally per
-  deck / per time window). One `json_each` query; readers who journal ask for
-  exactly this.
-- [ ] **9.3 Pick-your-own-cards draw.** [high] [L]
+  deck / per time window). One `json_each` query and a panel; readers who
+  journal ask for exactly this.
+- [ ] **9.5 Export.** [low] [S–M]
+  A print stylesheet for a reading (print-to-PDF covers PDF), and a JSON + CSV
+  export of the whole journal from Account Settings.
+- [ ] **9.6 Daily card** with a calendar view of past draws. [low] [S–M]
+  Needs one draw stored per user per day (a reading flagged as the daily card,
+  or a small table) and a calendar page.
+
+### Medium
+
+- [ ] **9.7 Public deck pages** (`/decks/{id}`: name, artist, purchase link,
+  card gallery). [medium] [M]
+  `GET /decks/{id}/cards` already exists (approved decks only since §8). Preview
+  before drawing, SEO landing pages (sitemap + `og.php` meta), and a natural
+  home for "report a problem".
+- [ ] **9.8 Table / presentation mode** for in-person readings: full screen,
+  chrome hidden, large cards, keyboard flip and advance, plus a QR code for the
+  share link (readers hand a phone to the client). [medium] [M]
+  Frontend only.
+- [ ] **9.9 Journal fields and findability.** [high] [M]
+  Add `question` (what was asked) and `querent` (who it was for, free text) to
+  readings, plus tags; then search and filter (deck, spread, tag, date range,
+  text in notes/question) in **My Readings**, which already pages (§2.6). A
+  migration, query parameters on `GET /account/readings`, and the UI.
+- [ ] **9.10 Privacy levels.** [medium] [M]
+  Unlisted / private (today: public-by-link or password), and an optional
+  expiry on a guest reading. A migration and an access rule on every reading
+  read (`ReadingController`, `og.php` share meta, the plugin routes).
+- [ ] **9.11 Spread library polish:** categories/tags + search, fork-a-spread
+  into My Spreads, per-position descriptions (today titles only). [low] [M]
+
+### Large
+
+- [ ] **9.12 Pick-your-own-cards draw.** [high] [L]
   Fan the shuffled deck face-down and let the user tap cards to fill positions
   in order, instead of the server dealing the top N. Server stays authoritative
   (shuffle once per reading, store the permutation, reveal on pick). The
   single biggest ritual gap for people who actually do readings.
-- [ ] **9.4 Reversal rate setting** (none / light / standard / heavy, e.g.
-  0/15/27/50%) instead of a boolean. [medium] [S] `ReadingService::REVERSAL_TURN_PROBABILITY`
-  already parameterises it; plumb a per-request value with a server-side clamp.
-- [ ] **9.5 Public deck pages** (`/decks/{id}`: name, artist, purchase link,
-  card gallery). [medium] [M] `GET /decks/{id}/cards` already exists. Preview
-  before drawing, SEO landing pages, and a natural home for "report a problem".
-- [ ] **9.6 Table / presentation mode** for in-person readings: full screen,
-  chrome hidden, large cards, keyboard flip and advance, plus a QR code for the
-  share link (readers hand a phone to the client). [medium] [M]
-- [ ] **9.7 Privacy levels and session control.** [medium] [M]
-  Unlisted / private (today: public-by-link or password), optional expiry on
-  guest readings, and "sign out everywhere" (the `sessions` table makes the
-  last one trivial).
-- [ ] **9.8 Daily card** with a calendar view of past draws. [low] [S]
-- [ ] **9.9 Spread library polish:** categories/tags + search, fork-a-spread
-  into My Spreads, per-position descriptions (today titles only). [low] [M]
-- [ ] **9.10 Export:** print stylesheet / PDF for a reading; JSON (and CSV)
-  export of the whole journal from Account Settings. [low] [S–M]
-- [ ] **9.11 Admin:** open-card-reports count on the dashboard (the code notes
-  it is missing, `admin/DashboardView.vue:42`), and a "re-scanned → regenerate
-  thumbnail" action on Errored Cards rows wired to the existing
-  `POST /admin/decks/{id}/images` (renamed from `…/thumbnails` in §3.2), so the
-  reporting loop closes in one click.
-  [low] [S]
-- [ ] **9.12 PWA offline for saved readings.** [low] [L] `sw.js` is a
+- [ ] **9.13 PWA offline for saved readings.** [low] [L] `sw.js` is a
   pass-through today (correctly, to avoid stale deploys); a reading-scoped cache
   is a later project.
 
@@ -1828,7 +1850,7 @@ except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 3. ~~**Tests**~~ done 2026-10-28 (§8). PHPUnit 13.4.5 is the newest stable.
    The owner's decisions it found are listed under "Open from §8".
 4. **Open from §6.1:** keyboard favouriting (a design call).
-5. **Features:** §9.1 → §9.4 first.
+5. **Features:** in §9's order, smallest first.
 ---
 
 ## Appendix A — Claims that did not survive verification

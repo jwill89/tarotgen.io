@@ -454,12 +454,21 @@ anything is touched. Unpacked files get root ownership, 644/755 modes and the
 extraction time, as the old per-file upload left them. Per-file uploading cost
 ~0.15 s a file (240 files ≈ 35 s); the tarballs total ~0.8 MB.
 
-**Automation.** `.github/workflows/ci.yml` (frontend, backend, scripts, then the
-release tag), `plugin.yml` (when `plugin/` changes) and `codeql.yml` (frontend,
-plugin and workflows; CodeQL has no PHP). `.github/dependabot.yml` opens weekly
-grouped updates for npm, Composer, NuGet and Actions; TypeScript's major is held
-(see §2). Dependabot can't read Actions secrets: `FONTAWESOME_NPM_TOKEN` and
-`ESLINT_CONFIG_TOKEN` must also exist as **Dependabot** secrets.
+**Automation.** `.github/workflows/ci.yml` (frontend, backend, the Playwright
+smoke run, scripts, then the release tag, which waits for all four),
+`plugin.yml` (when `plugin/` changes) and `codeql.yml` (frontend, plugin and
+workflows; CodeQL has no PHP). `.github/dependabot.yml` opens weekly grouped
+updates for npm, Composer, NuGet and Actions; TypeScript's major is held (see
+§2). Dependabot can't read Actions secrets: `FONTAWESOME_NPM_TOKEN` and
+`ESLINT_CONFIG_TOKEN` also exist as **Dependabot** secrets (both checked out by
+CI on its pull requests). Every update job clones the repo with the private
+`eslint-config` submodule, so each ecosystem lists the `github` git registry;
+the Font Awesome registry needs its `scope` (`@fortawesome`), because the
+repo's `.npmrc` is gitignored.
+
+**A release with a migration** runs it on production first (backup, then
+`runuser -u www-data -- php db/migrate_x.php`), then deploys (§10 "Schema
+changes").
 
 **Backups.** `/etc/cron.d/tarotgen` runs `/usr/local/sbin/tarotgen-backup` at 03:17
 UTC: an online `.backup` of the DB, integrity-checked, gzipped into
@@ -555,11 +564,15 @@ scripts/retention.php --dry-run`.
     status codes, error bodies, auth and anything that crosses layers.
     `replaceService()` swaps in a stand-in for something that talks to the outside
     world (Google, SMTP) before the first request.
-  - PHPStan analyses `tests/` too, at the same level as the app.
+  - PHPStan analyses `tests/` too, at the same level as the app, and
+    `phpunit.xml` fails the run on PHPUnit's own deprecations, notices and
+    warnings, so a deprecated PHPUnit API is caught as soon as it's used and a
+    PHPUnit major is a bump and a run.
     `composer test:coverage` (CI) fails when line or method coverage drops below
     the floor in `bin/coverage-check.php`; locally it needs Xdebug or pcov.
-- Add/extend tests when you change logic in services, repositories, composables,
-  or utils.
+- **Every change ships with its tests** — routes, services, composables,
+  components and views alike, and a bug fix with the test that would have caught
+  it. What each needs is in §10; the coverage floors never go down.
 
 ---
 
@@ -589,6 +602,58 @@ scripts/retention.php --dry-run`.
 
 ## 10. Conventions & expectations for changes
 
+- **Every change ships with its tests — no exceptions for small features.**
+  Coverage is held high on purpose (AUDIT §8: ~96% of backend lines, ~97% of
+  frontend lines), and the floors in `vite.config.ts` and
+  `backend/bin/coverage-check.php` **never go down**; raise them when coverage
+  rises. For each change:
+  - **Backend:** an HTTP test (`tests/Http`) for every new or changed route —
+    the success path with `assertDocumented()`, its 400s, 401/403, 404, and
+    what lands in the database — plus unit tests for new service or Data logic.
+    List in `#[CoversClass]` every class a test really checks: PHPUnit credits
+    coverage only to the classes listed.
+  - **Frontend:** a spec for every new composable, component and view
+    (`src/__tests__/helpers/`), covering the states and error paths a user can
+    reach, not just the happy path.
+  - A change on the core path (draw → reading → lightbox → report → admin)
+    updates `e2e/smoke.spec.ts`.
+  - **A bug fix comes with the test that would have caught it.** A finding that
+    is really a product decision gets asked, not suppressed or skipped.
+- **Versioning starts again from 5.0.0** (2026-10-28). The version lives in
+  `frontend/package.json`; bump it together with its `CHANGELOG.md` section in
+  the same commit (minor for a feature, patch for fixes, major for a breaking
+  API or plugin change), and CI tags and releases it. Changes between releases
+  collect under `## [Unreleased]`.
+- **Refusals** follow API.md: 400 validation, 401 not signed in, 403 not
+  allowed (e.g. a protected admin), **404 for anything the requester may not
+  see** as well as unknown ids (another user's reading or personal spread, a
+  pending deck), so ids can't be probed; 409 conflicts (a taken name, a change
+  that would leave no way to sign in); 429 rate limits. Always `{ error }` with a
+  message a user can read, and the frontend shows that message (`ApiResult.error`
+  from action composables) rather than a fixed one.
+- **Decided security rules** (2026-10-28; AUDIT "Open from §8"), to keep when
+  adding features: personal data (readings, personal spreads, tokens, passkeys)
+  is reachable only by its owner; unapproved submissions only by admins
+  (`AdminAuth::sessionIsAdmin()`), and only responses that are the same for
+  everyone get public cache headers; nothing answers differently for an
+  existing and an unknown account; a new public form or auth endpoint gets a
+  `RateLimiter` and, when configured, Turnstile (as login and contact do); a
+  password change or reset ends sessions; admins can't demote or delete
+  themselves, and `PROTECTED_ADMIN_EMAILS` accounts can't be demoted or deleted;
+  an account always keeps one way to sign in (`SignInMethods`).
+- **Schema changes are additive and migrate before deploy:** a new
+  `db/migrate_*.php` (idempotent; the `db/` scripts are gitignored, so it's
+  copied to the droplet by hand), `db/schema.sql` edited by hand (never
+  regenerated wholesale from a local DB — that drops a table and reorders), and
+  run on production **before** the backend deploy that needs it. Design it so
+  the old code keeps working on the new schema.
+- **Held or deferred on purpose — leave them unless the reason is gone:**
+  TypeScript stays on 6 until `vue-tsc` supports TypeScript 7.1; PHPStan is
+  held at 2.3.3 (`conflict` in `composer.json`) until Rector works with 2.3.4;
+  `scrollBehavior` stays until vue-router's `ScrollRestoration` leaves
+  `vue-router/experimental` (and Back should then restore position — the
+  owner's call); favouriting from the keyboard inside the deck/spread combobox
+  lists is an open design question (AUDIT §6.1).
 - **Match existing patterns.** New backend resource? Add a `Structure`, `Data`,
   `Repository`, optional `Service`, a `Controller` extending
   `AbstractController`, a route group in `api/app.php`, and a `tests/Http` test
