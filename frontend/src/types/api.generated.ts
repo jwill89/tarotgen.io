@@ -852,7 +852,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Get a public spread
+         * @description One spread for the admin editor: uncached, unlike GET /spreads/{id}, which
+         *     the browser keeps for five minutes and would hand back a spread as it was
+         *     before an edit.
+         */
+        get: operations["ebdcb34eee256c4b1279af08caa78779"];
         /** Update a public spread */
         put: operations["cd4508c20a4678781e41fe0efc685565"];
         post?: never;
@@ -3371,6 +3377,10 @@ export interface operations {
                             unreadContacts: number;
                             /** @description Reported cards not yet resolved (one per card). */
                             openCardReports: number;
+                            /** @description Spread submissions waiting for review. */
+                            pendingSpreads: number;
+                            /** @description Deck system submissions waiting for review (also in deckSystems). */
+                            pendingDeckSystems: number;
                         };
                         stats: components["schemas"]["UsageStats"];
                     };
@@ -4278,6 +4288,35 @@ export interface operations {
             };
             /** @description Failed to create spread */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ebdcb34eee256c4b1279af08caa78779: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The spread */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Spread"];
+                };
+            };
+            /** @description Spread not found */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

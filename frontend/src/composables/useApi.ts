@@ -23,6 +23,7 @@ export function useAdminApi() {
     path: string,
     options: RequestInit = {},
     successMessage?: string,
+    { quiet = false }: { quiet?: boolean } = {},
   ): Promise<ApiResult<T>> {
     const res = await apiRequest<T>('/admin' + path, { headers: JSON_HEADERS, ...options })
 
@@ -31,7 +32,7 @@ export function useAdminApi() {
         // Session expired or admin was revoked — drop to the login screen.
         currentUser.value = null
         void router.push({ name: 'login' })
-      } else {
+      } else if (!quiet) {
         // Surface the server's message (or the transport error) so admins see
         // why an action failed; log the body/status for post-mortem.
         toastError(res.error, { detail: { status: res.status, body: res.data } })
@@ -56,6 +57,15 @@ export function useAdminApi() {
     return request<T>(path)
   }
 
+  /**
+   * A GET for a page that shows its own failure (a "not found" state): the whole
+   * result, status and message included, with nothing toasted. A 401 still
+   * drops to the login page.
+   */
+  function getResult<T>(path: string): Promise<ApiResult<T>> {
+    return requestResult<T>(path, {}, undefined, { quiet: true })
+  }
+
   function post<T>(path: string, data: unknown, successMessage?: string) {
     return request<T>(path, { method: 'POST', body: JSON.stringify(data) }, successMessage)
   }
@@ -78,5 +88,5 @@ export function useAdminApi() {
     return (res.data ?? true) as T
   }
 
-  return { get, post, put, patch, del }
+  return { get, getResult, post, put, patch, del }
 }

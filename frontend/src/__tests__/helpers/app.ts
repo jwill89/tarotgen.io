@@ -1,5 +1,5 @@
 import { mount, flushPromises, type ComponentMountingOptions } from '@vue/test-utils'
-import { createRouter, createMemoryHistory, type Router } from 'vue-router'
+import { createRouter, createMemoryHistory, createWebHistory, type Router } from 'vue-router'
 import { FontAwesomeIcon, FontAwesomeLayers } from '@fortawesome/vue-fontawesome'
 import { routes } from '@/router/routes'
 import { useUser } from '@/composables/useUser'
@@ -10,6 +10,21 @@ export { stubApi } from './api'
 /** A router on the app's real route table (names, meta), without its guards. */
 export function testRouter(): Router {
   return createRouter({ history: createMemoryHistory(), routes })
+}
+
+const webRouters = new Set<Router>()
+
+/**
+ * testRouter on the window's own history (happy-dom's) instead of a memory one,
+ * for specs about Back: only there does vue-router keep the previous entry in
+ * history.state, and window.history.back() fires the popstate it listens for.
+ * Each starts afresh at `/` with no state; cleanup() stops it listening.
+ */
+export function testWebRouter(): Router {
+  window.history.replaceState(null, '', '/')
+  const router = createRouter({ history: createWebHistory(), routes })
+  webRouters.add(router)
+  return router
 }
 
 const mounted = new Set<{ unmount(): void }>()
@@ -54,6 +69,8 @@ export async function mountWithApp<T>(
 export async function cleanup(): Promise<void> {
   for (const wrapper of mounted) wrapper.unmount()
   mounted.clear()
+  for (const router of webRouters) router.options.history.destroy()
+  webRouters.clear()
   await flushPromises()
   document.body.innerHTML = ''
 }

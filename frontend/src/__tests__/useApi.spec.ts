@@ -7,6 +7,7 @@ vi.mock('vue-router', () => ({ useRouter: () => ({ push: pushMock }) }))
 
 import { apiFetch, apiRequest, useAdminApi, readApiError } from '@/composables/useApi'
 import { useUser } from '@/composables/useUser'
+import { useToasts } from '@/composables/useToasts'
 
 /** Build a minimal Response-like object for the fetch mock. */
 function fakeResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
@@ -282,5 +283,59 @@ describe('useAdminApi', () => {
   it('returns null when fetch rejects', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
     expect(await useAdminApi().get('/decks')).toBeNull()
+  })
+
+  it('toasts why a GET failed', async () => {
+    useToasts().toasts.value = []
+    // The toast is mirrored to the console; keep the run quiet.
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(fakeResponse({ error: 'Spread not found' }, { ok: false, status: 404 })),
+    )
+
+    await useAdminApi().get('/spreads/99')
+
+    expect(useToasts().toasts.value.map((t) => t.message)).toEqual(['Spread not found'])
+  })
+
+  it('getResult hands a page the whole failure to show itself, toasting nothing', async () => {
+    useToasts().toasts.value = []
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValue(fakeResponse({ error: 'Spread not found' }, { ok: false, status: 404 })),
+    )
+
+    const result = await useAdminApi().getResult('/spreads/99')
+
+    expect(result).toMatchObject({ ok: false, status: 404, error: 'Spread not found' })
+    expect(useToasts().toasts.value).toEqual([])
+    expect(pushMock).not.toHaveBeenCalled()
+  })
+
+  it('getResult returns the data on success', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(fakeResponse({ spread_id: 1 })))
+
+    expect(await useAdminApi().getResult('/spreads/1')).toMatchObject({
+      ok: true,
+      data: { spread_id: 1 },
+    })
+  })
+
+  it('getResult still drops to the login page on a 401', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(fakeResponse(null, { ok: false, status: 401 })),
+    )
+
+    const result = await useAdminApi().getResult('/spreads/1')
+
+    expect(result.ok).toBe(false)
+    expect(useUser().currentUser.value).toBeNull()
+    expect(pushMock).toHaveBeenCalledWith({ name: 'login' })
   })
 })

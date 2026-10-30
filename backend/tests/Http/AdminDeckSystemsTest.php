@@ -52,11 +52,32 @@ final class AdminDeckSystemsTest extends HttpTestCase
         $this->assertSame(['Lenormand', 'Rider-Waite-Smith'], array_column($this->assertJsonResponse(200, $this->get('/deck-systems')), 'name'));
     }
 
+    public function testOneSystemIsReadForTheEditorWithItsCardsAndWithoutACache(): void
+    {
+        $this->system('Rider-Waite-Smith', approved: true);
+        $submitter = $this->createUser('maker@example.test');
+        // The editor opens submissions too, before they are approved.
+        $pending = $this->system('Lenormand', approved: false, submittedBy: $submitter->user_id);
+        $this->service(DeckSystemData::class)->storeCards($pending->deck_system_id, [
+            ['card_id' => 1, 'name' => 'Rider'], ['card_id' => 2, 'name' => 'Clover'],
+        ]);
+
+        $response = $this->get("/admin/deck-systems/{$pending->deck_system_id}");
+
+        $read = $this->assertJsonResponse(200, $response);
+        $this->assertDocumented('get', '/admin/deck-systems/{id}', 200, $read);
+        $this->assertSame(['Lenormand', 'LEN', false, $submitter->user_id], [$read['name'], $read['short_name'], $read['approved'], $read['submitted_by']]);
+        $this->assertSame(['Rider', 'Clover'], array_column($read['cards'], 'name'));
+        // The public GET /deck-systems/{id} is cached for five minutes; an editor must see the last save.
+        $this->assertSame('', $response->getHeaderLine('Cache-Control'));
+    }
+
     public function testASystemThatDoesNotExistIsNotFound(): void
     {
         $notFound = ['error' => 'Deck system not found'];
 
         $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/deck-systems/999')));
+        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/deck-systems/lenormand')));
         $this->assertSame($notFound, $this->assertJsonResponse(404, $this->post('/admin/deck-systems/999/approve')));
         $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('PUT', '/admin/deck-systems/999', ['name' => 'Ghost'])));
         $this->assertSame($notFound, $this->assertJsonResponse(404, $this->request('DELETE', '/admin/deck-systems/999')));

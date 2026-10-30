@@ -1,39 +1,29 @@
 <script setup lang="ts">
-import AdminListPage from '@/components/admin/AdminListPage.vue'
-import AdminSearchField from '@/components/admin/AdminSearchField.vue'
+/**
+ * The approved deck systems: search, sort, and each one's way into the editor
+ * or out of the catalog. Adding and editing, and the submission queue, are
+ * pages of their own, linked from the header.
+ */
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, watch, onMounted } from 'vue'
+import { onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAdminApi } from '@/composables/useApi'
+import { useAdminDeckSystems } from '@/composables/useAdminDeckSystems'
 import { endpoints } from '@/api/endpoints'
 import { useConfirm } from '@/composables/useConfirm'
 import { useDataTable } from '@/composables/useDataTable'
-import { useSubmissions } from '@/composables/useSubmissions'
-import { useToasts } from '@/composables/useToasts'
+import AdminListPage from '@/components/admin/AdminListPage.vue'
+import AdminSearchField from '@/components/admin/AdminSearchField.vue'
+import IconButton from '@/components/IconButton.vue'
 import SortableTh from '@/components/admin/SortableTh.vue'
 import Tooltip from '@/components/Tooltip.vue'
-import IconButton from '@/components/IconButton.vue'
-import NumberField from '@/components/NumberField.vue'
-import DeckCardListEditor from '@/components/DeckCardListEditor.vue'
-import {
-  resizeCards,
-  allCardsNamed,
-  missingNameCount,
-  type DeckCardListEditorApi,
-} from '@/components/deckCards'
-import type { DeckSystem, DeckSystemWithCards, DeckSystemCard } from '@/types'
+import type { DeckSystem } from '@/types'
 
 const api = useAdminApi()
-const { submitDeckSystem } = useSubmissions()
+const router = useRouter()
 const { confirm } = useConfirm()
-const toasts = useToasts()
-
-const systems = ref<DeckSystem[]>([])
-const pendingSystems = ref<DeckSystem[]>([])
-const editingSystem = ref<(Partial<DeckSystemWithCards> & { cards: DeckSystemCard[] }) | null>(null)
-const isNew = ref(false)
-const saving = ref(false)
-
-const cardEditor = ref<DeckCardListEditorApi | null>(null)
+// The queue only for its count, on the Submissions link.
+const { systems, pending, loadSystems, loadPending } = useAdminDeckSystems()
 
 const {
   search,
@@ -52,114 +42,11 @@ const {
   initialSort: 'name',
 })
 
-const allCardTitlesValid = computed(() => allCardsNamed(editingSystem.value?.cards ?? []))
-
-async function fetchSystems() {
-  const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.list)
-  if (data) systems.value = data
+function openEdit(system: DeckSystem): void {
+  void router.push({ name: 'admin-deck-system-edit', params: { id: system.deck_system_id } })
 }
 
-async function fetchPendingSystems() {
-  const data = await api.get<DeckSystem[]>(endpoints.admin.deckSystems.pending)
-  if (data) pendingSystems.value = data
-}
-
-function openAdd() {
-  isNew.value = true
-  editingSystem.value = {
-    name: '',
-    short_name: '',
-    total_cards: 78,
-    cards: resizeCards([], 78),
-  }
-}
-
-async function openEdit(system: DeckSystem) {
-  isNew.value = false
-  const full = await api.get<DeckSystemWithCards>(
-    endpoints.admin.deckSystems.byId(system.deck_system_id),
-  )
-  if (full) {
-    editingSystem.value = { ...full }
-  }
-}
-
-function closeEdit() {
-  editingSystem.value = null
-}
-
-function updateCardCount() {
-  if (!editingSystem.value) return
-  editingSystem.value.cards = resizeCards(
-    editingSystem.value.cards,
-    editingSystem.value.total_cards ?? 78,
-  )
-}
-
-// Watch rather than a native @change listener: Reka's NumberField commits the
-// model on blur/Enter AND on the −/+ steppers, but the steppers set it
-// programmatically, which fires no native `change` — so an @change handler
-// silently missed every stepper click. Typing is safe here because the model is
-// only committed on blur, never per keystroke (NumberFieldInput's onInput
-// updates the displayed text only).
-watch(() => editingSystem.value?.total_cards, updateCardCount)
-
-async function saveSystem() {
-  if (!editingSystem.value) return
-
-  // Validate card names
-  const missing = missingNameCount(editingSystem.value.cards)
-  if (missing > 0) {
-    toasts.error(`${missing} card(s) are missing names.`)
-    cardEditor.value?.revealFirstMissing()
-    return
-  }
-
-  saving.value = true
-  try {
-    let result
-    if (isNew.value) {
-      // There is no admin create route: an admin's submission is approved on arrival.
-      const s = editingSystem.value
-      const res = await submitDeckSystem({
-        name: s.name ?? '',
-        short_name: s.short_name ?? '',
-        total_cards: s.total_cards ?? s.cards.length,
-        cards: s.cards,
-      })
-      if (!res.ok) {
-        toasts.error(res.error)
-        return
-      }
-      result = res.data
-      toasts.success('Deck system created.')
-    } else if (editingSystem.value.deck_system_id !== undefined) {
-      result = await api.put(
-        endpoints.admin.deckSystems.byId(editingSystem.value.deck_system_id),
-        editingSystem.value,
-        'Deck system updated.',
-      )
-    }
-    if (!result) return
-    await Promise.all([fetchSystems(), fetchPendingSystems()])
-    closeEdit()
-  } finally {
-    saving.value = false
-  }
-}
-
-async function approveSystem(system: DeckSystem) {
-  const result = await api.post(
-    endpoints.admin.deckSystems.approve(system.deck_system_id),
-    {},
-    'Deck system approved.',
-  )
-  if (result) {
-    await Promise.all([fetchSystems(), fetchPendingSystems()])
-  }
-}
-
-async function deleteSystem(system: DeckSystem) {
+async function deleteSystem(system: DeckSystem): Promise<void> {
   const ok = await confirm({
     title: 'Delete Deck System',
     message: `Delete "${system.name}"? This will also delete all card data for this system. Decks using this system will need to be reassigned.`,
@@ -171,14 +58,12 @@ async function deleteSystem(system: DeckSystem) {
     endpoints.admin.deckSystems.byId(system.deck_system_id),
     'Deck system deleted.',
   )
-  if (result) {
-    await Promise.all([fetchSystems(), fetchPendingSystems()])
-  }
+  if (result) await loadSystems()
 }
 
 onMounted(() => {
-  void fetchSystems()
-  void fetchPendingSystems()
+  void loadSystems()
+  void loadPending()
 })
 </script>
 
@@ -188,154 +73,22 @@ onMounted(() => {
     subtitle="Manage card naming systems (e.g. Rider-Waite-Smith, Thoth)."
   >
     <template #actions>
-      <button class="button is-primary" :disabled="editingSystem !== null" @click="openAdd">
+      <router-link
+        :to="{ name: 'admin-deck-system-submissions' }"
+        class="button"
+        :aria-label="pending.length ? `Submissions, ${pending.length} waiting` : undefined"
+      >
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['inbox']" /></span>
+        <span>Submissions</span>
+        <span v-if="pending.length" class="tag is-warning is-rounded ml-2">{{
+          pending.length
+        }}</span>
+      </router-link>
+      <router-link :to="{ name: 'admin-deck-system-new' }" class="button is-primary">
         <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']" /></span>
         <span>Add Deck System</span>
-      </button>
+      </router-link>
     </template>
-
-    <!-- Inline Add/Edit Form -->
-    <div v-if="editingSystem" class="settings-panel mb-6 deck-system-editor">
-      <div class="is-flex is-align-items-center is-justify-content-space-between mb-4">
-        <h3 class="title is-4 mb-0">
-          {{ isNew ? 'Add Deck System' : 'Edit Deck System #' + editingSystem.deck_system_id }}
-        </h3>
-        <button class="delete" aria-label="close" @click="closeEdit"></button>
-      </div>
-
-      <div class="columns">
-        <div class="column is-4">
-          <div class="field">
-            <label for="admin-system-name" class="label"
-              >Name <span class="has-text-danger">*</span></label
-            >
-            <input
-              id="admin-system-name"
-              v-model="editingSystem.name"
-              class="input"
-              placeholder="e.g. Rider-Waite-Smith"
-            />
-          </div>
-        </div>
-        <div class="column is-4">
-          <div class="field">
-            <label for="admin-system-short-name" class="label"
-              >Short Name <span class="has-text-danger">*</span></label
-            >
-            <input
-              id="admin-system-short-name"
-              v-model="editingSystem.short_name"
-              class="input"
-              placeholder="e.g. RWS"
-            />
-          </div>
-        </div>
-        <div class="column is-4">
-          <div class="field">
-            <label for="admin-system-total-cards" class="label"
-              >Total Cards <span class="has-text-danger">*</span></label
-            >
-            <NumberField
-              id="admin-system-total-cards"
-              v-model="editingSystem.total_cards"
-              :min="1"
-            />
-          </div>
-        </div>
-      </div>
-
-      <DeckCardListEditor
-        :key="isNew ? 'new' : editingSystem.deck_system_id"
-        ref="cardEditor"
-        v-model="editingSystem.cards"
-        heading-tag="h5"
-        max-height="600px"
-        :initial-open="isNew ? ['0'] : []"
-      >
-        <template #hint>
-          <p class="mb-4 has-text-grey is-size-7">
-            Each card needs a name at minimum. Other fields are optional.
-          </p>
-        </template>
-      </DeckCardListEditor>
-
-      <div class="is-flex is-justify-content-space-between is-align-items-center mt-5">
-        <div>
-          <p v-if="!allCardTitlesValid" class="help is-danger">
-            All cards must have a title before saving.
-          </p>
-        </div>
-        <div class="buttons">
-          <button class="button" @click="closeEdit">Cancel</button>
-          <button
-            class="button is-success"
-            :class="{ 'is-loading': saving }"
-            :disabled="saving || !allCardTitlesValid"
-            @click="saveSystem"
-          >
-            <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['floppy-disk']" /></span>
-            <span>{{ isNew ? 'Create' : 'Save' }}</span>
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pending Submissions -->
-    <div v-if="pendingSystems.length > 0" class="mb-6">
-      <h2 class="title is-4">
-        Pending Submissions
-        <span class="tag is-warning ml-2">{{ pendingSystems.length }}</span>
-      </h2>
-      <div class="settings-panel">
-        <div class="table-container">
-          <table class="table is-fullwidth is-hoverable is-striped">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Short Name</th>
-                <th>Cards</th>
-                <th>Submitted By</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="sys in pendingSystems" :key="sys.deck_system_id">
-                <td>{{ sys.deck_system_id }}</td>
-                <td>{{ sys.name }}</td>
-                <td>{{ sys.short_name }}</td>
-                <td>{{ sys.total_cards }}</td>
-                <td>{{ sys.submitted_by ?? '—' }}</td>
-                <td>
-                  <div class="row-actions">
-                    <IconButton
-                      :icon="byPrefixAndName.fas['check']"
-                      label="Approve"
-                      intent="success"
-                      @click="approveSystem(sys)"
-                    />
-                    <IconButton
-                      :icon="byPrefixAndName.fas['pen-to-square']"
-                      label="Edit"
-                      @click="openEdit(sys)"
-                    />
-                    <IconButton
-                      :icon="byPrefixAndName.fas['trash']"
-                      label="Delete"
-                      intent="danger"
-                      @click="deleteSystem(sys)"
-                    />
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- Approved Systems -->
-    <h2 class="title is-4">Approved Systems</h2>
 
     <AdminSearchField v-model="search" placeholder="Search by name or short name..." />
 
@@ -410,9 +163,3 @@ onMounted(() => {
     </p>
   </AdminListPage>
 </template>
-
-<style scoped>
-.deck-system-editor {
-  border: 2px solid var(--myst-border-strong);
-}
-</style>

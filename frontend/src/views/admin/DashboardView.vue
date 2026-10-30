@@ -21,6 +21,8 @@ const counts = ref({
   users: 0,
   unreadContacts: 0,
   openCardReports: 0,
+  pendingSpreads: 0,
+  pendingDeckSystems: 0,
 })
 const stats = ref<UsageStats | null>(null)
 const loading = ref(true)
@@ -59,6 +61,14 @@ const navGroups = computed<NavGroup[]>(() => [
         count: counts.value.deckSystems,
       },
       {
+        to: 'admin-deck-system-submissions',
+        label: 'Deck System Submissions',
+        icon: byPrefixAndName.fad['inbox'],
+        // Waiting for review, so a badge like unread contacts.
+        count: counts.value.pendingDeckSystems,
+        badge: true,
+      },
+      {
         to: 'admin-special-cards',
         label: 'Special Cards',
         icon: byPrefixAndName.fad['sparkles'],
@@ -69,6 +79,14 @@ const navGroups = computed<NavGroup[]>(() => [
         label: 'Spreads',
         icon: byPrefixAndName.fad['table-cells'],
         count: counts.value.spreads,
+      },
+      {
+        to: 'admin-spread-submissions',
+        label: 'Spread Submissions',
+        icon: byPrefixAndName.fad['inbox'],
+        // Waiting for review, so a badge like unread contacts.
+        count: counts.value.pendingSpreads,
+        badge: true,
       },
     ],
   },

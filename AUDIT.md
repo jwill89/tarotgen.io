@@ -46,10 +46,10 @@ verification are listed at the end so nobody re-chases them.
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
 | 9 | Product | 8 | 4 | §9.6–9.7 and the two large ones; 5.1.0 and 5.2.0 shipped the rest |
 
-**Edited but not yet committed/deployed** (as of this writing): all of §8 and
-the decisions it raised, as version 5.0.0. **Run `db/migrate_sessions_user_id.php`
-on prod before the backend deploy**, then deploy both. The plugin's
-ProtectedData bump (§7.4) waits for its next release.
+**Deployed** (as of 2026-10-30): 5.2.0, after its two migrations
+(`migrate_reading_journal.php`, `migrate_spread_library.php`) ran on prod.
+FFXIV plugin 0.7.0 (spread categories, position descriptions) is built and
+awaits its own release (`deploy.ps1 -Target plugin`).
 
 ## Decisions and production facts (2026-10-28)
 
@@ -1883,6 +1883,33 @@ only go up.
 - [ ] **9.12 PWA offline for saved readings.** [low] [L] `sw.js` is a
   pass-through today (correctly, to avoid stale deploys); a reading-scoped cache
   is a later project.
+
+### Planned next (the owner, 2026-10-30)
+
+- [ ] **9.13 Retire the manual changelog.** Remove the hand-written changelog
+  and show the changelog **only in the admin panel**, as the owner's Kindred
+  Nights and Senpan App Suite projects do. Check how they source it first
+  (`CHANGELOG.md`, which CI already turns into GitHub Releases, is the likely
+  source); then remove the public `/changelog` page, the admin Changelog CRUD
+  and their API/table if nothing else needs them (a migration that drops a
+  table is the first non-additive one: back up, and deploy the code first).
+- [ ] **9.14 Turnstile on New Draw for signed-out visitors** (bot use), while
+  the FFXIV plugin can still draw without a signed-in user. Design question to
+  settle first: how the plugin is let through without opening a bypass any bot
+  can copy (a plugin-only route behind its own rate limit, a per-install token,
+  or Turnstile skipped only for linked-plugin bearer tokens) — the plugin
+  shouldn't need a browser challenge.
+
+- [x] **9.15 Admin Deck Systems: the same split as Spreads.** Its add/edit
+  form (the 78-card editor) is a panel atop the list page, not in the URL, so
+  the browser's Back leaves the page and loses unsaved work. Route it like
+  admin Spreads (`/admin/deck-systems/:id/edit` + a submissions page,
+  `useReturnTo`). (Admin Decks edits in a modal and doesn't have this bug.)
+  - **DONE 2026-10-30:** `/admin/deck-systems` (list), `/new` and `/{id}/edit`
+    (the editor, with an unsaved-changes guard, `useUnsavedChanges`),
+    `/submissions` (with a card preview); dashboard "Deck System Submissions"
+    (`pendingDeckSystems`). Saving no longer sends `approved` back, which could
+    undo another admin's approval.
 
 ### Declined
 

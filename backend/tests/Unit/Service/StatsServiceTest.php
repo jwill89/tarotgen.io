@@ -72,7 +72,7 @@ final class StatsServiceTest extends TestCase
     public function testCountsReturnsRowCountsPerTable(): void
     {
         // Minimal entity tables for the dashboard summary.
-        $this->pdo->exec('CREATE TABLE deck_systems (deck_system_id INTEGER PRIMARY KEY)');
+        $this->pdo->exec('CREATE TABLE deck_systems (deck_system_id INTEGER PRIMARY KEY, approved INTEGER NOT NULL DEFAULT 1)');
         $this->pdo->exec('CREATE TABLE special_cards (deck_id INTEGER, card_id INTEGER)');
         $this->pdo->exec('CREATE TABLE spreads (spread_id INTEGER PRIMARY KEY)');
         $this->pdo->exec('CREATE TABLE changelog (entry_id INTEGER PRIMARY KEY)');
@@ -80,7 +80,9 @@ final class StatsServiceTest extends TestCase
         $this->pdo->exec('CREATE TABLE contacts (contact_id INTEGER PRIMARY KEY, is_read INTEGER NOT NULL DEFAULT 0)');
         $this->pdo->exec('CREATE TABLE card_reports (report_id INTEGER PRIMARY KEY, resolved_at TEXT DEFAULT NULL)');
         $this->pdo->exec("INSERT INTO card_reports (resolved_at) VALUES (NULL), (NULL), ('2026-10-20 10:00:00')");
-        $this->pdo->exec('INSERT INTO deck_systems (deck_system_id) VALUES (1), (2), (3)');
+        $this->pdo->exec('CREATE TABLE pending_spreads (pending_id INTEGER PRIMARY KEY)');
+        $this->pdo->exec('INSERT INTO pending_spreads (pending_id) VALUES (1), (2), (3)');
+        $this->pdo->exec('INSERT INTO deck_systems (deck_system_id, approved) VALUES (1, 1), (2, 0), (3, 1)');
         $this->pdo->exec('INSERT INTO spreads (spread_id) VALUES (1)');
         $this->pdo->exec('INSERT INTO users (user_id) VALUES (1), (2)');
 
@@ -95,6 +97,8 @@ final class StatsServiceTest extends TestCase
         $this->assertSame(2, $counts['users']);
         $this->assertSame(0, $counts['unreadContacts']);
         $this->assertSame(2, $counts['openCardReports']);   // the resolved one isn't counted
+        $this->assertSame(3, $counts['pendingSpreads']);
+        $this->assertSame(1, $counts['pendingDeckSystems']);   // also one of the three deckSystems
     }
 
     public function testOverviewHandlesNoReadings(): void

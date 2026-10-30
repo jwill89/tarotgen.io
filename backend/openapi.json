@@ -1583,6 +1583,14 @@
                                                 "openCardReports": {
                                                     "type": "integer",
                                                     "description": "Reported cards not yet resolved (one per card)."
+                                                },
+                                                "pendingSpreads": {
+                                                    "type": "integer",
+                                                    "description": "Spread submissions waiting for review."
+                                                },
+                                                "pendingDeckSystems": {
+                                                    "type": "integer",
+                                                    "description": "Deck system submissions waiting for review (also in deckSystems)."
                                                 }
                                             },
                                             "required": [
@@ -1594,7 +1602,9 @@
                                                 "changelog",
                                                 "users",
                                                 "unreadContacts",
-                                                "openCardReports"
+                                                "openCardReports",
+                                                "pendingSpreads",
+                                                "pendingDeckSystems"
                                             ]
                                         },
                                         "stats": {
@@ -2913,6 +2923,44 @@
             }
         },
         "/admin/spreads/{spread_id}": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Get a public spread",
+                "description": "One spread for the admin editor: uncached, unlike GET /spreads/{id}, which\nthe browser keeps for five minutes and would hand back a spread as it was\nbefore an edit.",
+                "operationId": "ebdcb34eee256c4b1279af08caa78779",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/Spread"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Spread not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
             "put": {
                 "tags": [
                     "Admin · Spreads"

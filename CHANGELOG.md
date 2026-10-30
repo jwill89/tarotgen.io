@@ -21,6 +21,21 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
+### Changed
+
+- **Admin Spreads is split into pages:** the list, the editor (`/admin/spreads/new`,
+  `/admin/spreads/{id}/edit`), Categories and Submissions. Editing a spread is in
+  the address now, so Back, Cancel and Save return to the list instead of the
+  dashboard. The dashboard menu shows waiting spread submissions.
+- **Admin Deck Systems likewise:** the list, the editor (it now asks before you
+  leave with unsaved changes) and Submissions (with a card preview); the
+  dashboard menu shows waiting deck-system submissions.
+
+### Fixed
+
+- Saving a deck system in the admin could undo another admin's approval made
+  while the form was open.
+
 ## [5.2.0] — 2026-10-31
 
 A journal you can search, readings you can keep private, and a library of

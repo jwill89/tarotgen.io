@@ -29,7 +29,11 @@ const router = createRouter({
   routes,
 })
 
-router.afterEach((to) => {
+router.afterEach((to, _from, failure) => {
+  // A navigation a page stopped (unsaved changes kept it) never arrived: the
+  // title and meta stay the page's own.
+  if (failure) return
+
   const pageTitle = to.meta.title as string | undefined
   document.title = pageTitle ? `${pageTitle} | ${BASE_TITLE}` : BASE_TITLE
 

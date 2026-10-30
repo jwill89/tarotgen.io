@@ -38,15 +38,18 @@ class StatsService
     public function counts(): array
     {
         return [
-            'deckSystems'     => $this->countRows('deck_systems'),
-            'decks'           => $this->countRows('decks'),
-            'specialCards'    => $this->countRows('special_cards'),
-            'spreads'         => $this->countRows('spreads'),
-            'readings'        => $this->countRows('readings'),
-            'changelog'       => $this->countRows('changelog'),
-            'users'           => $this->countRows('users'),
-            'unreadContacts'  => $this->countUnreadContacts(),
-            'openCardReports' => $this->countOpenCardReports(),
+            'deckSystems'        => $this->countRows('deck_systems'),
+            'decks'              => $this->countRows('decks'),
+            'specialCards'       => $this->countRows('special_cards'),
+            'spreads'            => $this->countRows('spreads'),
+            'readings'           => $this->countRows('readings'),
+            'changelog'          => $this->countRows('changelog'),
+            'users'              => $this->countRows('users'),
+            'unreadContacts'     => $this->countUnreadContacts(),
+            'openCardReports'    => $this->countOpenCardReports(),
+            // Every queued submission is waiting: approving or rejecting removes it.
+            'pendingSpreads'     => $this->countRows('pending_spreads'),
+            'pendingDeckSystems' => $this->countPendingDeckSystems(),
         ];
     }
 
@@ -59,6 +62,15 @@ class StatsService
     private function countUnreadContacts(): int
     {
         return $this->scalarInt("SELECT COUNT(*) FROM contacts WHERE is_read = 0");
+    }
+
+    /**
+     * Submitted systems waiting for review. Unlike a spread submission, one stays
+     * in its table: approving it flips the flag, rejecting it deletes the row.
+     */
+    private function countPendingDeckSystems(): int
+    {
+        return $this->scalarInt("SELECT COUNT(*) FROM deck_systems WHERE approved = 0");
     }
 
     /** Reported cards still waiting for a fix (one row per card, however often reported). */

@@ -10,6 +10,7 @@ use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadCategoryRepository;
 use Tarot\Repository\SpreadRepository;
 use Tarot\Structure\PendingSpread;
+use Tarot\Structure\Spread;
 use OpenApi\Spec as OAS;
 
 /**
@@ -43,6 +44,41 @@ class AdminSpreadController extends AbstractController
     public function getSpreads(Request $request, Response $response): Response|ResponseInterface
     {
         return $response->withJson($this->spreads->get());
+    }
+
+    /**
+     * One spread for the admin editor: uncached, unlike GET /spreads/{id}, which
+     * the browser keeps for five minutes and would hand back a spread as it was
+     * before an edit.
+     *
+     * @param array<string,string> $args
+     */
+    #[OAS\Operation\Get(
+        path: '/admin/spreads/{spread_id}',
+        summary: 'Get a public spread',
+        tags: ['Admin · Spreads'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        parameters: [
+            new OAS\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'The spread',
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
+            ),
+            new OAS\Response(response: 404, description: 'Spread not found'),
+        ]
+    )]
+    public function getSpread(Request $request, Response $response, array $args): Response|ResponseInterface
+    {
+        $spread = $this->spreads->get((int)($args['spread_id'] ?? 0));
+
+        if (!($spread instanceof Spread)) {
+            return $response->withJson(['error' => 'Spread not found'], 404);
+        }
+
+        return $response->withJson($spread);
     }
 
     #[OAS\Operation\Post(

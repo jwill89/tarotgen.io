@@ -1781,6 +1781,9 @@ body {
 .myst-modal-foot {
   flex: none;
   display: flex;
+  /* Four actions (a deck-system submission's preview) wrap on a phone instead of
+     running off the dialog's left edge. */
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.6rem;
   padding: 1rem 1.25rem;

@@ -46,6 +46,8 @@ defineProps<{
 }
 .page-header__actions {
   display: flex;
+  /* Several actions (admin Spreads has three) wrap on a phone instead of widening the page. */
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
 }

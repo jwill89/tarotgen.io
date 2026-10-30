@@ -290,6 +290,7 @@ return function (ContainerInterface $container, bool $is_production): App {
         // Spreads
         $group->get('/spreads[/]', AdminSpreadController::class . ':getSpreads');
         $group->post('/spreads[/]', AdminSpreadController::class . ':createSpread');
+        $group->get('/spreads/{spread_id}[/]', AdminSpreadController::class . ':getSpread');
         $group->put('/spreads/{spread_id}[/]', AdminSpreadController::class . ':updateSpread');
         $group->delete('/spreads/{spread_id}[/]', AdminSpreadController::class . ':deleteSpread');
 

@@ -31,13 +31,13 @@ const starting = [
   category(3, 'Career'),
 ]
 
-/** The manager as the Spreads page holds it: the list in, `changed` counted. */
+/** The manager as the Spread Categories page holds it: the list in, `changed` counted. */
 async function mountManager(list: SpreadCategory[] = starting) {
   const changed = ref(0)
   const Host = defineComponent({
     render: () => h(SpreadCategoryManager, { categories: list, onChanged: () => changed.value++ }),
   })
-  await mountPage(Host, { path: '/admin/spreads' })
+  await mountPage(Host, { path: '/admin/spreads/categories' })
   return { changed }
 }
 

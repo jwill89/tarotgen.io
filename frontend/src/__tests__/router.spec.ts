@@ -68,6 +68,32 @@ describe('router guards', () => {
     expect(router.currentRoute.value.name).toBe('admin-users')
   })
 
+  it.each([
+    ['/admin/spreads/new', 'admin-spread-new'],
+    ['/admin/spreads/7/edit', 'admin-spread-edit'],
+    ['/admin/spreads/categories', 'admin-spread-categories'],
+    ['/admin/spreads/submissions', 'admin-spread-submissions'],
+    ['/admin/deck-systems/new', 'admin-deck-system-new'],
+    ['/admin/deck-systems/3/edit', 'admin-deck-system-edit'],
+    ['/admin/deck-systems/submissions', 'admin-deck-system-submissions'],
+  ])('keeps the admin sub-page %s to admins', async (path, name) => {
+    const guest = await freshApp()
+    await guest.router.push(path)
+    expect(guest.router.currentRoute.value.name).toBe('login')
+    expect(guest.router.currentRoute.value.query.redirect).toBe(path)
+
+    const reader = await freshApp(testUser())
+    reader.markAuthChecked()
+    await reader.router.push(path)
+    expect(reader.router.currentRoute.value.name).toBe('home')
+
+    const admin = await freshApp(testUser({ is_admin: true }))
+    admin.markAuthChecked()
+    await admin.router.push(path)
+    expect(admin.router.currentRoute.value.name).toBe(name)
+    expect(admin.router.currentRoute.value.meta.noindex).toBe(true)
+  })
+
   it('asks a signed-out visitor to sign in for the daily card, and lets a user in', async () => {
     const guest = await freshApp()
     await guest.router.push('/daily')
@@ -199,6 +225,19 @@ describe('router page head', () => {
     expect(meta('description')).toBe('See the latest updates, features, and fixes for TarotGen.io.')
     expect(canonical()).toBe('https://tarotgen.io/changelog')
     expect(meta('robots')).toBe('index, follow')
+  })
+
+  it('keeps the title and meta of a page that stopped the navigation away from it', async () => {
+    const { router } = await freshApp()
+    await router.push('/changelog')
+    // As a page with unsaved changes does when the visitor stays.
+    router.beforeEach((to) => to.name !== 'contact')
+
+    await router.push('/contact')
+
+    expect(router.currentRoute.value.name).toBe('changelog')
+    expect(document.title).toBe('Changelog | TarotGen.io Tarot Generator')
+    expect(canonical()).toBe('https://tarotgen.io/changelog')
   })
 
   it('keeps the site title alone on the home page', async () => {

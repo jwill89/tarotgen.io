@@ -59,6 +59,21 @@ export function hasButton(name: string, root: ParentNode = document.body): boole
   )
 }
 
+/** The one link named `name` (its aria-label, else its text) under `root`. */
+export function link(name: string, root: ParentNode = document.body): HTMLAnchorElement {
+  const found = [...root.querySelectorAll('a')].filter(
+    (a) => (a.getAttribute('aria-label') ?? text(a)) === name,
+  )
+  if (found.length !== 1)
+    throw new Error(`Expected one link named "${name}", found ${found.length}`)
+  return found[0]
+}
+
+/** The page's title: its one h1. */
+export function pageTitle(): string | undefined {
+  return document.body.querySelector('h1')?.textContent.trim()
+}
+
 /** Click and let the API calls and re-renders it starts settle. */
 export async function click(el: HTMLElement): Promise<void> {
   el.click()

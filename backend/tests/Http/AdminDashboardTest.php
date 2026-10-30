@@ -10,6 +10,7 @@ use Tarot\Data\ChangelogData;
 use Tarot\Data\ContactData;
 use Tarot\Data\DeckData;
 use Tarot\Data\DeckSystemData;
+use Tarot\Data\PendingSpreadData;
 use Tarot\Data\SpecialCardData;
 use Tarot\Data\SpreadData;
 use Tarot\Repository\CardReportRepository;
@@ -27,12 +28,18 @@ final class AdminDashboardTest extends HttpTestCase
 {
     public function testTheSummaryCountsEachKindOfThingAndSumsUpTheReadings(): void
     {
-        $system = $this->service(DeckSystemData::class)->store(['name' => 'Rider-Waite-Smith', 'short_name' => 'RWS', 'approved' => true]);
+        $systems = $this->service(DeckSystemData::class);
+        $system = $systems->store(['name' => 'Rider-Waite-Smith', 'short_name' => 'RWS', 'approved' => true]);
         $this->assertNotNull($system);
+        // A submission waiting for review: one of the systems, and counted again as waiting.
+        $systems->store(['name' => 'Sola Busca', 'short_name' => 'SB', 'approved' => false]);
         $deck = $this->service(DeckData::class)->store(['name' => 'Thoth', 'deck_system_id' => $system->deck_system_id]);
         $this->assertNotNull($deck);
         $this->service(SpecialCardData::class)->store(['deck_id' => $deck->deck_id, 'card_id' => 79, 'name' => 'Extra']);
         $this->service(SpreadData::class)->store(['name' => 'Three Card']);
+        $queue = $this->service(PendingSpreadData::class);
+        $queue->store(['name' => 'Crossroads']);
+        $queue->store(['name' => 'Moon Phases']);
         $this->service(ChangelogData::class)->store(['title' => 'Launch', 'body' => 'Hello']);
         $contacts = $this->service(ContactData::class);
         $contacts->store(['name' => 'A', 'email' => 'a@example.test', 'message' => 'Unread']);
@@ -62,9 +69,9 @@ final class AdminDashboardTest extends HttpTestCase
 
         $this->assertDocumented('get', '/admin/summary', 200, $summary);
         $this->assertSame([
-            'deckSystems' => 1, 'decks' => 1, 'specialCards' => 1, 'spreads' => 1,
+            'deckSystems' => 2, 'decks' => 1, 'specialCards' => 1, 'spreads' => 1,
             'readings' => 5, 'changelog' => 1, 'users' => 2, 'unreadContacts' => 1,
-            'openCardReports' => 2,
+            'openCardReports' => 2, 'pendingSpreads' => 2, 'pendingDeckSystems' => 1,
         ], $summary['counts']);
         $this->assertSame([
             'totals' => ['readings' => 5, 'last7' => 3, 'last30' => 4],

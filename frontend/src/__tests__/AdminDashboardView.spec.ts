@@ -17,6 +17,8 @@ const counts = {
   users: 58,
   unreadContacts: 2,
   openCardReports: 3,
+  pendingSpreads: 4,
+  pendingDeckSystems: 1,
 }
 
 const stats: UsageStats = {
@@ -136,8 +138,11 @@ describe('admin DashboardView', () => {
     expect(launcher()).toEqual([
       'Decks 12',
       'Deck Systems 3',
+      'Deck System Submissions 1',
       'Special Cards 4',
       'Spreads 9',
+      // Submissions waiting for review show as a badge, like unread messages.
+      'Spread Submissions 4',
       'Readings 12,345',
       'Users 58',
       // Unread messages show as a badge; open card reports as a plain count.
@@ -146,9 +151,29 @@ describe('admin DashboardView', () => {
       'Changelog 7',
     ])
     expect(link('Contacts').querySelector('.nav-badge')?.textContent).toBe('2')
+    expect(link('Spread Submissions').querySelector('.nav-badge')?.textContent).toBe('4')
+    expect(link('Deck System Submissions').querySelector('.nav-badge')?.textContent).toBe('1')
     expect(link('Errored Cards').querySelector('.nav-badge')).toBeNull()
     expect(link('Decks').getAttribute('href')).toBe('/admin/decks')
+    expect(link('Spread Submissions').getAttribute('href')).toBe('/admin/spreads/submissions')
+    expect(link('Deck System Submissions').getAttribute('href')).toBe(
+      '/admin/deck-systems/submissions',
+    )
     expect(link('Errored Cards').getAttribute('href')).toBe('/admin/card-reports')
+  })
+
+  it('shows no submissions badge when nothing is waiting for review', async () => {
+    stubApi({
+      'GET /admin/summary': {
+        body: { counts: { ...counts, pendingSpreads: 0, pendingDeckSystems: 0 }, stats },
+      },
+    })
+    await mountPage(DashboardView, { path: '/admin' })
+
+    expect(link('Spread Submissions').querySelector('.nav-badge')).toBeNull()
+    expect(launcher()).toContain('Spread Submissions 0')
+    expect(link('Deck System Submissions').querySelector('.nav-badge')).toBeNull()
+    expect(launcher()).toContain('Deck System Submissions 0')
   })
 
   it('counts no errored cards once every report is resolved', async () => {

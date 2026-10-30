@@ -209,6 +209,7 @@ export const endpoints = {
     },
     spreads: {
       list: '/spreads',
+      /** `GET` (uncached, for the editor) / `PUT` / `DELETE` one spread. */
       byId: (id: string | number) => `/spreads/${id}`,
     },
     spreadCategories: {

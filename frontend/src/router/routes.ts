@@ -230,6 +230,26 @@ export const routes: RouteRecordRaw[] = [
     component: () => import('@/views/admin/DeckSystemsView.vue'),
     meta: { title: 'Admin Deck Systems', admin: true, noindex: true },
   },
+  // The deck-system editor and the submission queue are pages of their own under
+  // the list, so each is in the URL and Back leaves it for the list.
+  {
+    path: '/admin/deck-systems/new',
+    name: 'admin-deck-system-new',
+    component: () => import('@/views/admin/DeckSystemEditorView.vue'),
+    meta: { title: 'Admin Add Deck System', admin: true, noindex: true },
+  },
+  {
+    path: '/admin/deck-systems/:id/edit',
+    name: 'admin-deck-system-edit',
+    component: () => import('@/views/admin/DeckSystemEditorView.vue'),
+    meta: { title: 'Admin Edit Deck System', admin: true, noindex: true },
+  },
+  {
+    path: '/admin/deck-systems/submissions',
+    name: 'admin-deck-system-submissions',
+    component: () => import('@/views/admin/DeckSystemSubmissionsView.vue'),
+    meta: { title: 'Admin Deck System Submissions', admin: true, noindex: true },
+  },
   {
     path: '/admin/special-cards',
     name: 'admin-special-cards',
@@ -241,6 +261,32 @@ export const routes: RouteRecordRaw[] = [
     name: 'admin-spreads',
     component: () => import('@/views/admin/SpreadsView.vue'),
     meta: { title: 'Admin Spreads', admin: true, noindex: true },
+  },
+  // The spread editor, the categories and the submission queue are pages of
+  // their own under the list, so each is in the URL and Back leaves it for the list.
+  {
+    path: '/admin/spreads/new',
+    name: 'admin-spread-new',
+    component: () => import('@/views/admin/SpreadEditorView.vue'),
+    meta: { title: 'Admin Add Spread', admin: true, noindex: true },
+  },
+  {
+    path: '/admin/spreads/:id/edit',
+    name: 'admin-spread-edit',
+    component: () => import('@/views/admin/SpreadEditorView.vue'),
+    meta: { title: 'Admin Edit Spread', admin: true, noindex: true },
+  },
+  {
+    path: '/admin/spreads/categories',
+    name: 'admin-spread-categories',
+    component: () => import('@/views/admin/SpreadCategoriesView.vue'),
+    meta: { title: 'Admin Spread Categories', admin: true, noindex: true },
+  },
+  {
+    path: '/admin/spreads/submissions',
+    name: 'admin-spread-submissions',
+    component: () => import('@/views/admin/SpreadSubmissionsView.vue'),
+    meta: { title: 'Admin Spread Submissions', admin: true, noindex: true },
   },
   {
     path: '/admin/readings',

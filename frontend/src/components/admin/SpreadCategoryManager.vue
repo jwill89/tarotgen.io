@@ -1,12 +1,12 @@
 <script setup lang="ts">
 /**
- * The spread library's categories, kept by admins on the Spreads page: add one
- * (at the end), rename, move up or down, and remove an empty one. The server
- * refuses removing one that still holds spreads (they're moved one by one,
- * from the spread editor) and the last one; its message is toasted.
+ * The spread library's categories, kept by admins on the Spread Categories page:
+ * add one (at the end), rename, move up or down, and remove an empty one. The
+ * server refuses removing one that still holds spreads (they're moved one by
+ * one, from the spread editor) and the last one; its message is toasted.
  *
- * The parent owns the list; after each change this emits `changed` for it to
- * reload.
+ * The page owns the list (and the heading); after each change this emits
+ * `changed` for it to reload.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, nextTick, useId } from 'vue'
@@ -112,12 +112,6 @@ async function remove(category: SpreadCategory): Promise<void> {
 
 <template>
   <div class="category-manager">
-    <h2 class="title is-4">Categories</h2>
-    <p class="subtitle is-6">
-      The spread library groups spreads under these, in this order. A new or approved spread goes
-      into the first unless you choose another.
-    </p>
-
     <div class="settings-panel">
       <ol class="category-list">
         <li

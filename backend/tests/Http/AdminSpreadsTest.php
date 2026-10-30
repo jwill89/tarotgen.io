@@ -65,6 +65,28 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertSame(['Three Card'], array_column($this->assertJsonResponse(200, $this->get('/spreads')), 'name'));
     }
 
+    public function testOneSpreadIsReadForTheEditorWithoutACache(): void
+    {
+        $this->spread('Celtic Cross', 10);
+        $spread = $this->spread('Three Card', 3);
+
+        $response = $this->get("/admin/spreads/{$spread->spread_id}");
+
+        $read = $this->assertJsonResponse(200, $response);
+        $this->assertDocumented('get', '/admin/spreads/{spread_id}', 200, $read);
+        $this->assertSame(['Three Card', 3, 1, 'General'], [$read['name'], $read['card_count'], $read['category_id'], $read['category_name']]);
+        // The public GET /spreads/{id} is cached for five minutes; an editor must see the last save.
+        $this->assertSame('', $response->getHeaderLine('Cache-Control'));
+    }
+
+    public function testReadingASpreadThatIsGoneIsNotFound(): void
+    {
+        $notFound = ['error' => 'Spread not found'];
+
+        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/spreads/999')));
+        $this->assertSame($notFound, $this->assertJsonResponse(404, $this->get('/admin/spreads/three-card')));
+    }
+
     public function testNewPositionsBringTheCardCountAlongUnlessItIsGiven(): void
     {
         $spread = $this->spread('Three Card', 3);
