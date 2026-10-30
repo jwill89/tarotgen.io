@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Tarot\Tests\Unit\Service;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Tarot\Exception\DailyCardTakenException;
 use Tarot\Repository\DailyCardRepository;
@@ -23,10 +24,19 @@ use Tarot\Utility\Clock;
 #[CoversClass(DailyCardTakenException::class)]
 final class DailyCardServiceTest extends TestCase
 {
-    public function testADrawThatLosesARaceLeavesNoStrayReading(): void
+    /** @return iterable<string,array{?string,string}> */
+    public static function winners(): iterable
+    {
+        yield 'its reading' => ['winner0001', 'You have already drawn your daily card for this day.'];
+        // The winning draw's reading was deleted before this one looked again.
+        yield 'its reading deleted' => [null, 'You have already drawn your daily card for this day, and its reading was deleted.'];
+    }
+
+    #[DataProvider('winners')]
+    public function testADrawThatLosesARaceLeavesNoStrayReading(?string $winnerReading, string $message): void
     {
         $today = Clock::today();
-        $winner = new DailyCard(['day' => $today, 'reading_id' => 'winner0001']);
+        $winner = new DailyCard(['day' => $today, 'reading_id' => $winnerReading]);
 
         $dailyCards = $this->createStub(DailyCardRepository::class);
         // Nothing yet when this draw looks; the other draw's card once it has lost.
@@ -47,8 +57,8 @@ final class DailyCardServiceTest extends TestCase
             $service->draw(7, ['day' => $today, 'deck_id' => 1]);
             $this->fail('The losing draw was accepted.');
         } catch (DailyCardTakenException $e) {
-            $this->assertSame('winner0001', $e->readingId);
-            $this->assertSame('You have already drawn your daily card for this day.', $e->getMessage());
+            $this->assertSame($winnerReading, $e->readingId);
+            $this->assertSame($message, $e->getMessage());
         }
     }
 }

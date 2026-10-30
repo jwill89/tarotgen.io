@@ -10,11 +10,13 @@ export interface DailyCardChoice {
 }
 
 /**
- * A draw's outcome. When the day already had its card (409), `existingReadingId`
- * names that card's reading so the page can open it.
+ * A draw's outcome. When the day already had its card (409), `taken` is set and
+ * `existingReadingId` names that card's reading so the page can open it — or is
+ * null when that reading was deleted: the day stays drawn all the same.
  */
 export type DailyCardDraw =
-  { ok: true; card: DailyCard } | { ok: false; error: string; existingReadingId: string | null }
+  | { ok: true; card: DailyCard }
+  | { ok: false; error: string; taken: boolean; existingReadingId: string | null }
 
 /** The signed-in user's daily card (/api/account/daily-cards). */
 export function useDailyCards() {
@@ -39,11 +41,13 @@ export function useDailyCards() {
     )
     if (res.ok) return { ok: true, card: res.data }
 
-    const taken = res.status === 409 ? (res.data as { reading_id?: unknown } | null) : null
+    const taken = res.status === 409
+    const existing = taken ? (res.data as { reading_id?: unknown } | null) : null
     return {
       ok: false,
       error: res.error,
-      existingReadingId: typeof taken?.reading_id === 'string' ? taken.reading_id : null,
+      taken,
+      existingReadingId: typeof existing?.reading_id === 'string' ? existing.reading_id : null,
     }
   }
 

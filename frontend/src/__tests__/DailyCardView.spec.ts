@@ -53,6 +53,20 @@ const card = (day: string, extra: Partial<DailyCard> = {}): DailyCard => ({
   ...extra,
 })
 
+/** A day drawn whose reading was deleted since, as the API sends it. */
+const deleted = (day: string): DailyCard => ({
+  day,
+  reading_id: null,
+  deck_id: null,
+  deck_name: null,
+  card_id: null,
+  card_name: null,
+  reversed: null,
+})
+
+const DELETED_TODAY =
+  "You drew today's card and later deleted its reading. A new card can be drawn tomorrow."
+
 const monthName = (y: number, m: number) =>
   new Date(y, m - 1, 1).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })
 
@@ -61,6 +75,11 @@ const days = () => [...document.body.querySelectorAll('.daily-calendar__day')].m
 const drawnDay = (n: number) =>
   [...document.body.querySelectorAll<HTMLAnchorElement>('a.daily-calendar__day')].find(
     (a) => a.querySelector('.daily-calendar__num')?.textContent === String(n),
+  )
+/** The calendar's day `n`, whatever it shows. */
+const dayCell = (n: number) =>
+  [...document.body.querySelectorAll<HTMLElement>('.daily-calendar__day')].find(
+    (el) => el.querySelector('.daily-calendar__num')?.textContent === String(n),
   )
 
 /** Serve the decks, each month's cards (by ?month), and anything else asked. */
@@ -198,6 +217,35 @@ describe('DailyCardView', () => {
       ])
     })
 
+    it("says so, and opens nothing, when the day's reading was deleted elsewhere", async () => {
+      serve(
+        {},
+        {
+          'POST /account/daily-cards': {
+            status: 409,
+            body: {
+              error:
+                'You have already drawn your daily card for this day, and its reading was deleted.',
+              reading_id: null,
+            },
+          },
+        },
+      )
+      const { router } = await mountPage()
+
+      button("Draw today's card").click()
+      await flushPromises()
+
+      expect(useToasts().toasts.value.map((t) => t.message)).toEqual([
+        'You have already drawn your daily card for this day, and its reading was deleted.',
+      ])
+      expect(router.currentRoute.value.name).toBe('daily-card')
+      // The day is shown as the drawn one it is: no draw on offer again.
+      expect(pageText()).toContain(DELETED_TODAY)
+      expect(document.body.querySelector('.daily-today__form')).toBeNull()
+      expect(dayCell(30)?.classList.contains('is-deleted')).toBe(true)
+    })
+
     it("shows the server's message when the draw is refused", async () => {
       serve(
         {},
@@ -249,6 +297,20 @@ describe('DailyCardView', () => {
       expect(document.body.querySelector('.daily-today__figure')).toBeNull()
       expect(document.body.querySelector('.daily-today__name')?.textContent).toBe('The Star')
     })
+
+    it('says plainly when its reading was deleted, and offers no second draw', async () => {
+      serve({ '2026-10': [deleted(TODAY)] })
+
+      await mountPage()
+
+      expect(pageText()).toContain(DELETED_TODAY)
+      expect(pageText()).not.toContain("Draw today's card")
+      expect(document.body.querySelector('.daily-today__form')).toBeNull()
+      expect(document.body.querySelector('.daily-today__name')).toBeNull()
+      expect([...document.body.querySelectorAll('a')].map((a) => text(a))).not.toContain(
+        'Open the reading',
+      )
+    })
   })
 
   describe('the calendar', () => {
@@ -284,6 +346,33 @@ describe('DailyCardView', () => {
       expect(
         document.body.querySelector('.daily-calendar__day.is-future')?.textContent.trim(),
       ).toBe('31')
+    })
+
+    it('marks a day whose reading was deleted as drawn, with nothing to open', async () => {
+      serve({ '2026-10': [card('2026-10-03'), deleted('2026-10-12'), deleted(TODAY)] })
+
+      await mountPage()
+
+      const twelfth = dayCell(12)
+      expect(twelfth?.tagName).toBe('SPAN')
+      expect(twelfth?.classList.contains('is-deleted')).toBe(true)
+      expect(twelfth?.querySelector('.daily-calendar__card')?.textContent).toBe('Deleted')
+      // What a screen reader hears: the date, drawn, and the reading gone.
+      expect(twelfth?.querySelector('.visually-hidden')?.textContent).toMatch(
+        /12.*: drawn, reading deleted$/,
+      )
+      expect(
+        [...(twelfth?.querySelectorAll('[aria-hidden="true"]') ?? [])].map((el) => el.className),
+      ).toEqual(['daily-calendar__num', 'daily-calendar__card', 'daily-calendar__mark'])
+      // Only the day whose reading is there opens one.
+      expect(
+        [...document.body.querySelectorAll('a.daily-calendar__day')].map((a) =>
+          a.getAttribute('href'),
+        ),
+      ).toEqual(['/reading/r-2026-10-03'])
+      // Today, deleted too, is still today.
+      expect(document.body.querySelector('[aria-current="date"]')).toBe(dayCell(30))
+      expect(dayCell(30)?.classList.contains('is-deleted')).toBe(true)
     })
 
     it('pages back through the months, never past this one', async () => {

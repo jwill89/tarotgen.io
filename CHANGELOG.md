@@ -38,7 +38,8 @@ ever: these are tools for keeping and reviewing your own practice.
   page, choosing the deck and reversals each time, and look back over a month
   calendar of past draws. Each is a real one-card reading, so notes and sharing
   work, and **My Readings** marks it "Daily card". The day is the reader's own
-  local date.
+  local date, and it stays drawn even if its reading is deleted: one card a day,
+  no redrawing.
 - **Card frequency** on your Dashboard: which cards turn up most in your
   readings, upright and reversed, for one deck or all of them, over the last 30
   days, 90 days, year or all time.

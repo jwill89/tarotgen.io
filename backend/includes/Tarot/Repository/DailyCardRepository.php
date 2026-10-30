@@ -12,7 +12,7 @@ readonly class DailyCardRepository
     {
     }
 
-    /** The user's card for $day ("Y-m-d"), if they drew one. */
+    /** The user's card for $day ("Y-m-d"), if they drew one — its reading null if deleted since. */
     public function forDay(int $userId, string $day): ?DailyCard
     {
         return $this->data->retrieve($userId, $day);

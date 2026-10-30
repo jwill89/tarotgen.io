@@ -33,7 +33,7 @@ class DailyCardController extends AbstractController
         responses: [
             new OAS\Response(
                 response: 200,
-                description: 'One per day drawn, oldest first; a day without a draw is left out',
+                description: 'One per day drawn, oldest first; a day without a draw is left out; a day whose reading was deleted is still listed, its reading and card null',
                 content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/DailyCard'))
             ),
             new OAS\Response(response: 400, description: 'month is missing or not YYYY-MM'),
@@ -60,7 +60,7 @@ class DailyCardController extends AbstractController
         summary: "Draw the user's daily card for their day",
         description: 'A one-card reading from the chosen deck, owned by the user and named "Daily card — 30 October 2026" '
             . 'after the day sent, which is the browser\'s local date: accepted only within a day of the server\'s UTC date. '
-            . 'Deleting that reading frees the day.',
+            . 'Deleting that reading doesn\'t free the day: it stays drawn, with no reading.',
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         requestBody: new OAS\RequestBody(
@@ -84,10 +84,10 @@ class DailyCardController extends AbstractController
             new OAS\Response(response: 401, description: 'Not signed in'),
             new OAS\Response(
                 response: 409,
-                description: 'The day already has its card',
+                description: 'The day already has its card, or had one whose reading was deleted',
                 content: new OAS\MediaType\Json(required: ['error', 'reading_id'], properties: [
                     new OAS\Property(property: 'error', schema: new OAS\Schema(type: 'string')),
-                    new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The reading already drawn for the day.', type: 'string')),
+                    new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The reading already drawn for the day; null when it was deleted.', type: 'string', nullable: true)),
                 ])
             ),
         ]

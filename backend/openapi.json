@@ -3247,7 +3247,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "One per day drawn, oldest first; a day without a draw is left out",
+                        "description": "One per day drawn, oldest first; a day without a draw is left out; a day whose reading was deleted is still listed, its reading and card null",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3277,7 +3277,7 @@
                     "Account"
                 ],
                 "summary": "Draw the user's daily card for their day",
-                "description": "A one-card reading from the chosen deck, owned by the user and named \"Daily card — 30 October 2026\" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading frees the day.",
+                "description": "A one-card reading from the chosen deck, owned by the user and named \"Daily card — 30 October 2026\" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading doesn't free the day: it stays drawn, with no reading.",
                 "operationId": "4d500d42071f40c7ff972c90e1a34aae",
                 "requestBody": {
                     "content": {
@@ -3324,7 +3324,7 @@
                         "description": "Not signed in"
                     },
                     "409": {
-                        "description": "The day already has its card",
+                        "description": "The day already has its card, or had one whose reading was deleted",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3334,8 +3334,11 @@
                                             "type": "string"
                                         },
                                         "reading_id": {
-                                            "type": "string",
-                                            "description": "The reading already drawn for the day."
+                                            "type": [
+                                                "string",
+                                                "null"
+                                            ],
+                                            "description": "The reading already drawn for the day; null when it was deleted."
                                         }
                                     },
                                     "required": [
@@ -6072,34 +6075,53 @@
             },
             "DailyCard": {
                 "type": "object",
-                "description": "A day's daily card: the reading drawn for that day and the card it holds.",
+                "description": "A day's daily card: the reading drawn for that day and the card it holds. A day whose reading was deleted stays drawn, with reading_id and every card field null.",
                 "properties": {
                     "day": {
                         "type": "string",
                         "description": "The day it was drawn for: the owner's local date, \"Y-m-d\"."
                     },
                     "reading_id": {
-                        "type": "string",
-                        "description": "The reading drawn for the day."
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The reading drawn for the day; null once that reading was deleted."
                     },
                     "deck_id": {
-                        "type": "integer"
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "Null once the reading was deleted."
                     },
                     "deck_name": {
-                        "type": "string",
-                        "description": "The deck's name, or `Deck #<id>` once the deck is gone."
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The deck's name, or `Deck #<id>` once the deck is gone; null once the reading was deleted."
                     },
                     "card_id": {
-                        "type": "integer",
-                        "description": "The card's number in its deck."
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The card's number in its deck; null once the reading was deleted."
                     },
                     "card_name": {
-                        "type": "string",
-                        "description": "The card's name as the reading recorded it, or `Card #<id>` when the deck had none."
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The card's name as the reading recorded it, or `Card #<id>` when the deck had none; null once the reading was deleted."
                     },
                     "reversed": {
-                        "type": "boolean",
-                        "description": "Drawn upside down."
+                        "type": [
+                            "boolean",
+                            "null"
+                        ],
+                        "description": "Drawn upside down; null once the reading was deleted."
                     }
                 },
                 "required": [

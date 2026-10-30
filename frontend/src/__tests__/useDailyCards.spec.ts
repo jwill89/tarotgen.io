@@ -53,7 +53,34 @@ describe('useDailyCards', () => {
       useReversals: false,
     })
 
-    expect(res).toEqual({ ok: false, error: 'Already drawn.', existingReadingId: 'first1' })
+    expect(res).toEqual({
+      ok: false,
+      error: 'Already drawn.',
+      taken: true,
+      existingReadingId: 'first1',
+    })
+  })
+
+  it('says the day is taken, naming no reading, when its reading was deleted', async () => {
+    stubApi({
+      'POST /account/daily-cards': {
+        status: 409,
+        body: { error: 'Already drawn, and its reading was deleted.', reading_id: null },
+      },
+    })
+
+    const res = await useDailyCards().drawDailyCard({
+      day: '2026-10-30',
+      deckId: 1,
+      useReversals: false,
+    })
+
+    expect(res).toEqual({
+      ok: false,
+      error: 'Already drawn, and its reading was deleted.',
+      taken: true,
+      existingReadingId: null,
+    })
   })
 
   it('names no reading for any other refusal, or a 409 without one', async () => {
@@ -68,11 +95,13 @@ describe('useDailyCards', () => {
     expect(await drawDailyCard({ day: '2026-10-30', deckId: 1, useReversals: false })).toEqual({
       ok: false,
       error: 'Choose a deck to draw from.',
+      taken: false,
       existingReadingId: null,
     })
     expect(await drawDailyCard({ day: '2026-10-30', deckId: 2, useReversals: false })).toEqual({
       ok: false,
       error: 'Already drawn.',
+      taken: true,
       existingReadingId: null,
     })
   })
@@ -86,6 +115,11 @@ describe('useDailyCards', () => {
       useReversals: false,
     })
 
-    expect(res).toEqual({ ok: false, error: "Couldn't draw your card.", existingReadingId: null })
+    expect(res).toEqual({
+      ok: false,
+      error: "Couldn't draw your card.",
+      taken: false,
+      existingReadingId: null,
+    })
   })
 })

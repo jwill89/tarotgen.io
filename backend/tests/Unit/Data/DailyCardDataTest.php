@@ -12,8 +12,8 @@ use Tarot\Structure\DailyCard;
 
 /**
  * The daily_cards table on the committed schema: one card per user per day,
- * read back with its reading's first card, and gone with its reading or its
- * account.
+ * read back with its reading's first card, still drawn (with no card) once its
+ * reading is deleted, and gone with its account.
  */
 #[CoversClass(DailyCardData::class)]
 #[CoversClass(DailyCard::class)]
@@ -98,22 +98,40 @@ final class DailyCardDataTest extends TestCase
         $this->assertSame(['2026-10-01', '2026-10-31'], $days);
     }
 
-    public function testDeletingTheReadingOrTheAccountFreesTheDay(): void
+    public function testDeletingTheReadingKeepsTheDayDrawnWithNoCard(): void
+    {
+        $this->db->exec('PRAGMA foreign_keys = ON');
+        $this->reading('r1', 1, [['card_id' => 1, 'reversed' => false, 'card_name' => 'The Fool']]);
+        $this->reading('r2', 1, [['card_id' => 2, 'reversed' => true, 'card_name' => 'The Magician']]);
+        $this->data->link(1, '2026-10-29', 'r1');
+        $this->data->link(1, '2026-10-30', 'r2');
+
+        $this->db->exec("DELETE FROM readings WHERE reading_id IN ('r1', 'r2')");
+
+        // Nothing of the card is kept: it went with the reading.
+        $this->assertEquals(new DailyCard(['day' => '2026-10-30']), $this->data->retrieve(1, '2026-10-30'));
+        $this->assertSame(['2026-10-29', '2026-10-30'], array_map(static fn(DailyCard $c): string => $c->day, $this->data->listBetween(1, '2026-10-01', '2026-11-01')));
+        // The day takes no new card. Many days may be left without a reading (the unique index allows NULLs).
+        $this->reading('r3', 1, [['card_id' => 3, 'reversed' => false, 'card_name' => 'The Empress']]);
+        $this->assertFalse($this->data->link(1, '2026-10-30', 'r3'));
+        $this->assertTrue($this->data->link(1, '2026-10-31', 'r3'));
+    }
+
+    public function testDeletingTheAccountTakesItsDays(): void
     {
         $this->db->exec('PRAGMA foreign_keys = ON');
         $this->reading('r1', 1, [['card_id' => 1, 'reversed' => false, 'card_name' => 'The Fool']]);
         $this->reading('r2', 2, [['card_id' => 1, 'reversed' => false, 'card_name' => 'The Fool']]);
+        $this->reading('r3', 2, [['card_id' => 2, 'reversed' => false, 'card_name' => 'The Magician']]);
         $this->data->link(1, '2026-10-30', 'r1');
-        $this->data->link(2, '2026-10-30', 'r2');
+        $this->data->link(2, '2026-10-29', 'r2');
+        $this->data->link(2, '2026-10-30', 'r3');
+        $this->db->exec("DELETE FROM readings WHERE reading_id = 'r2'");
 
-        $this->db->exec("DELETE FROM readings WHERE reading_id = 'r1'");
         $this->db->exec('DELETE FROM users WHERE user_id = 2');
 
-        $count = $this->db->prepare('SELECT COUNT(*) FROM daily_cards');
-        $count->execute();
-        $this->assertSame(0, $count->fetchColumn());
-        // The freed day takes a new card.
-        $this->reading('r3', 1, [['card_id' => 2, 'reversed' => false, 'card_name' => 'The Magician']]);
-        $this->assertTrue($this->data->link(1, '2026-10-30', 'r3'));
+        $rows = $this->db->prepare('SELECT user_id, day, reading_id FROM daily_cards');
+        $rows->execute();
+        $this->assertSame([['user_id' => 1, 'day' => '2026-10-30', 'reading_id' => 'r1']], $rows->fetchAll(PDO::FETCH_ASSOC));
     }
 }

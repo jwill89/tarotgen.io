@@ -38,7 +38,7 @@ final class ReadingDataTest extends TestCase
             'CREATE TABLE daily_cards (
                 user_id INTEGER NOT NULL,
                 day TEXT NOT NULL,
-                reading_id TEXT NOT NULL REFERENCES readings(reading_id) ON DELETE CASCADE,
+                reading_id TEXT DEFAULT NULL REFERENCES readings(reading_id) ON DELETE SET NULL,
                 PRIMARY KEY (user_id, day)
             )'
         );
@@ -127,6 +127,8 @@ final class ReadingDataTest extends TestCase
         $this->data->store($this->make('daily', 4));
         $this->data->store($this->make('plain', 4));
         $this->pdo->exec("INSERT INTO daily_cards (user_id, day, reading_id) VALUES (4, '2026-10-30', 'daily')");
+        // A day whose reading was deleted belongs to no reading.
+        $this->pdo->exec("INSERT INTO daily_cards (user_id, day, reading_id) VALUES (4, '2026-10-29', NULL)");
 
         $this->assertSame('2026-10-30', $this->retrieved('daily')->daily_card_day);
         $this->assertNull($this->retrieved('plain')->daily_card_day);

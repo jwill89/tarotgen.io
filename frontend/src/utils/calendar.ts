@@ -3,6 +3,7 @@
  * "YYYY-MM" (a month), in the browser's own time zone. The server stores the
  * day the browser says it is, so these never pass through UTC.
  */
+import type { DailyCard, KeptDailyCard } from '@/types'
 
 const pad = (n: number) => String(n).padStart(2, '0')
 
@@ -46,4 +47,32 @@ export function monthWeeks(month: string): (string | null)[][] {
   const weeks: (string | null)[][] = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
   return weeks
+}
+
+/** Whether a daily card's reading is still there: the API nulls it and its card together. */
+export function isKept(card: DailyCard): card is KeptDailyCard {
+  return card.reading_id !== null
+}
+
+/**
+ * One day of the calendar: not drawn, drawn (its card opens its reading), or
+ * drawn and its reading deleted since — still drawn, so no new card that day,
+ * but nothing left to open.
+ */
+export type CalendarDay =
+  | { day: string; status: 'empty' }
+  | { day: string; status: 'drawn'; card: KeptDailyCard }
+  | { day: string; status: 'deleted' }
+
+/** A month's weeks (as `monthWeeks`), each day with its daily card from `cards`. */
+export function monthCalendar(month: string, cards: DailyCard[]): (CalendarDay | null)[][] {
+  const byDay = new Map(cards.map((c) => [c.day, c]))
+  return monthWeeks(month).map((week) =>
+    week.map((day): CalendarDay | null => {
+      if (day === null) return null
+      const card = byDay.get(day)
+      if (!card) return { day, status: 'empty' }
+      return isKept(card) ? { day, status: 'drawn', card } : { day, status: 'deleted' }
+    }),
+  )
 }

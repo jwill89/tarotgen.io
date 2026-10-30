@@ -1819,8 +1819,8 @@ only go up.
     within a day of the server's UTC date; a second draw for the day is a 409
     naming the first. A daily card is finalized (one card, no drawing more).
     Table `daily_cards` (`db/migrate_daily_cards.php`, run on prod before the
-    deploy). Open, the owner's call: deleting the day's reading frees the day,
-    so a reader could redraw it.
+    deploy). Deleting the day's reading keeps the day taken (the owner's call:
+    no redrawing until the card suits), so `reading_id` is `ON DELETE SET NULL`.
 
 ### Medium
 

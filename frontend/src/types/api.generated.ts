@@ -1017,7 +1017,7 @@ export interface paths {
         put?: never;
         /**
          * Draw the user's daily card for their day
-         * @description A one-card reading from the chosen deck, owned by the user and named "Daily card — 30 October 2026" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading frees the day.
+         * @description A one-card reading from the chosen deck, owned by the user and named "Daily card — 30 October 2026" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading doesn't free the day: it stays drawn, with no reading.
          */
         post: operations["4d500d42071f40c7ff972c90e1a34aae"];
         delete?: never;
@@ -1973,21 +1973,22 @@ export interface components {
             is_read: number;
             submitted_at: string;
         };
-        /** @description A day's daily card: the reading drawn for that day and the card it holds. */
+        /** @description A day's daily card: the reading drawn for that day and the card it holds. A day whose reading was deleted stays drawn, with reading_id and every card field null. */
         DailyCard: {
             /** @description The day it was drawn for: the owner's local date, "Y-m-d". */
             day: string;
-            /** @description The reading drawn for the day. */
-            reading_id: string;
-            deck_id: number;
-            /** @description The deck's name, or `Deck #<id>` once the deck is gone. */
-            deck_name: string;
-            /** @description The card's number in its deck. */
-            card_id: number;
-            /** @description The card's name as the reading recorded it, or `Card #<id>` when the deck had none. */
-            card_name: string;
-            /** @description Drawn upside down. */
-            reversed: boolean;
+            /** @description The reading drawn for the day; null once that reading was deleted. */
+            reading_id: string | null;
+            /** @description Null once the reading was deleted. */
+            deck_id: number | null;
+            /** @description The deck's name, or `Deck #<id>` once the deck is gone; null once the reading was deleted. */
+            deck_name: string | null;
+            /** @description The card's number in its deck; null once the reading was deleted. */
+            card_id: number | null;
+            /** @description The card's name as the reading recorded it, or `Card #<id>` when the deck had none; null once the reading was deleted. */
+            card_name: string | null;
+            /** @description Drawn upside down; null once the reading was deleted. */
+            reversed: boolean | null;
         };
         /** @description A tarot deck. */
         Deck: {
@@ -4386,7 +4387,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description One per day drawn, oldest first; a day without a draw is left out */
+            /** @description One per day drawn, oldest first; a day without a draw is left out; a day whose reading was deleted is still listed, its reading and card null */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4453,7 +4454,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description The day already has its card */
+            /** @description The day already has its card, or had one whose reading was deleted */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4461,8 +4462,8 @@ export interface operations {
                 content: {
                     "application/json": {
                         error: string;
-                        /** @description The reading already drawn for the day. */
-                        reading_id: string;
+                        /** @description The reading already drawn for the day; null when it was deleted. */
+                        reading_id: string | null;
                     };
                 };
             };

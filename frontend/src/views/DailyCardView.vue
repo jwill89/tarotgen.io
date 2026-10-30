@@ -3,7 +3,8 @@
  * The daily card: one card a day, from the deck the reader picks that day, kept
  * as an ordinary reading (it shows in My Readings too), and a month calendar of
  * the days drawn. "Today" is the browser's local date; the server only checks
- * that it is within a day of its own.
+ * that it is within a day of its own. Deleting a daily card's reading doesn't
+ * free its day: it stays drawn, with no card to show.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import { computed, onMounted, ref, useId, watch } from 'vue'
@@ -17,11 +18,11 @@ import { useDailyCards } from '@/composables/useDailyCards'
 import { useToasts } from '@/composables/useToasts'
 import { cardImageUrls } from '@/utils/cardImages'
 import { cardAspectStyle } from '@/utils/cardAspect'
-import { dateOf, localDay, monthWeeks, shiftMonth } from '@/utils/calendar'
+import { dateOf, isKept, localDay, monthCalendar, shiftMonth } from '@/utils/calendar'
 import { defaultDeckId } from '@/utils/deck'
 import { local } from '@/utils/storage'
 import { STORAGE_KEYS } from '@/constants'
-import type { DailyCard } from '@/types'
+import type { DailyCard, KeptDailyCard } from '@/types'
 
 /** What the last draw was made with, kept to prefill the next day's choice. */
 interface StoredChoice {
@@ -43,7 +44,12 @@ const today = localDay()
 const thisMonth = today.slice(0, 7)
 
 // ── Today ──────────────────────────────────────────────────────────────────
+/** Today's daily card: null until it's drawn, its card null once its reading is deleted. */
 const todayCard = ref<DailyCard | null>(null)
+const todayKept = computed(() => {
+  const card = todayCard.value
+  return card && isKept(card) ? card : null
+})
 /** Whether this month's cards have loaded, so today's state is known. */
 const todayKnown = ref(false)
 const deckId = ref<number | null>(null)
@@ -69,11 +75,16 @@ watch(
   { immediate: true },
 )
 
-const todayLabel = dateOf(today).toLocaleDateString(undefined, {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-})
+/** A day as its heading and screen readers give it: "Friday 30 October". */
+function longDate(day: string): string {
+  return dateOf(day).toLocaleDateString(undefined, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+}
+
+const todayLabel = longDate(today)
 
 async function draw() {
   if (deckId.value === null) {
@@ -87,24 +98,42 @@ async function draw() {
   drawing.value = false
 
   if (res.ok) {
-    todayCard.value = res.card
+    showToday(res.card)
     local.set(STORAGE_KEYS.dailyCardChoice, {
       deck_id: choice.deckId,
       use_reversals: choice.useReversals,
     } satisfies StoredChoice)
-    if (month.value === thisMonth) {
-      monthCards.value = [...monthCards.value.filter((c) => c.day !== today), res.card]
-    }
     return
   }
 
-  // Already drawn (in another tab, say): open the card the day already has.
+  if (!res.taken) {
+    drawError.value = res.error
+    return
+  }
+  // Already drawn (in another tab, say): open the card the day already has…
+  toasts.info(res.error)
   if (res.existingReadingId !== null) {
-    toasts.info(res.error)
     void router.push({ name: 'reading', params: { id: res.existingReadingId } })
     return
   }
-  drawError.value = res.error
+  // …or, its reading deleted since, show the day as the drawn one it still is.
+  showToday({
+    day: today,
+    reading_id: null,
+    deck_id: null,
+    deck_name: null,
+    card_id: null,
+    card_name: null,
+    reversed: null,
+  })
+}
+
+/** Make `card` today's, in the calendar too while it shows this month. */
+function showToday(card: DailyCard) {
+  todayCard.value = card
+  if (month.value === thisMonth) {
+    monthCards.value = [...monthCards.value.filter((c) => c.day !== today), card]
+  }
 }
 
 // The card's thumbnail, falling back to the master scan while a deck's web
@@ -114,7 +143,7 @@ watch(todayCard, () => {
   imageStep.value = 'thumb'
 })
 const todayImage = computed(() => {
-  const card = todayCard.value
+  const card = todayKept.value
   if (!card || imageStep.value === 'none') return null
   const urls = cardImageUrls(card.deck_id, card.card_id)
   return imageStep.value === 'thumb' ? urls.thumb : urls.png
@@ -130,12 +159,7 @@ const monthLoading = ref(true)
 const monthError = ref('')
 
 // The month's weeks, each day with its card (if drawn); null pads the weeks out.
-const weeks = computed(() => {
-  const byDay = new Map(monthCards.value.map((c) => [c.day, c]))
-  return monthWeeks(month.value).map((week) =>
-    week.map((day) => (day === null ? null : { day, card: byDay.get(day) ?? null })),
-  )
-})
+const weeks = computed(() => monthCalendar(month.value, monthCards.value))
 const monthLabel = computed(() =>
   dateOf(month.value).toLocaleDateString(undefined, { month: 'long', year: 'numeric' }),
 )
@@ -154,13 +178,8 @@ function dayNumber(day: string): number {
 }
 
 /** What a screen reader hears for a drawn day: its date, the card, and whether reversed. */
-function drawnLabel(card: DailyCard): string {
-  const date = dateOf(card.day).toLocaleDateString(undefined, {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  })
-  return `${date}: ${card.card_name}${card.reversed ? ', reversed' : ''}`
+function drawnLabel(card: KeptDailyCard): string {
+  return `${longDate(card.day)}: ${card.card_name}${card.reversed ? ', reversed' : ''}`
 }
 
 // Only the latest month asked for may land, however quickly someone pages.
@@ -232,30 +251,30 @@ onMounted(() => {
                 </button>
               </div>
 
-              <div v-else-if="todayCard" class="daily-today__drawn">
+              <div v-else-if="todayKept" class="daily-today__drawn">
                 <!-- No frame at all when the deck has no picture of the card. -->
                 <div
                   v-if="todayImage"
                   class="daily-today__figure"
-                  :style="cardAspectStyle(deckLookup[todayCard.deck_id])"
+                  :style="cardAspectStyle(deckLookup[todayKept.deck_id])"
                 >
                   <img
                     :src="todayImage"
-                    :class="{ reversed: todayCard.reversed }"
-                    :alt="todayCard.card_name"
+                    :class="{ reversed: todayKept.reversed }"
+                    :alt="todayKept.card_name"
                     @error="onImageError"
                   />
                 </div>
                 <div class="daily-today__text">
-                  <p class="daily-today__name">{{ todayCard.card_name }}</p>
+                  <p class="daily-today__name">{{ todayKept.card_name }}</p>
                   <p class="daily-today__meta">
-                    <template v-if="todayCard.reversed"
+                    <template v-if="todayKept.reversed"
                       ><span class="daily-today__reversed">Reversed</span>{{ ' · ' }}</template
-                    ><span>{{ todayCard.deck_name }}</span>
+                    ><span>{{ todayKept.deck_name }}</span>
                   </p>
                   <router-link
                     class="button is-link is-outlined mt-4"
-                    :to="{ name: 'reading', params: { id: todayCard.reading_id } }"
+                    :to="{ name: 'reading', params: { id: todayKept.reading_id } }"
                   >
                     <span>Open the reading</span>
                     <span class="icon"
@@ -264,6 +283,12 @@ onMounted(() => {
                   </router-link>
                 </div>
               </div>
+
+              <!-- Drawn, and its reading deleted since: the day is still taken. -->
+              <p v-else-if="todayCard" class="daily-today__deleted">
+                You drew today's card and later deleted its reading. A new card can be drawn
+                tomorrow.
+              </p>
 
               <div v-else class="daily-today__form">
                 <div class="field">
@@ -345,7 +370,7 @@ onMounted(() => {
                   <td v-for="(cell, d) in week" :key="cell?.day ?? `pad-${w}-${d}`">
                     <template v-if="cell">
                       <router-link
-                        v-if="cell.card"
+                        v-if="cell.status === 'drawn'"
                         class="daily-calendar__day is-drawn"
                         :class="{ 'is-today': cell.day === today }"
                         :to="{ name: 'reading', params: { id: cell.card.reading_id } }"
@@ -359,6 +384,22 @@ onMounted(() => {
                         <span class="daily-calendar__card">{{ cell.card.card_name }}</span>
                         <span class="daily-calendar__mark" aria-hidden="true"></span>
                       </router-link>
+                      <!-- Drawn, its reading deleted since: still taken, nothing to open. -->
+                      <span
+                        v-else-if="cell.status === 'deleted'"
+                        class="daily-calendar__day is-deleted"
+                        :class="{ 'is-today': cell.day === today }"
+                        :aria-current="cell.day === today ? 'date' : undefined"
+                      >
+                        <span class="daily-calendar__num" aria-hidden="true">{{
+                          dayNumber(cell.day)
+                        }}</span>
+                        <span class="daily-calendar__card" aria-hidden="true">Deleted</span>
+                        <span class="visually-hidden"
+                          >{{ longDate(cell.day) }}: drawn, reading deleted</span
+                        >
+                        <span class="daily-calendar__mark" aria-hidden="true"></span>
+                      </span>
                       <span
                         v-else
                         class="daily-calendar__day"
@@ -429,6 +470,11 @@ onMounted(() => {
 }
 .daily-today__reversed {
   color: var(--myst-silver);
+}
+.daily-today__deleted {
+  max-width: 34rem;
+  margin-top: 1rem;
+  color: var(--myst-text-muted);
 }
 @media screen and (max-width: 600px) {
   .daily-today__drawn {
@@ -537,6 +583,15 @@ onMounted(() => {
   outline: none;
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
 }
+/* Drawn, but its reading is gone: the gold edge of a drawn day, broken, and
+   no hover, as there is nothing to open. */
+.daily-calendar__day.is-deleted {
+  border-style: dashed;
+  border-color: var(--myst-hair-gold);
+}
+.daily-calendar__day.is-deleted .daily-calendar__card {
+  color: var(--myst-text-dim);
+}
 .daily-calendar__day.is-today {
   border-color: var(--myst-gold);
   box-shadow: inset 0 0 0 1px var(--myst-gold);
@@ -597,6 +652,10 @@ onMounted(() => {
     height: 6px;
     border-radius: 50%;
     background: var(--myst-gold);
+  }
+  .daily-calendar__day.is-deleted .daily-calendar__mark {
+    background: transparent;
+    border: 1px solid var(--myst-gold);
   }
 }
 </style>

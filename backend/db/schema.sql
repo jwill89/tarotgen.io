@@ -194,7 +194,7 @@ CREATE TABLE card_report_submissions (
 CREATE TABLE daily_cards (
         user_id    INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
         day        TEXT    NOT NULL,
-        reading_id TEXT    NOT NULL REFERENCES readings(reading_id) ON DELETE CASCADE,
+        reading_id TEXT    DEFAULT NULL REFERENCES readings(reading_id) ON DELETE SET NULL,
         PRIMARY KEY (user_id, day)
     );
 

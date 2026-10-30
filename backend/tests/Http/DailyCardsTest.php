@@ -23,8 +23,9 @@ use Tarot\Structure\DailyCard;
 
 /**
  * The daily card: drawing the card for the user's day (a one-card reading of
- * their own), the one-a-day rule and the day window, the month calendar, and
- * how a daily card shows in My Readings.
+ * their own), the one-a-day rule and the day window, the month calendar, how a
+ * daily card shows in My Readings, and a day staying drawn once its reading is
+ * deleted.
  */
 #[CoversClass(DailyCardController::class)]
 #[CoversClass(DailyCardService::class)]
@@ -219,6 +220,8 @@ final class DailyCardsTest extends HttpTestCase
         $this->dailyCard('oct01', $this->userId, '2026-10-01', ['card_id' => 2, 'reversed' => false, 'card_name' => 'The Magician']);
         $this->dailyCard('nov01', $this->userId, '2026-11-01', ['card_id' => 3, 'reversed' => false, 'card_name' => 'The High Priestess']);
         $this->dailyCard('theirs', $other->user_id, '2026-10-15', ['card_id' => 3, 'reversed' => false, 'card_name' => 'The High Priestess']);
+        // A day whose reading was deleted since.
+        $this->db->prepare('INSERT INTO daily_cards (user_id, day, reading_id) VALUES (?, ?, NULL)')->execute([$this->userId, '2026-10-20']);
         $this->signInAs($this->userId);
 
         $response = $this->get('/account/daily-cards?month=2026-10');
@@ -228,6 +231,8 @@ final class DailyCardsTest extends HttpTestCase
         $this->assertSame('private, no-store', $response->getHeaderLine('Cache-Control'));
         $this->assertSame([
             ['day' => '2026-10-01', 'reading_id' => 'oct01', 'deck_id' => $this->deckId, 'deck_name' => 'Moonlit Deck', 'card_id' => 2, 'card_name' => 'The Magician', 'reversed' => false],
+            // Still drawn, but with its reading gone there is no card to show.
+            ['day' => '2026-10-20', 'reading_id' => null, 'deck_id' => null, 'deck_name' => null, 'card_id' => null, 'card_name' => null, 'reversed' => null],
             // A card its deck never named, from a deck deleted since.
             ['day' => '2026-10-31', 'reading_id' => 'oct31', 'deck_id' => 99, 'deck_name' => 'Deck #99', 'card_id' => 79, 'card_name' => 'Card #79', 'reversed' => true],
         ], $october);
@@ -268,25 +273,55 @@ final class DailyCardsTest extends HttpTestCase
         );
     }
 
-    public function testDeletingTheReadingFreesTheDay(): void
+    public function testDeletingTheReadingKeepsTheDayTaken(): void
     {
         $this->signInAs($this->userId);
         $first = $this->assertJsonResponse(201, $this->draw(self::day()));
 
         $this->assertSame(204, $this->request('DELETE', '/account/readings/' . $first['reading_id'])->getStatusCode());
 
-        $this->assertSame(0, $this->rowCount('daily_cards'));
-        $again = $this->assertJsonResponse(201, $this->draw(self::day()));
-        $this->assertNotSame($first['reading_id'], $again['reading_id']);
+        // No redrawing until a card suits: the day stays drawn, with no reading.
+        $this->assertSame([['day' => self::day(), 'reading_id' => null]], $this->rows('SELECT day, reading_id FROM daily_cards'));
+        $again = $this->assertJsonResponse(409, $this->draw(self::day()));
+        $this->assertDocumented('post', '/account/daily-cards', 409, $again);
+        $this->assertSame(['error' => 'You have already drawn your daily card for this day, and its reading was deleted.', 'reading_id' => null], $again);
+        $this->assertSame(0, $this->rowCount('readings'));
+
+        $month = $this->assertJsonResponse(200, $this->get('/account/daily-cards?month=' . substr(self::day(), 0, 7)));
+        $this->assertDocumented('get', '/account/daily-cards', 200, $month);
+        $this->assertSame([[
+            'day' => self::day(), 'reading_id' => null, 'deck_id' => null, 'deck_name' => null,
+            'card_id' => null, 'card_name' => null, 'reversed' => null,
+        ]], $month);
+    }
+
+    public function testAnAdminDeletingTheReadingKeepsTheDayTaken(): void
+    {
+        $this->signInAs($this->userId);
+        $card = $this->assertJsonResponse(201, $this->draw(self::day()));
+
+        $this->useSessionCookie(null);
+        $this->signInAs($this->createUser('admin@example.test', admin: true)->user_id);
+        $this->assertSame(204, $this->request('DELETE', '/admin/readings/' . $card['reading_id'])->getStatusCode());
+
+        $this->assertSame([['user_id' => $this->userId, 'reading_id' => null]], $this->rows('SELECT user_id, reading_id FROM daily_cards'));
+        $this->useSessionCookie(null);
+        $this->signInAs($this->userId);
+        $this->assertNull($this->assertJsonResponse(409, $this->draw(self::day()))['reading_id']);
+        $this->assertSame(0, $this->rowCount('readings'));
     }
 
     public function testDeletingTheAccountTakesItsDays(): void
     {
         $this->signInAs($this->userId);
         $this->assertJsonResponse(201, $this->draw(self::day()));
+        $deleted = $this->assertJsonResponse(201, $this->draw(self::day(-1)));
+        $this->assertSame(204, $this->request('DELETE', '/account/readings/' . $deleted['reading_id'])->getStatusCode());
+        $this->assertSame(2, $this->rowCount('daily_cards'));
 
         $this->service(UserRepository::class)->delete($this->userId);
 
+        // The day kept, its reading deleted, goes with the account too.
         $this->assertSame(0, $this->rowCount('daily_cards'));
         $this->assertSame(0, $this->rowCount('readings'));
     }

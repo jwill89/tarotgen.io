@@ -286,7 +286,7 @@ async function clearAll() {
               <th scope="col">Reading</th>
               <th scope="col">Deck</th>
               <th scope="col">Date</th>
-              <th scope="col" class="col-actions"><span class="sr-only">Actions</span></th>
+              <th scope="col" class="col-actions"><span class="visually-hidden">Actions</span></th>
             </tr>
           </thead>
           <tbody>

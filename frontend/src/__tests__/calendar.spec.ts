@@ -1,5 +1,26 @@
 import { describe, it, expect } from 'vitest'
-import { dateOf, localDay, monthWeeks, shiftMonth } from '@/utils/calendar'
+import { dateOf, isKept, localDay, monthCalendar, monthWeeks, shiftMonth } from '@/utils/calendar'
+import type { DailyCard } from '@/types'
+
+const kept: DailyCard = {
+  day: '2026-10-03',
+  reading_id: 'r1',
+  deck_id: 1,
+  deck_name: 'Rider-Waite',
+  card_id: 17,
+  card_name: 'The Star',
+  reversed: false,
+}
+/** A day drawn whose reading was deleted since, as the API sends it. */
+const deleted: DailyCard = {
+  day: '2026-10-12',
+  reading_id: null,
+  deck_id: null,
+  deck_name: null,
+  card_id: null,
+  card_name: null,
+  reversed: null,
+}
 
 describe('calendar', () => {
   it("names a moment's local date", () => {
@@ -43,5 +64,30 @@ describe('calendar', () => {
     expect(february).toHaveLength(4)
     expect(february[0]?.[0]).toBe('2026-02-01')
     expect(february[3]?.[6]).toBe('2026-02-28')
+  })
+
+  it('tells a daily card from a day whose reading was deleted', () => {
+    expect(isKept(kept)).toBe(true)
+    expect(isKept(deleted)).toBe(false)
+  })
+
+  it('gives each day of a month its daily card, a deleted one drawn with nothing to open', () => {
+    const october = monthCalendar('2026-10', [kept, deleted, { ...kept, day: '2026-09-30' }])
+
+    expect(october.map((week) => week.map((cell) => cell?.day ?? null))).toEqual(
+      monthWeeks('2026-10'),
+    )
+    const days = october.flat().filter((cell) => cell !== null)
+    expect(days.find((d) => d.day === '2026-10-03')).toEqual({
+      day: '2026-10-03',
+      status: 'drawn',
+      card: kept,
+    })
+    expect(days.find((d) => d.day === '2026-10-12')).toEqual({
+      day: '2026-10-12',
+      status: 'deleted',
+    })
+    // Another month's card stays out; every other day is empty.
+    expect(days.filter((d) => d.status === 'empty')).toHaveLength(29)
   })
 })

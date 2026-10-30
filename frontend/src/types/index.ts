@@ -51,6 +51,13 @@ export type DailyCard = Schemas['DailyCard']
 /** Admin dashboard usage analytics (GET /admin/stats, and `stats` in GET /admin/summary). */
 export type UsageStats = Schemas['UsageStats']
 
+/**
+ * A daily card whose reading still exists, so its card is known. A day whose
+ * reading was deleted stays drawn, and the API sends it with `reading_id` and
+ * every card field null; `isKept()` (utils/calendar) tells the two apart.
+ */
+export type KeptDailyCard = { [K in keyof DailyCard]: NonNullable<DailyCard[K]> }
+
 /** A selectable card within a deck (id + display name) for the custom reading picker. */
 export interface DeckCard {
   card_id: number

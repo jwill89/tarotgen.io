@@ -18,6 +18,9 @@ use Tarot\Utility\Input;
  * The daily card: one card a day per user, drawn as an ordinary one-card reading
  * (ReadingService) and linked to the day it was drawn for.
  *
+ * Once drawn, a day stays drawn: deleting its reading leaves the day with no
+ * reading rather than free, so no one can keep redrawing until a card suits.
+ *
  * A day is the user's local date, which only their browser knows. The server
  * takes it on trust within a day either side of its own UTC date — the span of
  * the world's time zones, UTC−12 to UTC+14 — so no one can draw for a day long
@@ -56,7 +59,7 @@ class DailyCardService
      *
      * @param array<string,mixed> $params `day` ("Y-m-d", local), `deck_id`, `use_reversals`.
      * @throws ApiException On a bad day or deck.
-     * @throws DailyCardTakenException When the day already has its card.
+     * @throws DailyCardTakenException When the day already has its card, even one whose reading was deleted.
      * @throws RandomException
      * @throws JsonException
      */
@@ -89,7 +92,7 @@ class DailyCardService
             // Another draw for the same day (a double submit) linked first. Its
             // card is the day's; this reading would only be a stray in My Readings.
             $this->readings->deleteOwned($reading->reading_id, $userId);
-            throw new DailyCardTakenException($this->dailyCards->forDay($userId, $day)->reading_id ?? '');
+            throw new DailyCardTakenException($this->dailyCards->forDay($userId, $day)?->reading_id);
         }
 
         // A daily card is one card: locked against drawing more, as the calendar
