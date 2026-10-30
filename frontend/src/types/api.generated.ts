@@ -51,6 +51,26 @@ export interface paths {
         patch: operations["f2bf91c45a8fdd7232feb63c43aec389"];
         trace?: never;
     };
+    "/account/readings/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Download the user's whole journal, every reading, as JSON or CSV
+         * @description A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading's name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.
+         */
+        get: operations["2994dc5931088990384aa2978eec332d"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/account": {
         parameters: {
             query?: never;
@@ -91,6 +111,26 @@ export interface paths {
          * @description Ends every other session of the account; the browser making the change stays signed in, under a new session id. Linked plugins keep their tokens (they're revoked under Connected Apps).
          */
         post: operations["70ac3d9471f6b7020edd89bfa6393c36"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/sessions/end-others": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign out of every other device
+         * @description Ends every session of the account but the browser asking, which stays signed in under a new session id, so a copy of its old cookie is signed out too. Linked plugins keep their tokens (they're revoked under Connected Apps).
+         */
+        post: operations["4fcffb6c19b8f2665cadc6df5a58e2b7"];
         delete?: never;
         options?: never;
         head?: never;
@@ -278,6 +318,29 @@ export interface paths {
         head?: never;
         /** Mark a card report resolved / reopened */
         patch: operations["aca620abc6a0ca6158ff8d80669f3b2a"];
+        trace?: never;
+    };
+    "/admin/card-reports/{report_id}/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rebuild a reported card's web images from its replaced master scan, then resolve the report
+         * @description The last step of fixing a reported card, once its new master scan is on
+         *     the server: rebuild that one card's web images and, only if that worked,
+         *     resolve the report. The images are rebuilt even when they look current,
+         *     since an upload may keep the old scan's timestamp.
+         */
+        post: operations["cbac340837324a4aafeaf60ce8805351"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/changelog": {
@@ -836,6 +899,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/account/card-frequency": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** How often each card turned up in the user's readings (daily cards included) */
+        get: operations["68775f69e1c1f9a95691e1771e417057"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/card-reports": {
         parameters: {
             query?: never;
@@ -919,6 +999,27 @@ export interface paths {
          *     Rate-limited per IP to prevent spam.
          */
         post: operations["b49307dba89fa7fec7b08d62c3bdb293"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/daily-cards": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The user's daily cards in one month, for the calendar */
+        get: operations["d05035690f5568131e9e42ed47b6142c"];
+        put?: never;
+        /**
+         * Draw the user's daily card for their day
+         * @description A one-card reading from the chosen deck, owned by the user and named "Daily card — 30 October 2026" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading frees the day.
+         */
+        post: operations["4d500d42071f40c7ff972c90e1a34aae"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1694,6 +1795,51 @@ export interface components {
             /** @description The owner's title for it, if any — the only thing shown before unlocking. */
             reading_name: string | null;
         };
+        /** @description Every reading the user owns: the JSON journal download. */
+        JournalExport: {
+            /** @description When the file was made, UTC ("Y-m-d H:i:s"). */
+            exported_at: string;
+            /** @description Newest first. */
+            readings: components["schemas"]["JournalReading"][];
+        };
+        /** @description One reading in the journal download. */
+        JournalReading: {
+            /** @description The code in the reading link. */
+            reading_id: string;
+            /** @description The reading's share link. */
+            link: string;
+            /** @description When it was made, UTC ("Y-m-d H:i:s"). */
+            reading_time: string;
+            /** @description The owner's title for it, if any. */
+            reading_name: string | null;
+            /** @description The owner's notes (Markdown), if any. */
+            reading_notes: string | null;
+            /** @description The deck the cards were drawn from. */
+            deck_id: number;
+            /** @description "Deck #{deck_id}" for a deck since deleted. */
+            deck_name: string;
+            /** @description The layout as it was when the reading was made; null for a free draw that was never placed. */
+            spread: components["schemas"]["SpreadSnapshot"] | null;
+            /** @description In draw order. */
+            cards: components["schemas"]["JournalCard"][];
+            /** @description Locked for good against further draws. */
+            is_final: boolean;
+            /** @description A view password is set (the password itself is never exported). */
+            password_protected: boolean;
+        };
+        /** @description One drawn card in the journal download. */
+        JournalCard: {
+            /** @description Its place in the draw, from 1; on a spread, the order of the position it lies in. */
+            position: number;
+            /** @description That position's title; null for a free draw, or a card drawn after the layout was placed. */
+            position_title: string | null;
+            /** @description The card's number in its deck. */
+            card_id: number;
+            /** @description "Card #{card_id}" when the deck has no name for it. */
+            card_name: string;
+            /** @description Drawn upside down. */
+            reversed: boolean;
+        };
         /** @description A deck system with its card definitions: what viewing one returns (public and admin). */
         DeckSystemWithCards: components["schemas"]["DeckSystem"] & {
             /** @description The named cards, in card order. */
@@ -1751,6 +1897,30 @@ export interface components {
                 count: number;
             }[];
         };
+        /** @description One card and how often it was drawn. */
+        CardCount: {
+            /** @description The card's name as the readings recorded it, or `Card #<id>` for a card its deck had not named. */
+            card_name: string;
+            /** @description The card's number in its deck; null when counted by name across decks. */
+            card_id: number | null;
+            /** @description The deck it was drawn from; null when counted by name across decks. */
+            deck_id: number | null;
+            /** @description Times drawn: upright + reversed. */
+            count: number;
+            upright: number;
+            reversed: number;
+        };
+        /** @description How often each card turned up in the signed-in user's readings. */
+        CardFrequency: {
+            /** @description Readings counted: those matching the deck and window. */
+            readings: number;
+            /** @description The deck counted, or null for every deck. */
+            deck_id: number | null;
+            /** @description The window counted, in days back from now, or null for all time. */
+            days: number | null;
+            /** @description Every card drawn, most often first (ties by name). */
+            cards: components["schemas"]["CardCount"][];
+        };
         /** @description A card users have reported as having a problem with its image. */
         CardReport: {
             report_id: number;
@@ -1802,6 +1972,22 @@ export interface components {
             message: string;
             is_read: number;
             submitted_at: string;
+        };
+        /** @description A day's daily card: the reading drawn for that day and the card it holds. */
+        DailyCard: {
+            /** @description The day it was drawn for: the owner's local date, "Y-m-d". */
+            day: string;
+            /** @description The reading drawn for the day. */
+            reading_id: string;
+            deck_id: number;
+            /** @description The deck's name, or `Deck #<id>` once the deck is gone. */
+            deck_name: string;
+            /** @description The card's number in its deck. */
+            card_id: number;
+            /** @description The card's name as the reading recorded it, or `Card #<id>` when the deck had none. */
+            card_name: string;
+            /** @description Drawn upside down. */
+            reversed: boolean;
         };
         /** @description A tarot deck. */
         Deck: {
@@ -1906,6 +2092,8 @@ export interface components {
             is_final: boolean;
             /** @description Derived flag — true when a view password is set. The hash itself is never exposed. */
             password_protected: boolean;
+            /** @description The day ("Y-m-d", the owner's local date) this reading is their daily card for; null for any other reading. */
+            daily_card_day: string | null;
         };
         /** @description A reading as the admin readings list shows it. */
         ReadingSummary: {
@@ -2086,6 +2274,39 @@ export interface operations {
             };
         };
     };
+    "2994dc5931088990384aa2978eec332d": {
+        parameters: {
+            query?: {
+                /** @description json (the default) or csv. */
+                format?: "json" | "csv";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The journal */
+            200: {
+                headers: {
+                    /** @description attachment; filename="tarotgen-journal-{Y-m-d}.json" (or .csv), dated in UTC */
+                    "Content-Disposition"?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalExport"];
+                    "text/csv": string;
+                };
+            };
+            /** @description Unknown format */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     f494bd5d0850bf24d66ae14b041e3bb3: {
         parameters: {
             query?: never;
@@ -2191,6 +2412,30 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    "4fcffb6c19b8f2665cadc6df5a58e2b7": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The other sessions ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        success: boolean;
+                        /** @description How many other sessions were signed out; 0 when none was. */
+                        ended: number;
+                    };
+                };
             };
         };
     };
@@ -2579,6 +2824,56 @@ export interface operations {
             };
         };
     };
+    cbac340837324a4aafeaf60ce8805351: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Images rebuilt and the report resolved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardReport"];
+                };
+            };
+            /** @description Invalid report ID */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Report (or its deck) not found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Already resolved, or the card has no master scan on the server */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The scan could not be turned into web images; the report stays open */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "7d7f486fcabcec3e810fb64934dec6e6": {
         parameters: {
             query?: never;
@@ -2820,6 +3115,8 @@ export interface operations {
                             users: number;
                             /** @description Contact messages not yet marked read. */
                             unreadContacts: number;
+                            /** @description Reported cards not yet resolved (one per card). */
+                            openCardReports: number;
                         };
                         stats: components["schemas"]["UsageStats"];
                     };
@@ -3861,6 +4158,45 @@ export interface operations {
             };
         };
     };
+    "68775f69e1c1f9a95691e1771e417057": {
+        parameters: {
+            query?: {
+                /** @description Count one deck's readings only, card by card. Omit to count every deck, a card by its name. */
+                deck_id?: number;
+                /** @description Count readings from the last this many days (1–3650). Omit for all time. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CardFrequency"];
+                };
+            };
+            /** @description deck_id or days is not a whole number in range */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "7121e0ef3d6914631c4b1b46a5d6a143": {
         parameters: {
             query?: never;
@@ -4035,6 +4371,100 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    d05035690f5568131e9e42ed47b6142c: {
+        parameters: {
+            query: {
+                /** @description YYYY-MM */
+                month: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One per day drawn, oldest first; a day without a draw is left out */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyCard"][];
+                };
+            };
+            /** @description month is missing or not YYYY-MM */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "4d500d42071f40c7ff972c90e1a34aae": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description The local date, YYYY-MM-DD. */
+                    day: string;
+                    deck_id: number;
+                    /** @description Off when omitted. */
+                    use_reversals?: boolean;
+                };
+            };
+        };
+        responses: {
+            /** @description The day's card */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DailyCard"];
+                };
+            };
+            /** @description day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The day already has its card */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        error: string;
+                        /** @description The reading already drawn for the day. */
+                        reading_id: string;
+                    };
+                };
             };
         };
     };

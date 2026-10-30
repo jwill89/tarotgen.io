@@ -181,6 +181,65 @@
                 ]
             }
         },
+        "/account/readings/export": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Download the user's whole journal, every reading, as JSON or CSV",
+                "description": "A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading's name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.",
+                "operationId": "2994dc5931088990384aa2978eec332d",
+                "parameters": [
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "description": "json (the default) or csv.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "json",
+                                "csv"
+                            ]
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The journal",
+                        "headers": {
+                            "Content-Disposition": {
+                                "description": "attachment; filename=\"tarotgen-journal-{Y-m-d}.json\" (or .csv), dated in UTC",
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        },
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/JournalExport"
+                                }
+                            },
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string",
+                                    "description": "Columns: Reading ID, Reading Time (UTC), Reading Name, Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes."
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Unknown format"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/account": {
             "patch": {
                 "tags": [
@@ -335,6 +394,46 @@
                     },
                     "422": {
                         "description": "Wrong current password or weak new password"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/sessions/end-others": {
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Sign out of every other device",
+                "description": "Ends every session of the account but the browser asking, which stays signed in under a new session id, so a copy of its old cookie is signed out too. Linked plugins keep their tokens (they're revoked under Connected Apps).",
+                "operationId": "4fcffb6c19b8f2665cadc6df5a58e2b7",
+                "responses": {
+                    "200": {
+                        "description": "The other sessions ended",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "ended": {
+                                            "type": "integer",
+                                            "description": "How many other sessions were signed out; 0 when none was."
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "ended"
+                                    ]
+                                }
+                            }
+                        }
                     }
                 },
                 "security": [
@@ -913,6 +1012,55 @@
                 ]
             }
         },
+        "/admin/card-reports/{report_id}/regenerate": {
+            "post": {
+                "tags": [
+                    "Admin · Card Reports"
+                ],
+                "summary": "Rebuild a reported card's web images from its replaced master scan, then resolve the report",
+                "description": "The last step of fixing a reported card, once its new master scan is on\nthe server: rebuild that one card's web images and, only if that worked,\nresolve the report. The images are rebuilt even when they look current,\nsince an upload may keep the old scan's timestamp.",
+                "operationId": "cbac340837324a4aafeaf60ce8805351",
+                "parameters": [
+                    {
+                        "name": "report_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Images rebuilt and the report resolved",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CardReport"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid report ID"
+                    },
+                    "404": {
+                        "description": "Report (or its deck) not found"
+                    },
+                    "409": {
+                        "description": "Already resolved, or the card has no master scan on the server"
+                    },
+                    "500": {
+                        "description": "The scan could not be turned into web images; the report stays open"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/admin/changelog": {
             "get": {
                 "tags": [
@@ -1263,6 +1411,10 @@
                                                 "unreadContacts": {
                                                     "type": "integer",
                                                     "description": "Contact messages not yet marked read."
+                                                },
+                                                "openCardReports": {
+                                                    "type": "integer",
+                                                    "description": "Reported cards not yet resolved (one per card)."
                                                 }
                                             },
                                             "required": [
@@ -1273,7 +1425,8 @@
                                                 "readings",
                                                 "changelog",
                                                 "users",
-                                                "unreadContacts"
+                                                "unreadContacts",
+                                                "openCardReports"
                                             ]
                                         },
                                         "stats": {
@@ -2775,6 +2928,61 @@
                 ]
             }
         },
+        "/account/card-frequency": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "How often each card turned up in the user's readings (daily cards included)",
+                "operationId": "68775f69e1c1f9a95691e1771e417057",
+                "parameters": [
+                    {
+                        "name": "deck_id",
+                        "in": "query",
+                        "description": "Count one deck's readings only, card by card. Omit to count every deck, a card by its name.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "days",
+                        "in": "query",
+                        "description": "Count readings from the last this many days (1–3650). Omit for all time.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 3650
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The counts",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/CardFrequency"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "deck_id or days is not a whole number in range"
+                    },
+                    "401": {
+                        "description": "Not signed in"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/card-reports": {
             "post": {
                 "tags": [
@@ -3017,6 +3225,133 @@
                         "description": "Rate limit exceeded"
                     }
                 }
+            }
+        },
+        "/account/daily-cards": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "The user's daily cards in one month, for the calendar",
+                "operationId": "d05035690f5568131e9e42ed47b6142c",
+                "parameters": [
+                    {
+                        "name": "month",
+                        "in": "query",
+                        "description": "YYYY-MM",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "One per day drawn, oldest first; a day without a draw is left out",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/DailyCard"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "month is missing or not YYYY-MM"
+                    },
+                    "401": {
+                        "description": "Not signed in"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "Draw the user's daily card for their day",
+                "description": "A one-card reading from the chosen deck, owned by the user and named \"Daily card — 30 October 2026\" after the day sent, which is the browser's local date: accepted only within a day of the server's UTC date. Deleting that reading frees the day.",
+                "operationId": "4d500d42071f40c7ff972c90e1a34aae",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "day": {
+                                        "type": "string",
+                                        "description": "The local date, YYYY-MM-DD."
+                                    },
+                                    "deck_id": {
+                                        "type": "integer"
+                                    },
+                                    "use_reversals": {
+                                        "type": "boolean",
+                                        "description": "Off when omitted."
+                                    }
+                                },
+                                "required": [
+                                    "day",
+                                    "deck_id"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "The day's card",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/DailyCard"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "day is not a date within a day of today (UTC), or the deck is missing, unknown or awaiting approval"
+                    },
+                    "401": {
+                        "description": "Not signed in"
+                    },
+                    "409": {
+                        "description": "The day already has its card",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        },
+                                        "reading_id": {
+                                            "type": "string",
+                                            "description": "The reading already drawn for the day."
+                                        }
+                                    },
+                                    "required": [
+                                        "error",
+                                        "reading_id"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
             }
         },
         "/decks": {
@@ -5171,6 +5506,142 @@
                     "reading_name"
                 ]
             },
+            "JournalExport": {
+                "type": "object",
+                "description": "Every reading the user owns: the JSON journal download.",
+                "properties": {
+                    "exported_at": {
+                        "type": "string",
+                        "description": "When the file was made, UTC (\"Y-m-d H:i:s\")."
+                    },
+                    "readings": {
+                        "type": "array",
+                        "description": "Newest first.",
+                        "items": {
+                            "$ref": "#/components/schemas/JournalReading"
+                        }
+                    }
+                },
+                "required": [
+                    "exported_at",
+                    "readings"
+                ]
+            },
+            "JournalReading": {
+                "type": "object",
+                "description": "One reading in the journal download.",
+                "properties": {
+                    "reading_id": {
+                        "type": "string",
+                        "description": "The code in the reading link."
+                    },
+                    "link": {
+                        "type": "string",
+                        "description": "The reading's share link."
+                    },
+                    "reading_time": {
+                        "type": "string",
+                        "description": "When it was made, UTC (\"Y-m-d H:i:s\")."
+                    },
+                    "reading_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The owner's title for it, if any."
+                    },
+                    "reading_notes": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The owner's notes (Markdown), if any."
+                    },
+                    "deck_id": {
+                        "type": "integer",
+                        "description": "The deck the cards were drawn from."
+                    },
+                    "deck_name": {
+                        "type": "string",
+                        "description": "\"Deck #{deck_id}\" for a deck since deleted."
+                    },
+                    "spread": {
+                        "description": "The layout as it was when the reading was made; null for a free draw that was never placed.",
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/SpreadSnapshot"
+                            },
+                            {
+                                "type": "null"
+                            }
+                        ]
+                    },
+                    "cards": {
+                        "type": "array",
+                        "description": "In draw order.",
+                        "items": {
+                            "$ref": "#/components/schemas/JournalCard"
+                        }
+                    },
+                    "is_final": {
+                        "type": "boolean",
+                        "description": "Locked for good against further draws."
+                    },
+                    "password_protected": {
+                        "type": "boolean",
+                        "description": "A view password is set (the password itself is never exported)."
+                    }
+                },
+                "required": [
+                    "reading_id",
+                    "link",
+                    "reading_time",
+                    "reading_name",
+                    "reading_notes",
+                    "deck_id",
+                    "deck_name",
+                    "spread",
+                    "cards",
+                    "is_final",
+                    "password_protected"
+                ]
+            },
+            "JournalCard": {
+                "type": "object",
+                "description": "One drawn card in the journal download.",
+                "properties": {
+                    "position": {
+                        "type": "integer",
+                        "description": "Its place in the draw, from 1; on a spread, the order of the position it lies in."
+                    },
+                    "position_title": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "That position's title; null for a free draw, or a card drawn after the layout was placed."
+                    },
+                    "card_id": {
+                        "type": "integer",
+                        "description": "The card's number in its deck."
+                    },
+                    "card_name": {
+                        "type": "string",
+                        "description": "\"Card #{card_id}\" when the deck has no name for it."
+                    },
+                    "reversed": {
+                        "type": "boolean",
+                        "description": "Drawn upside down."
+                    }
+                },
+                "required": [
+                    "position",
+                    "position_title",
+                    "card_id",
+                    "card_name",
+                    "reversed"
+                ]
+            },
             "DeckSystemWithCards": {
                 "description": "A deck system with its card definitions: what viewing one returns (public and admin).",
                 "allOf": [
@@ -5349,6 +5820,85 @@
                     "daily"
                 ]
             },
+            "CardCount": {
+                "type": "object",
+                "description": "One card and how often it was drawn.",
+                "properties": {
+                    "card_name": {
+                        "type": "string",
+                        "description": "The card's name as the readings recorded it, or `Card #<id>` for a card its deck had not named."
+                    },
+                    "card_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The card's number in its deck; null when counted by name across decks."
+                    },
+                    "deck_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The deck it was drawn from; null when counted by name across decks."
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Times drawn: upright + reversed."
+                    },
+                    "upright": {
+                        "type": "integer"
+                    },
+                    "reversed": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "card_name",
+                    "card_id",
+                    "deck_id",
+                    "count",
+                    "upright",
+                    "reversed"
+                ]
+            },
+            "CardFrequency": {
+                "type": "object",
+                "description": "How often each card turned up in the signed-in user's readings.",
+                "properties": {
+                    "readings": {
+                        "type": "integer",
+                        "description": "Readings counted: those matching the deck and window."
+                    },
+                    "deck_id": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The deck counted, or null for every deck."
+                    },
+                    "days": {
+                        "type": [
+                            "integer",
+                            "null"
+                        ],
+                        "description": "The window counted, in days back from now, or null for all time."
+                    },
+                    "cards": {
+                        "type": "array",
+                        "description": "Every card drawn, most often first (ties by name).",
+                        "items": {
+                            "$ref": "#/components/schemas/CardCount"
+                        }
+                    }
+                },
+                "required": [
+                    "readings",
+                    "deck_id",
+                    "days",
+                    "cards"
+                ]
+            },
             "CardReport": {
                 "type": "object",
                 "description": "A card users have reported as having a problem with its image.",
@@ -5518,6 +6068,48 @@
                     "message",
                     "is_read",
                     "submitted_at"
+                ]
+            },
+            "DailyCard": {
+                "type": "object",
+                "description": "A day's daily card: the reading drawn for that day and the card it holds.",
+                "properties": {
+                    "day": {
+                        "type": "string",
+                        "description": "The day it was drawn for: the owner's local date, \"Y-m-d\"."
+                    },
+                    "reading_id": {
+                        "type": "string",
+                        "description": "The reading drawn for the day."
+                    },
+                    "deck_id": {
+                        "type": "integer"
+                    },
+                    "deck_name": {
+                        "type": "string",
+                        "description": "The deck's name, or `Deck #<id>` once the deck is gone."
+                    },
+                    "card_id": {
+                        "type": "integer",
+                        "description": "The card's number in its deck."
+                    },
+                    "card_name": {
+                        "type": "string",
+                        "description": "The card's name as the reading recorded it, or `Card #<id>` when the deck had none."
+                    },
+                    "reversed": {
+                        "type": "boolean",
+                        "description": "Drawn upside down."
+                    }
+                },
+                "required": [
+                    "day",
+                    "reading_id",
+                    "deck_id",
+                    "deck_name",
+                    "card_id",
+                    "card_name",
+                    "reversed"
                 ]
             },
             "Deck": {
@@ -5877,6 +6469,13 @@
                     "password_protected": {
                         "type": "boolean",
                         "description": "Derived flag — true when a view password is set. The hash itself is never exposed."
+                    },
+                    "daily_card_day": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "The day (\"Y-m-d\", the owner's local date) this reading is their daily card for; null for any other reading."
                     }
                 },
                 "required": [
@@ -5888,7 +6487,8 @@
                     "reading_name",
                     "reading_notes",
                     "is_final",
-                    "password_protected"
+                    "password_protected",
+                    "daily_card_day"
                 ]
             },
             "ReadingSummary": {

@@ -295,6 +295,13 @@ function copyReadingUrl() {
   toasts.success('Reading link copied to clipboard.')
 }
 
+// The print styles (bottom of this file) lay the reading out for paper, every
+// card face up whatever was revealed here, so the browser's own Print (and its
+// Save as PDF) needs nothing more from the page.
+function printReading() {
+  window.print()
+}
+
 function exportAt(scale: number) {
   showExportModal.value = false
   if (!reading.value || !readingInfo.value) return
@@ -507,7 +514,10 @@ watch(
                     }}</span>
                   </dd>
                 </div>
-                <div v-if="readingDeck && readingDeck.purchase_url" class="meta-row">
+                <div
+                  v-if="readingDeck && readingDeck.purchase_url"
+                  class="meta-row meta-row--purchase"
+                >
                   <dt>
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['cart-shopping']" /></span
@@ -536,6 +546,10 @@ watch(
                 >
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['image']" /></span>
                   <span>Save as Image</span>
+                </button>
+                <button class="button is-link" @click="printReading">
+                  <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['print']" /></span>
+                  <span>Print</span>
                 </button>
                 <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
                   <span class="icon">
@@ -619,6 +633,11 @@ watch(
                     :alt="item.card.card_name"
                     loading="lazy"
                   />
+                  <!-- Print only (the caption names the card on screen): pairs the
+                       face with its row in the printed list. -->
+                  <span class="spread-order-badge spread-order-badge--reveal" aria-hidden="true">{{
+                    item.order
+                  }}</span>
                 </div>
               </div>
               <p class="reading-grid-caption">
@@ -729,6 +748,12 @@ watch(
                     /></span>
                     <span>Save as Image</span>
                   </button>
+                  <button class="button is-link" @click="printReading">
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['print']"
+                    /></span>
+                    <span>Print</span>
+                  </button>
                   <button v-if="canDrawMore" class="button is-link is-light" @click="openDrawMore">
                     <span class="icon"
                       ><FontAwesomeIcon :icon="byPrefixAndName.fas['plus']"
@@ -746,6 +771,37 @@ watch(
                 </div>
               </div>
             </div>
+          </div>
+
+          <!-- Print only: the cards' list and the notes, flat on paper. On screen
+               the details list reveals names one tap at a time and the notes fold
+               away; a printout shows them all. -->
+          <div class="reading-print">
+            <table class="reading-print-cards">
+              <thead>
+                <tr>
+                  <th scope="col">#</th>
+                  <th v-if="spread" scope="col">Position</th>
+                  <th scope="col">Card</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="item in detailItems" :key="'print-' + item.drawIndex">
+                  <td>{{ item.order }}</td>
+                  <td v-if="spread">{{ item.title }}</td>
+                  <td>
+                    {{ item.card.card_name
+                    }}<em v-if="item.card.reversed" class="reading-print-reversed"> (Reversed)</em>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <section v-if="readingNotes" class="reading-print-notes">
+              <h2 class="spread-detail-list-title">Reading Notes</h2>
+              <!-- User-authored notes; sanitized by renderMarkdown() (marked + DOMPurify) -->
+              <!-- eslint-disable-next-line vue/no-v-html -->
+              <div class="content" v-html="readingNotesHtml"></div>
+            </section>
           </div>
 
           <!-- Reading Notes: full-width detailed interpretation, below the cards. -->
@@ -970,5 +1026,130 @@ watch(
   font-size: 0.8rem;
   font-weight: 400;
   opacity: 0.75;
+}
+
+/* ── Print ──────────────────────────────────────────────────
+   The reading on paper: title, details, the cards face up, their list and the
+   notes. Ink on white and no app chrome come from tokens.css and print.css. */
+.reading-print {
+  display: none;
+}
+
+@media print {
+  /* The screen's controls, and the panels the print sheet says again, flat. */
+  .buttons,
+  .myst-callout,
+  .reading-details,
+  .spread-details,
+  .reading-notes,
+  .meta-url .button,
+  .meta-row--purchase,
+  .reading-grid-caption {
+    display: none;
+  }
+
+  .reading-print {
+    display: block;
+  }
+
+  /* One column, full width: details, cards, then their list and the notes. */
+  .columns {
+    display: block;
+    margin: 0;
+  }
+  .columns > .column {
+    width: auto;
+    margin: 0;
+    padding: 0;
+  }
+
+  .reading-final-tag {
+    background: none;
+    color: var(--myst-text-strong);
+    border: 1px solid var(--myst-border-strong);
+  }
+
+  .reading-meta {
+    max-width: none;
+    margin-bottom: 1rem;
+    padding: 0;
+    background: none;
+    border: 0;
+  }
+  .reading-meta .meta-row {
+    grid-template-columns: 7rem 1fr;
+    padding: 0.15rem 0;
+    border-bottom: 0;
+  }
+
+  /* Every card face up, whatever was revealed on screen. The flip transforms
+     come from style.css at the same specificity, hence !important. */
+  .spread-flip {
+    transform: none !important;
+    transition: none;
+  }
+  .spread-face--back {
+    display: none;
+  }
+  .spread-face--reveal {
+    transform: none;
+  }
+  .spread-face {
+    box-shadow: none;
+  }
+  .spread-order-badge--reveal {
+    opacity: 1;
+    transition: none;
+  }
+  .spread-card.is-active .spread-flip,
+  .reading-grid-card.is-active .spread-flip {
+    outline: none;
+  }
+
+  .reading-canvas {
+    width: 15cm;
+    max-width: 100%;
+    margin: 0 auto 1rem;
+    background: none;
+    border: 1px solid var(--myst-border);
+    break-inside: avoid;
+  }
+  .reading-grid {
+    grid-template-columns: repeat(5, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+  .reading-grid-card {
+    break-inside: avoid;
+  }
+
+  .reading-print-cards {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1.25rem;
+  }
+  .reading-print-cards th,
+  .reading-print-cards td {
+    padding: 0.3rem 0.6rem 0.3rem 0;
+    border-bottom: 1px solid var(--myst-border);
+    text-align: left;
+    vertical-align: top;
+    color: var(--myst-text);
+  }
+  .reading-print-cards th:first-child {
+    width: 2.5rem;
+  }
+  .reading-print-cards th {
+    font-size: 0.75rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--myst-text-muted);
+  }
+  .reading-print-cards tr {
+    break-inside: avoid;
+  }
+  .reading-print-reversed {
+    color: var(--myst-text-muted);
+  }
 }
 </style>

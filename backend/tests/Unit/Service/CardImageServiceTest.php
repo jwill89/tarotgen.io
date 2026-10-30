@@ -166,6 +166,60 @@ final class CardImageServiceTest extends TestCase
         $this->assertSame(['deck_id' => 404, 'generated' => 0, 'skipped' => 0, 'failed' => 0], $result);
     }
 
+    public function testRegenerateCardRebuildsOnlyThatCardEvenWhenItLooksCurrent(): void
+    {
+        $this->makeCard(3, 1);
+        $this->makeCard(3, 2);
+        // Images dated after the scan, as an upload that keeps the old timestamp leaves them.
+        mkdir($this->root . '/3/thumbs');
+        foreach ([$this->root . '/3/Card_0001.webp', $this->root . '/3/thumbs/Card_0001.webp'] as $stale) {
+            file_put_contents($stale, 'the old image');
+            touch($stale, time() + 60);
+        }
+        clearstatcache();
+
+        $this->assertTrue($this->service->regenerateCard(3, 1));
+
+        $display = getimagesize($this->root . '/3/Card_0001.webp');
+        $thumb = getimagesize($this->root . '/3/thumbs/Card_0001.webp');
+        $this->assertNotFalse($display);
+        $this->assertNotFalse($thumb);
+        $this->assertSame([600, 1032, IMAGETYPE_WEBP], [$display[0], $display[1], $display[2]]);
+        $this->assertSame([400, 688, IMAGETYPE_WEBP], [$thumb[0], $thumb[1], $thumb[2]]);
+        $this->assertFileDoesNotExist($this->root . '/3/Card_0002.webp');
+    }
+
+    public function testRegenerateCardMakesTheThumbnailFolderWhenTheDeckHasNone(): void
+    {
+        $this->makeCard(4, 0);
+
+        $this->assertTrue($this->service->regenerateCard(4, 0));
+
+        $this->assertFileExists($this->root . '/4/Card_0000.webp');
+        $this->assertFileExists($this->root . '/4/thumbs/Card_0000.webp');
+    }
+
+    public function testRegenerateCardFailsWithoutAUsableScan(): void
+    {
+        $this->assertFalse($this->service->hasScan(9, 1));
+        $this->assertFalse($this->service->regenerateCard(9, 1));
+
+        mkdir($this->root . '/9', 0o775, true);
+        file_put_contents($this->root . '/9/Card_0001.png', 'not a png');
+
+        $this->assertTrue($this->service->hasScan(9, 1));
+        $this->assertFalse(@$this->service->regenerateCard(9, 1));
+        $this->assertSame([], self::filesMatching($this->root . '/9/*.webp*'));
+        $this->assertSame([], self::filesMatching($this->root . '/9/thumbs/*'));
+    }
+
+    public function testScanFileNamesArePaddedToFourDigits(): void
+    {
+        $this->assertSame('Card_0000.png', CardImageService::scanFileName(0));
+        $this->assertSame('Card_0078.png', CardImageService::scanFileName(78));
+        $this->assertSame('Card_12345.png', CardImageService::scanFileName(12345));
+    }
+
     public function testGenerateAllAggregatesAcrossDecks(): void
     {
         $this->makeCard(1, 1);

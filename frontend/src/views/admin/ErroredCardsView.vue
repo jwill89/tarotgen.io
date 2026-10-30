@@ -4,6 +4,8 @@ import AdminSearchField from '@/components/admin/AdminSearchField.vue'
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed, onMounted } from 'vue'
 import { useAdminApi } from '@/composables/useApi'
+import { useConfirm } from '@/composables/useConfirm'
+import { useToasts } from '@/composables/useToasts'
 import { endpoints } from '@/api/endpoints'
 import { useDataTable } from '@/composables/useDataTable'
 import SortableTh from '@/components/admin/SortableTh.vue'
@@ -22,11 +24,16 @@ import {
 import type { CardReport } from '@/types'
 
 const api = useAdminApi()
+const { confirm } = useConfirm()
+const { success: toastSuccess, error: toastError } = useToasts()
 
 const reports = ref<CardReport[]>([])
 const showResolved = ref(false)
 const busyId = ref<number | null>(null)
+const regeneratingId = ref<number | null>(null)
 const viewing = ref<CardReport | null>(null)
+/** The card just regenerated, whose old images Cloudflare may still serve. */
+const purging = ref<CardReport | null>(null)
 
 const {
   search,
@@ -99,6 +106,55 @@ async function toggleResolved(report: CardReport) {
   })
   busyId.value = null
   if (result) await fetchReports()
+}
+
+/**
+ * The last step of a fix, once the new master scan is on the server: rebuild the
+ * card's web images from it and resolve the report, in one request that resolves
+ * nothing if the images can't be made.
+ */
+async function regenerate(report: CardReport) {
+  const ok = await confirm({
+    title: 'Regenerate & resolve',
+    message:
+      `Upload the new scan to ${cardFull(report)} first. This rebuilds ` +
+      `${cardLabel(report)}'s web images from the scan on the server now, ` +
+      'then marks the report resolved.',
+    confirmLabel: 'Regenerate & resolve',
+  })
+  if (!ok) return
+
+  regeneratingId.value = report.report_id
+  const updated = await api.post<CardReport>(
+    endpoints.admin.cardReports.regenerate(report.report_id),
+    {},
+  )
+  regeneratingId.value = null
+  // On failure useAdminApi has shown the server's reason; the report is still open.
+  if (!updated) return
+
+  reports.value = reports.value.map((r) => (r.report_id === updated.report_id ? updated : r))
+  purging.value = updated
+}
+
+/**
+ * What Cloudflare may hold old copies of (it caches /assets for 30 days): the
+ * replaced scan, which the plugin loads, and both images made from it. Absolute,
+ * as its Custom Purge asks for.
+ */
+const purgeUrls = computed(() => {
+  if (!purging.value) return []
+  const { display, thumb, png } = cardImageUrls(purging.value.deck_id, purging.value.card_id)
+  return [display, thumb, png].map((path) => new URL(path, window.location.origin).href)
+})
+
+async function copyPurgeUrls() {
+  try {
+    await navigator.clipboard.writeText(purgeUrls.value.join('\n'))
+    toastSuccess('URLs copied to your clipboard.')
+  } catch {
+    toastError('Could not copy — select the URLs and copy them manually.')
+  }
 }
 
 function toggleShowResolved() {
@@ -220,6 +276,14 @@ onMounted(fetchReports)
                     @click="viewing = row.report"
                   />
                   <IconButton
+                    v-if="row.report.resolved_at === null"
+                    :icon="byPrefixAndName.fas['images']"
+                    label="Regenerate images & resolve"
+                    intent="gold"
+                    :loading="regeneratingId === row.report.report_id"
+                    @click="regenerate(row.report)"
+                  />
+                  <IconButton
                     :icon="
                       row.report.resolved_at
                         ? byPrefixAndName.fas['rotate-left']
@@ -325,6 +389,33 @@ onMounted(fetchReports)
         {{ viewingWithoutReason === 1 ? 'report came' : 'reports came' }} without a reason — sent
         before reasons were collected, or from an older plugin version.
       </p>
+    </template>
+  </BaseModal>
+
+  <BaseModal
+    :active="purging !== null"
+    title="Purge the old images"
+    max-width="38rem"
+    @close="purging = null"
+  >
+    <template v-if="purging">
+      <p class="purge-intro">
+        {{ cardLabel(purging) }} has new web images and its report is resolved. Cloudflare keeps
+        <code>/assets</code> for 30 days, so purge these URLs (Caching → Configuration → Custom
+        Purge), or visitors and the plugin keep getting the old ones:
+      </p>
+      <ul class="purge-urls">
+        <li v-for="url in purgeUrls" :key="url">
+          <code>{{ url }}</code>
+        </li>
+      </ul>
+    </template>
+    <template #footer>
+      <button class="button" @click="purging = null">Done</button>
+      <button class="button is-link" @click="copyPurgeUrls">
+        <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['copy']" /></span>
+        <span>Copy URLs</span>
+      </button>
     </template>
   </BaseModal>
 </template>
@@ -453,6 +544,30 @@ onMounted(fetchReports)
   margin-top: 1rem;
   font-size: 0.85rem;
   color: var(--myst-text-muted);
+}
+
+/* ── Purge-the-cache dialog ────────────────────────────────── */
+.purge-intro {
+  color: var(--myst-text-muted);
+}
+
+.purge-urls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.9rem 0 0;
+  list-style: none;
+}
+
+.purge-urls code {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0.45rem 0.7rem;
+  background: var(--myst-bg-2);
+  border: 1px solid var(--myst-border-strong);
+  border-radius: 8px;
+  color: var(--myst-gold-bright);
 }
 
 @media screen and (max-width: 480px) {

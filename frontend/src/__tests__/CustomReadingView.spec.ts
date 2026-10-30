@@ -62,6 +62,7 @@ const saved: AccountReading = {
   reading_notes: null,
   is_final: false,
   password_protected: false,
+  daily_card_day: null,
 }
 
 /** What the page loads, plus `extra`. */

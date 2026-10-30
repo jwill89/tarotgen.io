@@ -20,6 +20,7 @@ const counts = ref({
   changelog: 0,
   users: 0,
   unreadContacts: 0,
+  openCardReports: 0,
 })
 const stats = ref<UsageStats | null>(null)
 const loading = ref(true)
@@ -28,7 +29,7 @@ interface NavItem {
   to: string
   label: string
   icon: IconDefinition
-  count: number | null
+  count: number
   /** Render the count as the highlighted pop badge (e.g. unread contacts). */
   badge?: boolean
 }
@@ -39,7 +40,7 @@ interface NavGroup {
 }
 
 // The dashboard's section launcher: a grouped side-menu whose item counts stay
-// live off `counts`. (Errored Cards has no server-side count, so it shows none.)
+// live off `counts`.
 const navGroups = computed<NavGroup[]>(() => [
   {
     label: 'Catalog',
@@ -98,7 +99,8 @@ const navGroups = computed<NavGroup[]>(() => [
         to: 'admin-card-reports',
         label: 'Errored Cards',
         icon: byPrefixAndName.fad['circle-exclamation'],
-        count: null,
+        // Open reports only: the ones still waiting for a new scan.
+        count: counts.value.openCardReports,
       },
     ],
   },
@@ -167,7 +169,7 @@ onMounted(async () => {
                   <span class="nav-icon"><FontAwesomeIcon :icon="item.icon" /></span>
                   <span class="nav-label">{{ item.label }}</span>
                   <span v-if="item.badge && item.count" class="nav-badge">{{ item.count }}</span>
-                  <span v-else-if="item.count !== null" class="nav-count">{{
+                  <span v-else class="nav-count">{{
                     loading ? '·' : item.count.toLocaleString()
                   }}</span>
                 </router-link>

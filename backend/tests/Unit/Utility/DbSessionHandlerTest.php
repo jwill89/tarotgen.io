@@ -187,6 +187,22 @@ final class DbSessionHandlerTest extends TestCase
         $this->assertSame([8, null], array_map($this->ownerOf(...), ['someone-else', 'signed-out']));
     }
 
+    public function testDestroyForUserCountsOnlyTheSessionsThatWereStillLive(): void
+    {
+        $_SESSION = ['user_id' => 7];
+        $this->handler->write('laptop', 'user_id|i:7;');
+        $this->handler->write('phone', 'user_id|i:7;');
+        $this->handler->write('old-tablet', 'user_id|i:7;');
+        $this->pdo->prepare('UPDATE sessions SET expires = :e WHERE id = :id')
+            ->execute([':e' => time() - 1, ':id' => hash('sha256', 'old-tablet')]);
+
+        // The phone was signed in; the tablet's session had already run out.
+        $this->assertSame(1, $this->handler->destroyForUser(7, 'laptop'));
+        // Both rows go all the same: an expired one is only waiting for gc().
+        $this->assertSame(1, $this->rowCount());
+        $this->assertSame(7, $this->ownerOf('laptop'));
+    }
+
     public function testExpiredSessionReadsEmptyAndIsInvalid(): void
     {
         $this->handler->write(self::SID, 'x|i:1;');

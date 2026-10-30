@@ -184,4 +184,37 @@ describe('useAccount profile', () => {
 
     expect(await useAccount().unlinkGoogle()).toEqual({ ok: true })
   })
+
+  it('signs out the other devices and says how many there were', async () => {
+    const api = stubApi({
+      'POST /account/sessions/end-others': { body: { success: true, ended: 2 } },
+    })
+
+    expect(await useAccount().endOtherSessions()).toEqual({ ok: true, ended: 2 })
+    expect(api.mock.calls[0]?.[1]).toEqual({ method: 'POST' })
+  })
+
+  it("passes on the server's reason when the other devices can't be signed out", async () => {
+    stubApi({
+      'POST /account/sessions/end-others': { status: 401, body: { error: 'Not authenticated' } },
+    })
+
+    expect(await useAccount().endOtherSessions()).toEqual({ ok: false, error: 'Not authenticated' })
+  })
+
+  it('falls back to its own message when the server gives none', async () => {
+    stubApi({ 'POST /account/sessions/end-others': { status: 500 } })
+
+    expect(await useAccount().endOtherSessions()).toEqual({
+      ok: false,
+      error: 'Could not sign out your other devices.',
+    })
+  })
+
+  it('links to the journal download in either format', () => {
+    const { journalExportUrl } = useAccount()
+
+    expect(journalExportUrl('json')).toBe('/api/account/readings/export?format=json')
+    expect(journalExportUrl('csv')).toBe('/api/account/readings/export?format=csv')
+  })
 })

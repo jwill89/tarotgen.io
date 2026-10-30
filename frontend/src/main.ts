@@ -12,6 +12,7 @@ import './assets/bulma-helpers.css'
 import './assets/tokens.css'
 import './assets/fonts.css'
 import './assets/style.css'
+import './assets/print.css'
 // Self-hosted FontAwesome: imports the icon set + core CSS and exposes the
 // byPrefixAndName lookup used by the <FontAwesomeIcon> components below.
 import './fontawesome'

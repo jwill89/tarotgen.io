@@ -134,6 +134,7 @@ describe('App', () => {
       expect(menuItems()).toEqual([
         'Dashboard',
         'My Readings',
+        'Daily Card',
         'My Spreads',
         'Account Settings',
         'Log Out',
@@ -169,6 +170,7 @@ describe('App', () => {
     expect(menuItems()).toEqual([
       'Dashboard',
       'My Readings',
+      'Daily Card',
       'My Spreads',
       'Account Settings',
       'Dashboard',
@@ -260,9 +262,10 @@ describe('App', () => {
       const { wrapper } = await openApp()
 
       const links = mobileLinks(wrapper)
-      expect(links.slice(5, 9)).toEqual([
+      expect(links.slice(5, 10)).toEqual([
         'Dashboard',
         'My Readings',
+        'Daily Card',
         'My Spreads',
         'Account Settings',
       ])

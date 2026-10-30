@@ -43,6 +43,13 @@ class Reading extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(type: 'boolean'))]
     public private(set) bool $password_protected = false;
 
+    /**
+     * Derived — the local day ("Y-m-d") this reading is the owner's daily card
+     * for, or null for any other reading (see DailyCardData).
+     */
+    #[OAS\Property(schema: new OAS\Schema(description: 'The day ("Y-m-d", the owner\'s local date) this reading is their daily card for; null for any other reading.', type: 'string', nullable: true))]
+    public private(set) ?string $daily_card_day = null;
+
     public function setReadingId(string $reading_id): self
     {
         $this->reading_id = $reading_id;

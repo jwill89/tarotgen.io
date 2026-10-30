@@ -10,6 +10,8 @@ import {
   hasButton,
   click,
   dialog,
+  confirmDialog,
+  answerConfirm,
   toasts,
   row,
   tableRows,
@@ -259,6 +261,127 @@ describe('admin ErroredCardsView', () => {
       expect(apiCalls(api)).toHaveLength(1)
       expect(toasts()).toEqual(['Report not found.'])
       expect(button('Resolve', row('Thoth Tarot')).disabled).toBe(false)
+    })
+  })
+
+  describe('regenerating', () => {
+    const regenerated: CardReport = { ...fool, resolved_at: '2026-10-30 09:15:00' }
+    const purgeUrls = [
+      `${window.location.origin}/assets/decks/3/Card_0001.webp`,
+      `${window.location.origin}/assets/decks/3/thumbs/Card_0001.webp`,
+      `${window.location.origin}/assets/decks/3/Card_0001.png`,
+    ]
+
+    /** The purge dialog's URLs, as listed. */
+    function listedUrls(): string[] {
+      const open = dialog('Purge the old images')
+      if (!open) throw new Error('No purge dialog')
+      return [...open.querySelectorAll('li code')].map((c) => c.textContent.trim())
+    }
+
+    it('asks first, saying the new scan must be uploaded, and sends nothing when cancelled', async () => {
+      const api = stubApi({ 'GET /admin/card-reports': { body: [fool] } })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+      api.mockClear()
+
+      await click(button('Regenerate images & resolve', row('Thoth Tarot')))
+
+      expect(confirmDialog()?.textContent).toContain(
+        "Upload the new scan to /assets/decks/3/Card_0001.png first. This rebuilds The Fool's web images",
+      )
+      await answerConfirm('cancel')
+
+      expect(apiCalls(api)).toEqual([])
+      expect(hasButton('Reopen', row('Thoth Tarot'))).toBe(false)
+      expect(dialog('Purge the old images')).toBeNull()
+    })
+
+    it('resolves the report in its row and lists the URLs to purge from the cache', async () => {
+      const api = stubApi({
+        'GET /admin/card-reports': { body: [fool, orphan] },
+        'POST /admin/card-reports/1/regenerate': { body: regenerated },
+      })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+      api.mockClear()
+
+      await click(button('Regenerate images & resolve', row('Thoth Tarot')))
+      await answerConfirm('confirm')
+
+      expect(apiCalls(api)).toEqual([['POST', '/api/admin/card-reports/1/regenerate', {}]])
+      // The row now reads as resolved; there is nothing left to regenerate.
+      expect(row('Thoth Tarot').classList).toContain('has-text-grey')
+      expect(hasButton('Reopen', row('Thoth Tarot'))).toBe(true)
+      expect(hasButton('Regenerate images & resolve', row('Thoth Tarot'))).toBe(false)
+      expect(hasButton('Regenerate images & resolve', row('Deck #5'))).toBe(true)
+      expect(dialog('Purge the old images')?.textContent).toContain(
+        'The Fool has new web images and its report is resolved.',
+      )
+      expect(listedUrls()).toEqual(purgeUrls)
+    })
+
+    it('copies the URLs to purge, one per line, and closes when done', async () => {
+      const writeText = vi.spyOn(navigator.clipboard, 'writeText').mockResolvedValue()
+      stubApi({
+        'GET /admin/card-reports': { body: [fool] },
+        'POST /admin/card-reports/1/regenerate': { body: regenerated },
+      })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+      await click(button('Regenerate images & resolve', row('Thoth Tarot')))
+      await answerConfirm('confirm')
+
+      await click(button('Copy URLs'))
+
+      expect(writeText).toHaveBeenCalledWith(purgeUrls.join('\n'))
+      expect(toasts()).toEqual(['URLs copied to your clipboard.'])
+
+      await click(button('Done'))
+      expect(dialog('Purge the old images')).toBeNull()
+    })
+
+    it('asks for a manual copy when the clipboard is refused', async () => {
+      vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(
+        new DOMException('Denied', 'NotAllowedError'),
+      )
+      stubApi({
+        'GET /admin/card-reports': { body: [fool] },
+        'POST /admin/card-reports/1/regenerate': { body: regenerated },
+      })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+      await click(button('Regenerate images & resolve', row('Thoth Tarot')))
+      await answerConfirm('confirm')
+
+      await click(button('Copy URLs'))
+
+      expect(toasts()).toEqual(['Could not copy — select the URLs and copy them manually.'])
+      expect(listedUrls()).toEqual(purgeUrls)
+    })
+
+    it("shows the server's reason and leaves the report open when it fails", async () => {
+      const message =
+        'There is no master scan for this card on the server. Upload Card_0001.png to deck 3’s folder, then try again.'
+      stubApi({
+        'GET /admin/card-reports': { body: [fool] },
+        'POST /admin/card-reports/1/regenerate': { status: 409, body: { error: message } },
+      })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+
+      await click(button('Regenerate images & resolve', row('Thoth Tarot')))
+      await answerConfirm('confirm')
+
+      expect(toasts()).toEqual([message])
+      expect(hasButton('Resolve', row('Thoth Tarot'))).toBe(true)
+      expect(button('Regenerate images & resolve', row('Thoth Tarot')).disabled).toBe(false)
+      expect(dialog('Purge the old images')).toBeNull()
+    })
+
+    it('is not offered on a resolved report', async () => {
+      stubApi({ 'GET /admin/card-reports': { body: [fool, fixed] } })
+      await mountPage(ErroredCardsView, { path: '/admin/card-reports' })
+
+      await click(button('Show Resolved'))
+
+      expect(hasButton('Regenerate images & resolve', row('Rider-Waite Tarot'))).toBe(false)
+      expect(hasButton('Regenerate images & resolve', row('Thoth Tarot'))).toBe(true)
     })
   })
 

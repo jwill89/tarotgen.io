@@ -29,6 +29,11 @@ readonly class CardReportRepository
         return $this->data->retrieve($includeResolved);
     }
 
+    public function find(int $reportId): ?CardReport
+    {
+        return $this->data->retrieveOne($reportId);
+    }
+
     public function exists(int $reportId): bool
     {
         return $this->data->exists($reportId);

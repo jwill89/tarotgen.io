@@ -119,14 +119,20 @@ final readonly class DbSessionHandler implements SessionHandlerInterface, Sessio
     /**
      * End every session of $userId, except the one whose (raw) id is $exceptId —
      * the browser making the change, when it should stay signed in. Returns how
-     * many were ended.
+     * many were still live: an expired row gc() hasn't swept yet goes too, but it
+     * signed nobody in, so "signed out of N other devices" doesn't count it.
      */
     public function destroyForUser(int $userId, ?string $exceptId = null): int
     {
-        $stmt = $this->db->prepare('DELETE FROM sessions WHERE user_id = :user AND id <> :except');
-        $stmt->execute([':user' => $userId, ':except' => $exceptId === null ? '' : $this->key($exceptId)]);
+        $params = [':user' => $userId, ':except' => $exceptId === null ? '' : $this->key($exceptId)];
 
-        return $stmt->rowCount();
+        $live = $this->db->prepare('SELECT COUNT(*) FROM sessions WHERE user_id = :user AND id <> :except AND expires > :now');
+        $live->execute($params + [':now' => time()]);
+        $ended = (int)$live->fetchColumn();
+
+        $this->db->prepare('DELETE FROM sessions WHERE user_id = :user AND id <> :except')->execute($params);
+
+        return $ended;
     }
 
     /** Sweep expired rows. Called by PHP's probabilistic GC (see Session::start). */

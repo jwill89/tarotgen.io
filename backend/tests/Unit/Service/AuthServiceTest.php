@@ -494,6 +494,21 @@ final class AuthServiceTest extends TestCase
         $this->assertSame([hash('sha256', 'this-browser')], $kept->fetchAll(PDO::FETCH_COLUMN));
     }
 
+    public function testEndingTheOtherSessionsKeepsThisOneAndCountsTheRest(): void
+    {
+        $reg = $this->registered('out@example.com', 'Outer');
+        $other = $this->registered('else@example.com', 'Elsewhere');
+        $id = $reg['user']->user_id;
+        $this->addSession('this-browser', $id);
+        $this->addSession('phone', $id);
+        $this->addSession('laptop', $id);
+        $this->addSession('theirs', $other['user']->user_id);
+
+        $this->assertSame(2, $this->auth->endOtherSessions($id, 'this-browser'));
+        $this->assertSame([$id, $other['user']->user_id], $this->sessionOwners());
+        $this->assertSame(0, $this->auth->endOtherSessions($id, 'this-browser'));
+    }
+
     public function testDeleteAccountRequiresCorrectPassword(): void
     {
         $reg = $this->registered('del@example.com', 'Deleter', 'correct horse battery staple');

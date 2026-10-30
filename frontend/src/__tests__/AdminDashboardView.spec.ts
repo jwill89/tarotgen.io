@@ -16,6 +16,7 @@ const counts = {
   changelog: 7,
   users: 58,
   unreadContacts: 2,
+  openCardReports: 3,
 }
 
 const stats: UsageStats = {
@@ -139,14 +140,24 @@ describe('admin DashboardView', () => {
       'Spreads 9',
       'Readings 12,345',
       'Users 58',
-      // Unread messages show as a badge; Errored Cards has no count to show.
+      // Unread messages show as a badge; open card reports as a plain count.
       'Contacts 2',
-      'Errored Cards',
+      'Errored Cards 3',
       'Changelog 7',
     ])
     expect(link('Contacts').querySelector('.nav-badge')?.textContent).toBe('2')
+    expect(link('Errored Cards').querySelector('.nav-badge')).toBeNull()
     expect(link('Decks').getAttribute('href')).toBe('/admin/decks')
     expect(link('Errored Cards').getAttribute('href')).toBe('/admin/card-reports')
+  })
+
+  it('counts no errored cards once every report is resolved', async () => {
+    stubApi({
+      'GET /admin/summary': { body: { counts: { ...counts, openCardReports: 0 }, stats } },
+    })
+    await mountPage(DashboardView, { path: '/admin' })
+
+    expect(launcher()).toContain('Errored Cards 0')
   })
 
   it('shows no unread badge when every message has been read', async () => {

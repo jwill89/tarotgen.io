@@ -581,6 +581,84 @@ describe('ReadingView', () => {
     })
   })
 
+  describe('printing', () => {
+    /** The printed list of cards, row by row (the header included). */
+    const printedCards = (wrapper: VueWrapper) =>
+      wrapper
+        .findAll('.reading-print-cards tr')
+        .map((row) => row.findAll('th, td').map((cell) => words(cell.element)))
+
+    it("opens the browser's print dialog from the Print button", async () => {
+      const print = vi.fn()
+      vi.stubGlobal('print', print)
+      loads(reading())
+      await openReading()
+
+      await click('Print')
+
+      expect(print).toHaveBeenCalledOnce()
+    })
+
+    it('offers Print beside Save as Image on a spread too', async () => {
+      const print = vi.fn()
+      vi.stubGlobal('print', print)
+      loads(reading({ reading_info: spreadInfo }))
+      await openReading()
+
+      await click('Print')
+
+      expect(print).toHaveBeenCalledOnce()
+    })
+
+    it("lists a spread's cards by position for paper, named and marked reversed, face down or not", async () => {
+      loads(reading({ reading_info: spreadInfo }))
+      const { wrapper } = await openReading()
+
+      // Still face down on screen; the printout names every card.
+      expect(detailRows(wrapper)[0]).toBe('Past Not yet revealed')
+      expect(printedCards(wrapper)).toEqual([
+        ['#', 'Position', 'Card'],
+        ['1', 'Past', 'The Star'],
+        ['2', 'Present', 'The Moon (Reversed)'],
+        ['3', 'Future', 'The Sun'],
+      ])
+    })
+
+    it('lists a free draw in draw order, an unnamed card by its number', async () => {
+      loads(reading())
+      const { wrapper } = await openReading()
+
+      expect(printedCards(wrapper)).toEqual([
+        ['#', 'Card'],
+        ['1', 'The Magician'],
+        ['2', 'Card #79 (Reversed)'],
+      ])
+      // Each face carries its number, to find its row on paper.
+      expect(
+        wrapper.findAll('.spread-face--reveal .spread-order-badge').map((b) => b.text()),
+      ).toEqual(['1', '2'])
+    })
+
+    it('prints the notes even while they are folded away on screen', async () => {
+      loads(reading({ reading_notes: 'The **Tower** speaks of change.' }))
+      const { wrapper } = await openReading()
+
+      await wrapper.get('.reading-notes .spread-details-header').trigger('click')
+
+      expect(wrapper.get('.reading-notes .spread-details-header').attributes('aria-expanded')).toBe(
+        'false',
+      )
+      expect(wrapper.get('.reading-print-notes strong').text()).toBe('Tower')
+    })
+
+    it('prints no notes section for a reading without notes', async () => {
+      loads(reading())
+      const { wrapper } = await openReading()
+
+      expect(wrapper.find('.reading-print-notes').exists()).toBe(false)
+    })
+  })
+
   describe("the owner's actions", () => {
     const owned = (overrides: Partial<Reading> = {}) =>
       reading({ is_owner: true, can_draw_more: true, reader: 'Reader', ...overrides })

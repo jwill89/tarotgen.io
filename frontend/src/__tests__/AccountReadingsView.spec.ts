@@ -90,6 +90,7 @@ const reading = (reading_id: string, extra: Partial<AccountReading> = {}): Accou
   reading_notes: null,
   is_final: false,
   password_protected: false,
+  daily_card_day: null,
   ...extra,
 })
 
@@ -153,6 +154,19 @@ describe('AccountReadingsView', () => {
       await mountWithApp(Page, { path: '/account/readings' })
 
       expect(titles()).toEqual(['Morning reflection', 'Celtic Cross', '3 cards', '1 card'])
+    })
+
+    it('marks a daily card as one', async () => {
+      serve(() => [
+        named('a', 'Daily card — 30 October 2026', { daily_card_day: '2026-10-30' }),
+        named('b', 'Morning reflection'),
+      ])
+      await mountWithApp(Page, { path: '/account/readings' })
+
+      const tags = (title: string) =>
+        [...row(title).cells[0].querySelectorAll('.tag')].map((t) => text(t))
+      expect(tags('Daily card — 30 October 2026 Daily card')).toEqual(['Daily card'])
+      expect(tags('Morning reflection')).toEqual([])
     })
 
     it('shows who can see each reading', async () => {

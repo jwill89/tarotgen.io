@@ -180,6 +180,13 @@ export const routes: RouteRecordRaw[] = [
     meta: { title: 'My Readings', userOnly: true, noindex: true },
   },
   {
+    // One card a day for a signed-in reader; a guest is sent to sign in first.
+    path: '/daily',
+    name: 'daily-card',
+    component: () => import('@/views/DailyCardView.vue'),
+    meta: { title: 'Daily Card', userOnly: true, noindex: true },
+  },
+  {
     path: '/account/settings',
     name: 'account-settings',
     component: () => import('@/views/AccountSettingsView.vue'),

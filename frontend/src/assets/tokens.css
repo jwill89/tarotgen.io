@@ -119,6 +119,35 @@
   --bulma-focus-l: 54%;
 }
 
+/* ── Print palette: ink on paper ─────────────────────────────
+   The night-sky charcoal would print as a page of toner (or, with background
+   graphics off, light text on nothing). On paper, surfaces go white and text
+   near-black; gold darkens until it reads on white. Bulma's variables follow,
+   being mapped onto these above. Layout for print lives in print.css. */
+@media print {
+  :root {
+    color-scheme: light;
+
+    --myst-bg: #fff;
+    --myst-bg-2: #fff;
+    --myst-chrome: #fff;
+    --myst-surface: #fff;
+    --myst-surface-2: #fff;
+    --myst-surface-3: #f3f3f5;
+    --myst-border: rgba(0, 0, 0, 0.15);
+    --myst-border-strong: rgba(0, 0, 0, 0.3);
+
+    --myst-text: #1c1c22;
+    --myst-text-strong: #000;
+    --myst-text-muted: #4a4a55;
+    --myst-text-dim: #5a5a66;
+
+    --myst-gold: #7a5b1c;
+    --myst-gold-bright: #6a4e16;
+    --myst-warning: #8a5a00;
+  }
+}
+
 /* ── Global element polish ─────────────────────────────────── */
 
 /* Buttons: one consistent treatment for every intent (no per-intent specials),

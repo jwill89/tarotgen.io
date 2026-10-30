@@ -1,0 +1,35 @@
+/*
+ * Print: any page on paper, without the app around it. The ink-on-white palette
+ * is tokens.css's (its print block); a page with more to say on paper lays
+ * itself out in its own print styles (the reading: ReadingView.vue).
+ */
+@page {
+  margin: 1.5cm;
+}
+
+@media print {
+  /* The night sky's gradients, and the room left for the fixed nav. */
+  html {
+    background-image: none;
+  }
+  body.has-fixed-nav {
+    padding-top: 0;
+  }
+
+  /* The app's chrome: navigation, footer, the starfield, and whatever floats
+     over a page (toasts, tooltips, the cookie notice). !important because their
+     components' scoped styles out-rank a bare class. */
+  .site-nav,
+  .footer,
+  .skip-link,
+  .starfield,
+  .toast-viewport,
+  .myst-tooltip,
+  .cookie-banner {
+    display: none !important;
+  }
+
+  .section {
+    padding: 0;
+  }
+}

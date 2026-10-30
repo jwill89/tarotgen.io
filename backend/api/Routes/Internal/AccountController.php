@@ -13,7 +13,9 @@ use Tarot\Repository\ReadingRepository;
 use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserSpreadRepository;
 use Tarot\Service\AuthService;
+use Tarot\Service\JournalExport;
 use Tarot\Structure\Deck;
+use Tarot\Utility\Clock;
 use Tarot\Utility\Input;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
@@ -36,6 +38,7 @@ class AccountController extends AbstractController
         private readonly FavoriteSpreadRepository $favorites,
         private readonly FavoriteDeckRepository $favoriteDecks,
         private readonly DeckRepository $decks,
+        private readonly JournalExport $journal,
     ) {
     }
 
@@ -196,6 +199,65 @@ class AccountController extends AbstractController
         return $response->withStatus(204);
     }
 
+    #[OAS\Operation\Get(
+        path: '/account/readings/export',
+        summary: "Download the user's whole journal, every reading, as JSON or CSV",
+        description: 'A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading\'s name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.',
+        tags: ['Account'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        parameters: [
+            new OAS\Parameter(
+                name: 'format',
+                in: 'query',
+                required: false,
+                description: 'json (the default) or csv.',
+                schema: new OAS\Schema(type: 'string', enum: ['json', 'csv'])
+            ),
+        ],
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'The journal',
+                headers: [
+                    new OAS\Header(
+                        header: 'Content-Disposition',
+                        description: 'attachment; filename="tarotgen-journal-{Y-m-d}.json" (or .csv), dated in UTC',
+                        schema: new OAS\Schema(type: 'string')
+                    ),
+                ],
+                content: [
+                    new OAS\MediaType\Json(ref: '#/components/schemas/JournalExport'),
+                    new OAS\MediaType(
+                        mediaType: 'text/csv',
+                        schema: new OAS\Schema(
+                            description: 'Columns: Reading ID, Reading Time (UTC), Reading Name, Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes.',
+                            type: 'string'
+                        )
+                    ),
+                ]
+            ),
+            new OAS\Response(response: 400, description: 'Unknown format'),
+        ]
+    )]
+    public function exportReadings(Request $request, Response $response): Response|ResponseInterface
+    {
+        $format = $request->getQueryParams()['format'] ?? 'json';
+        if ($format !== 'json' && $format !== 'csv') {
+            return $response->withJson(['error' => 'Choose an export format: json or csv.'], 400);
+        }
+
+        $userId = $this->userId($request);
+        $body   = $response->getBody();
+        foreach ($format === 'csv' ? $this->journal->csv($userId) : $this->journal->json($userId) as $chunk) {
+            $body->write($chunk);
+        }
+
+        return $response
+            ->withHeader('Content-Type', $format === 'csv' ? 'text/csv; charset=utf-8' : 'application/json; charset=utf-8')
+            ->withHeader('Content-Disposition', 'attachment; filename="tarotgen-journal-' . Clock::today() . '.' . $format . '"')
+            ->withHeader('Cache-Control', 'private, no-store');
+    }
+
     /**
      * Partial update of the current account's profile. Currently the only
      * editable field is the display name (previously the dedicated
@@ -282,6 +344,37 @@ class AccountController extends AbstractController
         Session::rotate();
 
         return $response->withJson(['success' => true, 'message' => 'Your password has been updated.']);
+    }
+
+    #[OAS\Operation\Post(
+        path: '/account/sessions/end-others',
+        summary: 'Sign out of every other device',
+        description: "Ends every session of the account but the browser asking, which stays signed in under a new session id, so a copy of its old cookie is signed out too. Linked plugins keep their tokens (they're revoked under Connected Apps).",
+        tags: ['Account'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'The other sessions ended',
+                content: new OAS\MediaType\Json(
+                    required: ['success', 'ended'],
+                    properties: [
+                        new OAS\Property(property: 'success', schema: new OAS\Schema(type: 'boolean')),
+                        new OAS\Property(property: 'ended', schema: new OAS\Schema(description: 'How many other sessions were signed out; 0 when none was.', type: 'integer')),
+                    ]
+                )
+            ),
+        ]
+    )]
+    public function endOtherSessions(Request $request, Response $response): Response|ResponseInterface
+    {
+        $ended = $this->auth->endOtherSessions($this->userId($request), Session::id());
+
+        // Rotated as after a password change: when it's this browser's cookie that
+        // was copied, "everywhere else" has to include the copy.
+        Session::rotate();
+
+        return $response->withJson(['success' => true, 'ended' => $ended]);
     }
 
     #[OAS\Operation\Delete(

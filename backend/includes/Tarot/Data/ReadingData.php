@@ -11,10 +11,13 @@ class ReadingData extends AbstractData
      * Columns selected for every Reading read. Note `password_hash` is exposed
      * only as the derived `password_protected` flag — the hash itself is never
      * hydrated onto the Reading (so it can't leak through serialization).
+     * `daily_card_day` names the table (`readings.reading_id`), so these columns
+     * are read FROM readings without an alias.
      */
     private const string SELECT_COLS
         = 'reading_id, reading_info, reading_time, user_id, hide_user, reading_name, reading_notes, is_final,
-         CASE WHEN password_hash IS NOT NULL AND password_hash <> \'\' THEN 1 ELSE 0 END AS password_protected';
+         CASE WHEN password_hash IS NOT NULL AND password_hash <> \'\' THEN 1 ELSE 0 END AS password_protected,
+         (SELECT dc.day FROM daily_cards dc WHERE dc.reading_id = readings.reading_id) AS daily_card_day';
 
     public function retrieve(string $reading_id): ?Reading
     {

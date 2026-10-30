@@ -30,7 +30,8 @@ class ReadingService
     /**
      * Probability that any single packet is turned (180°) during the
      * cut-and-turn pass. In a single pass this is also the approximate
-     * per-card reversal rate, so tune this to taste (e.g. 0.27 ≈ 27%).
+     * per-card reversal rate (0.27 ≈ 27%). A model parameter, not a user
+     * setting: readers asked that reversals stay on/off (AUDIT §9 "Declined").
      */
     private const float REVERSAL_TURN_PROBABILITY = 0.27;
 

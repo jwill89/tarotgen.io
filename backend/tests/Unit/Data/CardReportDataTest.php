@@ -200,6 +200,27 @@ final class CardReportDataTest extends TestCase
         $this->assertSame(['still dusty' => 1], $this->roundsByDetails($report));
     }
 
+    public function testFindReturnsOneReportWithItsDeckNameAndReasons(): void
+    {
+        $this->reports->report(1, 6, 'The Lovers', CardReportReason::Quality, 'blurry');
+        // Reported twice, so it lists first.
+        $this->reports->report(2, 5, 'The Hierophant', CardReportReason::Artefact, 'dusty');
+        $this->reports->report(2, 5, 'The Hierophant', CardReportReason::Cropping, 'crooked');
+        $id = $this->reports->get(false)[0]->report_id;
+        $this->reports->setResolved($id, true);
+
+        $report = $this->reports->find($id);
+
+        $this->assertNotNull($report);
+        $this->assertSame([$id, 'Thoth', 'The Hierophant', 2], [$report->report_id, $report->deck_name, $report->card_name, $report->report_count]);
+        $this->assertNotNull($report->resolved_at);
+        $this->assertSame(
+            ['crooked', 'dusty'],
+            array_map(static fn(CardReportSubmission $s): string => $s->details, $report->submissions)
+        );
+        $this->assertNull($this->reports->find(999));
+    }
+
     public function testOpenReportsSortBeforeResolvedOnes(): void
     {
         $this->reports->report(1, 5, 'A', CardReportReason::Artefact, '');

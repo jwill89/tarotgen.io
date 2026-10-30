@@ -18,4 +18,6 @@ export const STORAGE_KEYS = {
   recentReadings: 'tarot.recentReadings',
   /** Cached current user (display name, is_admin, etc.) for instant nav/guards on reload. */
   currentUser: 'tarot.user.current',
+  /** The deck and reversals choice of the last daily card drawn, to prefill the next. */
+  dailyCardChoice: 'tarot.dailyCard.choice',
 } as const

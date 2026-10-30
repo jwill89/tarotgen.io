@@ -68,6 +68,18 @@ describe('router guards', () => {
     expect(router.currentRoute.value.name).toBe('admin-users')
   })
 
+  it('asks a signed-out visitor to sign in for the daily card, and lets a user in', async () => {
+    const guest = await freshApp()
+    await guest.router.push('/daily')
+    expect(guest.router.currentRoute.value.name).toBe('login')
+    expect(guest.router.currentRoute.value.query.redirect).toBe('/daily')
+
+    const { router, markAuthChecked } = await freshApp(testUser())
+    markAuthChecked()
+    await router.push('/daily')
+    expect(router.currentRoute.value.name).toBe('daily-card')
+  })
+
   it('lets a signed-in user into their account pages', async () => {
     const { router, markAuthChecked } = await freshApp(testUser())
     markAuthChecked()

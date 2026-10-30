@@ -33,6 +33,15 @@ final class ReadingDataTest extends TestCase
                 password_hash TEXT DEFAULT NULL
             )'
         );
+        // Read for Reading::$daily_card_day (as in db/schema.sql, minus users).
+        $this->pdo->exec(
+            'CREATE TABLE daily_cards (
+                user_id INTEGER NOT NULL,
+                day TEXT NOT NULL,
+                reading_id TEXT NOT NULL REFERENCES readings(reading_id) ON DELETE CASCADE,
+                PRIMARY KEY (user_id, day)
+            )'
+        );
         $this->data = new ReadingData($this->pdo);
     }
 
@@ -111,6 +120,20 @@ final class ReadingDataTest extends TestCase
 
         // The serialized form must not contain the hash.
         $this->assertArrayNotHasKey('password_hash', $loaded->jsonSerialize());
+    }
+
+    public function testADailyCardReadingCarriesItsDay(): void
+    {
+        $this->data->store($this->make('daily', 4));
+        $this->data->store($this->make('plain', 4));
+        $this->pdo->exec("INSERT INTO daily_cards (user_id, day, reading_id) VALUES (4, '2026-10-30', 'daily')");
+
+        $this->assertSame('2026-10-30', $this->retrieved('daily')->daily_card_day);
+        $this->assertNull($this->retrieved('plain')->daily_card_day);
+        $this->assertSame(
+            ['plain' => null, 'daily' => '2026-10-30'],
+            array_column(array_map(static fn(Reading $r): array => $r->jsonSerialize(), $this->data->listByUser(4)), 'daily_card_day', 'reading_id')
+        );
     }
 
     public function testReadingNotesRoundTripAndUpdate(): void

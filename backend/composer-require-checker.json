@@ -5,6 +5,7 @@
     "OpenApi\\Builder",
     "OpenApi\\Spec\\Header",
     "OpenApi\\Spec\\Info",
+    "OpenApi\\Spec\\MediaType",
     "OpenApi\\Spec\\MediaType\\Json",
     "OpenApi\\Spec\\Operation\\Delete",
     "OpenApi\\Spec\\Operation\\Get",

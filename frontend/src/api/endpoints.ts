@@ -129,9 +129,13 @@ export const endpoints = {
     profile: '/account',
     /** `POST` — change password. */
     changePassword: '/account/change-password',
+    /** `POST` — sign out every other session of the account (→ `{ success, ended }`). */
+    endOtherSessions: '/account/sessions/end-others',
 
     readings: '/account/readings',
     readingById: (id: string | number) => `/account/readings/${id}`,
+    /** `GET` — the whole journal as a download (a plain link: it's an attachment). */
+    readingsExport: (format: 'json' | 'csv') => `/account/readings/export?format=${format}`,
 
     spreads: '/account/spreads',
     spreadById: (id: string | number) => `/account/spreads/${id}`,
@@ -141,6 +145,11 @@ export const endpoints = {
     /** `DELETE` — remove a favorite spread (ids now in the URL). */
     favoriteById: (spreadType: string, spreadId: string | number) =>
       `/account/favorites/${spreadType}/${spreadId}`,
+
+    /** `GET` — how often each card turned up in the user's readings (`?deck_id=&days=`). */
+    cardFrequency: '/account/card-frequency',
+    /** `GET ?month=YYYY-MM` — that month's daily cards / `POST` — draw the day's card. */
+    dailyCards: '/account/daily-cards',
 
     favoriteDecks: '/account/favorite-decks',
     /** `DELETE` — remove a favorite deck (id now in the URL). */
@@ -225,6 +234,8 @@ export const endpoints = {
       /** `GET` — pass `?show_resolved=1` to include resolved reports. */
       list: (showResolved: boolean) => `/card-reports?show_resolved=${showResolved ? '1' : '0'}`,
       byId: (id: string | number) => `/card-reports/${id}`,
+      /** `POST` — rebuild the card's web images from its new scan, then resolve the report. */
+      regenerate: (id: string | number) => `/card-reports/${id}/regenerate`,
     },
   },
 } as const

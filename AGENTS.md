@@ -269,8 +269,9 @@ little PHP per navigation):
   **A raw `fetch(` anywhere else is a lint error** (`tarot/api-client-only` in
   `eslint.config.ts`). Calls belong in a composable: `useReadings` (generate,
   custom, get, unlock, draw more, finalize, placement), `useSubmissions` (public
-  deck / deck-system / spread submissions), `useAccount`, `usePasskeys`,
-  `useUserSpreads`, `useDecks`, `useContact`, `useUser`.
+  deck / deck-system / spread submissions), `useAccount` (incl. sign out of
+  other devices and the journal export links), `usePasskeys`, `useUserSpreads`,
+  `useDecks`, `useContact`, `useUser`, `useCardFrequency`, `useDailyCards`.
 - **Types:** `src/types/api.generated.ts` is **generated** from `backend/openapi.json`
   via `npm run gen:types` (openapi-typescript) — never edit it by hand; regenerate
   it after the backend spec changes (CI fails if it's stale). `src/types/index.ts`
@@ -642,11 +643,19 @@ scripts/retention.php --dry-run`.
   themselves, and `PROTECTED_ADMIN_EMAILS` accounts can't be demoted or deleted;
   an account always keeps one way to sign in (`SignInMethods`).
 - **Schema changes are additive and migrate before deploy:** a new
-  `db/migrate_*.php` (idempotent; the `db/` scripts are gitignored, so it's
-  copied to the droplet by hand), `db/schema.sql` edited by hand (never
+  `db/migrate_*.php` (idempotent; **migrations are never committed** — `db/` is
+  gitignored apart from `schema.sql`, so don't un-ignore one, and don't add a
+  committed test that needs one: verify it against a throwaway copy of the old
+  schema instead; it's copied to the droplet by hand), `db/schema.sql` edited by hand (never
   regenerated wholesale from a local DB — that drops a table and reorders), and
   run on production **before** the backend deploy that needs it. Design it so
   the old code keeps working on the new schema.
+- **Product boundaries (the owner's, after talking with practitioners):** the
+  site is a tool for readers — no card interpretations and no AI readings.
+  Reversals are an **on/off toggle**, never a rate or percentage setting:
+  choosing a rate takes the spirit out of the draw, and the draw already models
+  a physical "cut and turn" (`ReadingService::cutAndTurn()`), so reversals come
+  in realistic runs (AUDIT §9 "Declined").
 - **Held or deferred on purpose — leave them unless the reason is gone:**
   TypeScript stays on 6 until `vue-tsc` supports TypeScript 7.1; PHPStan is
   held at 2.3.3 (`conflict` in `composer.json`) until Rector works with 2.3.4;
@@ -680,7 +689,10 @@ scripts/retention.php --dry-run`.
   `Card_Back.png` — the master scans, never modified (the plugin loads them).
   `CardImageService` derives a full-size display `Card_XXXX.webp` (lightbox,
   export) and a 400 px `thumbs/Card_XXXX.webp`, regenerating any older than its
-  PNG. Run it from the admin Decks page, or for a backfill / after an SFTP upload:
+  PNG. For one reported card, Errored Cards' **Regenerate & resolve**
+  (`POST /admin/card-reports/{id}/regenerate`) rebuilds that card's images
+  whatever their timestamps (SFTP clients keep a file's old mtime) and resolves
+  the report, then lists the URLs to purge. Run it from the admin Decks page, or for a backfill / after an SFTP upload:
   `runuser -u www-data -- nice -n 19 php scripts/generate_card_images.php [deck_id …]`.
   The frontend builds these URLs only through `cardImageUrls()` /
   `cardBackImageUrls()` (`src/utils/cardImages.ts`). After replacing a scan,

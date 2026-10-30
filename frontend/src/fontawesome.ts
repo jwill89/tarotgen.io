@@ -49,6 +49,7 @@ import {
   faCartShopping,
   faCheck,
   faChevronDown,
+  faChevronLeft,
   faChevronRight,
   faChevronUp,
   faCircleCheck,
@@ -68,6 +69,7 @@ import {
   faEnvelopeOpen,
   faEye,
   faEyeSlash,
+  faFileArrowDown,
   faFloppyDisk,
   faFont,
   faForward,
@@ -100,6 +102,7 @@ import {
   faPen,
   faPenToSquare,
   faPlus,
+  faPrint,
   faQuoteLeft,
   faRightFromBracket,
   faRightToBracket,
@@ -129,6 +132,7 @@ import {
 
 // ── Duotone solid (fad) ─────────────────────────────────────────────────────
 import {
+  faCalendarDay as fadCalendarDay,
   faCardsBlank as fadCardsBlank,
   faCircleCheck as fadCircleCheck,
   faCircleExclamation as fadCircleExclamation,
@@ -198,6 +202,7 @@ export const byPrefixAndName = index([
   faCartShopping,
   faCheck,
   faChevronDown,
+  faChevronLeft,
   faChevronRight,
   faChevronUp,
   faCircleCheck,
@@ -217,6 +222,7 @@ export const byPrefixAndName = index([
   faEnvelopeOpen,
   faEye,
   faEyeSlash,
+  faFileArrowDown,
   faFloppyDisk,
   faFont,
   faForward,
@@ -249,6 +255,7 @@ export const byPrefixAndName = index([
   faPen,
   faPenToSquare,
   faPlus,
+  faPrint,
   faQuoteLeft,
   faRightFromBracket,
   faRightToBracket,
@@ -275,6 +282,7 @@ export const byPrefixAndName = index([
   faWandMagicSparkles,
   faXmark,
   // duotone (fad)
+  fadCalendarDay,
   fadCardsBlank,
   fadCircleCheck,
   fadCircleExclamation,

@@ -87,6 +87,29 @@ export function useAccount() {
     return res.ok ? { ok: true } : { ok: false, error: res.error }
   }
 
+  /**
+   * Sign the account out on every other device; this browser stays signed in.
+   * `ended` is how many sessions that signed out.
+   */
+  async function endOtherSessions(): Promise<
+    { ok: true; ended: number } | { ok: false; error: string }
+  > {
+    const res = await apiRequest<{ ended: number }>(
+      endpoints.account.endOtherSessions,
+      { method: 'POST' },
+      'Could not sign out your other devices.',
+    )
+    return res.ok ? { ok: true, ended: res.data.ended } : { ok: false, error: res.error }
+  }
+
+  /**
+   * Where the journal download lives, for a plain link: the browser sends the
+   * session cookie and saves the attachment itself, no fetch in between.
+   */
+  function journalExportUrl(format: 'json' | 'csv'): string {
+    return '/api' + endpoints.account.readingsExport(format)
+  }
+
   async function deleteAccount(password: string): Promise<{ ok: boolean; error?: string }> {
     const res = await apiRequest(
       endpoints.account.root,
@@ -114,6 +137,8 @@ export function useAccount() {
     deleteReading,
     changeDisplayName,
     changePassword,
+    endOtherSessions,
+    journalExportUrl,
     deleteAccount,
     unlinkGoogle,
   }

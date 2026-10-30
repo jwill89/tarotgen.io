@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import PageHeader from '@/components/PageHeader.vue'
+import CardFrequencyPanel from '@/components/CardFrequencyPanel.vue'
 import { useUser } from '@/composables/useUser'
 import { useRouter } from 'vue-router'
 
@@ -19,6 +20,23 @@ async function doLogout() {
       <div class="columns is-centered">
         <div class="column is-10-desktop is-11-tablet">
           <PageHeader title="Dashboard" subtitle="Welcome back! Manage your account from here." />
+
+          <!-- The daily ritual gets its own line rather than a fifth tile. -->
+          <router-link :to="{ name: 'daily-card' }" class="daily-strip mb-5">
+            <span class="daily-strip__icon">
+              <FontAwesomeIcon :icon="byPrefixAndName.fad['calendar-day']" />
+            </span>
+            <span class="daily-strip__text">
+              <span class="daily-strip__title">Daily Card</span>
+              <span class="daily-strip__sub"
+                >Draw today's card, and look back over the days before.</span
+              >
+            </span>
+            <span class="daily-strip__go">
+              <span>Today's card</span>
+              <FontAwesomeIcon :icon="byPrefixAndName.fas['arrow-right']" />
+            </span>
+          </router-link>
 
           <div class="columns is-multiline">
             <div class="column is-3">
@@ -68,8 +86,74 @@ async function doLogout() {
               </button>
             </div>
           </div>
+
+          <CardFrequencyPanel class="mt-5" />
         </div>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.daily-strip {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  padding: 1rem 1.35rem;
+  border: 1px solid var(--myst-hair-gold);
+  border-radius: 14px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--myst-gold) 8%, var(--myst-surface-2)),
+    var(--myst-surface-2) 60%
+  );
+  color: var(--myst-text);
+  text-decoration: none;
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
+}
+.daily-strip:hover {
+  border-color: var(--myst-gold);
+  color: var(--myst-text);
+  transform: translateY(-1px);
+}
+.daily-strip:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 35%, transparent);
+}
+.daily-strip__icon {
+  flex: none;
+  color: var(--myst-gold);
+  font-size: 1.6rem;
+}
+.daily-strip__text {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.daily-strip__title {
+  font-family: var(--myst-heading-font);
+  font-size: 1.3rem;
+  color: var(--myst-text-strong);
+  line-height: 1.2;
+}
+.daily-strip__sub {
+  color: var(--myst-text-muted);
+  font-size: 0.95rem;
+}
+.daily-strip__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: none;
+  color: var(--myst-gold-bright);
+  font-weight: 600;
+}
+@media screen and (max-width: 600px) {
+  .daily-strip__go span {
+    display: none;
+  }
+}
+</style>

@@ -27,10 +27,12 @@ use Routes\Internal\{AccountController,
     AdminSpreadController,
     AdminUserController,
     ApiDocsController,
+    CardFrequencyController,
     CardReportController,
     ChangelogController,
     ConfigController,
     ContactController,
+    DailyCardController,
     DeckController,
     DeckSystemController,
     GoogleAuthController,
@@ -153,6 +155,8 @@ return function (ContainerInterface $container, bool $is_production): App {
     // ── Account self-service (browser session only: mutations, settings, deletion,
     // and managing which plugins are linked). A plugin token is NOT accepted here.
     $app->group('/account', function (RouteCollectorProxy $group) {
+        // The whole journal as a download: personal data in bulk, so session only.
+        $group->get('/readings/export[/]', AccountController::class . ':exportReadings');
         $group->patch('/readings/{reading_id}[/]', AccountController::class . ':updateReadingMeta');
         $group->delete('/readings/{reading_id}[/]', AccountController::class . ':deleteReading');
         $group->get('/spreads[/]', AccountController::class . ':mySpreads');
@@ -165,11 +169,20 @@ return function (ContainerInterface $container, bool $is_production): App {
         $group->post('/favorite-decks[/]', AccountController::class . ':addFavoriteDeck');
         $group->delete('/favorite-decks/{deck_id}[/]', AccountController::class . ':removeFavoriteDeck');
         $group->post('/change-password[/]', AccountController::class . ':changePassword');
+        $group->post('/sessions/end-others[/]', AccountController::class . ':endOtherSessions');
         $group->patch('[/]', AccountController::class . ':updateProfile');
         $group->delete('[/]', AccountController::class . ':deleteAccount');
         // Connected Apps: list / revoke linked plugin tokens.
         $group->get('/tokens[/]', PluginAuthController::class . ':listTokens');
         $group->delete('/tokens/{id}[/]', PluginAuthController::class . ':revokeToken');
+    })->add(UserAuth::class);
+
+    // ── Journal tools (browser session only: the plugin calls none of them, so a
+    // token stays least-privilege): card frequency and the daily card.
+    $app->group('/account', function (RouteCollectorProxy $group) {
+        $group->get('/card-frequency[/]', CardFrequencyController::class . ':get');
+        $group->get('/daily-cards[/]', DailyCardController::class . ':list');
+        $group->post('/daily-cards[/]', DailyCardController::class . ':draw');
     })->add(UserAuth::class);
 
     // ── Plugin account linking (OAuth-style, PKCE public client). `authorize` is the
@@ -304,6 +317,7 @@ return function (ContainerInterface $container, bool $is_production): App {
         // Card reports (image problems + reasons, submitted from the card lightbox)
         $group->get('/card-reports[/]', AdminCardReportController::class . ':getCardReports');
         $group->patch('/card-reports/{report_id}[/]', AdminCardReportController::class . ':updateCardReport');
+        $group->post('/card-reports/{report_id}/regenerate[/]', AdminCardReportController::class . ':regenerateCard');
     })->add(AdminAuth::class);
 
     return $app;

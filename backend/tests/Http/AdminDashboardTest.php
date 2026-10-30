@@ -12,7 +12,9 @@ use Tarot\Data\DeckData;
 use Tarot\Data\DeckSystemData;
 use Tarot\Data\SpecialCardData;
 use Tarot\Data\SpreadData;
+use Tarot\Repository\CardReportRepository;
 use Tarot\Service\StatsService;
+use Tarot\Structure\CardReportReason;
 use Tarot\Utility\Clock;
 
 /**
@@ -38,6 +40,13 @@ final class AdminDashboardTest extends HttpTestCase
         $this->assertNotNull($read);
         $contacts->markRead($read->contact_id);
         $this->createUser('reader@example.test');
+        // Open reports count per card, however often each was reported; a resolved one doesn't count.
+        $reports = $this->service(CardReportRepository::class);
+        $reports->report($deck->deck_id, 1, 'The Magician', CardReportReason::Cropping, '');
+        $reports->report($deck->deck_id, 1, 'The Magician', CardReportReason::Quality, '');
+        $reports->report($deck->deck_id, 2, 'The High Priestess', CardReportReason::Artefact, '');
+        $reports->report($deck->deck_id, 3, 'The Empress', CardReportReason::WrongCard, '');
+        $reports->setResolved((int)$this->rows('SELECT report_id FROM card_reports WHERE card_id = 3')[0]['report_id'], true);
 
         $threeCard = ['spread_id' => 4, 'name' => 'Three Card'];
         $recent = time() - 60;
@@ -55,6 +64,7 @@ final class AdminDashboardTest extends HttpTestCase
         $this->assertSame([
             'deckSystems' => 1, 'decks' => 1, 'specialCards' => 1, 'spreads' => 1,
             'readings' => 5, 'changelog' => 1, 'users' => 2, 'unreadContacts' => 1,
+            'openCardReports' => 2,
         ], $summary['counts']);
         $this->assertSame([
             'totals' => ['readings' => 5, 'last7' => 3, 'last30' => 4],

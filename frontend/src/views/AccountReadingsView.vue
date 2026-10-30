@@ -195,7 +195,15 @@ onMounted(load)
                 </thead>
                 <tbody>
                   <tr v-for="r in readings" :key="r.reading_id">
-                    <td>{{ summarize(r) }}</td>
+                    <td>
+                      {{ summarize(r) }}
+                      <!-- A spoken space between the title and the tag, which the
+                           template compiler would otherwise drop. -->
+                      <template v-if="r.daily_card_day"
+                        >{{ ' '
+                        }}<span class="tag is-link is-light ml-1">Daily card</span></template
+                      >
+                    </td>
                     <td>{{ formatDateTime(r.reading_time) }}</td>
                     <td>
                       <span v-if="r.password_protected" class="tag is-warning is-light mr-1">

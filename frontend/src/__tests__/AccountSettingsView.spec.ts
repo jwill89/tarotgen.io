@@ -688,6 +688,87 @@ describe('AccountSettingsView', () => {
     })
   })
 
+  describe('signing out of other devices', () => {
+    it('signs out every other device once the user confirms, saying how many', async () => {
+      const api = stub({
+        'POST /account/sessions/end-others': { body: { success: true, ended: 2 } },
+      })
+      await mountSettings()
+
+      await click(button('Sign out of all other devices'))
+      expect(confirmText()).toContain('This browser stays signed in.')
+      await answer('Sign out other devices')
+
+      expect(calledWith(api)).toEqual(['GET /account/tokens', 'POST /account/sessions/end-others'])
+      expect(toastMessages()).toEqual(['Signed out of 2 other devices.'])
+      expect(useUser().isLoggedIn.value).toBe(true)
+    })
+
+    it('counts a single device as one', async () => {
+      stub({ 'POST /account/sessions/end-others': { body: { success: true, ended: 1 } } })
+      await mountSettings()
+
+      await click(button('Sign out of all other devices'))
+      await answer('Sign out other devices')
+
+      expect(toastMessages()).toEqual(['Signed out of 1 other device.'])
+    })
+
+    it('says so when no other device was signed in', async () => {
+      stub({ 'POST /account/sessions/end-others': { body: { success: true, ended: 0 } } })
+      await mountSettings()
+
+      await click(button('Sign out of all other devices'))
+      await answer('Sign out other devices')
+
+      expect(toastMessages()).toEqual(['No other devices were signed in.'])
+    })
+
+    it('signs nothing out when the user thinks better of it', async () => {
+      const api = stub()
+      await mountSettings()
+
+      await click(button('Sign out of all other devices'))
+      await answer('Cancel')
+
+      expect(calledWith(api)).toEqual(['GET /account/tokens'])
+      expect(toastMessages()).toEqual([])
+    })
+
+    it("shows the server's reason when the devices can't be signed out", async () => {
+      stub({
+        'POST /account/sessions/end-others': {
+          status: 429,
+          body: { error: 'Slow down a moment.' },
+        },
+      })
+      await mountSettings()
+
+      await click(button('Sign out of all other devices'))
+      await answer('Sign out other devices')
+
+      expect(pageText()).toContain('Slow down a moment.')
+      expect(toastMessages()).toEqual([])
+      expect(button('Sign out of all other devices').classList.contains('is-loading')).toBe(false)
+    })
+  })
+
+  describe('exporting the journal', () => {
+    it('downloads the journal as JSON or CSV through plain links', async () => {
+      stub()
+      await mountSettings()
+
+      const links = [...document.body.querySelectorAll<HTMLAnchorElement>('a[download]')].map(
+        (a) => [text(a), a.getAttribute('href')],
+      )
+      expect(links).toEqual([
+        ['Download JSON', '/api/account/readings/export?format=json'],
+        ['Download CSV', '/api/account/readings/export?format=csv'],
+      ])
+      expect(pageText()).toContain("a reading's name and notes repeat on each of its cards' rows")
+    })
+  })
+
   describe('deleting the account', () => {
     it('asks for the password before anything else', async () => {
       stub()

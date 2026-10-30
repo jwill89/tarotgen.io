@@ -18,6 +18,8 @@ const route = useRoute()
 const {
   changeDisplayName,
   changePassword,
+  endOtherSessions,
+  journalExportUrl,
   deleteAccount,
   unlinkGoogle: unlinkGoogleAccount,
 } = useAccount()
@@ -126,6 +128,35 @@ async function savePassword() {
     }
   } finally {
     pwSaving.value = false
+  }
+}
+
+// Other devices: every other session of the account ends; this browser stays.
+const endingSessions = ref(false)
+const sessionsError = ref('')
+
+async function signOutOtherDevices() {
+  const ok = await confirm({
+    title: 'Sign out of other devices',
+    message:
+      'Every other browser and device signed in to your account will be signed out. This browser stays signed in.',
+    confirmLabel: 'Sign out other devices',
+  })
+  if (!ok) return
+
+  sessionsError.value = ''
+  endingSessions.value = true
+  try {
+    const res = await endOtherSessions()
+    if (!res.ok) {
+      sessionsError.value = res.error
+    } else if (res.ended === 0) {
+      toasts.success('No other devices were signed in.')
+    } else {
+      toasts.success(`Signed out of ${res.ended} other device${res.ended === 1 ? '' : 's'}.`)
+    }
+  } finally {
+    endingSessions.value = false
   }
 }
 
@@ -330,7 +361,7 @@ async function revokePluginToken(token: PluginToken) {
 
           <PageHeader
             title="Account Settings"
-            subtitle="Manage your display name, password, sign-in methods, and connected apps."
+            subtitle="Manage your display name, password, sign-in methods, devices and connected apps, and export your journal."
           />
 
           <!-- Display name -->
@@ -606,6 +637,29 @@ async function revokePluginToken(token: PluginToken) {
             </template>
           </div>
 
+          <!-- Other devices -->
+          <div class="settings-panel mb-5">
+            <h2 class="title is-5">Signed-in Devices</h2>
+            <p class="mb-3">
+              Signed in on a shared computer, or on a device you no longer have? Sign out everywhere
+              except this browser. Linked apps keep their access; revoke them under Connected Apps.
+            </p>
+            <div v-if="sessionsError" class="notification is-danger is-light">
+              {{ sessionsError }}
+            </div>
+            <button
+              class="button is-warning"
+              type="button"
+              :class="{ 'is-loading': endingSessions }"
+              @click="signOutOtherDevices"
+            >
+              <span class="icon"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['right-from-bracket']"
+              /></span>
+              <span>Sign out of all other devices</span>
+            </button>
+          </div>
+
           <!-- Connected Apps (Dalamud plugin) -->
           <div class="settings-panel mb-5">
             <h2 class="title is-5">Connected Apps</h2>
@@ -641,6 +695,31 @@ async function revokePluginToken(token: PluginToken) {
               </div>
             </div>
             <p v-else-if="!pluginTokensLoading" class="has-text-grey">No linked apps.</p>
+          </div>
+
+          <!-- Journal export: plain links, so the browser saves the attachment itself. -->
+          <div class="settings-panel mb-5">
+            <h2 class="title is-5">Export Your Journal</h2>
+            <p class="mb-3">Download every reading you've saved, to keep or to use elsewhere.</p>
+            <div class="buttons mb-2">
+              <a class="button is-link" :href="journalExportUrl('json')" download>
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['file-arrow-down']"
+                /></span>
+                <span>Download JSON</span>
+              </a>
+              <a class="button is-link" :href="journalExportUrl('csv')" download>
+                <span class="icon"
+                  ><FontAwesomeIcon :icon="byPrefixAndName.fas['file-arrow-down']"
+                /></span>
+                <span>Download CSV</span>
+              </a>
+            </div>
+            <p class="help">
+              JSON keeps everything: each reading's spread and positions, its cards and your notes.
+              CSV is for spreadsheets, with one row per drawn card, so a reading's name and notes
+              repeat on each of its cards' rows.
+            </p>
           </div>
 
           <!-- Danger zone -->

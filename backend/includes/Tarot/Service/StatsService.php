@@ -46,6 +46,7 @@ class StatsService
             'changelog'       => $this->countRows('changelog'),
             'users'           => $this->countRows('users'),
             'unreadContacts'  => $this->countUnreadContacts(),
+            'openCardReports' => $this->countOpenCardReports(),
         ];
     }
 
@@ -58,6 +59,12 @@ class StatsService
     private function countUnreadContacts(): int
     {
         return $this->scalarInt("SELECT COUNT(*) FROM contacts WHERE is_read = 0");
+    }
+
+    /** Reported cards still waiting for a fix (one row per card, however often reported). */
+    private function countOpenCardReports(): int
+    {
+        return $this->scalarInt("SELECT COUNT(*) FROM card_reports WHERE resolved_at IS NULL");
     }
 
     /** @return array{readings:int,last7:int,last30:int} */

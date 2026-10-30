@@ -31,7 +31,7 @@ verification are listed at the end so nobody re-chases them.
 
 ## Status (2026-10-28, end of day)
 
-**53 items done, 16 open — 13 of the open ones are §9 product features.**
+**58 items done, 10 open — 7 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
@@ -44,7 +44,7 @@ verification are listed at the end so nobody re-chases them.
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
-| 9 | Product | 0 | 13 | All, smallest first (§9 is in build order) |
+| 9 | Product | 5 | 7 | The medium and large ones (§9.6–9.12); the small ones shipped in 5.1.0 |
 
 **Edited but not yet committed/deployed** (as of this writing): all of §8 and
 the decisions it raised, as version 5.0.0. **Run `db/migrate_sessions_user_id.php`
@@ -1775,64 +1775,95 @@ only go up.
 
 ### Small
 
-- [ ] **9.1 "Sign out everywhere."** [medium] [S]
+- [x] **9.1 "Sign out everywhere."** [medium] [S]
   A button in Account Settings over a small `POST /account/sessions/end-others`.
   `DbSessionHandler::destroyForUser()` (§8) already ends every session but this
   one; the change-password flow uses it. (Split out of the old privacy item.)
-- [ ] **9.2 Admin: close the card-report loop.** [low] [S]
+  - **DONE 2026-10-30 (5.1.0):** `POST /account/sessions/end-others` (session
+    only, not a plugin token) ends every other session and rotates this one, as
+    a password change does; Account Settings → Signed-in Devices says how many.
+- [x] **9.2 Admin: close the card-report loop.** [low] [S]
   An open-reports count on the dashboard (the Errored Cards nav item shows none
   today: "no server-side count", `admin/DashboardView.vue`), and a "re-scanned →
   regenerate" action on Errored Cards rows wired to the existing
   `POST /admin/decks/{id}/images`, so a report is closed in one click.
-- [ ] **9.3 Reversal rate setting** (none / light / standard / heavy, e.g.
-  0/15/27/50%) instead of a boolean. [medium] [S]
-  `ReadingService::REVERSAL_TURN_PROBABILITY` already parameterises it; plumb a
-  per-request value with a server-side clamp, and a segmented control on New
-  Draw.
-- [ ] **9.4 Card frequency for an account.** [high] [S]
+  - **DONE 2026-10-30 (5.1.0):** the dashboard counts open reports, and
+    `POST /admin/card-reports/{id}/regenerate` rebuilds **that card's** images
+    (always: SFTP clients keep a scan's old timestamp, so a deck-wide incremental
+    run could skip it) and resolves the report only if that worked; a missing
+    scan or an already-resolved report is a 409. The page then lists the URLs to
+    purge from Cloudflare, with a copy button.
+- [x] **9.3 Card frequency for an account.** [high] [S]
   "Which cards keep turning up" over the user's own readings (optionally per
   deck / per time window). One `json_each` query and a panel; readers who
   journal ask for exactly this.
-- [ ] **9.5 Export.** [low] [S–M]
+  - **DONE 2026-10-30 (5.1.0):** `GET /account/card-frequency?deck_id=&days=`
+    (`json_each` over each reading's draw; by card name across decks, by card
+    in one deck) and a panel on the Dashboard: top 10 with "show all", upright
+    and reversed, deck filter, 30 days / 90 days / 1 year / all time.
+- [x] **9.4 Export.** [low] [S–M]
   A print stylesheet for a reading (print-to-PDF covers PDF), and a JSON + CSV
   export of the whole journal from Account Settings.
-- [ ] **9.6 Daily card** with a calendar view of past draws. [low] [S–M]
+  - **DONE 2026-10-30 (5.1.0):** a Print button and print layout on the
+    reading page (cards face up and numbered, a table, the notes; light, no
+    chrome), and `GET /account/readings/export?format=json|csv` from Account
+    Settings (JSON in the `JournalExport` schema; CSV one row per card, UTF-8
+    with a BOM for Excel, formula cells neutralised).
+- [x] **9.5 Daily card** with a calendar view of past draws. [low] [S–M]
   Needs one draw stored per user per day (a reading flagged as the daily card,
   or a small table) and a calendar page.
+  - **DONE 2026-10-30 (5.1.0)**, as the owner decided: signed-in only, deck and
+    reversals chosen each day, and a real reading that **My Readings** labels
+    "Daily card". `/daily` has today's draw and a month calendar;
+    `GET|POST /account/daily-cards`; the reader's local date, accepted only
+    within a day of the server's UTC date; a second draw for the day is a 409
+    naming the first. A daily card is finalized (one card, no drawing more).
+    Table `daily_cards` (`db/migrate_daily_cards.php`, run on prod before the
+    deploy). Open, the owner's call: deleting the day's reading frees the day,
+    so a reader could redraw it.
 
 ### Medium
 
-- [ ] **9.7 Public deck pages** (`/decks/{id}`: name, artist, purchase link,
+- [ ] **9.6 Public deck pages** (`/decks/{id}`: name, artist, purchase link,
   card gallery). [medium] [M]
   `GET /decks/{id}/cards` already exists (approved decks only since §8). Preview
   before drawing, SEO landing pages (sitemap + `og.php` meta), and a natural
   home for "report a problem".
-- [ ] **9.8 Table / presentation mode** for in-person readings: full screen,
+- [ ] **9.7 Table / presentation mode** for in-person readings: full screen,
   chrome hidden, large cards, keyboard flip and advance, plus a QR code for the
   share link (readers hand a phone to the client). [medium] [M]
   Frontend only.
-- [ ] **9.9 Journal fields and findability.** [high] [M]
+- [ ] **9.8 Journal fields and findability.** [high] [M]
   Add `question` (what was asked) and `querent` (who it was for, free text) to
   readings, plus tags; then search and filter (deck, spread, tag, date range,
   text in notes/question) in **My Readings**, which already pages (§2.6). A
   migration, query parameters on `GET /account/readings`, and the UI.
-- [ ] **9.10 Privacy levels.** [medium] [M]
+- [ ] **9.9 Privacy levels.** [medium] [M]
   Unlisted / private (today: public-by-link or password), and an optional
   expiry on a guest reading. A migration and an access rule on every reading
   read (`ReadingController`, `og.php` share meta, the plugin routes).
-- [ ] **9.11 Spread library polish:** categories/tags + search, fork-a-spread
+- [ ] **9.10 Spread library polish:** categories/tags + search, fork-a-spread
   into My Spreads, per-position descriptions (today titles only). [low] [M]
 
 ### Large
 
-- [ ] **9.12 Pick-your-own-cards draw.** [high] [L]
+- [ ] **9.11 Pick-your-own-cards draw.** [high] [L]
   Fan the shuffled deck face-down and let the user tap cards to fill positions
   in order, instead of the server dealing the top N. Server stays authoritative
   (shuffle once per reading, store the permutation, reveal on pick). The
   single biggest ritual gap for people who actually do readings.
-- [ ] **9.13 PWA offline for saved readings.** [low] [L] `sw.js` is a
+- [ ] **9.12 PWA offline for saved readings.** [low] [L] `sw.js` is a
   pass-through today (correctly, to avoid stale deploys); a reading-scoped cache
   is a later project.
+
+### Declined
+
+- ~~**Reversal rate setting**~~ (none / light / standard / heavy) — **declined
+  2026-10-29, stays an on/off toggle.** Readers consulted said choosing a
+  percentage takes the spirit out of the draw. Reversals are already modelled
+  on a reader's physical "cut and turn" (`ReadingService::cutAndTurn()`: random
+  packets, each turned with probability `REVERSAL_TURN_PROBABILITY`, so
+  reversals come in realistic runs). Don't re-propose a rate control.
 
 ---
 

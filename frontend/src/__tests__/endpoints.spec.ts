@@ -70,4 +70,8 @@ describe('endpoints', () => {
   it('puts both halves of a favourite spread in its URL', () => {
     expect(endpoints.account.favoriteById('personal', 12)).toBe('/account/favorites/personal/12')
   })
+
+  it('asks for the journal export in the format chosen', () => {
+    expect(endpoints.account.readingsExport('csv')).toBe('/account/readings/export?format=csv')
+  })
 })

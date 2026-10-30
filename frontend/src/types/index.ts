@@ -42,6 +42,12 @@ export type ReadingSummary = Schemas['ReadingSummary']
 export type ReadingInfo = Schemas['ReadingInfo']
 export type DrawCard = Schemas['DrawCard']
 
+/** How often each card turned up in the user's readings (GET /account/card-frequency). */
+export type CardFrequency = Schemas['CardFrequency']
+export type CardCount = Schemas['CardCount']
+/** One day's daily card (GET/POST /account/daily-cards). */
+export type DailyCard = Schemas['DailyCard']
+
 /** Admin dashboard usage analytics (GET /admin/stats, and `stats` in GET /admin/summary). */
 export type UsageStats = Schemas['UsageStats']
 

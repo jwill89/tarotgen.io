@@ -21,6 +21,38 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
+## [5.1.0] — 2026-10-30
+
+The first features on the new foundation: a daily card, a view of which cards
+keep turning up, a printable reading and a journal export, signing out of other
+devices, and a one-click fix for reported card images. No interpretations, as
+ever: these are tools for keeping and reviewing your own practice.
+
+> **Before deploying the backend, run `php db/migrate_daily_cards.php`** (as
+> `www-data`, after `sudo tarotgen-backup`). Every reading read now checks for
+> a daily card, so it needs the new table.
+
+### Added
+
+- **Daily card.** Signed-in readers draw one card a day from the **Daily Card**
+  page, choosing the deck and reversals each time, and look back over a month
+  calendar of past draws. Each is a real one-card reading, so notes and sharing
+  work, and **My Readings** marks it "Daily card". The day is the reader's own
+  local date.
+- **Card frequency** on your Dashboard: which cards turn up most in your
+  readings, upright and reversed, for one deck or all of them, over the last 30
+  days, 90 days, year or all time.
+- **Print a reading.** A Print button and a print layout: every card face up and
+  numbered, a table of positions and cards, and your notes, in ink-friendly
+  light colours. Print to PDF for a file.
+- **Export your journal** from Account Settings, as JSON (every reading with its
+  spread and cards) or CSV (one row per card, ready for a spreadsheet).
+- **Sign out of all other devices** from Account Settings.
+- **Admin:** the dashboard counts open card reports, and Errored Cards has
+  **Regenerate & resolve**: once a new scan is uploaded, one click rebuilds that
+  card's web images and closes the report, then lists the image URLs to purge
+  from the CDN cache.
+
 ## [5.0.0] — 2026-10-28
 
 A new look and a rebuilt foundation, and the baseline new features are
@@ -640,7 +672,8 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.0.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.1.0...HEAD
+[5.1.0]: https://github.com/jwill89/tarot-site/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/jwill89/tarot-site/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/jwill89/tarot-site/compare/v4.0.0...v4.1.0
 [4.0.0]: https://github.com/jwill89/tarot-site/compare/v3.4.0...v4.0.0

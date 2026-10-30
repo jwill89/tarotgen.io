@@ -114,9 +114,50 @@ class CardImageService
         return $totals;
     }
 
+    /** Whether the card's master scan is on disk. */
+    public function hasScan(int $deckId, int $cardId): bool
+    {
+        return is_file($this->scanPath($deckId, $cardId));
+    }
+
+    /**
+     * Rebuild one card's web images from its master scan, whether or not they
+     * look current: an SFTP client may keep a replaced scan's original
+     * modification time, which would leave it "older" than the stale WebP that
+     * generateForDeck() then skips. False when there is no scan, or it couldn't
+     * be decoded or a derived file couldn't be written.
+     */
+    public function regenerateCard(int $deckId, int $cardId): bool
+    {
+        $png = $this->scanPath($deckId, $cardId);
+        if (!is_file($png)) {
+            return false;
+        }
+
+        $dir = $this->deckDir($deckId);
+        $name = basename($png, '.png');
+        $thumbDir = $dir . '/thumbs';
+        if (!is_dir($thumbDir)) {
+            @mkdir($thumbDir, 0o775, true);
+        }
+
+        return $this->process($png, "{$dir}/{$name}.webp", "{$thumbDir}/{$name}.webp");
+    }
+
+    /** A card's master scan file name, as the frontend's cardImageUrls() names it. */
+    public static function scanFileName(int $cardId): string
+    {
+        return sprintf('Card_%04d.png', $cardId);
+    }
+
     private function deckDir(int $deckId): string
     {
         return $this->decksRoot . '/' . $deckId;
+    }
+
+    private function scanPath(int $deckId, int $cardId): string
+    {
+        return $this->deckDir($deckId) . '/' . self::scanFileName($cardId);
     }
 
     /** A derived file is current when it exists and is at least as new as its PNG. */

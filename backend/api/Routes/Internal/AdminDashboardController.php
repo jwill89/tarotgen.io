@@ -56,7 +56,7 @@ class AdminDashboardController extends AbstractController
                         new OAS\Property(property: 'counts', schema: new OAS\Schema(
                             description: 'Row counts for the dashboard tiles.',
                             type: 'object',
-                            required: ['deckSystems', 'decks', 'specialCards', 'spreads', 'readings', 'changelog', 'users', 'unreadContacts'],
+                            required: ['deckSystems', 'decks', 'specialCards', 'spreads', 'readings', 'changelog', 'users', 'unreadContacts', 'openCardReports'],
                             properties: [
                                 new OAS\Property(property: 'deckSystems', schema: new OAS\Schema(description: 'Approved and pending.', type: 'integer')),
                                 new OAS\Property(property: 'decks', schema: new OAS\Schema(description: 'Approved and pending.', type: 'integer')),
@@ -66,6 +66,7 @@ class AdminDashboardController extends AbstractController
                                 new OAS\Property(property: 'changelog', schema: new OAS\Schema(type: 'integer')),
                                 new OAS\Property(property: 'users', schema: new OAS\Schema(type: 'integer')),
                                 new OAS\Property(property: 'unreadContacts', schema: new OAS\Schema(description: 'Contact messages not yet marked read.', type: 'integer')),
+                                new OAS\Property(property: 'openCardReports', schema: new OAS\Schema(description: 'Reported cards not yet resolved (one per card).', type: 'integer')),
                             ]
                         )),
                         new OAS\Property(property: 'stats', schema: new OAS\Schema(ref: '#/components/schemas/UsageStats')),

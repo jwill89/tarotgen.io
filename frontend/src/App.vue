@@ -51,6 +51,7 @@ const navLinks = [
 const accountItems = [
   { label: 'Dashboard', icon: 'gauge-high', to: { name: 'dashboard' } },
   { label: 'My Readings', icon: 'scroll', to: { name: 'account-readings' } },
+  { label: 'Daily Card', icon: 'calendar-day', to: { name: 'daily-card' } },
   { label: 'My Spreads', icon: 'table-cells', to: { name: 'account-spreads' } },
   { label: 'Account Settings', icon: 'gear', to: { name: 'account-settings' } },
 ]

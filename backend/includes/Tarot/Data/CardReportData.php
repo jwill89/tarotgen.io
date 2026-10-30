@@ -15,6 +15,13 @@ use Tarot\Utility\Clock;
  */
 class CardReportData extends AbstractData
 {
+    /** A report as the admin listing shows it: the deck's name resolved (blank if it's gone). */
+    private const string SELECT_REPORTS = 'SELECT r.report_id, r.deck_id, COALESCE(d.name, \'\') AS deck_name,
+                       r.card_id, r.card_name, r.report_count, r.resolved_at,
+                       r.first_reported_at, r.last_reported_at, r.round
+                FROM card_reports r
+                LEFT JOIN "decks" d ON r.deck_id = d.deck_id';
+
     /**
      * Record a report for a card, creating the row or incrementing its counter,
      * and store the reporter's reason when there is one. A null $reason (older
@@ -75,11 +82,7 @@ class CardReportData extends AbstractData
      */
     public function retrieve(bool $includeResolved): array
     {
-        $sql = 'SELECT r.report_id, r.deck_id, COALESCE(d.name, \'\') AS deck_name,
-                       r.card_id, r.card_name, r.report_count, r.resolved_at,
-                       r.first_reported_at, r.last_reported_at, r.round
-                FROM card_reports r
-                LEFT JOIN "decks" d ON r.deck_id = d.deck_id';
+        $sql = self::SELECT_REPORTS;
 
         if (!$includeResolved) {
             $sql .= ' WHERE r.resolved_at IS NULL';
@@ -88,21 +91,21 @@ class CardReportData extends AbstractData
         $sql .= ' ORDER BY (r.resolved_at IS NOT NULL), r.report_count DESC, r.last_reported_at DESC';
 
         $reports = $this->fetchAllAs($sql, [], CardReport::class);
-
-        if ($reports === []) {
-            return [];
-        }
-
-        $byReport = [];
-        foreach ($this->submissionsFor(array_map(static fn(CardReport $r): int => $r->report_id, $reports)) as $s) {
-            $byReport[$s->report_id][] = $s;
-        }
-
-        foreach ($reports as $report) {
-            $report->setProperties(['submissions' => $byReport[$report->report_id] ?? []]);
-        }
+        $this->attachSubmissions($reports);
 
         return $reports;
+    }
+
+    /** One report, as the listing shows it, or null when there is none. */
+    public function retrieveOne(int $reportId): ?CardReport
+    {
+        $report = $this->fetchOne(self::SELECT_REPORTS . ' WHERE r.report_id = :id', [':id' => $reportId], CardReport::class);
+
+        if ($report !== null) {
+            $this->attachSubmissions([$report]);
+        }
+
+        return $report;
     }
 
     public function exists(int $reportId): bool
@@ -120,6 +123,27 @@ class CardReportData extends AbstractData
         $stmt->execute([':val' => $resolved ? Clock::now() : null, ':id' => $reportId]);
 
         return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Attach each report's submissions, in one query for all of them.
+     *
+     * @param list<CardReport> $reports
+     */
+    private function attachSubmissions(array $reports): void
+    {
+        if ($reports === []) {
+            return;
+        }
+
+        $byReport = [];
+        foreach ($this->submissionsFor(array_map(static fn(CardReport $r): int => $r->report_id, $reports)) as $s) {
+            $byReport[$s->report_id][] = $s;
+        }
+
+        foreach ($reports as $report) {
+            $report->setProperties(['submissions' => $byReport[$report->report_id] ?? []]);
+        }
     }
 
     /**

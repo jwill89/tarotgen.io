@@ -30,6 +30,8 @@ final class AccountAccessTest extends HttpTestCase
             ['GET', '/account/readings', null],
             ['PATCH', '/account/readings/abc123', ['reading_name' => 'Mine']],
             ['DELETE', '/account/readings/abc123', null],
+            ['GET', '/account/readings/export?format=json', null],
+            ['GET', '/account/readings/export?format=csv', null],
             ['GET', '/account/spreads', null],
             ['POST', '/account/spreads', ['name' => 'Mine', 'positions' => [['order' => 1]]]],
             ['PUT', '/account/spreads/1', ['name' => 'Mine']],
@@ -42,10 +44,14 @@ final class AccountAccessTest extends HttpTestCase
             ['POST', '/account/favorite-decks', ['deck_id' => 1]],
             ['DELETE', '/account/favorite-decks/1', null],
             ['POST', '/account/change-password', ['current_password' => 'x', 'new_password' => 'a brand new passphrase']],
+            ['POST', '/account/sessions/end-others', null],
             ['PATCH', '/account', ['display_name' => 'Someone']],
             ['DELETE', '/account', ['password' => 'x']],
             ['GET', '/account/tokens', null],
             ['DELETE', '/account/tokens/1', null],
+            ['GET', '/account/card-frequency', null],
+            ['GET', '/account/daily-cards?month=2026-10', null],
+            ['POST', '/account/daily-cards', ['day' => '2026-10-30', 'deck_id' => 1]],
             ['POST', '/plugin/authorize', ['code_challenge' => 'abc', 'redirect_uri' => 'http://127.0.0.1:5000/cb']],
         ];
         foreach ($routes as [$method, $path, $body]) {
@@ -63,7 +69,7 @@ final class AccountAccessTest extends HttpTestCase
 
         $this->assertSame(['error' => 'Not authenticated'], $this->assertJsonResponse(401, $response));
         $this->assertSame(1, $this->rowCount('users'));
-        foreach (['user_spreads', 'user_favorite_spreads', 'user_favorite_decks', 'plugin_auth_codes'] as $table) {
+        foreach (['user_spreads', 'user_favorite_spreads', 'user_favorite_decks', 'plugin_auth_codes', 'readings', 'daily_cards'] as $table) {
             $this->assertSame(0, $this->rowCount($table), $table);
         }
     }

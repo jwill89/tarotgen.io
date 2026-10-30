@@ -143,6 +143,50 @@ use OpenApi\Utils\Pipeline;
         new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any — the only thing shown before unlocking.", type: 'string', nullable: true)),
     ]
 )]
+// The journal download (GET /account/readings/export?format=json), which
+// Tarot\Service\JournalExport writes a reading at a time.
+#[OAS\Schema(
+    component: 'JournalExport',
+    description: "Every reading the user owns: the JSON journal download.",
+    required: ['exported_at', 'readings'],
+    properties: [
+        new OAS\Property(property: 'exported_at', schema: new OAS\Schema(description: 'When the file was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'readings', schema: new OAS\Schema(description: 'Newest first.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/JournalReading'))),
+    ]
+)]
+#[OAS\Schema(
+    component: 'JournalReading',
+    description: 'One reading in the journal download.',
+    required: ['reading_id', 'link', 'reading_time', 'reading_name', 'reading_notes', 'deck_id', 'deck_name', 'spread', 'cards', 'is_final', 'password_protected'],
+    properties: [
+        new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
+        new OAS\Property(property: 'link', schema: new OAS\Schema(description: "The reading's share link.", type: 'string')),
+        new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string')),
+        new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'deck_id', schema: new OAS\Schema(description: 'The deck the cards were drawn from.', type: 'integer')),
+        new OAS\Property(property: 'deck_name', schema: new OAS\Schema(description: '"Deck #{deck_id}" for a deck since deleted.', type: 'string')),
+        new OAS\Property(property: 'spread', schema: new OAS\Schema(
+            description: 'The layout as it was when the reading was made; null for a free draw that was never placed.',
+            oneOf: [new OAS\Schema(ref: '#/components/schemas/SpreadSnapshot'), new OAS\Schema(type: 'null')]
+        )),
+        new OAS\Property(property: 'cards', schema: new OAS\Schema(description: 'In draw order.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/JournalCard'))),
+        new OAS\Property(property: 'is_final', schema: new OAS\Schema(description: 'Locked for good against further draws.', type: 'boolean')),
+        new OAS\Property(property: 'password_protected', schema: new OAS\Schema(description: 'A view password is set (the password itself is never exported).', type: 'boolean')),
+    ]
+)]
+#[OAS\Schema(
+    component: 'JournalCard',
+    description: 'One drawn card in the journal download.',
+    required: ['position', 'position_title', 'card_id', 'card_name', 'reversed'],
+    properties: [
+        new OAS\Property(property: 'position', schema: new OAS\Schema(description: 'Its place in the draw, from 1; on a spread, the order of the position it lies in.', type: 'integer')),
+        new OAS\Property(property: 'position_title', schema: new OAS\Schema(description: "That position's title; null for a free draw, or a card drawn after the layout was placed.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'card_id', schema: new OAS\Schema(description: "The card's number in its deck.", type: 'integer')),
+        new OAS\Property(property: 'card_name', schema: new OAS\Schema(description: '"Card #{card_id}" when the deck has no name for it.', type: 'string')),
+        new OAS\Property(property: 'reversed', schema: new OAS\Schema(description: 'Drawn upside down.', type: 'boolean')),
+    ]
+)]
 #[OAS\Schema(
     component: 'DeckSystemWithCards',
     description: 'A deck system with its card definitions: what viewing one returns (public and admin).',

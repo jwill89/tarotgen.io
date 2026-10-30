@@ -191,6 +191,13 @@ CREATE TABLE card_report_submissions (
         submitted_at  TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
 
+CREATE TABLE daily_cards (
+        user_id    INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+        day        TEXT    NOT NULL,
+        reading_id TEXT    NOT NULL REFERENCES readings(reading_id) ON DELETE CASCADE,
+        PRIMARY KEY (user_id, day)
+    );
+
 CREATE TABLE users (
         user_id        INTEGER PRIMARY KEY AUTOINCREMENT,
         email          TEXT    NOT NULL COLLATE NOCASE,
@@ -240,6 +247,8 @@ CREATE UNIQUE INDEX idx_card_reports_card ON card_reports (deck_id, card_id);
 
 CREATE INDEX idx_card_report_submissions_report
         ON card_report_submissions (report_id);
+
+CREATE UNIQUE INDEX idx_daily_cards_reading ON daily_cards (reading_id);
 
 CREATE UNIQUE INDEX idx_users_display_name ON users (display_name COLLATE NOCASE);
 

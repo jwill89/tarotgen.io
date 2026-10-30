@@ -357,6 +357,16 @@ class AuthService
     }
 
     /**
+     * Sign the account out everywhere but the browser asking (the session whose id
+     * is $keepSessionId). Returns how many sessions that ended. Linked plugins keep
+     * their tokens: they're revoked one by one under Connected Apps.
+     */
+    public function endOtherSessions(int $userId, ?string $keepSessionId): int
+    {
+        return $this->sessions->destroyForUser($userId, $keepSessionId);
+    }
+
+    /**
      * Delete a user's own account after verifying their password — unless it's
      * a protected account (AccountProtection), which can't be deleted.
      *
