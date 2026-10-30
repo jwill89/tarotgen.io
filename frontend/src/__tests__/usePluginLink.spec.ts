@@ -72,6 +72,46 @@ describe('usePluginLink.authorize', () => {
   })
 })
 
+describe('usePluginLink.authorizeDrawKey', () => {
+  it('sends the PKCE request with the challenge token and returns the loopback URL', async () => {
+    const api = stubApi({
+      'POST /plugin/draw-keys/authorize': {
+        body: { redirect_uri: 'http://127.0.0.1:51234/callback?code=abc&state=xyz' },
+      },
+    })
+
+    const res = await usePluginLink().authorizeDrawKey(params, 'cf-token')
+
+    expect(JSON.parse(String(api.mock.calls[0]?.[1]?.body))).toEqual({
+      ...params,
+      turnstile_token: 'cf-token',
+    })
+    expect(res).toEqual({
+      ok: true,
+      redirectUri: 'http://127.0.0.1:51234/callback?code=abc&state=xyz',
+    })
+  })
+
+  it("passes the server's refusal through, or its own message without one", async () => {
+    stubApi({
+      'POST /plugin/draw-keys/authorize': {
+        status: 400,
+        body: { error: 'Captcha verification failed. Please try again.' },
+      },
+    })
+    expect(await usePluginLink().authorizeDrawKey(params, '')).toEqual({
+      ok: false,
+      error: 'Captcha verification failed. Please try again.',
+    })
+
+    stubApi({ 'POST /plugin/draw-keys/authorize': { status: 500 } })
+    expect(await usePluginLink().authorizeDrawKey(params, '')).toEqual({
+      ok: false,
+      error: 'Could not get a draw key. Please try again.',
+    })
+  })
+})
+
 describe('usePluginLink connected apps', () => {
   it('lists the linked plugin tokens', async () => {
     stubApi({ 'GET /account/tokens': { body: [token(1, 'TarotGen FFXIV plugin')] } })

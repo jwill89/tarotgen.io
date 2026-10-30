@@ -7,6 +7,8 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\UserRepository;
 use Tarot\Service\PluginTokenService;
+use Tarot\Utility\LoopbackUri;
+use Tarot\Utility\Pkce;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
@@ -73,22 +75,19 @@ class PluginAuthController extends AbstractController
         $redirectUri = trim((string)($body['redirect_uri'] ?? ''));
         $state       = (string)($body['state'] ?? '');
 
-        if ($challenge === '' || $method !== 'S256') {
+        if ($challenge === '' || $method !== Pkce::METHOD) {
             return $response->withJson(['error' => 'A valid S256 code_challenge is required.'], 400);
         }
 
         // The code is handed back to a loopback listener the plugin controls;
         // refusing any non-loopback target stops a crafted link from exfiltrating it.
-        if (!$this->isLoopbackUri($redirectUri)) {
+        if (!LoopbackUri::isLoopback($redirectUri)) {
             return $response->withJson(['error' => 'redirect_uri must be a loopback address.'], 400);
         }
 
         $code = $this->pluginTokens->createAuthorizationCode($userId, $challenge);
 
-        $glue   = str_contains($redirectUri, '?') ? '&' : '?';
-        $target = $redirectUri . $glue . http_build_query(['code' => $code, 'state' => $state]);
-
-        return $response->withJson(['redirect_uri' => $target]);
+        return $response->withJson(['redirect_uri' => LoopbackUri::withQuery($redirectUri, ['code' => $code, 'state' => $state])]);
     }
 
     #[OAS\Operation\Post(
@@ -201,17 +200,5 @@ class PluginAuthController extends AbstractController
         }
 
         return $response->withStatus(204);
-    }
-
-    /**
-     * Whether a URL points at the local loopback interface (per RFC 8252).
-     *
-     * Matched as text, the way the SPA checks it, so the host is the one a browser
-     * will visit: parse_url() reads `http://evil.example\@127.0.0.1/` as 127.0.0.1,
-     * while a browser treats the backslash as a slash and goes to evil.example.
-     */
-    private function isLoopbackUri(string $url): bool
-    {
-        return preg_match('#^http://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:/|\z)#i', $url) === 1;
     }
 }

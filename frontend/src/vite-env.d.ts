@@ -8,3 +8,10 @@ declare module '*.vue' {
   const component: DefineComponent<object, object, unknown>
   export default component
 }
+
+// CHANGELOG.md, parsed at build time by config/changelog-plugin.ts.
+declare module 'virtual:changelog' {
+  import type { ChangelogRelease } from '@/utils/changelog'
+  /** Every release in CHANGELOG.md, newest first; [Unreleased] only when it lists something. */
+  export const releases: ChangelogRelease[]
+}

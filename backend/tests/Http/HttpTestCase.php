@@ -157,15 +157,37 @@ abstract class HttpTestCase extends TestCase
      */
     protected function request(string $method, string $path, ?array $json = null, array $headers = []): ResponseInterface
     {
+        return $json === null
+            ? $this->send($method, $path, null, $headers)
+            : $this->send($method, $path, ['application/json', json_encode($json, JSON_THROW_ON_ERROR)], $headers);
+    }
+
+    /**
+     * POST form-encoded fields, as the site's New Draw form does (URLSearchParams).
+     *
+     * @param array<string,string> $fields
+     * @param array<string,string> $headers
+     */
+    protected function postForm(string $path, array $fields, array $headers = []): ResponseInterface
+    {
+        return $this->send('POST', $path, ['application/x-www-form-urlencoded', http_build_query($fields)], $headers);
+    }
+
+    /**
+     * @param array{string,string}|null $body Content type and the encoded body.
+     * @param array<string,string>      $headers
+     */
+    private function send(string $method, string $path, ?array $body, array $headers): ResponseInterface
+    {
         $request = new DecoratedServerRequestFactory(new ServerRequestFactory())
             ->createServerRequest($method, 'https://' . self::HOST . '/api' . $path, ['REMOTE_ADDR' => $this->clientIp])
             ->withHeader('Host', self::HOST)
             ->withHeader('Accept', 'application/json');
 
-        if ($json !== null) {
+        if ($body !== null) {
             $request = $request
-                ->withHeader('Content-Type', 'application/json')
-                ->withBody(new StreamFactory()->createStream(json_encode($json, JSON_THROW_ON_ERROR)));
+                ->withHeader('Content-Type', $body[0])
+                ->withBody(new StreamFactory()->createStream($body[1]));
         }
 
         foreach ($headers as $name => $value) {

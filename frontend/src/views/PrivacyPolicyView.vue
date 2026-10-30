@@ -7,7 +7,7 @@ import PageHeader from '@/components/PageHeader.vue'
     <div class="container">
       <div class="columns is-centered">
         <div class="column is-8-desktop is-10-tablet">
-          <PageHeader title="Privacy Policy" subtitle="Last updated: October 28, 2026" />
+          <PageHeader title="Privacy Policy" subtitle="Last updated: October 30, 2026" />
 
           <div class="settings-panel">
             <div class="content">
@@ -43,6 +43,14 @@ import PageHeader from '@/components/PageHeader.vue'
                 account so you can access them later. We do not share your readings with anyone.
               </p>
 
+              <h3 class="title is-5">FFXIV Plugin</h3>
+              <p>
+                If you use the FFXIV plugin without linking an account, it gets a draw key from this
+                site once, which lets it draw readings. We keep only a fingerprint of the key, not
+                the key itself, with when it was issued and last used, to limit how fast it can
+                draw. The key is not linked to you, an account or your character.
+              </p>
+
               <h2 class="title is-4">3. How We Use Your Information</h2>
               <p>We use the information we collect exclusively to:</p>
               <ul>
@@ -76,6 +84,21 @@ import PageHeader from '@/components/PageHeader.vue'
                 that it does not collect or use visitors' personal data, and it stores nothing in
                 your browser — no cookies, no local storage. Cloudflare also runs a short script on
                 each page to tell real visitors from automated traffic.
+              </p>
+              <p>
+                A few forms ask you to pass a Cloudflare Turnstile check, which shows that a person,
+                not a bot, is sending them: signing in, the contact form, drawing a reading while
+                signed out, and getting a draw key for the FFXIV plugin. Turnstile looks at signals
+                such as your IP address and browser to tell people from bots, solely to stop bots.
+                When you send the form, we pass the check's result and your IP address back to
+                Cloudflare to confirm it, and we keep nothing from the check. Cloudflare's
+                <a
+                  href="https://www.cloudflare.com/turnstile-privacy-policy/"
+                  target="_blank"
+                  rel="noopener"
+                  >Turnstile Privacy Addendum</a
+                >
+                describes what it collects.
               </p>
 
               <h2 class="title is-4">6. Cookies</h2>

@@ -18,7 +18,8 @@ namespace TarotGen.Plugin.Services;
 /// thread; callers marshal results back before touching ImGui. A linked account's
 /// Bearer token (from <see cref="TokenStore"/>) is attached to every request — the
 /// server treats it as optional on public reads and required on account routes.
-/// Decks/spreads are cached after first fetch.
+/// An unlinked install sends its draw key instead, on draws only: that is all the
+/// key is for. Decks/spreads are cached after first fetch.
 /// </summary>
 public sealed class TarotApiClient : IDisposable
 {
@@ -49,6 +50,14 @@ public sealed class TarotApiClient : IDisposable
     public CancellationToken Token => this.cts.Token;
 
     public bool IsLinked => this.tokens.IsLinked;
+
+    /// <summary>
+    /// The site lets this install draw: a linked account, or a draw key. Without
+    /// either, the New Reading tab offers to get a key instead of drawing.
+    /// </summary>
+    public bool CanDraw => this.tokens.IsLinked || this.tokens.HasDrawKey;
+
+    public bool HasDrawKey => this.tokens.HasDrawKey;
 
     public string LinkedName => this.tokens.LinkedName;
 
@@ -84,8 +93,26 @@ public sealed class TarotApiClient : IDisposable
 
     // ── Readings (anonymous; token-aware) ────────────────────────────────────
 
-    public Task<Reading?> GenerateAsync(GenerateRequest request, CancellationToken ct = default)
-        => PostJsonAsync<GenerateRequest, Reading>("/readings/generate", request, ct);
+    /// <summary>
+    /// Draw a reading, as the linked account or with this install's draw key. A
+    /// 401 means the site no longer takes the one sent (a revoked account link or
+    /// draw key): it is forgotten, so the next draw asks for a new one, and the
+    /// server's message is rethrown for the UI.
+    /// </summary>
+    public async Task<Reading?> GenerateAsync(GenerateRequest request, CancellationToken ct = default)
+    {
+        var credential = this.tokens.Token ?? this.tokens.DrawKey;
+        try
+        {
+            return await PostJsonAsync<GenerateRequest, Reading>("/readings/generate", request, credential, ct)
+                .ConfigureAwait(false);
+        }
+        catch (TarotApiException ex) when (ex.StatusCode == (int)HttpStatusCode.Unauthorized && credential is not null)
+        {
+            this.tokens.Forget(credential);
+            throw;
+        }
+    }
 
     public Task<Reading?> GetReadingAsync(string readingId, CancellationToken ct = default)
         => GetJsonAsync<Reading>($"/readings/{Uri.EscapeDataString(readingId)}", ct);
@@ -129,28 +156,30 @@ public sealed class TarotApiClient : IDisposable
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, this.cts.Token);
         using var request = new HttpRequestMessage(HttpMethod.Get, ApiBase + path);
-        AddAuth(request);
+        AddAuth(request, this.tokens.Token);
         using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
         return await ReadOrThrow<T>(resp, linked.Token).ConfigureAwait(false);
     }
 
-    private async Task<TOut?> PostJsonAsync<TIn, TOut>(string path, TIn body, CancellationToken ct)
+    private Task<TOut?> PostJsonAsync<TIn, TOut>(string path, TIn body, CancellationToken ct)
+        => PostJsonAsync<TIn, TOut>(path, body, this.tokens.Token, ct);
+
+    private async Task<TOut?> PostJsonAsync<TIn, TOut>(string path, TIn body, string? bearer, CancellationToken ct)
     {
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, this.cts.Token);
         using var request = new HttpRequestMessage(HttpMethod.Post, ApiBase + path)
         {
             Content = JsonContent.Create(body, options: JsonOpts),
         };
-        AddAuth(request);
+        AddAuth(request, bearer);
         using var resp = await this.http.SendAsync(request, linked.Token).ConfigureAwait(false);
         return await ReadOrThrow<TOut>(resp, linked.Token).ConfigureAwait(false);
     }
 
-    private void AddAuth(HttpRequestMessage request)
+    private static void AddAuth(HttpRequestMessage request, string? bearer)
     {
-        var token = this.tokens.Token;
-        if (!string.IsNullOrEmpty(token))
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        if (!string.IsNullOrEmpty(bearer))
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", bearer);
     }
 
     private async Task<T?> ReadOrThrow<T>(HttpResponseMessage resp, CancellationToken ct)

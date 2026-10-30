@@ -1229,173 +1229,6 @@
                 ]
             }
         },
-        "/admin/changelog": {
-            "get": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "List all changelog entries",
-                "operationId": "7d7f486fcabcec3e810fb64934dec6e6",
-                "responses": {
-                    "200": {
-                        "description": "Array of changelog entries",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/ChangelogEntry"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Create a changelog entry",
-                "operationId": "4eaeb8f6c930f755bd6b36858dbb4fc7",
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "title": {
-                                        "type": "string"
-                                    },
-                                    "body": {
-                                        "type": "string"
-                                    }
-                                },
-                                "required": [
-                                    "title"
-                                ]
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "201": {
-                        "description": "Created changelog entry",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChangelogEntry"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Title is required"
-                    },
-                    "500": {
-                        "description": "Failed to create changelog entry"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
-        "/admin/changelog/{entry_id}": {
-            "put": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Update a changelog entry",
-                "operationId": "b582f34acfcf9dc67374021d8b8aac31",
-                "parameters": [
-                    {
-                        "name": "entry_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "type": "object",
-                                "properties": {
-                                    "title": {
-                                        "type": "string"
-                                    },
-                                    "body": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    "required": true
-                },
-                "responses": {
-                    "200": {
-                        "description": "Updated changelog entry",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChangelogEntry"
-                                }
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Title is blank"
-                    },
-                    "404": {
-                        "description": "Changelog entry not found or no valid fields"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Admin · Changelog"
-                ],
-                "summary": "Delete a changelog entry",
-                "operationId": "396a17e5e338c91c5907ba8d0b3eced4",
-                "parameters": [
-                    {
-                        "name": "entry_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Deleted"
-                    }
-                },
-                "security": [
-                    {
-                        "sessionCookie": []
-                    }
-                ]
-            }
-        },
         "/admin/contacts": {
             "get": {
                 "tags": [
@@ -1570,9 +1403,6 @@
                                                 "readings": {
                                                     "type": "integer"
                                                 },
-                                                "changelog": {
-                                                    "type": "integer"
-                                                },
                                                 "users": {
                                                     "type": "integer"
                                                 },
@@ -1599,7 +1429,6 @@
                                                 "specialCards",
                                                 "spreads",
                                                 "readings",
-                                                "changelog",
                                                 "users",
                                                 "unreadContacts",
                                                 "openCardReports",
@@ -3542,64 +3371,6 @@
                 }
             }
         },
-        "/changelog": {
-            "get": {
-                "tags": [
-                    "Changelog"
-                ],
-                "summary": "List changelog entries (newest first)",
-                "operationId": "8437968cb314700306428ee06ad0a2ab",
-                "responses": {
-                    "200": {
-                        "description": "Array of changelog entries",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "type": "array",
-                                    "items": {
-                                        "$ref": "#/components/schemas/ChangelogEntry"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/changelog/{entry_id}": {
-            "get": {
-                "tags": [
-                    "Changelog"
-                ],
-                "summary": "A single changelog entry",
-                "operationId": "7bddbbd5c9a8ec0ae3dcd15368d8ce9c",
-                "parameters": [
-                    {
-                        "name": "entry_id",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The changelog entry",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/ChangelogEntry"
-                                }
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "InvalidEntryID"
-                    }
-                }
-            }
-        },
         "/config": {
             "get": {
                 "tags": [
@@ -4125,6 +3896,132 @@
                     },
                     "404": {
                         "description": "Deck system not found, or awaiting approval and the viewer is not an admin"
+                    }
+                }
+            }
+        },
+        "/plugin/draw-keys/authorize": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Mint a one-time code for a plugin draw key, once the key page's challenge is passed. Rate-limited: 10 attempts/IP/hour.",
+                "operationId": "01aa9e17fc971e4398fc216f58485d8f",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code_challenge": {
+                                        "type": "string"
+                                    },
+                                    "code_challenge_method": {
+                                        "type": "string",
+                                        "default": "S256"
+                                    },
+                                    "redirect_uri": {
+                                        "type": "string",
+                                        "description": "Loopback URI, e.g. http://127.0.0.1:<port>/callback"
+                                    },
+                                    "state": {
+                                        "type": "string"
+                                    },
+                                    "turnstile_token": {
+                                        "type": "string",
+                                        "description": "Required when Turnstile is configured"
+                                    }
+                                },
+                                "required": [
+                                    "code_challenge",
+                                    "redirect_uri"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Loopback redirect target carrying the code (valid 5 minutes, once)",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "redirect_uri": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "redirect_uri"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid challenge, non-loopback redirect_uri, or captcha failed"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
+                    }
+                }
+            }
+        },
+        "/plugin/draw-keys/token": {
+            "post": {
+                "tags": [
+                    "Plugin"
+                ],
+                "summary": "Exchange a draw-key code and its PKCE verifier for the draw key. Rate-limited: 10 attempts/IP/minute.",
+                "operationId": "bb9f31e60f3bdf3aea6e506147fb7f20",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "code": {
+                                        "type": "string"
+                                    },
+                                    "code_verifier": {
+                                        "type": "string"
+                                    }
+                                },
+                                "required": [
+                                    "code",
+                                    "code_verifier"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "The key (returned once): sent on draws as `Authorization: Bearer tg_dk_…`",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "key": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "key"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid, expired or already used code, or the wrong verifier"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded"
                     }
                 }
             }
@@ -4991,7 +4888,7 @@
                 "summary": "Generate a random reading from a draw spec",
                 "operationId": "d8750b5a23fd03c315941e4facfd28ee",
                 "requestBody": {
-                    "description": "Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored.",
+                    "description": "Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored. When Turnstile is configured, a request with no signed-in user (a browser session, or a linked plugin's account token) needs either a passed challenge in `turnstile_token` (a signed-out visitor), or an unlinked plugin's draw key as `Authorization: Bearer tg_dk_…` (POST /plugin/draw-keys/token). When it isn't, nothing beyond the reading is required.",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -5013,10 +4910,13 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws)"
+                        "description": "Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")"
+                    },
+                    "401": {
+                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")"
                     },
                     "429": {
-                        "description": "Rate limit exceeded"
+                        "description": "Rate limit exceeded: 30 draws/IP/minute; with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")"
                     }
                 }
             }
@@ -5029,7 +4929,7 @@
                 "summary": "Create a custom reading from explicitly chosen cards/positions",
                 "operationId": "3e30d906e6fde22906f101631e2f600d",
                 "requestBody": {
-                    "description": "The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's).",
+                    "description": "The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's). When Turnstile is configured, a request with no signed-in user (a browser session, or a linked plugin's account token) needs either a passed challenge in `turnstile_token` (a signed-out visitor), or an unlinked plugin's draw key as `Authorization: Bearer tg_dk_…` (POST /plugin/draw-keys/token). When it isn't, nothing beyond the reading is required.",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -5051,7 +4951,13 @@
                         }
                     },
                     "400": {
-                        "description": "Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it)"
+                        "description": "Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge (\"Captcha verification failed. Please try again.\"; from a plugin too old for draw keys: \"This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.\")"
+                    },
+                    "401": {
+                        "description": "With Turnstile on: a draw key that is unknown or revoked (\"This draw key is no longer valid. Get a new one from the plugin.\"), or a plugin account token that no longer is (\"This account link is no longer valid. Link your account again in the plugin.\")"
+                    },
+                    "429": {
+                        "description": "Rate limit exceeded: with a draw key, 10/key/minute, 300/key/day and 30/IP/minute (\"Too many readings with this draw key. Please try again later.\")"
                     }
                 }
             }
@@ -6608,30 +6514,6 @@
                     "submitted_at"
                 ]
             },
-            "ChangelogEntry": {
-                "type": "object",
-                "description": "A changelog entry.",
-                "properties": {
-                    "entry_id": {
-                        "type": "integer"
-                    },
-                    "title": {
-                        "type": "string"
-                    },
-                    "body": {
-                        "type": "string"
-                    },
-                    "entry_date": {
-                        "type": "string"
-                    }
-                },
-                "required": [
-                    "entry_id",
-                    "title",
-                    "body",
-                    "entry_date"
-                ]
-            },
             "Contact": {
                 "type": "object",
                 "description": "A contact-form submission.",
@@ -7514,10 +7396,6 @@
             "description": "Public contact-form submissions."
         },
         {
-            "name": "Changelog",
-            "description": "Public changelog entries."
-        },
-        {
             "name": "Authentication",
             "description": "Registration, sign-in/out, and session."
         },
@@ -7531,7 +7409,7 @@
         },
         {
             "name": "Plugin",
-            "description": "Dalamud plugin account linking (OAuth PKCE) and token management."
+            "description": "Dalamud plugin account linking (OAuth PKCE), token management, and draw keys for unlinked installs."
         },
         {
             "name": "Admin · Dashboard",
@@ -7552,10 +7430,6 @@
         {
             "name": "Admin · Readings",
             "description": "Reading listing and retention cleanup."
-        },
-        {
-            "name": "Admin · Changelog",
-            "description": "Changelog entry CRUD."
         },
         {
             "name": "Admin · Users",

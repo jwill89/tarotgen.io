@@ -26,10 +26,12 @@ public sealed class MainWindow : Window, IDisposable
     private readonly TarotApiClient api;
     private readonly ReadingPanel readingPanel;
     private readonly LinkService linkService;
+    private readonly DrawKeyService drawKeys;
     private readonly Configuration config;
     private readonly IDalamudPluginInterface pluginInterface;
 
     private bool onboardingShown;
+    private bool drawKeyNoticeShown;
 
     private static readonly string PluginVersion =
         typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
@@ -61,12 +63,14 @@ public sealed class MainWindow : Window, IDisposable
     private string myReadingsFilter = string.Empty;
 
     private bool switchToReadingTab;
+    private bool switchToNewReadingTab;
     private bool switchToSettingsTab;
 
     public MainWindow(
         TarotApiClient api,
         ReadingPanel readingPanel,
         LinkService linkService,
+        DrawKeyService drawKeys,
         Configuration config,
         IDalamudPluginInterface pluginInterface)
         : base("TarotGen###TarotGenMain")
@@ -74,6 +78,7 @@ public sealed class MainWindow : Window, IDisposable
         this.api = api;
         this.readingPanel = readingPanel;
         this.linkService = linkService;
+        this.drawKeys = drawKeys;
         this.config = config;
         this.pluginInterface = pluginInterface;
         this.freeDrawCount = Math.Max(1, config.FreeDrawCount);
@@ -115,6 +120,17 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.OpenPopup("Welcome to TarotGen###onboarding");
         }
 
+        // Upgraded from before draw keys: tell the player once why drawing stopped
+        // and how to get a key. A linked install draws as before, so it never asks.
+        if (this.config.OnboardingComplete && !this.config.DrawKeyNoticeSeen && !this.drawKeyNoticeShown)
+        {
+            this.drawKeyNoticeShown = true;
+            if (this.api.CanDraw)
+                MarkDrawKeyNoticeSeen();
+            else
+                ImGui.OpenPopup("Drawing now needs a draw key###drawKeyNotice");
+        }
+
         using (var tabs = ImRaii.TabBar("##tarotgen-tabs"))
         {
             if (tabs)
@@ -127,7 +143,9 @@ public sealed class MainWindow : Window, IDisposable
                         this.readingPanel.Draw();
                 }
 
-                using (var t = ImRaii.TabItem("New Reading"))
+                var newReadingFlags = this.switchToNewReadingTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
+                this.switchToNewReadingTab = false;
+                using (var t = ImRaii.TabItem("New Reading", newReadingFlags))
                 {
                     if (t)
                         DrawNewReadingTab();
@@ -152,6 +170,7 @@ public sealed class MainWindow : Window, IDisposable
         }
 
         DrawOnboarding();
+        DrawDrawKeyNotice();
     }
 
     private void DrawOnboarding()
@@ -170,6 +189,7 @@ public sealed class MainWindow : Window, IDisposable
         ImGui.Spacing();
         ImGui.TextColored(Ui.SectionColor, "How it works");
         ImGui.BulletText("New Reading: pick a deck + spread (or a free draw) and draw.");
+        ImGui.BulletText("Without an account, your first draw asks for a draw key: a quick check in your browser.");
         ImGui.BulletText("Reading: view the cards, click one for full-res, copy the share code.");
         ImGui.BulletText("Share a reading's code in chat — anyone can open it with /tarot <code>.");
         ImGui.Spacing();
@@ -195,8 +215,73 @@ public sealed class MainWindow : Window, IDisposable
     private void CompleteOnboarding()
     {
         this.config.OnboardingComplete = true;
+        // Onboarding already explains draw keys; the upgrade notice is not for this install.
+        this.config.DrawKeyNoticeSeen = true;
         this.config.Save(this.pluginInterface);
         ImGui.CloseCurrentPopup();
+    }
+
+    private void DrawDrawKeyNotice()
+    {
+        var vp = ImGui.GetMainViewport();
+        float scale = ImGuiHelpers.GlobalScale;
+        ImGui.SetNextWindowPos(vp.WorkPos + (vp.WorkSize / 2f), ImGuiCond.Appearing, new Vector2(0.5f, 0.5f));
+        ImGui.SetNextWindowSize(new Vector2(460 * scale, 0), ImGuiCond.Appearing);
+
+        using var popup = ImRaii.PopupModal("Drawing now needs a draw key###drawKeyNotice", ImGuiWindowFlags.AlwaysAutoResize);
+        if (!popup)
+            return;
+
+        ImGui.PushTextWrapPos(440 * scale);
+        ImGui.TextWrapped(
+            "To keep bots out, TarotGen.io now asks for a quick check that you're a person before drawing "
+            + "without an account. The game can't show that check, so this plugin needs a draw key. You get "
+            + "one once:");
+        ImGui.Spacing();
+        ImGui.TextColored(Ui.SectionColor, "How to get one");
+        ImGui.BulletText("Click \"Get a draw key\" below (it's on the New Reading tab too).");
+        ImGui.BulletText("Your browser opens TarotGen.io: pass the check, then click \"Get Draw Key\".");
+        ImGui.BulletText("Come back to the game. The plugin keeps the key and draws as before.");
+        ImGui.Spacing();
+        ImGui.TextWrapped(
+            "Or link your TarotGen.io account instead: a linked plugin draws without a key, and your "
+            + "readings go to My Readings.");
+        ImGui.PopTextWrapPos();
+
+        ImGui.Spacing();
+        ImGui.Separator();
+
+        if (Ui.PrimaryButton("Get a draw key"))
+        {
+            this.drawKeys.StartGetKey();
+            // Its progress and any error show on the New Reading tab.
+            this.switchToNewReadingTab = true;
+            CloseDrawKeyNotice();
+        }
+
+        ImGui.SameLine();
+        if (Ui.Button("Link my account"))
+        {
+            this.linkService.StartLink();
+            this.switchToSettingsTab = true;
+            CloseDrawKeyNotice();
+        }
+
+        ImGui.SameLine();
+        if (Ui.Button("Later"))
+            CloseDrawKeyNotice();
+    }
+
+    private void CloseDrawKeyNotice()
+    {
+        MarkDrawKeyNoticeSeen();
+        ImGui.CloseCurrentPopup();
+    }
+
+    private void MarkDrawKeyNoticeSeen()
+    {
+        this.config.DrawKeyNoticeSeen = true;
+        this.config.Save(this.pluginInterface);
     }
 
     // ── New Reading tab ───────────────────────────────────────────────────────
@@ -268,6 +353,12 @@ public sealed class MainWindow : Window, IDisposable
 
     private void DrawGenerateButton()
     {
+        if (!this.api.CanDraw)
+        {
+            DrawGetKeyPrompt();
+            return;
+        }
+
         float scale = ImGuiHelpers.GlobalScale;
         using (ImRaii.Disabled(this.generating || this.selectedDeck == null))
         {
@@ -277,6 +368,38 @@ public sealed class MainWindow : Window, IDisposable
 
         if (this.generating)
             ImGui.TextUnformatted("Drawing…");
+        if (this.generateError != null)
+            ImGui.TextColored(ErrorColor, this.generateError);
+    }
+
+    /// <summary>
+    /// An unlinked install without a draw key. The site asks a signed-out draw to
+    /// pass a browser challenge, which the game can't show, so the player passes
+    /// it once on the site and the install keeps the key it gets.
+    /// </summary>
+    private void DrawGetKeyPrompt()
+    {
+        ImGui.TextWrapped(
+            "To draw without an account, this install needs a draw key. Getting one opens TarotGen.io in "
+            + "your browser for a quick check that you're a person; after that, drawing doesn't ask again.");
+        Ui.Help("Or link your account on the Settings tab.");
+        ImGui.Spacing();
+
+        using (ImRaii.Disabled(this.drawKeys.IsBusy))
+        {
+            if (Ui.PrimaryButton("Get a draw key", new Vector2(-1, 36 * ImGuiHelpers.GlobalScale)))
+            {
+                this.generateError = null;
+                this.drawKeys.StartGetKey();
+            }
+        }
+
+        if (this.drawKeys.IsBusy && Ui.Button("Cancel"))
+            this.drawKeys.Cancel();
+
+        if (!string.IsNullOrEmpty(this.drawKeys.Status))
+            ImGui.TextWrapped(this.drawKeys.Status);
+        // Why the key went, when the site turned it down on a draw.
         if (this.generateError != null)
             ImGui.TextColored(ErrorColor, this.generateError);
     }
@@ -648,6 +771,9 @@ public sealed class MainWindow : Window, IDisposable
             ImGui.TextWrapped(
                 "Link your TarotGen.io account for account features (locking, favorites, and "
                 + "My Readings). Drawing and viewing readings works without an account.");
+            Ui.Help(this.api.HasDrawKey
+                ? "This install has a draw key, so it draws without an account."
+                : "Without an account, drawing needs a draw key: the New Reading tab gets one.");
             ImGui.Spacing();
             using (ImRaii.Disabled(this.linkService.IsBusy))
             {

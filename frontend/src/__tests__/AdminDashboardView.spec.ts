@@ -4,7 +4,7 @@ import DashboardView from '@/views/admin/DashboardView.vue'
 import { useUser } from '@/composables/useUser'
 import { APP_VERSION } from '@/constants'
 import { cleanup, stubApi, signIn, testUser } from './helpers/app'
-import { mountPage, resetPageState, click, toasts, apiCalls } from './helpers/page'
+import { mountPage, resetPageState, click, toasts, apiCalls, button, dialog } from './helpers/page'
 import type { UsageStats } from '@/types'
 
 const counts = {
@@ -13,7 +13,6 @@ const counts = {
   specialCards: 4,
   spreads: 9,
   readings: 12345,
-  changelog: 7,
   users: 58,
   unreadContacts: 2,
   openCardReports: 3,
@@ -104,7 +103,30 @@ describe('admin DashboardView', () => {
     stubApi({ 'GET /admin/summary': { body: { counts, stats } } })
     await mountPage(DashboardView, { path: '/admin' })
 
-    expect(document.body.querySelector('.page-header')?.textContent).toContain(`v${APP_VERSION}`)
+    const version = button(`v${APP_VERSION}`)
+    expect(document.body.querySelector('.page-header')?.contains(version)).toBe(true)
+    expect(dialog('Changelog')).toBeNull()
+  })
+
+  it('opens the changelog from the version, and closes it', async () => {
+    const api = stubApi({ 'GET /admin/summary': { body: { counts, stats } } })
+    await mountPage(DashboardView, { path: '/admin' })
+
+    await click(button(`v${APP_VERSION}`))
+
+    // The dialog, and the notes with it, load on the first click.
+    await vi.waitFor(() => expect(dialog('Changelog')).not.toBeNull())
+    // CHANGELOG.md itself, through the build plugin: this version has its notes.
+    const releases = [...(dialog('Changelog')?.querySelectorAll('h3 button') ?? [])].map(
+      (trigger) => trigger.textContent.replace(/\s+/g, ' ').trim(),
+    )
+    expect(releases.some((release) => release.startsWith(`v${APP_VERSION}, released `))).toBe(true)
+
+    await click(button('Close'))
+
+    expect(dialog('Changelog')).toBeNull()
+    // No API call for the notes: they are built in.
+    expect(apiCalls(api)).toEqual([['GET', '/api/admin/summary']])
   })
 
   it('holds the counts and says insights are loading until the summary arrives', async () => {
@@ -148,7 +170,6 @@ describe('admin DashboardView', () => {
       // Unread messages show as a badge; open card reports as a plain count.
       'Contacts 2',
       'Errored Cards 3',
-      'Changelog 7',
     ])
     expect(link('Contacts').querySelector('.nav-badge')?.textContent).toBe('2')
     expect(link('Spread Submissions').querySelector('.nav-badge')?.textContent).toBe('4')

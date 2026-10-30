@@ -29,9 +29,9 @@ verification are listed at the end so nobody re-chases them.
   meanings, no AI readings, no "what does this spread say". It is a tool for
   people who do readings. Do not propose or build that.
 
-## Status (2026-10-28, end of day)
+## Status (2026-10-30)
 
-**62 items done, 6 open — 4 of the open ones are §9 product features.**
+**65 items done, 6 open — 4 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
@@ -44,12 +44,12 @@ verification are listed at the end so nobody re-chases them.
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
-| 9 | Product | 8 | 4 | §9.6–9.7 and the two large ones; 5.1.0 and 5.2.0 shipped the rest |
+| 9 | Product | 11 | 4 | §9.6–9.7 and the two large ones; 5.1.0–5.4.0 shipped the rest |
 
-**Deployed** (as of 2026-10-30): 5.2.0, after its two migrations
-(`migrate_reading_journal.php`, `migrate_spread_library.php`) ran on prod.
-FFXIV plugin 0.7.0 (spread categories, position descriptions) is built and
-awaits its own release (`deploy.ps1 -Target plugin`).
+**Deployed** (as of 2026-10-30): 5.3.0. **Next: 5.4.0**, in the order its
+CHANGELOG section gives (draw-key migration, deploy, plugin 0.8.0 straight
+after, then the changelog-table drop). FFXIV plugin 0.8.0 (draw keys)
+supersedes the unreleased 0.7.0.
 
 ## Decisions and production facts (2026-10-28)
 
@@ -1886,19 +1886,46 @@ only go up.
 
 ### Planned next (the owner, 2026-10-30)
 
-- [ ] **9.13 Retire the manual changelog.** Remove the hand-written changelog
+- [x] **9.13 Retire the manual changelog.** Remove the hand-written changelog
   and show the changelog **only in the admin panel**, as the owner's Kindred
   Nights and Senpan App Suite projects do. Check how they source it first
   (`CHANGELOG.md`, which CI already turns into GitHub Releases, is the likely
   source); then remove the public `/changelog` page, the admin Changelog CRUD
   and their API/table if nothing else needs them (a migration that drops a
   table is the first non-additive one: back up, and deploy the code first).
-- [ ] **9.14 Turnstile on New Draw for signed-out visitors** (bot use), while
+  - **DONE 2026-10-30 (5.4.0):** `CHANGELOG.md` is the only changelog. Vite's
+    `virtual:changelog` (`frontend/config/changelog-plugin.ts`, parsed by
+    `utils/changelog.ts`) reads it at build time, and the admin dashboard's
+    version tag opens it in `ChangelogDialog` (lazy chunk; nothing public links
+    to it). The page, the admin CRUD, their routes and the table are gone; old
+    entries dropped (owner). `migrate_drop_changelog.php` runs **after** the
+    deploy.
+- [x] **9.14 Turnstile on New Draw for signed-out visitors** (bot use), while
   the FFXIV plugin can still draw without a signed-in user. Design question to
   settle first: how the plugin is let through without opening a bypass any bot
   can copy (a plugin-only route behind its own rate limit, a per-install token,
   or Turnstile skipped only for linked-plugin bearer tokens) — the plugin
   shouldn't need a browser challenge.
+  - **DONE 2026-10-30 (5.4.0), the owner's design: a per-install draw key got
+    behind Turnstile.** With Turnstile configured, `POST /readings/generate` and
+    `POST /readings` (`ReadingController::refuseDraw()`) let through a signed-in
+    user (session, or a linked plugin's `tg_pat_` token), an unlinked plugin's
+    draw key (`Authorization: Bearer tg_dk_…`), or a passed challenge
+    (`turnstile_token`, New Draw and Recreate Draw). The plugin gets its key on
+    `/draw-key` (Turnstile, then PKCE to its loopback listener:
+    `POST /plugin/draw-keys/authorize` → `/token`). Keys are stored hashed in
+    `plugin_draw_keys`, open nothing but draws (their readings are guests'),
+    and are limited to 10/key/minute, 300/key/day and 30/IP/minute; revoking
+    one is a hand-run `UPDATE … SET revoked_at`. Plugin 0.8.0. **No bypass for
+    older unlinked plugins:** they get an "update the plugin" message.
+  - **Follow-ups, done the same day (owner):** `retention.php` deletes key codes
+    that expired unredeemed (`DrawKeyRepository::purgeUnredeemedCodes()`); the
+    privacy page names Turnstile and every page using it (a spec fails when a
+    new page uses the widget unnamed) and what is kept of a draw key; plugin
+    0.8.0 shows an unlinked install upgraded from an earlier version a one-time
+    "Drawing now needs a draw key" pop-up with the steps. Still open, not
+    asked: expired `plugin_auth_codes` (the account link's) aren't cleaned up
+    either.
 
 - [x] **9.15 Admin Deck Systems: the same split as Spreads.** Its add/edit
   form (the 78-card editor) is a panel atop the list page, not in the URL, so

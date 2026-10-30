@@ -34,6 +34,13 @@ async function submitCode(code: string): Promise<void> {
   await flushPromises()
 }
 
+/** What New Draw loads for a signed-out visitor (its Turnstile widget asks for /config). */
+const newDrawLoads = {
+  'GET /decks': { body: [] },
+  'GET /spreads': { body: [] },
+  'GET /config': { body: { turnstile_sitekey: null } },
+}
+
 describe('App', () => {
   beforeEach(() => {
     signIn(null)
@@ -65,7 +72,7 @@ describe('App', () => {
     })
 
     it('marks the link for the page being shown', async () => {
-      stubApi({ 'GET /decks': { body: [] }, 'GET /spreads': { body: [] } })
+      stubApi(newDrawLoads)
       const { wrapper } = await openApp('/new')
 
       const active = wrapper.findAll('.nav-links a.active').map((a) => a.text())
@@ -87,14 +94,13 @@ describe('App', () => {
       expect(router.currentRoute.value.hash).toBe('')
     })
 
-    it('links the footer to the policies, changelog and contact form', async () => {
+    it('links the footer to the policies and the contact form', async () => {
       const { wrapper } = await openApp()
 
       expect(wrapper.findAll('footer a').map((a) => a.text())).toEqual([
         'MathDad',
         'Privacy Policy',
         'Terms of Service',
-        'Changelog',
         'Contact Us',
       ])
       expect(wrapper.get('footer').text()).toContain(
@@ -181,7 +187,6 @@ describe('App', () => {
       'Users',
       'Contacts',
       'Errored Cards',
-      'Changelog',
       'Log Out',
     ])
   })
@@ -205,7 +210,7 @@ describe('App', () => {
     })
 
     it('starts a new draw instead when no code is entered', async () => {
-      stubApi({ 'GET /decks': { body: [] }, 'GET /spreads': { body: [] } })
+      stubApi(newDrawLoads)
       const { wrapper, router } = await openApp()
 
       await wrapper.get('.nav-code-btn').trigger('click')

@@ -7,7 +7,6 @@ namespace Tarot\Tests\Unit\Data;
 use PDO;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
-use Tarot\Data\ChangelogData;
 use Tarot\Data\DeckData;
 use Tarot\Data\DeckSystemData;
 use Tarot\Data\SpecialCardData;
@@ -22,7 +21,6 @@ use Tarot\Data\UserSpreadData;
  * rejects unknown columns at prepare time), and a stray column reaching a
  * FETCH_CLASS Structure fails as a dynamic-property deprecation (AUDIT §2.4).
  */
-#[CoversClass(ChangelogData::class)]
 #[CoversClass(DeckData::class)]
 #[CoversClass(DeckSystemData::class)]
 #[CoversClass(SpecialCardData::class)]
@@ -89,18 +87,12 @@ final class ProductionSchemaReadsTest extends TestCase
         $this->assertCount(1, $spreads->retrieve($user->user_id, $spread->user_spread_id));
     }
 
-    public function testSpreadAndChangelogReads(): void
+    public function testSpreadReads(): void
     {
         $spreads = new SpreadData($this->db);
         $spread = $spreads->store(['name' => 'Three Card']);
         $this->assertNotNull($spread);
         $this->assertCount(1, $spreads->retrieve());
         $this->assertCount(1, $spreads->retrieve($spread->spread_id));
-
-        $changelog = new ChangelogData($this->db);
-        $entry = $changelog->store(['title' => 'Release', 'body' => 'Notes', 'entry_date' => '2026-10-28']);
-        $this->assertNotNull($entry);
-        $this->assertCount(1, $changelog->retrieve());
-        $this->assertCount(1, $changelog->retrieve($entry->entry_id));
     }
 }

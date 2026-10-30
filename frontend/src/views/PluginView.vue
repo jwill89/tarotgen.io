@@ -163,8 +163,9 @@ async function copyRepoUrl(): Promise<void> {
               <FontAwesomeIcon :icon="byPrefixAndName.fas['lock']" class="note-icon" />
               <span>
                 <strong>Linking an account is optional.</strong> Guests can draw, view, and share
-                readings. Link a TarotGen account from the plugin's settings to lock readings, sort
-                by favorites, and track them in
+                readings; the first draw asks once, in your browser, for a draw key (a quick check
+                that you're a person). Link a TarotGen account from the plugin's settings to lock
+                readings, sort by favorites, and track them in
                 <router-link :to="{ name: 'account-readings' }">My Readings</router-link> —
                 revocable any time from
                 <router-link :to="{ name: 'account-settings' }">Account Settings</router-link>.

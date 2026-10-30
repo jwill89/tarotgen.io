@@ -9,7 +9,7 @@
  *
  * Usage (from the backend/ directory):
  *   php scripts/indexnow.php                                   # submit every URL in the frontend sitemap
- *   php scripts/indexnow.php https://tarotgen.io/changelog ... # submit specific URLs
+ *   php scripts/indexnow.php https://tarotgen.io/spreads ...   # submit specific URLs
  */
 
 require_once __DIR__ . '/../vendor/autoload.php';

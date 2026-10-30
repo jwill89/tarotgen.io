@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, defineAsyncComponent } from 'vue'
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core'
 import { useAdminApi } from '@/composables/useApi'
 import { endpoints } from '@/api/endpoints'
@@ -9,7 +9,11 @@ import PageHeader from '@/components/PageHeader.vue'
 import Tooltip from '@/components/Tooltip.vue'
 import type { UsageStats } from '@/types'
 
+// The release notes come with it, so they load only when the version is clicked.
+const ChangelogDialog = defineAsyncComponent(() => import('@/components/admin/ChangelogDialog.vue'))
+
 const api = useAdminApi()
+const changelogOpen = ref(false)
 
 const counts = ref({
   deckSystems: 0,
@@ -17,7 +21,6 @@ const counts = ref({
   specialCards: 0,
   spreads: 0,
   readings: 0,
-  changelog: 0,
   users: 0,
   unreadContacts: 0,
   openCardReports: 0,
@@ -122,18 +125,6 @@ const navGroups = computed<NavGroup[]>(() => [
       },
     ],
   },
-  {
-    label: 'Site',
-    icon: byPrefixAndName.fad['gear'],
-    items: [
-      {
-        to: 'admin-changelog',
-        label: 'Changelog',
-        icon: byPrefixAndName.fad['newspaper'],
-        count: counts.value.changelog,
-      },
-    ],
-  },
 ])
 
 // Largest bar values, used to scale the simple CSS bar charts.
@@ -166,8 +157,10 @@ onMounted(async () => {
       <div class="columns is-centered">
         <div class="column is-11-desktop is-12-tablet">
           <PageHeader title="Admin Dashboard" subtitle="Manage your tarot data.">
-            <Tooltip text="Application version">
-              <span class="tag app-version">v{{ APP_VERSION }}</span>
+            <Tooltip text="Application version: see the changelog">
+              <button type="button" class="tag app-version" @click="changelogOpen = true">
+                v{{ APP_VERSION }}
+              </button>
             </Tooltip>
           </PageHeader>
 
@@ -317,6 +310,8 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+    <ChangelogDialog v-if="changelogOpen" @close="changelogOpen = false" />
   </section>
 </template>
 
@@ -325,6 +320,18 @@ onMounted(async () => {
   vertical-align: middle;
   font-size: 0.6em;
   font-weight: 600;
+  /* A button (it opens the changelog) that still reads as the version tag. */
+  border: 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease;
+}
+.app-version:hover {
+  color: var(--myst-gold);
+}
+.app-version:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--myst-gold) 25%, transparent);
 }
 
 /* ── Console layout: side-menu launcher + insights ─────────── */

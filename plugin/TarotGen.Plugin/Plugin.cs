@@ -12,8 +12,9 @@ namespace TarotGen.Plugin;
 
 /// <summary>
 /// Composition root. Wires services + windows, registers /tarot, and tears
-/// everything down symmetrically on unload. Everything works anonymously; linking
-/// an account only adds to it (locking, favorites, My Readings).
+/// everything down symmetrically on unload. Everything works without an account:
+/// drawing needs only a draw key, got once in the browser; linking an account
+/// adds to it (locking, favorites, My Readings).
 /// </summary>
 public sealed class Plugin : IDalamudPlugin
 {
@@ -28,6 +29,7 @@ public sealed class Plugin : IDalamudPlugin
     private readonly TokenStore tokenStore;
     private readonly TarotApiClient api;
     private readonly LinkService linkService;
+    private readonly DrawKeyService drawKeys;
     private readonly CardTextureCache textures;
 
     private readonly WindowSystem windowSystem = new("TarotGen");
@@ -53,13 +55,14 @@ public sealed class Plugin : IDalamudPlugin
         this.tokenStore = new TokenStore(this.config, pluginInterface, log);
         this.api = new TarotApiClient(this.http, this.tokenStore, log);
         this.linkService = new LinkService(this.http, this.tokenStore, log);
+        this.drawKeys = new DrawKeyService(this.http, this.tokenStore, log);
 
         var cacheDir = Path.Combine(pluginInterface.GetPluginConfigDirectory(), "cards");
         this.textures = new CardTextureCache(this.http, textureProvider, log, cacheDir);
 
         this.readingPanel = new ReadingPanel(this.api, this.textures);
         this.mainWindow = new MainWindow(
-            this.api, this.readingPanel, this.linkService, this.config, this.pluginInterface);
+            this.api, this.readingPanel, this.linkService, this.drawKeys, this.config, this.pluginInterface);
 
         this.windowSystem.AddWindow(this.mainWindow);
 
@@ -85,6 +88,7 @@ public sealed class Plugin : IDalamudPlugin
         this.mainWindow.Dispose();
 
         this.linkService.Dispose();
+        this.drawKeys.Dispose();
         this.textures.Dispose();
         this.api.Dispose();
         this.http.Dispose();

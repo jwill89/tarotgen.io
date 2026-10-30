@@ -380,42 +380,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/changelog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List all changelog entries */
-        get: operations["7d7f486fcabcec3e810fb64934dec6e6"];
-        put?: never;
-        /** Create a changelog entry */
-        post: operations["4eaeb8f6c930f755bd6b36858dbb4fc7"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/admin/changelog/{entry_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Update a changelog entry */
-        put: operations["b582f34acfcf9dc67374021d8b8aac31"];
-        post?: never;
-        /** Delete a changelog entry */
-        delete: operations["396a17e5e338c91c5907ba8d0b3eced4"];
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/admin/contacts": {
         parameters: {
             query?: never;
@@ -1029,40 +993,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/changelog": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** List changelog entries (newest first) */
-        get: operations["8437968cb314700306428ee06ad0a2ab"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/changelog/{entry_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** A single changelog entry */
-        get: operations["7bddbbd5c9a8ec0ae3dcd15368d8ce9c"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/config": {
         parameters: {
             query?: never;
@@ -1223,6 +1153,40 @@ export interface paths {
         get: operations["bc7cfc91f621470189981f4ff529c799"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/draw-keys/authorize": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mint a one-time code for a plugin draw key, once the key page's challenge is passed. Rate-limited: 10 attempts/IP/hour. */
+        post: operations["01aa9e17fc971e4398fc216f58485d8f"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/plugin/draw-keys/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Exchange a draw-key code and its PKCE verifier for the draw key. Rate-limited: 10 attempts/IP/minute. */
+        post: operations["bb9f31e60f3bdf3aea6e506147fb7f20"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2099,13 +2063,6 @@ export interface components {
             /** @description What the reporter wrote; may be empty. */
             details: string;
             submitted_at: string;
-        };
-        /** @description A changelog entry. */
-        ChangelogEntry: {
-            entry_id: number;
-            title: string;
-            body: string;
-            entry_date: string;
         };
         /** @description A contact-form submission. */
         Contact: {
@@ -3134,130 +3091,6 @@ export interface operations {
             };
         };
     };
-    "7d7f486fcabcec3e810fb64934dec6e6": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of changelog entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"][];
-                };
-            };
-        };
-    };
-    "4eaeb8f6c930f755bd6b36858dbb4fc7": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    title: string;
-                    body?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Created changelog entry */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"];
-                };
-            };
-            /** @description Title is required */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Failed to create changelog entry */
-            500: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    b582f34acfcf9dc67374021d8b8aac31: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": {
-                    title?: string;
-                    body?: string;
-                };
-            };
-        };
-        responses: {
-            /** @description Updated changelog entry */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"];
-                };
-            };
-            /** @description Title is blank */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            /** @description Changelog entry not found or no valid fields */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
-    "396a17e5e338c91c5907ba8d0b3eced4": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     eef9538e7e3898dcfab09dc289df7c83: {
         parameters: {
             query?: {
@@ -3371,7 +3204,6 @@ export interface operations {
                             /** @description Public spreads. */
                             spreads: number;
                             readings: number;
-                            changelog: number;
                             users: number;
                             /** @description Contact messages not yet marked read. */
                             unreadContacts: number;
@@ -4746,55 +4578,6 @@ export interface operations {
             };
         };
     };
-    "8437968cb314700306428ee06ad0a2ab": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Array of changelog entries */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"][];
-                };
-            };
-        };
-    };
-    "7bddbbd5c9a8ec0ae3dcd15368d8ce9c": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: number;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The changelog entry */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ChangelogEntry"];
-                };
-            };
-            /** @description InvalidEntryID */
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-        };
-    };
     b1095774e7659df4e39a60882dd3de86: {
         parameters: {
             query?: never;
@@ -5184,6 +4967,98 @@ export interface operations {
             };
             /** @description Deck system not found, or awaiting approval and the viewer is not an admin */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "01aa9e17fc971e4398fc216f58485d8f": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code_challenge: string;
+                    /** @default S256 */
+                    code_challenge_method?: string;
+                    /** @description Loopback URI, e.g. http://127.0.0.1:<port>/callback */
+                    redirect_uri: string;
+                    state?: string;
+                    /** @description Required when Turnstile is configured */
+                    turnstile_token?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Loopback redirect target carrying the code (valid 5 minutes, once) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        redirect_uri: string;
+                    };
+                };
+            };
+            /** @description Invalid challenge, non-loopback redirect_uri, or captcha failed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    bb9f31e60f3bdf3aea6e506147fb7f20: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    code: string;
+                    code_verifier: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The key (returned once): sent on draws as `Authorization: Bearer tg_dk_…` */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        key: string;
+                    };
+                };
+            };
+            /** @description Invalid, expired or already used code, or the wrong verifier */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -5842,7 +5717,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored. */
+        /** @description Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored. When Turnstile is configured, a request with no signed-in user (a browser session, or a linked plugin's account token) needs either a passed challenge in `turnstile_token` (a signed-out visitor), or an unlinked plugin's draw key as `Authorization: Bearer tg_dk_…` (POST /plugin/draw-keys/token). When it isn't, nothing beyond the reading is required. */
         requestBody: {
             content: {
                 "application/json": Record<string, never>;
@@ -5858,14 +5733,21 @@ export interface operations {
                     "application/json": components["schemas"]["ReadingView"];
                 };
             };
-            /** @description Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws) */
+            /** @description Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Rate limit exceeded */
+            /** @description With Turnstile on: a draw key that is unknown or revoked ("This draw key is no longer valid. Get a new one from the plugin."), or a plugin account token that no longer is ("This account link is no longer valid. Link your account again in the plugin.") */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded: 30 draws/IP/minute; with a draw key, 10/key/minute, 300/key/day and 30/IP/minute ("Too many readings with this draw key. Please try again later.") */
             429: {
                 headers: {
                     [name: string]: unknown;
@@ -5881,7 +5763,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's). */
+        /** @description The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's). When Turnstile is configured, a request with no signed-in user (a browser session, or a linked plugin's account token) needs either a passed challenge in `turnstile_token` (a signed-out visitor), or an unlinked plugin's draw key as `Authorization: Bearer tg_dk_…` (POST /plugin/draw-keys/token). When it isn't, nothing beyond the reading is required. */
         requestBody: {
             content: {
                 "application/json": Record<string, never>;
@@ -5897,8 +5779,22 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"];
                 };
             };
-            /** @description Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it) */
+            /** @description Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); or, with Turnstile on, neither a signed-in user nor a draw key nor a passed challenge ("Captcha verification failed. Please try again."; from a plugin too old for draw keys: "This version of the TarotGen plugin can no longer draw without an account. Update the plugin to get a draw key, or link your account.") */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description With Turnstile on: a draw key that is unknown or revoked ("This draw key is no longer valid. Get a new one from the plugin."), or a plugin account token that no longer is ("This account link is no longer valid. Link your account again in the plugin.") */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Rate limit exceeded: with a draw key, 10/key/minute, 300/key/day and 30/IP/minute ("Too many readings with this draw key. Please try again later.") */
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };

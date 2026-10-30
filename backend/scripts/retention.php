@@ -4,8 +4,9 @@
  * Nightly data retention (AUDIT.md §1.7, §9.9). Deletes guest readings — saved
  * without an account — past the expiry their maker chose (1, 7 or 30 days), and
  * any a year after they were created, as the privacy policy's "Data Retention"
- * section states; then refreshes SQLite's query-planner statistics. (Reads treat
- * an expired reading as gone the moment it expires; this frees the rows.)
+ * section states. Also deletes plugin draw-key codes (§9.14) that expired without
+ * being redeemed. Then refreshes SQLite's query-planner statistics. (Reads treat
+ * an expired reading or code as gone the moment it expires; this frees the rows.)
  *
  * Run by /etc/cron.d/tarotgen straight after a successful nightly backup, as the
  * web-server user (AGENTS.md §7):
@@ -18,8 +19,10 @@
 
 require_once __DIR__ . '/../vendor/autoload.php';
 
+use Tarot\Data\DrawKeyData;
 use Tarot\Data\ReadingData;
 use Tarot\Database\Connection;
+use Tarot\Repository\DrawKeyRepository;
 use Tarot\Repository\ReadingRepository;
 
 /** The window the privacy policy promises — change both together. */
@@ -29,11 +32,14 @@ $dryRun = in_array('--dry-run', $argv, true);
 
 $db = Connection::getInstance();
 $readings = new ReadingRepository(new ReadingData($db));
+$drawKeys = new DrawKeyRepository(new DrawKeyData($db));
 
 ['expired' => $expired, 'aged' => $aged] = $readings->purgeGuests(GUEST_READING_DAYS, $dryRun);
+$codes = $drawKeys->purgeUnredeemedCodes($dryRun);
 
-$report = "{$expired} guest reading(s) past their chosen expiry and "
-    . "{$aged} guest reading(s) older than " . GUEST_READING_DAYS . ' days';
+$report = "{$expired} guest reading(s) past their chosen expiry, "
+    . "{$aged} guest reading(s) older than " . GUEST_READING_DAYS . ' days and '
+    . "{$codes} unredeemed draw-key code(s)";
 
 if ($dryRun) {
     echo "dry run: {$report} would be deleted\n";

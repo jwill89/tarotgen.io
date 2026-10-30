@@ -21,12 +21,14 @@ import { STORAGE_KEYS } from '@/constants'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useReadings } from '@/composables/useReadings'
+import { useUser } from '@/composables/useUser'
 import { defaultDeckId } from '@/utils/deck'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls } from '@/utils/cardImages'
 import type { DeckCard } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
+import TurnstileWidget from '@/components/TurnstileWidget.vue'
 
 const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
 
@@ -60,6 +62,16 @@ const isLoading = ref(false)
 const ownerOptions = useTemplateRef<InstanceType<typeof ReadingOwnerOptions>>('ownerOptions')
 const toasts = useToasts()
 const { record: recordReading } = useRecentReadings()
+const { isLoggedIn } = useUser()
+
+// A signed-out visitor passes a Turnstile challenge to save, where the site has
+// Turnstile on (AUDIT §9.14); a signed-in reader never sees one.
+const turnstileToken = ref('')
+const turnstileEnabled = ref(false)
+const turnstile = useTemplateRef('turnstile')
+const challengePending = computed(
+  () => !isLoggedIn.value && turnstileEnabled.value && !turnstileToken.value,
+)
 
 onMounted(() => {
   void fetchDecks()
@@ -235,6 +247,9 @@ async function submit() {
 
   const payload: Record<string, unknown> = { deck_id: deckId.value, name: readingName.value, cards }
   Object.assign(payload, ownerOptions.value?.collect())
+  if (!isLoggedIn.value && turnstileToken.value) {
+    payload.turnstile_token = turnstileToken.value
+  }
 
   isLoading.value = true
   const res = await createCustom(payload)
@@ -242,6 +257,8 @@ async function submit() {
 
   if (!res.ok) {
     toasts.error(res.error, { detail: res })
+    // The challenge token is single-use; reset so the visitor can try again.
+    turnstile.value?.reset()
     return
   }
 
@@ -415,9 +432,17 @@ async function submit() {
 
             <ReadingOwnerOptions ref="ownerOptions" :notes="true" class="mt-4" />
 
+            <TurnstileWidget
+              v-if="!isLoggedIn"
+              ref="turnstile"
+              v-model="turnstileToken"
+              v-model:enabled="turnstileEnabled"
+              class="mt-4"
+            />
+
             <div class="field is-grouped mt-4">
               <div class="control">
-                <button class="button is-primary" @click="submit">
+                <button class="button is-primary" :disabled="challengePending" @click="submit">
                   <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['cards']" /></span>
                   <span>Recreate Draw</span>
                 </button>

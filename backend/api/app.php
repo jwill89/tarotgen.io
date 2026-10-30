@@ -18,7 +18,6 @@ use Slim\Routing\RouteCollectorProxy;
 use Routes\JsonErrorRenderer;
 use Routes\Internal\{AccountController,
     AdminCardReportController,
-    AdminChangelogController,
     AdminContactController,
     AdminDashboardController,
     AdminDeckController,
@@ -30,12 +29,12 @@ use Routes\Internal\{AccountController,
     ApiDocsController,
     CardFrequencyController,
     CardReportController,
-    ChangelogController,
     ConfigController,
     ContactController,
     DailyCardController,
     DeckController,
     DeckSystemController,
+    DrawKeyController,
     GoogleAuthController,
     PasskeyController,
     PluginAuthController,
@@ -194,6 +193,10 @@ return function (ContainerInterface $container, bool $is_production): App {
     $app->group('/plugin', function (RouteCollectorProxy $group) {
         $group->post('/token[/]', PluginAuthController::class . ':token');
         $group->post('/authorize[/]', PluginAuthController::class . ':authorize')->add(UserAuth::class);
+        // Draw keys for an unlinked plugin, the same way round: the key page's
+        // `authorize` needs a passed Turnstile challenge instead of a session.
+        $group->post('/draw-keys/authorize[/]', DrawKeyController::class . ':authorize');
+        $group->post('/draw-keys/token[/]', DrawKeyController::class . ':token');
     });
 
     // ── Spreads (public read + public submission; copying one is the signed-in
@@ -212,11 +215,6 @@ return function (ContainerInterface $container, bool $is_production): App {
     // ── Card reports: image problems + reason (public submission from the lightbox) ─
     $app->group('/card-reports', function (RouteCollectorProxy $group) {
         $group->post('[/]', CardReportController::class . ':report');
-    });
-
-    // ── Changelog (public read) ──────────────────────────────────────────────────
-    $app->group('/changelog', function (RouteCollectorProxy $group) {
-        $group->get('[/{entry_id}[/]]', ChangelogController::class . ':getChangelog');
     });
 
     // Public runtime config (non-secret values the SPA needs, e.g. Turnstile site key)
@@ -310,12 +308,6 @@ return function (ContainerInterface $container, bool $is_production): App {
         $group->get('/readings[/]', AdminReadingController::class . ':getReadings');
         $group->delete('/readings/all[/]', AdminReadingController::class . ':cleanReadings');
         $group->delete('/readings/{reading_id}[/]', AdminReadingController::class . ':deleteReading');
-
-        // Changelog
-        $group->get('/changelog[/]', AdminChangelogController::class . ':getChangelog');
-        $group->post('/changelog[/]', AdminChangelogController::class . ':createChangelogEntry');
-        $group->put('/changelog/{entry_id}[/]', AdminChangelogController::class . ':updateChangelogEntry');
-        $group->delete('/changelog/{entry_id}[/]', AdminChangelogController::class . ':deleteChangelogEntry');
 
         // Users (management)
         $group->get('/users[/]', AdminUserController::class . ':getUsers');

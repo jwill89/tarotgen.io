@@ -35,8 +35,18 @@ public sealed class Configuration : IPluginConfiguration
     public bool TokenIsEncrypted { get; set; }
     public string? LinkedName { get; set; }
 
+    // Draw key (an unlinked install's credential for drawing), stored the same way
+    // and apart from the account token: linking or unlinking leaves it be.
+    public string? EncryptedDrawKey { get; set; }
+    public bool DrawKeyIsEncrypted { get; set; }
+
     // First-run onboarding — shown once, then never again.
     public bool OnboardingComplete { get; set; }
+
+    // The notice that drawing now needs a draw key, for an install set up before
+    // 0.8.0 (onboarded, with no such flag in its saved config). New installs learn
+    // it in onboarding, so finishing onboarding sets it too.
+    public bool DrawKeyNoticeSeen { get; set; }
 
     public void Save(IDalamudPluginInterface pluginInterface)
         => pluginInterface.SavePluginConfig(this);

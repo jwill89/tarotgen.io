@@ -2,6 +2,7 @@ import { defineConfig } from 'vitest/config'
 import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import { statSync } from 'node:fs'
+import { changelogPlugin } from './config/changelog-plugin.ts'
 
 /**
  * Append a cache-busting `?v=<mtime>` to a project-root asset's URL so social
@@ -26,6 +27,8 @@ function withAssetVersion(url: string, relPath: string): string {
 export default defineConfig({
   plugins: [
     vue(),
+    // The repo root's CHANGELOG.md as `virtual:changelog`, for the admin dashboard.
+    changelogPlugin(resolve(import.meta.dirname, '../CHANGELOG.md')),
     {
       // Cache-bust the homepage's OG/Twitter share image (served as the
       // static dist/index.html). Reading pages are handled in og.php.
@@ -73,10 +76,10 @@ export default defineConfig({
       include: ['src/**/*.{ts,vue}'],
       exclude: ['src/__tests__/**', 'src/types/**', 'src/**/*.d.ts'],
       reporter: ['text-summary', 'html'],
-      // The floor, a little under what the specs reached once components and views
-      // had specs (AUDIT §8, 2026-10-28: 96.7 / 92.5 / 95.0 / 97.5%; it was 10.5%
-      // of lines before). Raise it as specs land; never lower it.
-      thresholds: { statements: 95, branches: 91, functions: 94, lines: 96 },
+      // The floor, a little under what the specs reach (5.4.0, 2026-10-30: 97.1 /
+      // 93.5 / 95.8 / 97.9%; 10.5% of lines before AUDIT §8). Raise it as specs
+      // land; never lower it.
+      thresholds: { statements: 96, branches: 92, functions: 95, lines: 97 },
     },
   },
   build: {

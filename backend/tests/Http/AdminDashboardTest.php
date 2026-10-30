@@ -6,7 +6,6 @@ namespace Tarot\Tests\Http;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use Routes\Internal\AdminDashboardController;
-use Tarot\Data\ChangelogData;
 use Tarot\Data\ContactData;
 use Tarot\Data\DeckData;
 use Tarot\Data\DeckSystemData;
@@ -40,7 +39,6 @@ final class AdminDashboardTest extends HttpTestCase
         $queue = $this->service(PendingSpreadData::class);
         $queue->store(['name' => 'Crossroads']);
         $queue->store(['name' => 'Moon Phases']);
-        $this->service(ChangelogData::class)->store(['title' => 'Launch', 'body' => 'Hello']);
         $contacts = $this->service(ContactData::class);
         $contacts->store(['name' => 'A', 'email' => 'a@example.test', 'message' => 'Unread']);
         $read = $contacts->store(['name' => 'B', 'email' => 'b@example.test', 'message' => 'Read']);
@@ -70,7 +68,7 @@ final class AdminDashboardTest extends HttpTestCase
         $this->assertDocumented('get', '/admin/summary', 200, $summary);
         $this->assertSame([
             'deckSystems' => 2, 'decks' => 1, 'specialCards' => 1, 'spreads' => 1,
-            'readings' => 5, 'changelog' => 1, 'users' => 2, 'unreadContacts' => 1,
+            'readings' => 5, 'users' => 2, 'unreadContacts' => 1,
             'openCardReports' => 2, 'pendingSpreads' => 2, 'pendingDeckSystems' => 1,
         ], $summary['counts']);
         $this->assertSame([

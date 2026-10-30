@@ -6,7 +6,9 @@ use Random\RandomException;
 use Tarot\Repository\PluginAuthCodeRepository;
 use Tarot\Repository\PluginTokenRepository;
 use Tarot\Structure\PluginToken;
+use Tarot\Utility\BearerToken;
 use Tarot\Utility\Clock;
+use Tarot\Utility\Pkce;
 
 /**
  * The plugin account-linking engine (OAuth-style, PKCE public client).
@@ -81,7 +83,7 @@ class PluginTokenService
             return null;
         }
 
-        if (!$this->verifyChallenge($codeVerifier, $authCode->code_challenge)) {
+        if (!Pkce::verifies($codeVerifier, $authCode->code_challenge)) {
             return null;
         }
 
@@ -114,7 +116,7 @@ class PluginTokenService
      */
     public function resolveBearer(string $authorizationHeader): ?int
     {
-        $token = $this->extractBearer($authorizationHeader);
+        $token = BearerToken::from($authorizationHeader);
         if ($token === null) {
             return null;
         }
@@ -153,19 +155,6 @@ class PluginTokenService
     public function revoke(int $userId, int $tokenId): bool
     {
         return $this->tokens->revoke($tokenId, $userId);
-    }
-
-    /** Verify a PKCE `code_verifier` against the stored S256 `code_challenge`. */
-    private function verifyChallenge(string $verifier, string $challenge): bool
-    {
-        $computed = rtrim(strtr(base64_encode(hash('sha256', $verifier, true)), '+/', '-_'), '=');
-        return hash_equals($challenge, $computed);
-    }
-
-    /** Pull the raw token out of an `Authorization: Bearer <token>` header. */
-    private function extractBearer(string $header): ?string
-    {
-        return preg_match('/^\s*Bearer\s+(\S+)\s*$/i', $header, $matches) === 1 ? $matches[1] : null;
     }
 
     private function hash(string $value): string

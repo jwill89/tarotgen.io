@@ -4,13 +4,6 @@
 
 PRAGMA foreign_keys = ON;
 
-CREATE TABLE changelog (
-        entry_id   INTEGER PRIMARY KEY AUTOINCREMENT,
-        title      TEXT NOT NULL DEFAULT '',
-        body       TEXT NOT NULL DEFAULT '',
-        entry_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-    );
-
 CREATE TABLE contacts (
         contact_id   INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id      INTEGER DEFAULT NULL,
@@ -193,6 +186,18 @@ CREATE TABLE plugin_auth_codes (
         used_at        TEXT    DEFAULT NULL
     );
 
+CREATE TABLE plugin_draw_keys (
+        id              INTEGER PRIMARY KEY AUTOINCREMENT,
+        code_hash       TEXT    NOT NULL,
+        code_challenge  TEXT    NOT NULL,
+        code_expires_at TEXT    NOT NULL,
+        key_hash        TEXT    DEFAULT NULL,
+        created_at      TEXT    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        issued_at       TEXT    DEFAULT NULL,
+        last_used_at    TEXT    DEFAULT NULL,
+        revoked_at      TEXT    DEFAULT NULL
+    );
+
 CREATE TABLE card_reports (
         report_id         INTEGER PRIMARY KEY AUTOINCREMENT,
         deck_id           INTEGER NOT NULL REFERENCES "decks"(deck_id) ON DELETE CASCADE,
@@ -270,6 +275,10 @@ CREATE UNIQUE INDEX idx_plugin_tokens_hash ON plugin_tokens (token_hash);
 CREATE INDEX idx_plugin_tokens_user ON plugin_tokens (user_id);
 
 CREATE UNIQUE INDEX idx_plugin_auth_codes_hash ON plugin_auth_codes (code_hash);
+
+CREATE UNIQUE INDEX idx_plugin_draw_keys_code ON plugin_draw_keys (code_hash);
+
+CREATE UNIQUE INDEX idx_plugin_draw_keys_key ON plugin_draw_keys (key_hash);
 
 CREATE UNIQUE INDEX idx_card_reports_card ON card_reports (deck_id, card_id);
 

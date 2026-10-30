@@ -53,6 +53,31 @@ describe('PrivacyPolicyView', () => {
     )
   })
 
+  it('names every page that asks for a Turnstile check', async () => {
+    const views = import.meta.glob<string>('@/views/**/*.vue', {
+      query: '?raw',
+      import: 'default',
+      eager: true,
+    })
+    const named: Record<string, string> = {
+      'LoginView.vue': 'signing in',
+      'ContactView.vue': 'the contact form',
+      'NewReadingView.vue': 'drawing a reading while signed out',
+      'CustomReadingView.vue': 'drawing a reading while signed out',
+      'PluginDrawKeyView.vue': 'getting a draw key for the FFXIV plugin',
+    }
+    const checked = Object.entries(views)
+      .filter(([, source]) => source.includes('<TurnstileWidget'))
+      .map(([path]) => path.split('/').pop() ?? path)
+    await mountWithApp(PrivacyPolicyView, { path: '/privacy' })
+
+    // A new page with the widget fails here until the policy names it.
+    expect(checked.sort()).toEqual(Object.keys(named).sort())
+    const sharing = section('Data Sharing')
+    expect(sharing).toContain('Cloudflare Turnstile check')
+    for (const phrase of Object.values(named)) expect(sharing).toContain(phrase)
+  })
+
   it('states how long the nightly backups keep deleted data', async () => {
     const keep = Number(/TAROT_BACKUP_KEEP:-(\d+)/.exec(backupScript)?.[1])
     await mountWithApp(PrivacyPolicyView, { path: '/privacy' })

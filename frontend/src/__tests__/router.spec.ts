@@ -219,25 +219,35 @@ describe('router page head', () => {
   it('titles each page after the route and describes it for search engines', async () => {
     const { router } = await freshApp()
 
-    await router.push('/changelog')
+    await router.push('/privacy')
 
-    expect(document.title).toBe('Changelog | TarotGen.io Tarot Generator')
-    expect(meta('description')).toBe('See the latest updates, features, and fixes for TarotGen.io.')
-    expect(canonical()).toBe('https://tarotgen.io/changelog')
+    expect(document.title).toBe('Privacy Policy | TarotGen.io Tarot Generator')
+    expect(meta('description')).toBe('How TarotGen.io collects, uses, and protects your data.')
+    expect(canonical()).toBe('https://tarotgen.io/privacy')
     expect(meta('robots')).toBe('index, follow')
   })
 
   it('keeps the title and meta of a page that stopped the navigation away from it', async () => {
     const { router } = await freshApp()
-    await router.push('/changelog')
+    await router.push('/privacy')
     // As a page with unsaved changes does when the visitor stays.
     router.beforeEach((to) => to.name !== 'contact')
 
     await router.push('/contact')
 
-    expect(router.currentRoute.value.name).toBe('changelog')
-    expect(document.title).toBe('Changelog | TarotGen.io Tarot Generator')
-    expect(canonical()).toBe('https://tarotgen.io/changelog')
+    expect(router.currentRoute.value.name).toBe('privacy-policy')
+    expect(document.title).toBe('Privacy Policy | TarotGen.io Tarot Generator')
+    expect(canonical()).toBe('https://tarotgen.io/privacy')
+  })
+
+  it('sends the retired changelog pages home, as any unknown page', async () => {
+    const { router, markAuthChecked } = await freshApp(testUser({ is_admin: true }))
+    markAuthChecked()
+
+    for (const path of ['/changelog', '/admin/changelog']) {
+      await router.push(path)
+      expect(router.currentRoute.value.name).toBe('home')
+    }
   })
 
   it('keeps the site title alone on the home page', async () => {

@@ -642,8 +642,11 @@ body.has-fixed-nav {
   border-radius: 10px;
 }
 
-/* Always-visible details list beside the spread canvas */
+/* Always-visible details list beside the spread canvas. Its title takes the
+   display serif, as the secondary headings do (.title is themed in tokens.css). */
 .spread-detail-list-title {
+  font-family: var(--myst-heading-font);
+  letter-spacing: 0.01em;
   color: var(--myst-text-strong);
   font-size: 1.1rem;
   font-weight: 600;
@@ -931,48 +934,6 @@ button.home-action {
   border-color: rgba(255, 255, 255, 0.28);
 }
 
-/* ── Changelog ───────────────────────────────────────────── */
-.changelog-timeline {
-  margin-top: 1.5rem;
-}
-
-.changelog-entry {
-  background-color: var(--myst-surface-2);
-  border-left: 4px solid var(--myst-gold);
-  border-radius: 10px;
-  padding: 1.25rem 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.changelog-entry-head {
-  margin-bottom: 0.6rem;
-}
-
-.changelog-date {
-  display: block;
-  color: var(--myst-text-muted);
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.changelog-title {
-  color: var(--myst-text-strong);
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0.1rem 0 0;
-}
-
-.changelog-body,
-.changelog-body p {
-  color: var(--myst-text);
-}
-
-.changelog-body a {
-  color: var(--myst-gold);
-}
-
 /* ── Mystical Theme (palette + Bulma variable mapping live in tokens.css) ── */
 
 html,
@@ -1013,13 +974,6 @@ body {
      page — cancel it so modals (all Dialogs + the AlertDialog) open with zero
      layout shift. */
   padding-right: 0 !important;
-}
-
-/* Display serif for the secondary headings (.title is themed in tokens.css). */
-.spread-detail-list-title,
-.changelog-title {
-  font-family: var(--myst-heading-font);
-  letter-spacing: 0.01em;
 }
 
 /* Solid panels (kept opaque so text never sits over the starfield). Bulma's

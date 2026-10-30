@@ -98,6 +98,8 @@ function loads(extra: Parameters<typeof stubApi>[0] = {}) {
     'GET /account/spreads': { body: [myMorning] },
     'GET /account/favorites': { body: [] },
     'GET /account/favorite-decks': { body: [] },
+    // The Turnstile widget a signed-out visitor gets asks for the site key (none here).
+    'GET /config': { body: { turnstile_sitekey: null } },
     ...extra,
   })
 }
@@ -470,5 +472,82 @@ describe('NewReadingView', () => {
     const sent = sentFields(api)
     expect(sent.password).toBeUndefined()
     expect(sent.reading_name).toBeUndefined()
+  })
+
+  describe('with Cloudflare Turnstile switched on', () => {
+    let solve: (token: string) => void
+    const turnstile = { render: vi.fn(), reset: vi.fn(), remove: vi.fn() }
+    const siteKey = { 'GET /config': { body: { turnstile_sitekey: '0x4AAA' } } }
+
+    beforeEach(() => {
+      solve = () => {}
+      turnstile.render
+        .mockReset()
+        .mockImplementation((_el: HTMLElement, opts: Record<string, unknown>) => {
+          const callback = opts.callback
+          if (typeof callback === 'function') solve = (token) => callback(token)
+          return 'widget-1'
+        })
+      turnstile.reset.mockReset()
+      // Already "loaded", so the widget never fetches Cloudflare's script.
+      vi.stubGlobal('turnstile', turnstile)
+    })
+
+    const drawButton = (wrapper: VueWrapper) =>
+      button(wrapper, 'Generate New Draw').element as HTMLButtonElement
+
+    it('holds a signed-out draw until the challenge is solved, then sends its token', async () => {
+      const api = loads({ ...siteKey, 'POST /readings/generate': { body: drawn } })
+      const { wrapper, router } = await openPage()
+
+      expect(turnstile.render).toHaveBeenCalledWith(
+        expect.any(HTMLElement),
+        expect.objectContaining({ sitekey: '0x4AAA' }),
+      )
+      expect(drawButton(wrapper).disabled).toBe(true)
+
+      solve('cf-token')
+      await flushPromises()
+      expect(drawButton(wrapper).disabled).toBe(false)
+      await generate(wrapper)
+
+      expect(sentFields(api)).toMatchObject({ turnstile_token: 'cf-token' })
+      await vi.waitFor(() => expect(router.currentRoute.value.name).toBe('reading'))
+    })
+
+    it('asks for a fresh challenge after a refused draw (tokens are single-use)', async () => {
+      loads({
+        ...siteKey,
+        'POST /readings/generate': {
+          status: 400,
+          body: { error: 'Captcha verification failed. Please try again.' },
+        },
+      })
+      const { wrapper, router } = await openPage()
+      solve('cf-token')
+      await flushPromises()
+
+      await generate(wrapper)
+
+      expect(useToasts().toasts.value.map((t) => t.message)).toEqual([
+        'Captcha verification failed. Please try again.',
+      ])
+      expect(turnstile.reset).toHaveBeenCalledWith('widget-1')
+      expect(drawButton(wrapper).disabled).toBe(true)
+      expect(router.currentRoute.value.name).toBe('new-reading')
+    })
+
+    it('never asks a signed-in reader', async () => {
+      signIn(testUser())
+      const api = loads({ ...siteKey, 'POST /readings/generate': { body: drawn } })
+      const { wrapper } = await openPage()
+
+      expect(turnstile.render).not.toHaveBeenCalled()
+      expect(api.mock.calls.map(([url]) => url)).not.toContain('/api/config')
+      expect(drawButton(wrapper).disabled).toBe(false)
+      await generate(wrapper)
+
+      expect(sentFields(api)).not.toHaveProperty('turnstile_token')
+    })
   })
 })

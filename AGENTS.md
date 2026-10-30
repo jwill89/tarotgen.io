@@ -57,6 +57,7 @@ flattens both into the live server's single flat web root.
 │   ├── index.html          # SPA entry HTML (Vite).
 │   ├── package.json        # Frontend scripts & deps.
 │   ├── vite.config.ts      # Vite + Vitest config (alias @ -> src, /api + /assets proxy, manualChunks).
+│   ├── config/             # Vite plugins: changelog-plugin.ts serves the root CHANGELOG.md as `virtual:changelog`.
 │   ├── eslint.config.ts    # ESLint flat config: the shared @jwill89/eslint-config + project rules.
 │   ├── eslint-config/      # Git submodule holding that shared config (`git submodule update --init`).
 │   ├── stylelint.config.js # Stylelint: recommended configs + the palette rule (§5).
@@ -215,6 +216,16 @@ upgrade, change the version and recompute the sha384 of that exact file.
   and passkey login options give an unknown email stand-in credential ids
   (`PasskeyDecoys`, keyed by `<TAROT_DATA_DIR>/db/passkey-decoy.key`, created on
   first use).
+- **Who may make a reading** (`POST /readings/generate`, `POST /readings`;
+  `ReadingController::refuseDraw()`): with Turnstile configured, a request with
+  no signed-in user (session, or a linked plugin's `tg_pat_` token) needs a
+  passed challenge (`turnstile_token`, from New Draw and Recreate Draw) or an
+  unlinked plugin's **draw key** (`Authorization: Bearer tg_dk_…`). Keys come
+  from the `/draw-key` page (Turnstile, then PKCE to the plugin's loopback
+  listener: `POST /plugin/draw-keys/authorize` → `/token`), are stored hashed in
+  `plugin_draw_keys`, open nothing but draws (their readings are guests') and
+  are rate-limited per key and per IP (`DrawKeyService`). Without Turnstile (dev,
+  the tests, the smoke run) nothing more is needed.
 - `OriginGuard` middleware is CSRF defense-in-depth (rejects cross-origin
   state-changing requests). Added last so it runs outermost.
 - CORS is **opt-in** via `APP_ORIGIN` (never `*` with credentialed cookies).
@@ -484,7 +495,9 @@ stale `tarotdb.db-wal`/`-shm` beside it. Take a manual run before migrations:
 `backend/scripts/retention.php` as www-data (`scripts/` ships with `-Target
 backend`): it deletes **guest** readings (`user_id IS NULL`) older than 365 days —
 readings made while signed in, on the site or via a linked plugin, are never
-touched — then runs `ANALYZE` (not `PRAGMA optimize`: prod's SQLite 3.45 ignores its
+touched — and those past the earlier expiry a guest chose; deletes plugin draw-key
+codes that expired unredeemed (`plugin_draw_keys` rows with no key; issued keys
+stay); then runs `ANALYZE` (not `PRAGMA optimize`: prod's SQLite 3.45 ignores its
 check-every-table bit). The window is stated on the privacy page
 (`PrivacyPolicyView.vue`, "Data Retention"); change both together. Check runs with
 `journalctl -t tarotgen-retention`; preview with `runuser -u www-data -- php
@@ -627,7 +640,10 @@ scripts/retention.php --dry-run`.
   `frontend/package.json`; bump it together with its `CHANGELOG.md` section in
   the same commit (minor for a feature, patch for fixes, major for a breaking
   API or plugin change), and CI tags and releases it. Changes between releases
-  collect under `## [Unreleased]`.
+  collect under `## [Unreleased]`. `CHANGELOG.md` is the **only** changelog:
+  the admin dashboard's version tag shows it, read in at build time
+  (`virtual:changelog`, `utils/changelog.ts`); there is no changelog table, page
+  or API (retired in 5.4.0).
 - **Refusals** follow API.md: 400 validation, 401 not signed in, 403 not
   allowed (e.g. a protected admin), **404 for anything the requester may not
   see** as well as unknown ids (another user's reading or personal spread, a
@@ -641,7 +657,10 @@ scripts/retention.php --dry-run`.
   (`AdminAuth::sessionIsAdmin()`), and only responses that are the same for
   everyone get public cache headers; nothing answers differently for an
   existing and an unknown account; a new public form or auth endpoint gets a
-  `RateLimiter` and, when configured, Turnstile (as login and contact do); a
+  `RateLimiter` and, when configured, Turnstile (as login and contact do; the
+  privacy page names every page using it, `PrivacyPolicyView.spec.ts` checks), and
+  making a reading without a signed-in user needs Turnstile or a plugin draw
+  key (§4, "Who may make a reading"; no bypass for anything else); a
   password change or reset ends sessions; admins can't demote or delete
   themselves, and `PROTECTED_ADMIN_EMAILS` accounts can't be demoted or deleted;
   an account always keeps one way to sign in (`SignInMethods`). A reading's
@@ -759,12 +778,16 @@ and it has its own version, package, and release channel.
   (`TarotApiClient`, `CardTextureCache`, `LinkService` account link, `TokenStore`
   DPAPI, `ReadingFormat`, `SpreadDraw`, `SpreadLayout`), `Windows/` (`MainWindow`,
   `ReadingPanel`, `Ui`), `Models/ApiModels.cs` (DTOs), `Configuration.cs`.
-- **Talks to the API over HTTPS** (not the session cookie). Drawing and viewing
-  readings needs no auth; a linked account adds a per-account **Bearer token** for
-  the account routes (`AccountAuth`), obtained through a browser loopback + PKCE
-  flow on the site's `/authorize` page and stored DPAPI-encrypted. The endpoints
-  it uses are the `Plugin`/`Cards`-tagged routes in `api/app.php` (`/plugin/*`,
-  `/account/tokens`, `/card-reports`). The chatless share relay (per-install
+- **Talks to the API over HTTPS** (not the session cookie). Viewing readings
+  needs no auth. Drawing needs, where the site has Turnstile on, a linked
+  account or a **draw key** (0.8.0+): the plugin gets one once on the site's
+  `/draw-key` page and sends it only on draws (§4, "Who may make a reading").
+  A linked account adds a per-account **Bearer token** for the account routes
+  (`AccountAuth`). Both come through a browser loopback + PKCE flow
+  (`LoopbackCodeFlow`; `/authorize` for the account, `/draw-key` for the key)
+  and are stored DPAPI-encrypted (`TokenStore`); a 401 on a draw forgets the
+  credential that was sent. The endpoints it uses are the `Plugin`/`Cards`-tagged
+  routes in `api/app.php` (`/plugin/*`, `/account/tokens`, `/card-reports`). The chatless share relay (per-install
   client token, `plugin_clients` & co.) was removed; its tables were dropped in
   AUDIT §2.1 — a future relay gets a fresh design.
 - **Conventions/gotchas:** ImGui is `Dalamud.Bindings.ImGui` (not `ImGuiNET`);

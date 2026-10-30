@@ -46,11 +46,6 @@
     <priority>0.4</priority>
   </url>
   <url>
-    <loc>https://tarotgen.io/changelog</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.4</priority>
-  </url>
-  <url>
     <loc>https://tarotgen.io/privacy</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>

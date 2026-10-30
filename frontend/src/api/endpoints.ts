@@ -77,11 +77,6 @@ export const endpoints = {
   /** `POST /api/card-reports` — public report of a card scan needing a re-scan. */
   cardReports: '/card-reports',
 
-  changelog: {
-    list: '/changelog',
-    byId: (id: string | number) => `/changelog/${id}`,
-  },
-
   // -----------------------------------------------------------------------
   // Auth (public; path relative to /api)
   // -----------------------------------------------------------------------
@@ -168,12 +163,16 @@ export const endpoints = {
     tokenById: (id: string | number) => `/account/tokens/${id}`,
   },
 
-  /** Dalamud plugin account linking (OAuth-style, PKCE). */
+  /** Dalamud plugin account linking (OAuth-style, PKCE), and draw keys for an unlinked one. */
   plugin: {
     /** `POST` — browser consent approval → PKCE authorization code (session). */
     authorize: '/plugin/authorize',
     /** `POST` — plugin exchanges code + verifier for a Bearer token (public). */
     token: '/plugin/token',
+    /** `POST` — the draw-key page, its Turnstile challenge passed → PKCE code (public). */
+    drawKeyAuthorize: '/plugin/draw-keys/authorize',
+    /** `POST` — plugin exchanges code + verifier for its draw key (public). */
+    drawKeyToken: '/plugin/draw-keys/token',
   },
 
   // -----------------------------------------------------------------------
@@ -230,10 +229,6 @@ export const endpoints = {
       /** `DELETE /api/admin/readings/all?older_than_days=N` — bulk clean. */
       clean: (olderThanDays: string | number) => `/readings/all?older_than_days=${olderThanDays}`,
       byId: (id: string | number) => `/readings/${id}`,
-    },
-    changelog: {
-      list: '/changelog',
-      byId: (id: string | number) => `/changelog/${id}`,
     },
     users: {
       list: '/users',

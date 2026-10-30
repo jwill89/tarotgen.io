@@ -67,7 +67,6 @@ const adminItems = [
   { label: 'Users', icon: 'users', to: { name: 'admin-users' } },
   { label: 'Contacts', icon: 'envelope', to: { name: 'admin-contacts' } },
   { label: 'Errored Cards', icon: 'triangle-exclamation', to: { name: 'admin-card-reports' } },
-  { label: 'Changelog', icon: 'newspaper', to: { name: 'admin-changelog' } },
 ]
 
 function closeMenu() {
@@ -318,7 +317,6 @@ function skipToContent() {
             for a reader. Please use responsibly!<br />
             <router-link :to="{ name: 'privacy-policy' }">Privacy Policy</router-link> |
             <router-link :to="{ name: 'terms-of-service' }">Terms of Service</router-link> |
-            <router-link :to="{ name: 'changelog' }"> Changelog</router-link> |
             <router-link :to="{ name: 'contact' }">Contact Us</router-link>
           </p>
         </div>

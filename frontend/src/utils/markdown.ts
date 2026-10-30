@@ -4,7 +4,7 @@ import DOMPurify from 'dompurify'
 /**
  * Render markdown to sanitized HTML.
  *
- * Used for BOTH admin-authored copy (changelog entries, spread descriptions) and
+ * Used for BOTH admin-authored copy (CHANGELOG.md, spread descriptions) and
  * user-supplied content (contact messages, reading notes, user spread
  * descriptions), so the DOMPurify pass is load-bearing, not cosmetic: it is the
  * only thing that makes the `v-html` call sites safe. Every non-empty path goes

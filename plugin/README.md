@@ -14,7 +14,7 @@ channel (`-Target plugin`).
 
 **In scope**
 
-- **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. Anonymous. The spread pickers group the public spreads under the site's library categories, in the order the site lists them.
+- **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. No account needed: an unlinked install gets a **draw key** once (see "How it authenticates"). The spread pickers group the public spreads under the site's library categories, in the order the site lists them.
 - **View a reading** by its share code / URL, including password-protected readings (guest enters the password). Each position lists its card, with what the position asks beneath it when the spread says (the New Reading preview shows the same).
 - **Optional account** — link a TarotGen account to lock/finalize a reading, sort deck/spread pickers by your favorites, and track generated readings ("My Readings"). Guests never have to link.
 - **Report a problem with a card's image** from the card lightbox — pick what's wrong (scan artefact, cropping, image quality, wrong card, or something else) and optionally describe it, so the site admins know what to fix.
@@ -70,13 +70,30 @@ pluginmaster) to `https://tarotgen.io/plugin/`.
 ## How it authenticates
 
 The plugin is a native `HttpClient`, so it uses a **Bearer token** rather than the site's session
-cookie. Drawing and viewing readings need no token at all. Linking an account opens the site's
-`/authorize` page in the browser and hands an **account token** back to a local loopback listener
-(OAuth-style **loopback + PKCE**, no copy-paste); the plugin then uses it for the account routes it
-needs: locking a reading, favorites, and My Readings.
+cookie. Both of its credentials come from the same browser round trip (OAuth-style **loopback +
+PKCE**, no copy-paste: the site page hands a one-time code back to a local loopback listener, and the
+plugin swaps it, with its PKCE verifier, for the credential).
 
-The token is **DPAPI-encrypted** at rest (plaintext fallback under Wine) and can be revoked at any time
-from the site's *Connected Apps* screen.
+- **Account token** (`tg_pat_…`) — linking an account opens the site's `/authorize` page. The plugin
+  then uses the token for the account routes it needs (locking a reading, favorites, My Readings) and
+  draws as that account. It can be revoked at any time from the site's *Connected Apps* screen.
+- **Draw key** (`tg_dk_…`, since 0.8.0) — the site asks a signed-out draw to pass a Cloudflare
+  Turnstile challenge, which a game client can't show. So when the plugin isn't linked and has no
+  key, New Reading offers **Get a draw key**: it opens the site's `/draw-key` page, the player passes
+  the challenge once, and the key comes back the same way (`POST /api/plugin/draw-keys/token`). The
+  plugin sends it as `Authorization: Bearer tg_dk_…` on draws only; it opens nothing else (no account
+  routes), names no account (its readings are a guest's), and is rate-limited per key. If the site
+  ever turns it down (a 401: revoked), the plugin forgets it and offers to get a new one. A linked
+  account doesn't need one, and keeps it in case it is unlinked later.
+
+Viewing readings needs neither. Both credentials are **DPAPI-encrypted** at rest, separately
+(plaintext fallback under Wine).
+
+Plugins before 0.8.0 can't draw without a linked account once the site's Turnstile guard is live:
+they have no way to get a draw key. An install upgraded from one of them, unlinked and without a key,
+gets a one-time pop-up the next time its window opens, "Drawing now needs a draw key", with the steps
+and buttons to get a key or link an account (`Configuration.DrawKeyNoticeSeen`). A new install learns
+it in onboarding instead.
 
 ## Backend it talks to
 

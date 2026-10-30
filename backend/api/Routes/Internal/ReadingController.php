@@ -10,9 +10,12 @@ use JsonException;
 use Tarot\Exception\ApiException;
 use Tarot\Repository\ReadingRepository;
 use Tarot\Repository\UserRepository;
+use Tarot\Service\DrawKeyService;
 use Tarot\Service\PluginTokenService;
 use Tarot\Service\ReadingService;
+use Tarot\Service\TurnstileService;
 use Tarot\Structure\Reading;
+use Tarot\Utility\BearerToken;
 use Tarot\Utility\Input;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
@@ -27,11 +30,41 @@ class ReadingController extends AbstractController
     private const int UNLOCK_MAX_PER_WINDOW   = 10;   // password attempts (brute-force guard)
     private const int RATE_WINDOW_SECONDS     = 60;
 
+    // Readings made with an unlinked plugin's draw key (when Turnstile guards
+    // drawing): per key, a person's pace in a minute and a busy evening's worth
+    // in a day, so a key lifted from an install can't feed a bot; per IP, the 30
+    // a minute New Draw allows, counted across both routes (POST /readings has no
+    // IP limit of its own).
+    private const int KEY_DRAWS_PER_MINUTE    = 10;
+    private const int KEY_DRAWS_PER_DAY       = 300;
+    private const int KEY_DRAWS_PER_IP_MINUTE = 30;
+    private const int DAY_SECONDS             = 86400;
+
+    private const string CAPTCHA_FAILED = 'Captcha verification failed. Please try again.';
+    private const string PLUGIN_NEEDS_KEY = 'This version of the TarotGen plugin can no longer draw without an account. '
+        . 'Update the plugin to get a draw key, or link your account.';
+    private const string KEY_INVALID = 'This draw key is no longer valid. Get a new one from the plugin.';
+    private const string ACCOUNT_LINK_INVALID = 'This account link is no longer valid. Link your account again in the plugin.';
+    private const string KEY_LIMITED = 'Too many readings with this draw key. Please try again later.';
+
+    // Who may make a reading, as the two routes that make one document it.
+    private const string DRAW_ACCESS_DOC = 'When Turnstile is configured, a request with no signed-in user (a browser '
+        . 'session, or a linked plugin\'s account token) needs either a passed challenge in `turnstile_token` (a signed-out '
+        . 'visitor), or an unlinked plugin\'s draw key as `Authorization: Bearer tg_dk_…` (POST /plugin/draw-keys/token). '
+        . 'When it isn\'t, nothing beyond the reading is required.';
+    private const string DRAW_REFUSED_DOC = 'or, with Turnstile on, neither a signed-in user nor a draw key nor a passed '
+        . 'challenge ("' . self::CAPTCHA_FAILED . '"; from a plugin too old for draw keys: "' . self::PLUGIN_NEEDS_KEY . '")';
+    private const string DRAW_CREDENTIAL_DOC = 'With Turnstile on: a draw key that is unknown or revoked ("' . self::KEY_INVALID
+        . '"), or a plugin account token that no longer is ("' . self::ACCOUNT_LINK_INVALID . '")';
+    private const string KEY_LIMITS_DOC = 'with a draw key, 10/key/minute, 300/key/day and 30/IP/minute ("' . self::KEY_LIMITED . '")';
+
     public function __construct(
         private readonly ReadingRepository $readings,
         private readonly ReadingService $readingService,
         private readonly UserRepository $users,
         private readonly PluginTokenService $pluginTokens,
+        private readonly DrawKeyService $drawKeys,
+        private readonly TurnstileService $turnstile,
         private readonly AdminAuth $admin,
     ) {
     }
@@ -184,7 +217,7 @@ class ReadingController extends AbstractController
                 . 'characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most '
                 . '30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a '
                 . 'guest\'s are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then '
-                . 'instead of after the usual year; a signed-in reader\'s is ignored.',
+                . 'instead of after the usual year; a signed-in reader\'s is ignored. ' . self::DRAW_ACCESS_DOC,
             content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
@@ -193,8 +226,9 @@ class ReadingController extends AbstractController
                 description: 'The created reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
-            new OAS\Response(response: 400, description: 'Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws)'),
-            new OAS\Response(response: 429, description: 'Rate limit exceeded'),
+            new OAS\Response(response: 400, description: 'Invalid draw spec (InvalidDeckID also for a deck awaiting approval, unless an admin draws); ' . self::DRAW_REFUSED_DOC),
+            new OAS\Response(response: 401, description: self::DRAW_CREDENTIAL_DOC),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: 30 draws/IP/minute; ' . self::KEY_LIMITS_DOC),
         ]
     )]
     public function newReading(Request $request, Response $response, array $args): Response|ResponseInterface
@@ -211,6 +245,11 @@ class ReadingController extends AbstractController
 
         try {
             $userId  = $this->currentUserId($request);
+            $refusal = $this->refuseDraw($request, $response, $userId);
+            if ($refusal !== null) {
+                return $refusal;
+            }
+
             $reading = $this->readingService->generate($this->parsedBody($request), $userId, $this->isAdmin($userId));
             // Return the viewer-aware payload (like getReading) so a linked owner
             // sees is_owner=true and can immediately finalize their new reading.
@@ -231,7 +270,7 @@ class ReadingController extends AbstractController
         requestBody: new OAS\RequestBody(
             required: true,
             description: 'The deck, a name and the cards with their positions, plus the same owner options as '
-                . 'POST /readings/generate (a signed-in reader\'s) or expiry (a guest\'s).',
+                . 'POST /readings/generate (a signed-in reader\'s) or expiry (a guest\'s). ' . self::DRAW_ACCESS_DOC,
             content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
@@ -240,13 +279,20 @@ class ReadingController extends AbstractController
                 description: 'The created reading, as stored (not the viewer payload the other reading commands return)',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OAS\Response(response: 400, description: 'Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it)'),
+            new OAS\Response(response: 400, description: 'Invalid input (InvalidDeckID also for a deck awaiting approval, unless an admin records it); ' . self::DRAW_REFUSED_DOC),
+            new OAS\Response(response: 401, description: self::DRAW_CREDENTIAL_DOC),
+            new OAS\Response(response: 429, description: 'Rate limit exceeded: ' . self::KEY_LIMITS_DOC),
         ]
     )]
     public function customReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         try {
             $userId  = $this->currentUserId($request);
+            $refusal = $this->refuseDraw($request, $response, $userId);
+            if ($refusal !== null) {
+                return $refusal;
+            }
+
             $reading = $this->readingService->createCustom($this->parsedBody($request), $userId, $this->isAdmin($userId));
             return $response->withJson($reading, 201);
         } catch (ApiException $e) {
@@ -577,6 +623,69 @@ class ReadingController extends AbstractController
 
         $owner = $this->users->findById($reading->user_id);
         return $owner->display_name ?? 'Guest';
+    }
+
+    /**
+     * Who may make a reading (AUDIT §9.14), on the two routes that make one. With
+     * Turnstile configured, a request with no signed-in user needs a draw key (an
+     * unlinked plugin, which can't show a browser challenge) or a passed challenge
+     * (a signed-out visitor). Without Turnstile, as in development, nothing more.
+     * Null when the reading may be made; otherwise the refusal.
+     */
+    private function refuseDraw(Request $request, Response $response, ?int $userId): ?ResponseInterface
+    {
+        if ($userId !== null || !$this->turnstile->isConfigured()) {
+            return null;
+        }
+
+        $authorization = $request->getHeaderLine('Authorization');
+        if ($this->drawKeys->presentsKey($authorization)) {
+            $fingerprint = $this->drawKeys->resolve($authorization);
+            if ($fingerprint === null) {
+                return $response->withJson(['error' => self::KEY_INVALID], 401);
+            }
+
+            return $this->limitKeyDraw($request, $response, $fingerprint);
+        }
+
+        // Any other Bearer credential was an account token, and resolved to no one:
+        // revoked from Connected Apps, or its account deleted.
+        if (BearerToken::from($authorization) !== null) {
+            return $response->withJson(['error' => self::ACCOUNT_LINK_INVALID], 401);
+        }
+
+        $ip = $this->clientIp($request);
+        if ($this->turnstile->verify((string)($this->parsedBody($request)['turnstile_token'] ?? ''), $ip)) {
+            return null;
+        }
+
+        // A plugin from before draw keys sends neither: tell its player what to do,
+        // in the game, rather than about a captcha they never saw. Only the message
+        // depends on the User-Agent; the refusal is the same.
+        $error = str_starts_with($request->getHeaderLine('User-Agent'), 'TarotGenPlugin/')
+            ? self::PLUGIN_NEEDS_KEY
+            : self::CAPTCHA_FAILED;
+
+        return $response->withJson(['error' => $error], 400);
+    }
+
+    /** The draw-key limits (see KEY_DRAWS_*): null within them, else the 429. Every attempt counts. */
+    private function limitKeyDraw(Request $request, Response $response, string $fingerprint): ?ResponseInterface
+    {
+        $ip        = $this->clientIp($request);
+        $perMinute = new RateLimiter('draw_key_minute', self::KEY_DRAWS_PER_MINUTE, self::RATE_WINDOW_SECONDS);
+        $perDay    = new RateLimiter('draw_key_day', self::KEY_DRAWS_PER_DAY, self::DAY_SECONDS);
+        $perIp     = new RateLimiter('draw_key_ip', self::KEY_DRAWS_PER_IP_MINUTE, self::RATE_WINDOW_SECONDS);
+
+        if ($perMinute->isLimited($fingerprint) || $perDay->isLimited($fingerprint) || $perIp->isLimited($ip)) {
+            return $response->withJson(['error' => self::KEY_LIMITED], 429);
+        }
+
+        $perMinute->hit($fingerprint);
+        $perDay->hit($fingerprint);
+        $perIp->hit($ip);
+
+        return null;
     }
 
     /**

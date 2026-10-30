@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > were reconstructed from the Git history. Dates reflect the day the work landed
 > on the development branch. The application version is sourced from
 > [`frontend/package.json`](frontend/package.json) and is shown on the admin
-> dashboard.
+> dashboard, where it opens this file's notes (read in at build time; there is
+> no other changelog to update).
 
 **Releases & tags (going forward).** Each version now corresponds to a Git tag and
 GitHub Release named `v<version>` (e.g. `v4.1.0`), created **automatically** by the
@@ -20,6 +21,60 @@ release body taken from that version's section below. So bump the version and
 update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
+
+## [5.4.0] — 2026-10-30
+
+Signed-out drawing now asks for a Turnstile check, and the FFXIV plugin gets a
+draw key so it can keep drawing without one. The changelog moves to the admin
+dashboard.
+
+> **Deploy in this order.**
+>
+> 1. **Before the backend:** copy `migrate_plugin_draw_keys.php` into the
+>    droplet's `db/` and run it as `www-data` after `sudo tarotgen-backup`. It
+>    only adds a table, and 5.3.0 runs on it unchanged.
+> 2. Deploy `-Target both`, so the key page and its API arrive together.
+> 3. **Straight after,** release the plugin (`-Target plugin`, 0.8.0). Once step
+>    2 is live, unlinked plugins older than 0.8.0 can't draw; they're told to
+>    update. Plugins linked to an account keep drawing.
+> 4. **After the deploy:** back up again and run `migrate_drop_changelog.php`,
+>    which drops the old `changelog` table. It is the first migration that
+>    removes something, so the code that stopped reading the table goes first.
+
+### Added
+
+- **A Turnstile check on New Draw and Recreate Draw for signed-out visitors,**
+  against bots drawing in bulk. Signed-in readers never see it.
+- **Draw keys for the FFXIV plugin.** An install that isn't linked to an
+  account gets a key once, from a page with the same check (`/draw-key`), and
+  draws with it from then on. A key only draws: it opens no account, its
+  readings are a guest's, and it is rate-limited per key and per address.
+- **FFXIV plugin 0.8.0:** New Reading offers "Get a draw key" when the plugin
+  has neither a key nor a linked account. The key is stored encrypted, like
+  the account link, and a key or link the site no longer accepts is forgotten,
+  with the site's reason shown. An unlinked install upgraded from an earlier
+  version gets a one-time pop-up explaining the change, with the steps to get
+  a key (or link an account).
+- **The changelog is in the admin dashboard:** the version tag opens these
+  notes, read from `CHANGELOG.md` when the site is built.
+
+### Changed
+
+- Where Turnstile is configured, a reading made without a signed-in user needs
+  a passed check or a plugin draw key. Unlinked plugins older than 0.8.0 are
+  told to update.
+
+- The nightly retention run also deletes draw-key codes that expired without
+  being redeemed.
+- The privacy page names Cloudflare Turnstile and where it runs, and says what
+  is kept of a plugin draw key.
+
+### Removed
+
+- The hand-written changelog: the public `/changelog` page (it now goes to the
+  home page), the admin editor, their API routes and the `changelog` table.
+
+## [5.3.0] — 2026-10-30
 
 ### Changed
 
@@ -36,7 +91,7 @@ update its section here in the same commit — no manual tagging.
 - Saving a deck system in the admin could undo another admin's approval made
   while the form was open.
 
-## [5.2.0] — 2026-10-31
+## [5.2.0] — 2026-10-30
 
 A journal you can search, readings you can keep private, and a library of
 spreads to browse. No interpretations, as ever: position descriptions say what
@@ -731,7 +786,9 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.2.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.4.0...HEAD
+[5.4.0]: https://github.com/jwill89/tarot-site/compare/v5.3.0...v5.4.0
+[5.3.0]: https://github.com/jwill89/tarot-site/compare/v5.2.0...v5.3.0
 [5.2.0]: https://github.com/jwill89/tarot-site/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/jwill89/tarot-site/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/jwill89/tarot-site/compare/v4.1.0...v5.0.0

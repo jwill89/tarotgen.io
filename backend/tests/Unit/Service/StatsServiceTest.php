@@ -75,7 +75,6 @@ final class StatsServiceTest extends TestCase
         $this->pdo->exec('CREATE TABLE deck_systems (deck_system_id INTEGER PRIMARY KEY, approved INTEGER NOT NULL DEFAULT 1)');
         $this->pdo->exec('CREATE TABLE special_cards (deck_id INTEGER, card_id INTEGER)');
         $this->pdo->exec('CREATE TABLE spreads (spread_id INTEGER PRIMARY KEY)');
-        $this->pdo->exec('CREATE TABLE changelog (entry_id INTEGER PRIMARY KEY)');
         $this->pdo->exec('CREATE TABLE users (user_id INTEGER PRIMARY KEY)');
         $this->pdo->exec('CREATE TABLE contacts (contact_id INTEGER PRIMARY KEY, is_read INTEGER NOT NULL DEFAULT 0)');
         $this->pdo->exec('CREATE TABLE card_reports (report_id INTEGER PRIMARY KEY, resolved_at TEXT DEFAULT NULL)');
@@ -93,7 +92,8 @@ final class StatsServiceTest extends TestCase
         $this->assertSame(0, $counts['specialCards']);
         $this->assertSame(1, $counts['spreads']);
         $this->assertSame(0, $counts['readings']);
-        $this->assertSame(0, $counts['changelog']);
+        // The hand-entered changelog is retired (AUDIT §9.13): no table to count.
+        $this->assertArrayNotHasKey('changelog', $counts);
         $this->assertSame(2, $counts['users']);
         $this->assertSame(0, $counts['unreadContacts']);
         $this->assertSame(2, $counts['openCardReports']);   // the resolved one isn't counted

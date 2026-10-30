@@ -38,7 +38,7 @@ final class IndexNowTest extends TestCase
             return 200;
         });
 
-        $ok = $indexNow->submit(['https://tarotgen.io/', 'https://tarotgen.io/changelog']);
+        $ok = $indexNow->submit(['https://tarotgen.io/', 'https://tarotgen.io/spreads']);
 
         self::assertTrue($ok);
         self::assertNotNull($captured);
@@ -47,7 +47,7 @@ final class IndexNowTest extends TestCase
         self::assertSame('testkey123', $captured['body']['key']);
         self::assertSame('https://tarotgen.io/testkey123.txt', $captured['body']['keyLocation']);
         self::assertSame(
-            ['https://tarotgen.io/', 'https://tarotgen.io/changelog'],
+            ['https://tarotgen.io/', 'https://tarotgen.io/spreads'],
             $captured['body']['urlList'],
         );
     }

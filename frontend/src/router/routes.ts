@@ -113,15 +113,6 @@ export const routes: RouteRecordRaw[] = [
     meta: { title: 'Contact', description: 'Get in touch with the team behind TarotGen.io.' },
   },
   {
-    path: '/changelog',
-    name: 'changelog',
-    component: () => import('@/views/ChangelogView.vue'),
-    meta: {
-      title: 'Changelog',
-      description: 'See the latest updates, features, and fixes for TarotGen.io.',
-    },
-  },
-  {
     path: '/privacy',
     name: 'privacy-policy',
     component: () => import('@/views/PrivacyPolicyView.vue'),
@@ -178,6 +169,16 @@ export const routes: RouteRecordRaw[] = [
     name: 'authorize-plugin',
     component: () => import('@/views/AuthorizePluginView.vue'),
     meta: { title: 'Authorize Plugin', noindex: true },
+  },
+  {
+    // Where an unlinked plugin gets its draw key (opened by the plugin with PKCE
+    // query params, as /authorize): a Turnstile challenge, then the key goes to
+    // its loopback listener. Public. Not under /plugin/, which is the plugin's
+    // Dalamud repo directory on the server (a missing file there is a 404).
+    path: '/draw-key',
+    name: 'plugin-draw-key',
+    component: () => import('@/views/PluginDrawKeyView.vue'),
+    meta: { title: 'Plugin Draw Key', noindex: true },
   },
   {
     path: '/account',
@@ -293,12 +294,6 @@ export const routes: RouteRecordRaw[] = [
     name: 'admin-readings',
     component: () => import('@/views/admin/ReadingsView.vue'),
     meta: { title: 'Admin Readings', admin: true, noindex: true },
-  },
-  {
-    path: '/admin/changelog',
-    name: 'admin-changelog',
-    component: () => import('@/views/admin/ChangelogView.vue'),
-    meta: { title: 'Admin Changelog', admin: true, noindex: true },
   },
   {
     path: '/admin/users',

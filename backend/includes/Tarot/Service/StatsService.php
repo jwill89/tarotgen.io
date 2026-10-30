@@ -43,7 +43,6 @@ class StatsService
             'specialCards'       => $this->countRows('special_cards'),
             'spreads'            => $this->countRows('spreads'),
             'readings'           => $this->countRows('readings'),
-            'changelog'          => $this->countRows('changelog'),
             'users'              => $this->countRows('users'),
             'unreadContacts'     => $this->countUnreadContacts(),
             'openCardReports'    => $this->countOpenCardReports(),

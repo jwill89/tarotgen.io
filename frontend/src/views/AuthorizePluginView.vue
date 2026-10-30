@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import { usePluginLink } from '@/composables/usePluginLink'
+import { pluginRequest } from '@/utils/pluginRequest'
 import PageHeader from '@/components/PageHeader.vue'
 
 // The plugin opens this page with the PKCE + loopback query params.
@@ -10,18 +11,7 @@ const route = useRoute()
 const { currentUser, isLoggedIn, fetchMe } = useUser()
 const { authorize } = usePluginLink()
 
-const q = route.query
-const codeChallenge = String(q.code_challenge ?? '')
-const method = String(q.code_challenge_method ?? 'S256')
-const redirectUri = String(q.redirect_uri ?? '')
-const state = String(q.state ?? '')
-
-// Only a loopback redirect is ever legitimate here (the code/token goes to the
-// plugin's local listener). The server enforces this too; the client check is UX.
-const isLoopback = computed(() =>
-  /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?(\/|$)/i.test(redirectUri),
-)
-const paramsValid = computed(() => codeChallenge !== '' && method === 'S256' && isLoopback.value)
+const { params, valid: paramsValid } = pluginRequest(route.query)
 
 const checkingSession = ref(true)
 const submitting = ref(false)
@@ -42,14 +32,7 @@ async function approve(): Promise<void> {
   submitting.value = true
   error.value = null
 
-  const res = await authorize({
-    code_challenge: codeChallenge,
-    code_challenge_method: method,
-    redirect_uri: redirectUri,
-    state,
-  })
-
-  finish(res)
+  finish(await authorize(params))
 }
 
 function finish(res: { ok: boolean; redirectUri?: string; error?: string }): void {
