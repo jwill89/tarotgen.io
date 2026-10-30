@@ -306,6 +306,13 @@ public sealed class ReadingPanel
                 ImGui.TextUnformatted(card.CardName + (card.Reversed ? "  (reversed)" : ""));
             else
                 ImGui.TextDisabled("—");
+
+            // What the position asks, when the spread says: under its line, never in place of the title.
+            if (!string.IsNullOrWhiteSpace(p.Description))
+            {
+                using (Ui.Body())
+                    Ui.HelpWrapped(p.Description);
+            }
         }
     }
 

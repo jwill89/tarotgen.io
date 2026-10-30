@@ -17,6 +17,7 @@ async function repoFile(path: string): Promise<string> {
 }
 
 const retentionPhp = await repoFile('backend/scripts/retention.php')
+const readingInputPhp = await repoFile('backend/includes/Tarot/Service/ReadingInput.php')
 const backupScript = await repoFile('scripts/server/tarotgen-backup.sh')
 
 /** The paragraphs under a numbered heading, as one string. */
@@ -40,6 +41,16 @@ describe('PrivacyPolicyView', () => {
 
     expect(days).toBe(365)
     expect(section('Data Retention')).toContain('kept for one year from the day they were created')
+  })
+
+  it('states the earlier expiry a guest may choose, as the API offers it', async () => {
+    const days = /EXPIRY_DAYS = \[([\d, ]+)\];/.exec(readingInputPhp)?.[1]?.split(', ')
+    await mountWithApp(PrivacyPolicyView, { path: '/privacy' })
+
+    expect(days).toEqual(['1', '7', '30'])
+    expect(section('Data Retention')).toContain(
+      'you can choose to have it deleted sooner: after 1, 7 or 30 days',
+    )
   })
 
   it('states how long the nightly backups keep deleted data', async () => {

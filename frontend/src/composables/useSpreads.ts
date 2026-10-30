@@ -14,25 +14,37 @@ export function useSpreads() {
   const { fetchFavorites, isFavorite } = useFavoriteSpreads()
   const { isLoggedIn } = useUser()
 
+  /**
+   * Just the public spreads (the library), each with its category. False when
+   * they couldn't be loaded, after a toast saying so: an empty list would read
+   * as "there are none".
+   */
+  async function fetchPublicSpreads(): Promise<boolean> {
+    const res = await apiRequest<Spread[]>(endpoints.spreads.list)
+    if (res.ok) {
+      spreads.value = res.data
+    } else {
+      useToasts().error(`Couldn't load the spreads. ${res.error}`, { detail: res })
+    }
+    return res.ok
+  }
+
   async function fetchSpreads(): Promise<void> {
     // Fire the public list, personal spreads, and favorites concurrently. The
     // favorites/user-spreads calls don't depend on the public list (favorites are
     // reconciled by id in spreadOptions), so awaiting the public list first only
     // added a serial round trip to every spread-selector page load.
-    const [res] = await Promise.all([
-      apiRequest<Spread[]>(endpoints.spreads.list),
+    await Promise.all([
+      fetchPublicSpreads(),
       isLoggedIn.value ? fetchUserSpreads() : Promise.resolve(),
       isLoggedIn.value ? fetchFavorites() : Promise.resolve(),
     ])
-    if (res.ok) {
-      spreads.value = res.data
-    } else {
-      // An empty spread picker reads as "there are no spreads"; say why.
-      useToasts().error(`Couldn't load the spreads. ${res.error}`, { detail: res })
-    }
   }
 
-  /** Combined list of public + personal spreads for the spread selector. */
+  /**
+   * Combined list of public + personal spreads for the spread selector. A public
+   * spread carries its category's name and place, so the picker can group by them.
+   */
   const spreadOptions = computed<SpreadOption[]>(() => {
     const publicOpts: SpreadOption[] = spreads.value.map((s) => ({
       id: `public-${s.spread_id}`,
@@ -43,6 +55,8 @@ export function useSpreads() {
       positions: s.positions,
       type: 'public',
       isFavorite: isFavorite('public', s.spread_id),
+      category: s.category_name,
+      categoryOrder: s.category_sort_order,
     }))
 
     const userOpts: SpreadOption[] = userSpreads.value.map((s) => ({
@@ -59,5 +73,5 @@ export function useSpreads() {
     return [...userOpts, ...publicOpts]
   })
 
-  return { spreads, spreadOptions, fetchSpreads }
+  return { spreads, spreadOptions, fetchSpreads, fetchPublicSpreads }
 }

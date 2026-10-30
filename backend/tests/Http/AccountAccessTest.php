@@ -50,6 +50,7 @@ final class AccountAccessTest extends HttpTestCase
             ['GET', '/account/tokens', null],
             ['DELETE', '/account/tokens/1', null],
             ['GET', '/account/card-frequency', null],
+            ['GET', '/account/reading-spreads', null],
             ['GET', '/account/daily-cards?month=2026-10', null],
             ['POST', '/account/daily-cards', ['day' => '2026-10-30', 'deck_id' => 1]],
             ['POST', '/plugin/authorize', ['code_challenge' => 'abc', 'redirect_uri' => 'http://127.0.0.1:5000/cb']],

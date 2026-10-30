@@ -17,8 +17,8 @@
                 "tags": [
                     "Account"
                 ],
-                "summary": "The current user's readings, newest first (one page with ?limit, else all)",
-                "description": "The current user's readings, newest first. The site pages with ?limit and\nreads the total from X-Total-Count; without ?limit every reading comes back\nas a plain array, which the Dalamud plugin's List<Reading> still expects —\nkeep that shape until the plugin pages too (AUDIT §2.6).",
+                "summary": "The current user's readings, newest first (one page with ?limit, else all), optionally filtered",
+                "description": "Every filter is optional and they combine; a blank one is no filter.",
                 "operationId": "52d06296825f7d5198b9620f6ee0c77a",
                 "parameters": [
                     {
@@ -37,6 +37,82 @@
                         "schema": {
                             "type": "integer"
                         }
+                    },
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Text in the name, notes, question or querent (ignoring case for unaccented letters).",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "deck_id",
+                        "in": "query",
+                        "description": "Drawn from this deck.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "spread",
+                        "in": "query",
+                        "description": "Laid out in a spread of this name, as the reading recorded it (personal spreads have no public id); \"Free Draw\" also matches a free draw never placed.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tag",
+                        "in": "query",
+                        "description": "Carrying this tag.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Made on or after this day (YYYY-MM-DD) in `tz`.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Made on or before this day (YYYY-MM-DD) in `tz`.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tz",
+                        "in": "query",
+                        "description": "The reader's time zone for `from` and `to` (IANA, e.g. Europe/London); UTC when absent.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "daily",
+                        "in": "query",
+                        "description": "only: daily cards alone; exclude: everything but.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "only",
+                                "exclude"
+                            ]
+                        }
                     }
                 ],
                 "responses": {
@@ -44,7 +120,7 @@
                         "description": "Array of readings",
                         "headers": {
                             "X-Total-Count": {
-                                "description": "The user's total reading count (sent when paging with ?limit)",
+                                "description": "How many of the user's readings the filters match (sent when paging with ?limit)",
                                 "schema": {
                                     "type": "integer"
                                 }
@@ -60,6 +136,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to)"
                     }
                 },
                 "security": [
@@ -72,13 +151,73 @@
                 ]
             }
         },
+        "/account/tags": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "The tags on the user's readings, with how many readings carry each",
+                "description": "Alphabetical. For My Readings' tag filter and tag suggestions while writing one.",
+                "operationId": "45883e03600cbd3bad3c72f61db1e52b",
+                "responses": {
+                    "200": {
+                        "description": "Array of tags",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReadingTag"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/account/reading-spreads": {
+            "get": {
+                "tags": [
+                    "Account"
+                ],
+                "summary": "The spreads the user's readings were laid out in, with how many readings each",
+                "description": "Alphabetical, by the name the readings recorded; names that differ only in case are one spread. Each is a value for GET /account/readings?spread= that finds exactly that many readings, so My Readings' spread filter never offers a spread with none.",
+                "operationId": "78bf7b84f913d224c0b9b55af72bc813",
+                "responses": {
+                    "200": {
+                        "description": "Array of spreads",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/ReadingSpread"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/account/readings/{reading_id}": {
             "patch": {
                 "tags": [
                     "Account"
                 ],
-                "summary": "Update a reading's name, notes, hidden-author flag, or view password",
-                "description": "Update a reading the current user owns: name, hidden author, view password.",
+                "summary": "Update a reading's name, notes, hidden-author flag, journal fields, or who can open it",
+                "description": "Only the fields sent change. `visibility`: link (anyone with the link) and private (only you) drop any password; password needs `password` unless the reading has one already. Without `visibility`, `password` sets a password (and makes it a password reading) and `remove_password` drops it.",
                 "operationId": "f2bf91c45a8fdd7232feb63c43aec389",
                 "parameters": [
                     {
@@ -108,6 +247,35 @@
                                             "null"
                                         ]
                                     },
+                                    "question": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "Up to 500 characters; blank or null clears it."
+                                    },
+                                    "querent": {
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "description": "Up to 100 characters; blank or null clears it."
+                                    },
+                                    "tags": {
+                                        "type": "array",
+                                        "description": "Replaces every tag: at most 10, of at most 30 characters each; stored lower-case, a leading # dropped, repeats merged. [] clears them.",
+                                        "items": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "visibility": {
+                                        "type": "string",
+                                        "enum": [
+                                            "link",
+                                            "password",
+                                            "private"
+                                        ]
+                                    },
                                     "hide_user": {
                                         "type": "boolean"
                                     },
@@ -134,13 +302,13 @@
                         }
                     },
                     "400": {
-                        "description": "No changes provided"
+                        "description": "No changes provided, an unknown visibility, or tags over the limits"
                     },
                     "404": {
                         "description": "Reading not found"
                     },
                     "422": {
-                        "description": "Password too short"
+                        "description": "Password too short, or Password chosen without one"
                     }
                 },
                 "security": [
@@ -187,7 +355,7 @@
                     "Account"
                 ],
                 "summary": "Download the user's whole journal, every reading, as JSON or CSV",
-                "description": "A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading's name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.",
+                "description": "A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes, the question, querent and tags, who can open it, and the flags (never a view password). CSV has one row per drawn card, so a reading's name, journal fields and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.",
                 "operationId": "2994dc5931088990384aa2978eec332d",
                 "parameters": [
                     {
@@ -224,7 +392,7 @@
                             "text/csv": {
                                 "schema": {
                                     "type": "string",
-                                    "description": "Columns: Reading ID, Reading Time (UTC), Reading Name, Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes."
+                                    "description": "Columns: Reading ID, Reading Time (UTC), Reading Name, Question, Querent, Tags (comma-separated), Privacy (Anyone with the link, Password or Private), Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes."
                                 }
                             }
                         }
@@ -2428,6 +2596,235 @@
                 ]
             }
         },
+        "/admin/spread-categories": {
+            "get": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "List the spread library categories (uncached)",
+                "operationId": "ef075be7ca00990dc927a568f5d45f0d",
+                "responses": {
+                    "200": {
+                        "description": "Every category, in order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SpreadCategory"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Add a category at the end of the list",
+                "operationId": "e337321eedcf8e7624ed65dc8fbf3ff2",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Trimmed; cut to 60 characters."
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "201": {
+                        "description": "The new category",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SpreadCategory"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "A category needs a name"
+                    },
+                    "409": {
+                        "description": "Another category has that name (case-insensitively)"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spread-categories/{category_id}": {
+            "patch": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Rename a category",
+                "operationId": "42086e9e1fab3ca51b32dcafc6aa4f78",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "description": "Trimmed; cut to 60 characters."
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "The renamed category",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/SpreadCategory"
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "A category needs a name"
+                    },
+                    "404": {
+                        "description": "No such category"
+                    },
+                    "409": {
+                        "description": "Another category has that name (case-insensitively)"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Remove a category that holds no spreads",
+                "operationId": "f34360f1ec19673992ab030e02c8ca65",
+                "parameters": [
+                    {
+                        "name": "category_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Removed"
+                    },
+                    "404": {
+                        "description": "No such category"
+                    },
+                    "409": {
+                        "description": "It still holds spreads (move them first), or it is the last category"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
+        "/admin/spread-categories/order": {
+            "put": {
+                "tags": [
+                    "Admin · Spreads"
+                ],
+                "summary": "Put the categories in a new order",
+                "operationId": "ddcca740b5b9338eccdd9f84d5447972",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "category_ids": {
+                                        "type": "array",
+                                        "description": "Every category id, once, in the new order. The first becomes the default for new spreads.",
+                                        "items": {
+                                            "type": "integer"
+                                        }
+                                    }
+                                },
+                                "required": [
+                                    "category_ids"
+                                ]
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "responses": {
+                    "200": {
+                        "description": "Every category, in the new order",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "$ref": "#/components/schemas/SpreadCategory"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Not every category id exactly once"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
+            }
+        },
         "/admin/spreads": {
             "get": {
                 "tags": [
@@ -2476,6 +2873,10 @@
                                         "items": {
                                             "$ref": "#/components/schemas/SpreadPosition"
                                         }
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "description": "Its library category; the first category when left out."
                                     }
                                 },
                                 "required": [
@@ -2498,7 +2899,7 @@
                         }
                     },
                     "400": {
-                        "description": "Name is required"
+                        "description": "Name is required, or an unknown category"
                     },
                     "500": {
                         "description": "Failed to create spread"
@@ -2542,6 +2943,10 @@
                                         "items": {
                                             "$ref": "#/components/schemas/SpreadPosition"
                                         }
+                                    },
+                                    "category_id": {
+                                        "type": "integer",
+                                        "description": "Move it to another library category."
                                     }
                                 }
                             }
@@ -2561,7 +2966,7 @@
                         }
                     },
                     "400": {
-                        "description": "Name is required (a name sent blank)"
+                        "description": "Name is required (a name sent blank), or an unknown category"
                     },
                     "404": {
                         "description": "Spread not found or no valid fields"
@@ -2647,6 +3052,22 @@
                         }
                     }
                 ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "category_id": {
+                                        "type": "integer",
+                                        "description": "The library category to publish it in; the first category when left out."
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "required": false
+                },
                 "responses": {
                     "201": {
                         "description": "Approved spread",
@@ -2657,6 +3078,9 @@
                                 }
                             }
                         }
+                    },
+                    "400": {
+                        "description": "Unknown category"
                     },
                     "404": {
                         "description": "Pending spread not found"
@@ -4445,7 +4869,7 @@
                         }
                     },
                     "404": {
-                        "description": "InvalidReadingID"
+                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"
                     },
                     "429": {
                         "description": "Rate limit exceeded"
@@ -4503,7 +4927,7 @@
                         "description": "Incorrect password"
                     },
                     "404": {
-                        "description": "InvalidReadingID"
+                        "description": "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"
                     },
                     "429": {
                         "description": "Too many password attempts"
@@ -4519,7 +4943,7 @@
                 "summary": "Generate a random reading from a draw spec",
                 "operationId": "d8750b5a23fd03c315941e4facfd28ee",
                 "requestBody": {
-                    "description": "Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist.",
+                    "description": "Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored.",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -4557,6 +4981,7 @@
                 "summary": "Create a custom reading from explicitly chosen cards/positions",
                 "operationId": "3e30d906e6fde22906f101631e2f600d",
                 "requestBody": {
+                    "description": "The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's).",
                     "content": {
                         "application/json": {
                             "schema": {
@@ -4655,7 +5080,7 @@
                         "description": "Not the owner"
                     },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
                     },
                     "409": {
                         "description": "Reading is final"
@@ -4708,7 +5133,7 @@
                         "description": "Not the owner"
                     },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
                     },
                     "409": {
                         "description": "Reading is final"
@@ -4749,7 +5174,7 @@
                         "description": "Not the owner"
                     },
                     "404": {
-                        "description": "Reading not found"
+                        "description": "Reading not found: no such reading, one past its expiry, or someone else's private reading"
                     }
                 }
             }
@@ -4872,6 +5297,49 @@
                         "description": "InvalidSpreadID"
                     }
                 }
+            }
+        },
+        "/spreads/{spread_id}/copy": {
+            "post": {
+                "tags": [
+                    "Spreads"
+                ],
+                "summary": "Copy a public spread into the signed-in user's own spreads (My Spreads)",
+                "description": "The copy keeps the description and every position (with its description); its name gets \" (copy)\", or \" (copy 2)\" and on when the user already has that name. Only a published spread can be copied.",
+                "operationId": "8176e273b001a8282b32ca89d9e8f477",
+                "parameters": [
+                    {
+                        "name": "spread_id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "The new personal spread",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UserSpread"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Not signed in"
+                    },
+                    "404": {
+                        "description": "No such public spread"
+                    }
+                },
+                "security": [
+                    {
+                        "sessionCookie": []
+                    }
+                ]
             }
         },
         "/auth/register": {
@@ -5322,6 +5790,11 @@
                         "description": "Degrees, 0–359.",
                         "minimum": 0,
                         "maximum": 359
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "What the position asks about, e.g. \"What stands in your way\" — never what a card means. Trimmed; absent when it has none.",
+                        "maxLength": 280
                     }
                 },
                 "required": [
@@ -5372,7 +5845,7 @@
                     },
                     "positions": {
                         "type": "array",
-                        "description": "One per drawn card.",
+                        "description": "One per drawn card. A position keeps its spread's description unless the reader retitled it; readings made before descriptions existed have none.",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
@@ -5470,6 +5943,47 @@
                         "enum": [
                             false
                         ]
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "description": "Who can open it: anyone with the link, anyone with its password, or (private) only its owner.",
+                        "enum": [
+                            "link",
+                            "password",
+                            "private"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "When this guest reading will be deleted, UTC (\"Y-m-d H:i:s\"), as its maker chose; null for the usual retention."
+                    },
+                    "question": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "What was asked. Only in the owner's payload."
+                    },
+                    "querent": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Who the reading was for. Only in the owner's payload."
+                    },
+                    "tags": {
+                        "type": "array",
+                        "description": "The owner's tags, sorted. Only in the owner's payload.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "hide_user": {
+                        "type": "boolean",
+                        "description": "Whether the owner hid their name from it. Only in the owner's payload."
                     }
                 },
                 "required": [
@@ -5482,7 +5996,9 @@
                     "is_owner",
                     "is_final",
                     "can_draw_more",
-                    "locked"
+                    "locked",
+                    "visibility",
+                    "expires_at"
                 ]
             },
             "LockedReading": {
@@ -5560,6 +6076,27 @@
                         ],
                         "description": "The owner's notes (Markdown), if any."
                     },
+                    "question": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "What was asked, if recorded."
+                    },
+                    "querent": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Who the reading was for, if recorded."
+                    },
+                    "tags": {
+                        "type": "array",
+                        "description": "Its tags, sorted.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "deck_id": {
                         "type": "integer",
                         "description": "The deck the cards were drawn from."
@@ -5590,6 +6127,15 @@
                         "type": "boolean",
                         "description": "Locked for good against further draws."
                     },
+                    "visibility": {
+                        "type": "string",
+                        "description": "Who can open it: anyone with the link, anyone with its password, or (private) only its owner.",
+                        "enum": [
+                            "link",
+                            "password",
+                            "private"
+                        ]
+                    },
                     "password_protected": {
                         "type": "boolean",
                         "description": "A view password is set (the password itself is never exported)."
@@ -5601,11 +6147,15 @@
                     "reading_time",
                     "reading_name",
                     "reading_notes",
+                    "question",
+                    "querent",
+                    "tags",
                     "deck_id",
                     "deck_name",
                     "spread",
                     "cards",
                     "is_final",
+                    "visibility",
                     "password_protected"
                 ]
             },
@@ -6370,7 +6920,7 @@
                     },
                     "positions": {
                         "type": "array",
-                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int,\n 'description' => string (only when it has one)]",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
@@ -6498,6 +7048,45 @@
                             "null"
                         ],
                         "description": "The day (\"Y-m-d\", the owner's local date) this reading is their daily card for; null for any other reading."
+                    },
+                    "question": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "What was asked. Only its owner ever sees it.",
+                        "maxLength": 500
+                    },
+                    "querent": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "Who the reading was for, as the owner wrote it. Only its owner ever sees it.",
+                        "maxLength": 100
+                    },
+                    "tags": {
+                        "type": "array",
+                        "description": "The owner's tags: lower-case, sorted. Only its owner ever sees them.",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "description": "Who can open it: anyone with the link, anyone with its password, or (private) only its owner.",
+                        "enum": [
+                            "link",
+                            "password",
+                            "private"
+                        ]
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "description": "When a guest reading will be deleted, UTC (\"Y-m-d H:i:s\"), as its maker chose; null for the usual retention. A reading made signed in never has one."
                     }
                 },
                 "required": [
@@ -6510,7 +7099,30 @@
                     "reading_notes",
                     "is_final",
                     "password_protected",
-                    "daily_card_day"
+                    "daily_card_day",
+                    "question",
+                    "querent",
+                    "tags",
+                    "visibility",
+                    "expires_at"
+                ]
+            },
+            "ReadingSpread": {
+                "type": "object",
+                "description": "A spread the signed-in user's readings were laid out in, with how many.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The spread's name as the readings recorded it (personal spreads have no public id); \"Free Draw\" for free draws never placed. Send it as GET /account/readings?spread=."
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "How many of the user's readings were laid out in it."
+                    }
+                },
+                "required": [
+                    "name",
+                    "count"
                 ]
             },
             "ReadingSummary": {
@@ -6554,6 +7166,24 @@
                     "deck_id",
                     "deck_name",
                     "spread_name"
+                ]
+            },
+            "ReadingTag": {
+                "type": "object",
+                "description": "A tag the signed-in user has given their readings, with how many carry it.",
+                "properties": {
+                    "tag": {
+                        "type": "string",
+                        "description": "The tag, as stored: lower-case."
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "How many of the user's readings carry it."
+                    }
+                },
+                "required": [
+                    "tag",
+                    "count"
                 ]
             },
             "SpecialCard": {
@@ -6634,9 +7264,21 @@
                     "card_count": {
                         "type": "integer"
                     },
+                    "category_id": {
+                        "type": "integer",
+                        "description": "The library category it is listed under."
+                    },
+                    "category_name": {
+                        "type": "string",
+                        "description": "Its category's name."
+                    },
+                    "category_sort_order": {
+                        "type": "integer",
+                        "description": "Its category's place in the list, from 1: the library and the spread pickers show the categories in this order."
+                    },
                     "positions": {
                         "type": "array",
-                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]",
+                        "description": "Array of position objects, each shaped:\n['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int,\n 'description' => string (only when it has one)]",
                         "items": {
                             "$ref": "#/components/schemas/SpreadPosition"
                         }
@@ -6647,7 +7289,37 @@
                     "name",
                     "description",
                     "card_count",
+                    "category_id",
+                    "category_name",
+                    "category_sort_order",
                     "positions"
+                ]
+            },
+            "SpreadCategory": {
+                "type": "object",
+                "description": "A heading the public spread library groups spreads under. Admins keep the list; every public spread is in exactly one.",
+                "properties": {
+                    "category_id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "maxLength": 60
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "description": "Its place in the list, from 1. The first category is the default for a new or approved spread."
+                    },
+                    "spread_count": {
+                        "type": "integer",
+                        "description": "How many public spreads are in it."
+                    }
+                },
+                "required": [
+                    "category_id",
+                    "name",
+                    "sort_order",
+                    "spread_count"
                 ]
             },
             "User": {

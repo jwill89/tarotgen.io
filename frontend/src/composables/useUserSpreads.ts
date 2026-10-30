@@ -55,6 +55,20 @@ export function useUserSpreads() {
     return res.ok
   }
 
+  /**
+   * Copy a public spread into the user's own (named "… (copy)" by the server).
+   * The whole result, so a refusal can say why.
+   */
+  async function copyPublicSpread(spreadId: number): Promise<ApiResult<UserSpread>> {
+    const res = await apiRequest<UserSpread>(
+      endpoints.spreads.copy(spreadId),
+      { method: 'POST' },
+      "Couldn't copy the spread. Please try again.",
+    )
+    if (res.ok) userSpreads.value = [res.data, ...userSpreads.value]
+    return res
+  }
+
   return {
     userSpreads,
     fetchUserSpreads,
@@ -62,5 +76,6 @@ export function useUserSpreads() {
     updateUserSpread,
     deleteUserSpread,
     submitAsPublic,
+    copyPublicSpread,
   }
 }

@@ -31,12 +31,12 @@ verification are listed at the end so nobody re-chases them.
 
 ## Status (2026-10-28, end of day)
 
-**58 items done, 10 open — 7 of the open ones are §9 product features.**
+**62 items done, 6 open — 4 of the open ones are §9 product features.**
 
 | § | Area | Done | Open | What's left |
 |---|---|---|---|---|
 | 0 | State of the tree | 1 | 2 | Owner's git housekeeping: dead worktrees/branches, old branches, a stash |
-| 1 | Bugs and risks | 8 | 1 | §1.7 retention — built, cron installed; tick after the first live run (03:17 UTC 2026-10-29) |
+| 1 | Bugs and risks | 9 | 0 | — (§1.7 retention confirmed on its first live runs) |
 | 2 | Database | 7 | 0 | — (all migrations run on prod 2026-10-28) |
 | 3 | Performance | 5 | 0 | — |
 | 4 | Duplication | 7 | 0 | — |
@@ -44,7 +44,7 @@ verification are listed at the end so nobody re-chases them.
 | 6 | Tooling | 5 | 0 | Owner: Dependabot secrets (§6.4). Found and open: keyboard favouriting (§6.1) |
 | 7 | Dependencies | 4 | 0 | — Held: TypeScript 7 (until vue-tsc supports 7.1), PHPStan 2.3.3 (until Rector catches up). Owner's call: `scrollBehavior` → experimental `ScrollRestoration` (§7.3) |
 | 8 | Tests | 7 | 0 | — (and the owner's decisions the tests raised are implemented: "Open from §8") |
-| 9 | Product | 5 | 7 | The medium and large ones (§9.6–9.12); the small ones shipped in 5.1.0 |
+| 9 | Product | 8 | 4 | §9.6–9.7 and the two large ones; 5.1.0 and 5.2.0 shipped the rest |
 
 **Edited but not yet committed/deployed** (as of this writing): all of §8 and
 the decisions it raised, as version 5.0.0. **Run `db/migrate_sessions_user_id.php`
@@ -390,7 +390,7 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     in-memory table) — one collision → saved with a new id; three → gives up;
     a foreign-key error → not retried (one attempt).
 
-- [ ] **1.7 Guest readings never expire.** [medium] [S]
+- [x] **1.7 Guest readings never expire.** [medium] [S]
   - **Where:** `ReadingData::cleanGuestOlderThan()` (`ReadingData.php:233`) is
     reachable only through the admin "Clean" button (`DELETE /admin/readings/all`).
     Nothing runs it.
@@ -442,6 +442,10 @@ files, and a broken `vue` augmentation blinded typed ESLint too. Both fixed; see
     backup. Tick this item once `journalctl -t tarotgen-retention` shows
     `deleted 210 …` (± any that age past a year meanwhile) and the backup log
     shows the pre-deletion copy.
+  - **CONFIRMED 2026-10-30:** 03:17 UTC 2026-10-29, after that night's backup
+    (`tarotdb-20261029-031701`, 2,066 readings): `deleted 210 guest reading(s)
+    older than 365 days`, the dry run's count. 2026-10-30: `deleted 0`. Readings
+    2,066 → 1,856, then 1,883 with new draws.
 
 - [x] **1.8 Small leaks / decisions to record.** [low] [S]
   - Public `GET /decks` and `/deck-systems` return `submitted_by` user ids
@@ -1833,17 +1837,41 @@ only go up.
   chrome hidden, large cards, keyboard flip and advance, plus a QR code for the
   share link (readers hand a phone to the client). [medium] [M]
   Frontend only.
-- [ ] **9.8 Journal fields and findability.** [high] [M]
+- [x] **9.8 Journal fields and findability.** [high] [M]
   Add `question` (what was asked) and `querent` (who it was for, free text) to
   readings, plus tags; then search and filter (deck, spread, tag, date range,
   text in notes/question) in **My Readings**, which already pages (§2.6). A
   migration, query parameters on `GET /account/readings`, and the UI.
-- [ ] **9.9 Privacy levels.** [medium] [M]
+  - **DONE 2026-10-31 (5.2.0):** `question`, `querent` and tags (`reading_tags`,
+    normalised lower-case, 10 × 30 chars) — owner-only everywhere (shared and
+    locked payloads, og.php meta). My Readings filters: `q`, `deck_id`,
+    `spread` (the recorded name; "Free Draw" for unplaced), `tag`, `from`/`to`
+    (in the reader's zone via `tz`), `daily`; state in the URL. `GET
+    /account/tags` and `GET /account/reading-spreads` feed the filters.
+- [x] **9.9 Privacy levels.** [medium] [M]
   Unlisted / private (today: public-by-link or password), and an optional
   expiry on a guest reading. A migration and an access rule on every reading
   read (`ReadingController`, `og.php` share meta, the plugin routes).
-- [ ] **9.10 Spread library polish:** categories/tags + search, fork-a-spread
+  - **DONE 2026-10-31 (5.2.0):** link / password / private — a new
+    `readings.is_private` beside the existing `password_hash`, `visibility`
+    worked out in the SELECT (no backfill; old code runs on the new schema).
+    Private and expired readings are a 404 to all but the owner (and their
+    plugin token); og.php's share meta is generic for both
+    (`Tarot\Service\ReadingShareMeta`). Guests may pick 1 / 7 / 30 days
+    (`expires_at`); `retention.php` deletes them nightly with the year-old ones.
+- [x] **9.10 Spread library polish:** categories/tags + search, fork-a-spread
   into My Spreads, per-position descriptions (today titles only). [low] [M]
+  - **DONE 2026-10-31 (5.2.0):** `/spreads` library (category tabs, search,
+    layout preview via the shared `SpreadLayoutPreview`, Draw with / Copy to My
+    Spreads — `POST /spreads/{id}/copy`); admin-managed `spread_categories`
+    (seeded in `schema.sql`; one still holding spreads can't be removed — 409);
+    optional position descriptions (280 chars) on every spread kind, carried
+    into the reading snapshot; New Draw groups public spreads by category.
+    `GET /spreads` carries each spread's category inline (`category_name`,
+    `category_sort_order`), so the public site needs no categories call; only
+    the admin side lists categories on their own. Plugin 0.7.0 groups its
+    spread pickers by category and shows position descriptions.
+    "Spreads" took "Create a Spread"'s place in the top nav (six links wrapped).
 
 ### Large
 
@@ -1872,9 +1900,8 @@ only go up.
 The original order (prod reconnaissance → §0, §1, §2, §3, §4, §8.1) is done
 except §1.7's first live run. **Remaining, revised 2026-10-28 (end of day):**
 
-1. **Tonight:** tick §1.7 once `journalctl -t tarotgen-retention` shows the
-   first real run after 03:17 UTC 2026-10-29. Owner's housekeeping: §0 worktrees,
-   branches, stash; add the two Dependabot secrets (§6.4).
+1. ~~§1.7's first run~~ confirmed 2026-10-30; the Dependabot secrets are in
+   (2026-10-29). Owner's housekeeping left: §0 worktrees, branches, stash.
 2. ~~**Dependencies:**~~ done 2026-10-28 (§7). TypeScript 7 waits for vue-tsc
    (owner); `scrollBehavior` → `ScrollRestoration` waits for it to leave
    `vue-router/experimental` (owner's call, §7.3).

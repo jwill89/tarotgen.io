@@ -3,10 +3,10 @@
 // `composer test:coverage`: fails the run when line or method coverage in
 // PHPUnit's clover report falls below the floor (AUDIT §8.7). PHPUnit has no
 // threshold of its own. The floor sits a little under what the suite reached
-// when it was set (2026-10-28: 95.7% of lines, 89.1% of methods, with Xdebug;
+// when it was set (2026-10-31: 96.3% of lines, 90.4% of methods, with Xdebug;
 // CI measures with pcov): raise it as tests land, never lower it.
 
-const FLOOR = ['lines' => 94.0, 'methods' => 87.0];
+const FLOOR = ['lines' => 95.0, 'methods' => 88.0];
 
 $file = $argv[1] ?? '';
 $report = is_file($file) ? simplexml_load_file($file) : false;

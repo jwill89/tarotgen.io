@@ -95,7 +95,30 @@ final class JournalExportTest extends TestCase
 
         $this->assertSame([], $journal['readings']);
         $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/', $journal['exported_at']);
-        $this->assertSame("\u{FEFF}" . '"Reading ID","Reading Time (UTC)","Reading Name","Deck","Spread","Position","Position Title","Card","Reversed","Notes"' . "\r\n", implode('', iterator_to_array($this->export->csv(1), false)));
+        $this->assertSame("\u{FEFF}" . '"Reading ID","Reading Time (UTC)","Reading Name","Question","Querent","Tags","Privacy","Deck","Spread","Position","Position Title","Card","Reversed","Notes"' . "\r\n", implode('', iterator_to_array($this->export->csv(1), false)));
+    }
+
+    public function testTheJournalFieldsAndPrivacyComeAlong(): void
+    {
+        $this->insertReading('journal001', ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false, 'card_name' => 'The Fool']]]);
+        $this->db->exec("UPDATE readings SET question = 'Should I move?', querent = 'Sam', is_private = 1 WHERE reading_id = 'journal001'");
+        $this->db->exec("INSERT INTO reading_tags (reading_id, tag) VALUES ('journal001', 'move'), ('journal001', 'career')");
+        $this->insertReading('locked0002', ['deck_id' => 1, 'draw' => []], '2026-01-02 09:00:00');
+        $this->db->exec("UPDATE readings SET password_hash = 'x' WHERE reading_id = 'locked0002'");
+
+        $readings = array_column($this->journal()['readings'], null, 'reading_id');
+        $this->assertSame(
+            ['Should I move?', 'Sam', ['career', 'move'], 'private', false],
+            [$readings['journal001']['question'], $readings['journal001']['querent'], $readings['journal001']['tags'], $readings['journal001']['visibility'], $readings['journal001']['password_protected']]
+        );
+        $this->assertSame([null, null, [], 'password'], [$readings['locked0002']['question'], $readings['locked0002']['querent'], $readings['locked0002']['tags'], $readings['locked0002']['visibility']]);
+
+        $rows = array_map(
+            static fn(string $line): array => str_getcsv($line, ',', '"', ''),
+            explode("\r\n", trim(substr(implode('', iterator_to_array($this->export->csv(1), false)), 3)))
+        );
+        $this->assertSame(['Should I move?', 'Sam', 'career, move', 'Private'], array_slice($rows[2], 3, 4));
+        $this->assertSame(['', '', '', 'Password'], array_slice($rows[1], 3, 4));
     }
 
     public function testTheJsonIsPrettyPrintedForReading(): void

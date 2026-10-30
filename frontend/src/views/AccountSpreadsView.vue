@@ -5,7 +5,7 @@ import { useUserSpreads } from '@/composables/useUserSpreads'
 import { useToasts } from '@/composables/useToasts'
 import { useConfirm } from '@/composables/useConfirm'
 import { formatDateTime } from '@/utils/datetime'
-import type { UserSpread, Spread, SpreadPosition } from '@/types'
+import type { UserSpread, SpreadDraft, SpreadPosition } from '@/types'
 import BaseModal from '@/components/BaseModal.vue'
 import SpreadEditor from '@/components/admin/SpreadEditor.vue'
 import PageHeader from '@/components/PageHeader.vue'
@@ -31,14 +31,12 @@ function openEdit(spread: UserSpread) {
   showEditor.value = true
 }
 
-/** Map UserSpread → Spread-compatible object for the SpreadEditor. */
-const editorSpread = computed<Spread | null>(() => {
+/** The fields of the UserSpread being edited that the SpreadEditor loads. */
+const editorSpread = computed<SpreadDraft | null>(() => {
   if (!editingSpread.value) return null
   return {
-    spread_id: 0,
     name: editingSpread.value.name,
     description: editingSpread.value.description,
-    card_count: editingSpread.value.card_count,
     positions: editingSpread.value.positions,
   }
 })
@@ -130,7 +128,9 @@ async function handleSubmitPublic(spread: UserSpread) {
             <p>You haven't created any personal spreads yet.</p>
             <p class="mt-2">
               <router-link :to="{ name: 'submit-spread' }">Create your first spread</router-link>
-              and choose "Save to my personal spreads" to keep it private.
+              and choose "Save to my personal spreads" to keep it private, or copy one from the
+              <router-link :to="{ name: 'spread-library' }">spread library</router-link> to make it
+              your own.
             </p>
           </div>
 

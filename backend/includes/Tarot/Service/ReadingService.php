@@ -364,28 +364,23 @@ class ReadingService
     }
 
     /**
-     * Resolve the owner-only options (name, hidden author, view password) from a
-     * request. These are honored only when a user is logged in ($userId set);
-     * for guests an empty set is returned so the reading is anonymous and public.
+     * Resolve the owner-only options (name, notes, hidden author, the journal
+     * fields, who can open it) from a request. These are honored only when a
+     * user is logged in ($userId set); a guest's are ignored, so their reading
+     * is anonymous and open by link. A guest may instead choose an expiry
+     * (`expires_in_days`), which a signed-in reader's reading never gets.
      *
      * @param array<string,mixed> $params
-     * @return array{user_id?:int,hide_user?:bool,reading_name?:?string,password_hash?:?string}
+     * @return array<string,mixed>
      * @throws ApiException
      */
     private function buildOwnerOptions(?int $userId, array $params): array
     {
         if ($userId === null) {
-            return [];
+            return ['expires_at' => ReadingInput::expiresAt($params['expires_in_days'] ?? null)];
         }
 
-        $passwordHash = null;
-        $password = (string)($params['password'] ?? '');
-        if ($password !== '') {
-            if (mb_strlen($password) < 4) {
-                throw new ApiException('Reading password must be at least 4 characters.', 400);
-            }
-            $passwordHash = password_hash($password, AuthService::passwordAlgo());
-        }
+        $access = ReadingInput::access($params);
 
         return [
             'user_id'       => $userId,
@@ -393,7 +388,11 @@ class ReadingService
             'reading_name'  => Input::nullableString($params['reading_name'] ?? null, 100),
             // Notes keep internal whitespace (only the empty check is trimmed).
             'reading_notes' => Input::nullableString($params['reading_notes'] ?? null, 20000, trim: false),
-            'password_hash' => $passwordHash,
+            'question'      => ReadingInput::question($params['question'] ?? null),
+            'querent'       => ReadingInput::querent($params['querent'] ?? null),
+            'tags'          => ReadingInput::tags($params['tags'] ?? null),
+            'is_private'    => $access['is_private'] ?? false,
+            'password_hash' => $access['password_hash'] ?? null,
         ];
     }
 
@@ -401,6 +400,10 @@ class ReadingService
      * Build a spread snapshot, applying any custom position titles. Titles
      * arrive as a JSON array aligned with positions sorted by order; a blank
      * entry keeps the spread's default title for that position.
+     *
+     * Position descriptions come along, so a shared reading shows what each
+     * position asks. A retitled position drops its description: it was written
+     * for the spread's own title, and the reader has made the position theirs.
      *
      * @return array<string,mixed>
      */
@@ -421,8 +424,9 @@ class ReadingService
             $custom = $custom_titles[$idx] ?? null;
             if (is_string($custom)) {
                 $custom = Input::string($custom, 100);
-                if ($custom !== '') {
+                if ($custom !== '' && $custom !== ($pos['title'] ?? '')) {
                     $positions[$idx]['title'] = $custom;
+                    unset($positions[$idx]['description']);
                 }
             }
         }
@@ -469,7 +473,16 @@ class ReadingService
             $reading->setHideUser((bool)($owner['hide_user'] ?? false));
             $reading->setReadingName($owner['reading_name'] ?? null);
             $reading->setReadingNotes($owner['reading_notes'] ?? null);
+            $reading->setQuestion($owner['question'] ?? null);
+            $reading->setQuerent($owner['querent'] ?? null);
+            $reading->setTags($owner['tags'] ?? []);
+            $reading->setVisibility(match (true) {
+                ($owner['is_private'] ?? false) === true => 'private',
+                ($owner['password_hash'] ?? null) !== null => 'password',
+                default => 'link',
+            });
         }
+        $reading->setExpiresAt($owner['expires_at'] ?? null);
 
         // Ids are 40 random bits: a collision is rare, but it used to surface as
         // a 500. Draw a fresh id and retry; any other database error, or a

@@ -32,6 +32,18 @@ export const routes: RouteRecordRaw[] = [
     },
   },
   {
+    // The public spread library: browse by category, see each position, then
+    // draw with one (/new?spread=<id>) or copy it into My Spreads.
+    path: '/spreads',
+    name: 'spread-library',
+    component: () => import('@/views/SpreadLibraryView.vue'),
+    meta: {
+      title: 'Spreads',
+      description:
+        'Browse tarot spreads by theme, from love and career to decisions and self-reflection. See what each position asks, then draw with a spread or make it your own.',
+    },
+  },
+  {
     path: '/custom',
     name: 'custom-reading',
     component: () => import('@/views/CustomReadingView.vue'),

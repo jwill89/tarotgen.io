@@ -22,17 +22,21 @@ use Tarot\Utility\Clock;
  * @phpstan-type JournalCard array{position: int, position_title: string|null, card_id: int, card_name: string, reversed: bool}
  * @phpstan-type JournalReading array{
  *   reading_id: string, link: string, reading_time: string, reading_name: string|null,
- *   reading_notes: string|null, deck_id: int, deck_name: string, spread: array<mixed>|null,
- *   cards: list<JournalCard>, is_final: bool, password_protected: bool
+ *   reading_notes: string|null, question: string|null, querent: string|null, tags: list<string>,
+ *   deck_id: int, deck_name: string, spread: array<mixed>|null,
+ *   cards: list<JournalCard>, is_final: bool, visibility: string, password_protected: bool
  * }
  */
 final readonly class JournalExport
 {
     /** The CSV's columns, in order. */
     private const array CSV_HEADER = [
-        'Reading ID', 'Reading Time (UTC)', 'Reading Name', 'Deck', 'Spread',
-        'Position', 'Position Title', 'Card', 'Reversed', 'Notes',
+        'Reading ID', 'Reading Time (UTC)', 'Reading Name', 'Question', 'Querent', 'Tags', 'Privacy',
+        'Deck', 'Spread', 'Position', 'Position Title', 'Card', 'Reversed', 'Notes',
     ];
+
+    /** The CSV's Privacy column, by visibility. */
+    private const array PRIVACY = ['link' => 'Anyone with the link', 'password' => 'Password', 'private' => 'Private'];
 
     /**
      * What a spreadsheet takes for the start of a formula when a cell begins with
@@ -70,8 +74,8 @@ final readonly class JournalExport
     }
 
     /**
-     * The journal as CSV, one row per drawn card: a reading's name and notes
-     * repeat on each of its cards' rows. A reading with no cards still gets one
+     * The journal as CSV, one row per drawn card: a reading's name, question,
+     * querent, tags (comma-separated) and notes repeat on each of its cards' rows. A reading with no cards still gets one
      * row, so its notes aren't lost.
      *
      * It starts with a UTF-8 byte-order mark. Excel, where most of these files
@@ -95,6 +99,10 @@ final readonly class JournalExport
                     $entry['reading_id'],
                     $entry['reading_time'],
                     $entry['reading_name'] ?? '',
+                    $entry['question'] ?? '',
+                    $entry['querent'] ?? '',
+                    implode(', ', $entry['tags']),
+                    self::PRIVACY[$entry['visibility']] ?? $entry['visibility'],
                     $entry['deck_name'],
                     $spreadName,
                     $card === null ? '' : (string)$card['position'],
@@ -199,11 +207,15 @@ final readonly class JournalExport
             'reading_time'       => $reading->reading_time,
             'reading_name'       => $reading->reading_name,
             'reading_notes'      => $reading->reading_notes,
+            'question'           => $reading->question,
+            'querent'            => $reading->querent,
+            'tags'               => $reading->tags,
             'deck_id'            => $deckId,
             'deck_name'          => $deckNames[$deckId] ?? "Deck #{$deckId}",
             'spread'             => $spread,
             'cards'              => $cards,
             'is_final'           => $reading->is_final,
+            'visibility'         => $reading->visibility,
             'password_protected' => $reading->password_protected,
         ];
     }

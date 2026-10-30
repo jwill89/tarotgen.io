@@ -3,7 +3,7 @@
 // default happy-dom test DOM (even at its latest) mishandles its parsing and
 // fails to strip <script> — so this XSS-contract test runs under jsdom.
 import { describe, it, expect } from 'vitest'
-import { renderMarkdown } from '@/utils/markdown'
+import { markdownExcerpt, renderMarkdown } from '@/utils/markdown'
 
 describe('renderMarkdown', () => {
   it('returns an empty string for empty input', () => {
@@ -34,5 +34,33 @@ describe('renderMarkdown', () => {
   it('strips inline event handlers', () => {
     const html = renderMarkdown('<img src="x" onerror="alert(1)">')
     expect(html.toLowerCase()).not.toContain('onerror')
+  })
+})
+
+describe('markdownExcerpt', () => {
+  it('is empty for no markdown', () => {
+    expect(markdownExcerpt('', 50)).toBe('')
+    expect(markdownExcerpt(null, 50)).toBe('')
+  })
+
+  it('reads as plain text on one line, markup and scripts gone', () => {
+    expect(
+      markdownExcerpt('# Heading\n\nA **classic** [line](https://x.test).\n\n- one\n- two', 80),
+    ).toBe('Heading A classic line. one two')
+    expect(markdownExcerpt('Safe <script>alert(1)</script> text', 80)).toBe('Safe text')
+  })
+
+  it('cuts a long text at a word, with an ellipsis, within the length', () => {
+    const excerpt = markdownExcerpt(
+      'The present moment, as it stands, and what it asks of you now.',
+      30,
+    )
+
+    expect(excerpt).toBe('The present moment, as it…')
+    expect(excerpt.length).toBeLessThanOrEqual(30)
+  })
+
+  it('cuts mid-word when the first word alone is too long', () => {
+    expect(markdownExcerpt('Supercalifragilistic expialidocious', 10)).toBe('Supercali…')
   })
 })

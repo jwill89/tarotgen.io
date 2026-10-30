@@ -55,6 +55,7 @@ final class AccountExportTest extends HttpTestCase
                 ['card_id' => 18, 'reversed' => true, 'card_name' => 'The Moon'],
             ],
         ], '2026-01-01 09:00:00', name: 'New moon', notes: "## Notes\n\nKept as typed.", final: true, password: 'secret');
+        $this->journal('spread0001', 'Will it last?', 'Robin', ['moon', 'monthly']);
         $this->insertReading('freedraw02', $this->userId, ['deck_id' => 2, 'draw' => [['card_id' => 5, 'reversed' => false]]], '2026-01-02 09:00:00');
         $this->insertReading('theirs0003', $other->user_id, ['deck_id' => 1, 'draw' => []], '2026-01-03 09:00:00');
         $this->insertReading('guest00004', null, ['deck_id' => 1, 'draw' => []], '2026-01-04 09:00:00');
@@ -73,6 +74,9 @@ final class AccountExportTest extends HttpTestCase
             'reading_time'       => '2026-01-01 09:00:00',
             'reading_name'       => 'New moon',
             'reading_notes'      => "## Notes\n\nKept as typed.",
+            'question'           => 'Will it last?',
+            'querent'            => 'Robin',
+            'tags'               => ['monthly', 'moon'],
             'deck_id'            => 1,
             'deck_name'          => 'Rider-Waite',
             'spread'             => self::SPREAD,
@@ -81,6 +85,7 @@ final class AccountExportTest extends HttpTestCase
                 ['position' => 2, 'position_title' => 'Present', 'card_id' => 18, 'card_name' => 'The Moon', 'reversed' => true],
             ],
             'is_final'           => true,
+            'visibility'         => 'password',
             'password_protected' => true,
         ], $journal['readings'][1]);
         // A free draw has no layout; a deck awaiting review isn't named, as on the page.
@@ -113,7 +118,9 @@ final class AccountExportTest extends HttpTestCase
                 ['card_id' => 18, 'reversed' => true, 'card_name' => 'The Moon'],
             ],
         ], '2026-01-01 09:00:00', name: 'New moon', notes: "Line one, with a comma\nand \"quotes\"");
+        $this->journal('spread0001', 'Will it last?', 'Robin', ['moon', 'monthly']);
         $this->insertReading('freedraw02', $this->userId, ['deck_id' => 1, 'draw' => [['card_id' => 79, 'reversed' => false]]], '2026-01-02 09:00:00');
+        $this->db->exec("UPDATE readings SET is_private = 1 WHERE reading_id = 'freedraw02'");
         $this->insertReading('nocards03', $this->userId, ['deck_id' => 9, 'draw' => []], '2026-01-03 09:00:00', notes: 'Only notes');
         $this->insertReading('theirs0004', $this->createUser('other@example.test')->user_id, ['deck_id' => 1, 'draw' => [['card_id' => 1, 'reversed' => false]]]);
         $this->signInAs($this->userId);
@@ -126,11 +133,11 @@ final class AccountExportTest extends HttpTestCase
         // A UTF-8 byte-order mark, so Excel doesn't read it in a legacy code page.
         $this->assertStringStartsWith("\u{FEFF}\"Reading ID\",", $body);
         $this->assertSame([
-            ['Reading ID', 'Reading Time (UTC)', 'Reading Name', 'Deck', 'Spread', 'Position', 'Position Title', 'Card', 'Reversed', 'Notes'],
-            ['nocards03', '2026-01-03 09:00:00', '', 'Deck #9', 'Free Draw', '', '', '', '', 'Only notes'],
-            ['freedraw02', '2026-01-02 09:00:00', '', 'Rider-Waite', 'Free Draw', '1', '', 'Card #79', 'No', ''],
-            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Rider-Waite', 'Past, Present, Future', '1', 'Past', 'The Star', 'No', "Line one, with a comma\nand \"quotes\""],
-            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Rider-Waite', 'Past, Present, Future', '2', 'Present', 'The Moon', 'Yes', "Line one, with a comma\nand \"quotes\""],
+            ['Reading ID', 'Reading Time (UTC)', 'Reading Name', 'Question', 'Querent', 'Tags', 'Privacy', 'Deck', 'Spread', 'Position', 'Position Title', 'Card', 'Reversed', 'Notes'],
+            ['nocards03', '2026-01-03 09:00:00', '', '', '', '', 'Anyone with the link', 'Deck #9', 'Free Draw', '', '', '', '', 'Only notes'],
+            ['freedraw02', '2026-01-02 09:00:00', '', '', '', '', 'Private', 'Rider-Waite', 'Free Draw', '1', '', 'Card #79', 'No', ''],
+            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '1', 'Past', 'The Star', 'No', "Line one, with a comma\nand \"quotes\""],
+            ['spread0001', '2026-01-01 09:00:00', 'New moon', 'Will it last?', 'Robin', 'monthly, moon', 'Anyone with the link', 'Rider-Waite', 'Past, Present, Future', '2', 'Present', 'The Moon', 'Yes', "Line one, with a comma\nand \"quotes\""],
         ], $this->csvRows($body));
     }
 
@@ -141,13 +148,14 @@ final class AccountExportTest extends HttpTestCase
             'spread'  => ['spread_id' => 0, 'name' => '+Spread', 'description' => '', 'positions' => [['order' => 1, 'title' => "\tTab", 'x' => 50, 'y' => 50, 'rotation' => 0]]],
             'draw'    => [['card_id' => 1, 'reversed' => false, 'card_name' => '@Card']],
         ], name: '=HYPERLINK("https://evil.example","Open me")', notes: '-1+2');
+        $this->journal('formula001', '=1+1', '@me', ['+tag']);
         $this->signInAs($this->userId);
 
         $rows = $this->csvRows((string)$this->get('/account/readings/export?format=csv')->getBody());
 
         $this->assertSame(
-            ["'=HYPERLINK(\"https://evil.example\",\"Open me\")", "'+Spread", "'\tTab", "'@Card", "'-1+2"],
-            [$rows[1][2], $rows[1][4], $rows[1][6], $rows[1][7], $rows[1][9]]
+            ["'=HYPERLINK(\"https://evil.example\",\"Open me\")", "'=1+1", "'@me", "'+tag", "'+Spread", "'\tTab", "'@Card", "'-1+2"],
+            [$rows[1][2], $rows[1][3], $rows[1][4], $rows[1][5], $rows[1][8], $rows[1][10], $rows[1][11], $rows[1][13]]
         );
     }
 
@@ -203,6 +211,19 @@ final class AccountExportTest extends HttpTestCase
         fclose($stream);
 
         return $rows;
+    }
+
+    /**
+     * Give a stored reading its journal fields, as its owner would.
+     *
+     * @param list<string> $tags
+     */
+    private function journal(string $id, string $question, string $querent, array $tags): void
+    {
+        $this->db->prepare('UPDATE readings SET question = ?, querent = ? WHERE reading_id = ?')->execute([$question, $querent, $id]);
+        foreach ($tags as $tag) {
+            $this->db->prepare('INSERT INTO reading_tags (reading_id, tag) VALUES (?, ?)')->execute([$id, $tag]);
+        }
     }
 
     /**

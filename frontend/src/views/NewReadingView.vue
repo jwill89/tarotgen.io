@@ -1,14 +1,14 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { reactive, computed, watch, ref, onMounted, useTemplateRef } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import ReadingOwnerOptions from '@/components/ReadingOwnerOptions.vue'
 import SpreadComboBox from '@/components/SpreadComboBox.vue'
+import SpreadLayoutPreview from '@/components/SpreadLayoutPreview.vue'
 import DeckComboBox from '@/components/DeckComboBox.vue'
 import { useDecks } from '@/composables/useDecks'
 import { useFavoriteDecks } from '@/composables/useFavoriteDecks'
 import { useSpreads } from '@/composables/useSpreads'
-import { useSpreadLayout } from '@/composables/useSpreadLayout'
 import { useToasts } from '@/composables/useToasts'
 import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useReadings } from '@/composables/useReadings'
@@ -22,11 +22,12 @@ import ToggleSwitch from '@/components/ToggleSwitch.vue'
 import NumberField from '@/components/NumberField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import SegmentedControl from '@/components/SegmentedControl.vue'
-import type { Deck, SpreadOption, SpreadPosition } from '@/types'
+import type { Deck, SpreadOption } from '@/types'
 
 const LAST_DECK_KEY = STORAGE_KEYS.lastDeck
 
 const router = useRouter()
+const route = useRoute()
 const { decks, fetchDecks } = useDecks()
 const { fetchFavoriteDecks } = useFavoriteDecks()
 const { spreadOptions, fetchSpreads } = useSpreads()
@@ -69,6 +70,23 @@ onMounted(() => {
   void fetchSpreads()
   void fetchFavoriteDecks()
 })
+
+// `?spread=<id>` (the spread library's "Draw with this spread") picks that public
+// spread once the list arrives. Only once: after that the picker is the user's.
+const requestedSpread = typeof route.query.spread === 'string' ? Number(route.query.spread) : NaN
+let spreadRequestOpen = Number.isInteger(requestedSpread) && requestedSpread > 0
+watch(
+  spreadOptions,
+  (options) => {
+    if (!spreadRequestOpen) return
+    const match = options.find((o) => o.type === 'public' && o.spread_id === requestedSpread)
+    if (match) {
+      spreadRequestOpen = false
+      selectedSpreadOption.value = match
+    }
+  },
+  { immediate: true },
+)
 
 // Set the deck once loaded: prefer the user's last pick (if still available),
 // otherwise default to Rider-Waite.
@@ -161,83 +179,6 @@ const selectedSpreadPositions = computed(() => {
   return [...selectedSpread.value.positions].sort((a, b) => a.order - b.order)
 })
 
-// Spread canvas geometry (auto-fit + projection) is shared with the reading
-// view via this composable so the preview trims dead space identically.
-const { cardSize, project } = useSpreadLayout(selectedSpreadPositions)
-
-// Build the preview cards, and for each pick a number position that isn't
-// covered by a later (on-top) card. The canvas is square, so x/y percentages
-// share the same pixel scale and we can do plain point-in-rotated-rect math.
-interface PreviewCard {
-  order: number
-  style: Record<string, string>
-  numStyle: Record<string, string>
-}
-
-const previewCards = computed<PreviewCard[]>(() => {
-  const positions: SpreadPosition[] = selectedSpreadPositions.value
-  const { w: cardW, h: cardH }: { w: number; h: number } = cardSize.value
-  const toRad = (d: number) => (d * Math.PI) / 180
-
-  const cards = positions.map((p) => {
-    const { x, y } = project(p)
-    return { order: p.order, rot: p.rotation, gx: x, gy: y }
-  })
-
-  // Is global point (px,py) inside card c's rotated rectangle?
-  const inside = (px: number, py: number, c: (typeof cards)[number]) => {
-    const r = toRad(-c.rot)
-    const dx = px - c.gx
-    const dy = py - c.gy
-    const lx = dx * Math.cos(r) - dy * Math.sin(r)
-    const ly = dx * Math.sin(r) + dy * Math.cos(r)
-    return Math.abs(lx) <= cardW / 2 && Math.abs(ly) <= cardH / 2
-  }
-
-  // Candidate number spots as a fraction of the card's half-size: centre
-  // first, then edge midpoints, then corners.
-  const candidates: [number, number][] = [
-    [0, 0],
-    [0, -0.68],
-    [0, 0.68],
-    [-0.68, 0],
-    [0.68, 0],
-    [-0.62, -0.62],
-    [0.62, -0.62],
-    [-0.62, 0.62],
-    [0.62, 0.62],
-  ]
-
-  return cards.map((c, i) => {
-    const onTop = cards.filter((_, j) => j > i)
-    let chosen = candidates[0]
-    for (const [fx, fy] of candidates) {
-      const lx = fx * (cardW / 2)
-      const ly = fy * (cardH / 2)
-      const r = toRad(c.rot)
-      const gx = c.gx + (lx * Math.cos(r) - ly * Math.sin(r))
-      const gy = c.gy + (lx * Math.sin(r) + ly * Math.cos(r))
-      if (!onTop.some((lc) => inside(gx, gy, lc))) {
-        chosen = [fx, fy]
-        break
-      }
-    }
-    return {
-      order: c.order,
-      style: {
-        left: `${c.gx}%`,
-        top: `${c.gy}%`,
-        width: `${cardW}%`,
-        '--rotation': `${c.rot}deg`,
-      },
-      numStyle: {
-        left: `${50 + chosen[0] * 50}%`,
-        top: `${50 + chosen[1] * 50}%`,
-      },
-    }
-  })
-})
-
 // Custom titles the user can enter per position (aligned with sorted positions).
 const positionTitles = ref<string[]>([])
 
@@ -282,11 +223,9 @@ async function submitNewReading() {
     body.set('position_titles', JSON.stringify(positionTitles.value))
   }
 
-  const opts = ownerOptions.value?.collect()
-  if (opts) {
-    if (opts.reading_name) body.set('reading_name', opts.reading_name)
-    body.set('hide_user', String(opts.hide_user))
-    if (opts.password) body.set('password', opts.password)
+  // A form post: a list (the tags) goes as one comma-separated value.
+  for (const [key, value] of Object.entries(ownerOptions.value?.collect() ?? {})) {
+    body.set(key, Array.isArray(value) ? value.join(',') : String(value))
   }
 
   isLoading.value = true
@@ -369,19 +308,11 @@ async function submitNewReading() {
                 </div>
               </div>
               <div class="column is-half">
-                <div
-                  class="spread-canvas spread-canvas--preview has-grid mx-auto"
+                <SpreadLayoutPreview
+                  :positions="selectedSpreadPositions"
+                  class="mx-auto"
                   :style="cardAspectStyle(selectedDeck)"
-                >
-                  <div
-                    v-for="card in previewCards"
-                    :key="'preview-' + card.order"
-                    class="spread-card spread-card--editor"
-                    :style="card.style"
-                  >
-                    <span class="preview-number" :style="card.numStyle">{{ card.order }}</span>
-                  </div>
-                </div>
+                />
               </div>
             </div>
 
@@ -416,6 +347,7 @@ async function submitNewReading() {
                       />
                     </p>
                   </div>
+                  <p v-if="pos.description" class="help">{{ pos.description }}</p>
                 </div>
               </div>
             </div>

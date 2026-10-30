@@ -50,6 +50,53 @@ class Reading extends AbstractStructure
     #[OAS\Property(schema: new OAS\Schema(description: 'The day ("Y-m-d", the owner\'s local date) this reading is their daily card for; null for any other reading.', type: 'string', nullable: true))]
     public private(set) ?string $daily_card_day = null;
 
+    /** Owner-only: never in what anyone else is sent (ReadingController, og.php). */
+    #[OAS\Property(schema: new OAS\Schema(description: 'What was asked. Only its owner ever sees it.', type: 'string', nullable: true, maxLength: 500))]
+    public private(set) ?string $question = null;
+
+    /** Owner-only, as $question. */
+    #[OAS\Property(schema: new OAS\Schema(description: 'Who the reading was for, as the owner wrote it. Only its owner ever sees it.', type: 'string', nullable: true, maxLength: 100))]
+    public private(set) ?string $querent = null;
+
+    /**
+     * The owner's tags, sorted. Read as a JSON array the SELECT builds from
+     * reading_tags; the set hook decodes it, as Spread::$positions does.
+     *
+     * @var list<string>
+     */
+    #[OAS\Property(schema: new OAS\Schema(description: "The owner's tags: lower-case, sorted. Only its owner ever sees them.", type: 'array', items: new OAS\Schema\Items(type: 'string')))]
+    public private(set) array $tags = [] {
+        set(array|string $value) {
+            $decoded = is_string($value) ? json_decode($value, true, 512, JSON_THROW_ON_ERROR) : $value;
+            $this->tags = array_values(array_filter(is_array($decoded) ? $decoded : [], is_string(...)));
+        }
+    }
+
+    /**
+     * Derived — who may open it: `private` (is_private, the owner only), else
+     * `password` (a view password is set), else `link` (anyone with the link).
+     */
+    #[OAS\Property(schema: new OAS\Schema(description: 'Who can open it: anyone with the link, anyone with its password, or (private) only its owner.', type: 'string', enum: ['link', 'password', 'private']))]
+    public private(set) string $visibility = 'link';
+
+    #[OAS\Property(schema: new OAS\Schema(description: 'When a guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. A reading made signed in never has one.', type: 'string', nullable: true))]
+    public private(set) ?string $expires_at = null;
+
+    /** Whether $userId (null for a guest) owns it. */
+    public function isOwnedBy(?int $userId): bool
+    {
+        return $this->user_id !== null && $this->user_id === $userId;
+    }
+
+    /**
+     * Whether $userId (null for a guest) may open it at all: a private reading
+     * only its owner. A password still stands between anyone else and the rest.
+     */
+    public function isVisibleTo(?int $userId): bool
+    {
+        return $this->visibility !== 'private' || $this->isOwnedBy($userId);
+    }
+
     public function setReadingId(string $reading_id): self
     {
         $this->reading_id = $reading_id;
@@ -89,6 +136,38 @@ class Reading extends AbstractStructure
     public function setReadingNotes(?string $reading_notes): self
     {
         $this->reading_notes = $reading_notes;
+        return $this;
+    }
+
+    public function setQuestion(?string $question): self
+    {
+        $this->question = $question;
+        return $this;
+    }
+
+    public function setQuerent(?string $querent): self
+    {
+        $this->querent = $querent;
+        return $this;
+    }
+
+    /** @param list<string> $tags */
+    public function setTags(array $tags): self
+    {
+        $this->tags = $tags;
+        return $this;
+    }
+
+    /** `private` makes it owner-only; a password is stored apart (ReadingData::store()). */
+    public function setVisibility(string $visibility): self
+    {
+        $this->visibility = $visibility;
+        return $this;
+    }
+
+    public function setExpiresAt(?string $expires_at): self
+    {
+        $this->expires_at = $expires_at;
         return $this;
     }
 

@@ -12,13 +12,50 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The current user's readings, newest first (one page with ?limit, else all)
-         * @description The current user's readings, newest first. The site pages with ?limit and
-         *     reads the total from X-Total-Count; without ?limit every reading comes back
-         *     as a plain array, which the Dalamud plugin's List<Reading> still expects —
-         *     keep that shape until the plugin pages too (AUDIT §2.6).
+         * The current user's readings, newest first (one page with ?limit, else all), optionally filtered
+         * @description Every filter is optional and they combine; a blank one is no filter.
          */
         get: operations["52d06296825f7d5198b9620f6ee0c77a"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The tags on the user's readings, with how many readings carry each
+         * @description Alphabetical. For My Readings' tag filter and tag suggestions while writing one.
+         */
+        get: operations["45883e03600cbd3bad3c72f61db1e52b"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/account/reading-spreads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The spreads the user's readings were laid out in, with how many readings each
+         * @description Alphabetical, by the name the readings recorded; names that differ only in case are one spread. Each is a value for GET /account/readings?spread= that finds exactly that many readings, so My Readings' spread filter never offers a spread with none.
+         */
+        get: operations["78bf7b84f913d224c0b9b55af72bc813"];
         put?: never;
         post?: never;
         delete?: never;
@@ -45,8 +82,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Update a reading's name, notes, hidden-author flag, or view password
-         * @description Update a reading the current user owns: name, hidden author, view password.
+         * Update a reading's name, notes, hidden-author flag, journal fields, or who can open it
+         * @description Only the fields sent change. `visibility`: link (anyone with the link) and private (only you) drop any password; password needs `password` unless the reading has one already. Without `visibility`, `password` sets a password (and makes it a password reading) and `remove_password` drops it.
          */
         patch: operations["f2bf91c45a8fdd7232feb63c43aec389"];
         trace?: never;
@@ -60,7 +97,7 @@ export interface paths {
         };
         /**
          * Download the user's whole journal, every reading, as JSON or CSV
-         * @description A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading's name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.
+         * @description A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes, the question, querent and tags, who can open it, and the flags (never a view password). CSV has one row per drawn card, so a reading's name, journal fields and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.
          */
         get: operations["2994dc5931088990384aa2978eec332d"];
         put?: never;
@@ -732,6 +769,59 @@ export interface paths {
          *     an allow-listed number of days passed as the `older_than_days` query param.
          */
         delete: operations["2fb51741383f5cd8552779ce6b6f95e7"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/spread-categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the spread library categories (uncached) */
+        get: operations["ef075be7ca00990dc927a568f5d45f0d"];
+        put?: never;
+        /** Add a category at the end of the list */
+        post: operations["e337321eedcf8e7624ed65dc8fbf3ff2"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/spread-categories/{category_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove a category that holds no spreads */
+        delete: operations["f34360f1ec19673992ab030e02c8ca65"];
+        options?: never;
+        head?: never;
+        /** Rename a category */
+        patch: operations["42086e9e1fab3ca51b32dcafc6aa4f78"];
+        trace?: never;
+    };
+    "/admin/spread-categories/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Put the categories in a new order */
+        put: operations["ddcca740b5b9338eccdd9f84d5447972"];
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1578,6 +1668,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/spreads/{spread_id}/copy": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Copy a public spread into the signed-in user's own spreads (My Spreads)
+         * @description The copy keeps the description and every position (with its description); its name gets " (copy)", or " (copy 2)" and on when the user already has that name. Only a published spread can be copied.
+         */
+        post: operations["8176e273b001a8282b32ca89d9e8f477"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -1724,6 +1834,8 @@ export interface components {
             y: number;
             /** @description Degrees, 0–359. */
             rotation: number;
+            /** @description What the position asks about, e.g. "What stands in your way" — never what a card means. Trimmed; absent when it has none. */
+            description?: string;
         };
         /** @description One drawn card, in draw order. */
         DrawCard: {
@@ -1742,7 +1854,7 @@ export interface components {
             name: string;
             /** @description Markdown; may be empty. */
             description: string;
-            /** @description One per drawn card. */
+            /** @description One per drawn card. A position keeps its spread's description unless the reader retitled it; readings made before descriptions existed have none. */
             positions: components["schemas"]["SpreadPosition"][];
         };
         /** @description What was drawn, from which deck, in which layout. */
@@ -1784,6 +1896,21 @@ export interface components {
              * @enum {boolean}
              */
             locked: false;
+            /**
+             * @description Who can open it: anyone with the link, anyone with its password, or (private) only its owner.
+             * @enum {string}
+             */
+            visibility: "link" | "password" | "private";
+            /** @description When this guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. */
+            expires_at: string | null;
+            /** @description What was asked. Only in the owner's payload. */
+            question?: string | null;
+            /** @description Who the reading was for. Only in the owner's payload. */
+            querent?: string | null;
+            /** @description The owner's tags, sorted. Only in the owner's payload. */
+            tags?: string[];
+            /** @description Whether the owner hid their name from it. Only in the owner's payload. */
+            hide_user?: boolean;
         };
         /** @description Sent instead of the reading to anyone but its owner until they unlock it with its password (POST /readings/{reading_id}/unlock). */
         LockedReading: {
@@ -1814,6 +1941,12 @@ export interface components {
             reading_name: string | null;
             /** @description The owner's notes (Markdown), if any. */
             reading_notes: string | null;
+            /** @description What was asked, if recorded. */
+            question: string | null;
+            /** @description Who the reading was for, if recorded. */
+            querent: string | null;
+            /** @description Its tags, sorted. */
+            tags: string[];
             /** @description The deck the cards were drawn from. */
             deck_id: number;
             /** @description "Deck #{deck_id}" for a deck since deleted. */
@@ -1824,6 +1957,11 @@ export interface components {
             cards: components["schemas"]["JournalCard"][];
             /** @description Locked for good against further draws. */
             is_final: boolean;
+            /**
+             * @description Who can open it: anyone with the link, anyone with its password, or (private) only its owner.
+             * @enum {string}
+             */
+            visibility: "link" | "password" | "private";
             /** @description A view password is set (the password itself is never exported). */
             password_protected: boolean;
         };
@@ -2060,7 +2198,8 @@ export interface components {
             card_count: number;
             /**
              * @description Array of position objects, each shaped:
-             *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
+             *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int,
+             *      'description' => string (only when it has one)]
              */
             positions: components["schemas"]["SpreadPosition"][];
             /** @description Resolved submitter label: the linked account's display name, or "Guest". */
@@ -2095,6 +2234,26 @@ export interface components {
             password_protected: boolean;
             /** @description The day ("Y-m-d", the owner's local date) this reading is their daily card for; null for any other reading. */
             daily_card_day: string | null;
+            /** @description What was asked. Only its owner ever sees it. */
+            question: string | null;
+            /** @description Who the reading was for, as the owner wrote it. Only its owner ever sees it. */
+            querent: string | null;
+            /** @description The owner's tags: lower-case, sorted. Only its owner ever sees them. */
+            tags: string[];
+            /**
+             * @description Who can open it: anyone with the link, anyone with its password, or (private) only its owner.
+             * @enum {string}
+             */
+            visibility: "link" | "password" | "private";
+            /** @description When a guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention. A reading made signed in never has one. */
+            expires_at: string | null;
+        };
+        /** @description A spread the signed-in user's readings were laid out in, with how many. */
+        ReadingSpread: {
+            /** @description The spread's name as the readings recorded it (personal spreads have no public id); "Free Draw" for free draws never placed. Send it as GET /account/readings?spread=. */
+            name: string;
+            /** @description How many of the user's readings were laid out in it. */
+            count: number;
         };
         /** @description A reading as the admin readings list shows it. */
         ReadingSummary: {
@@ -2109,6 +2268,13 @@ export interface components {
             deck_name: string;
             /** @description The spread name, or empty for a free draw. */
             spread_name: string;
+        };
+        /** @description A tag the signed-in user has given their readings, with how many carry it. */
+        ReadingTag: {
+            /** @description The tag, as stored: lower-case. */
+            tag: string;
+            /** @description How many of the user's readings carry it. */
+            count: number;
         };
         /** @description A deck-specific special (custom) card. */
         SpecialCard: {
@@ -2128,11 +2294,27 @@ export interface components {
             name: string;
             description: string;
             card_count: number;
+            /** @description The library category it is listed under. */
+            category_id: number;
+            /** @description Its category's name. */
+            category_name: string;
+            /** @description Its category's place in the list, from 1: the library and the spread pickers show the categories in this order. */
+            category_sort_order: number;
             /**
              * @description Array of position objects, each shaped:
-             *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
+             *     ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int,
+             *      'description' => string (only when it has one)]
              */
             positions: components["schemas"]["SpreadPosition"][];
+        };
+        /** @description A heading the public spread library groups spreads under. Admins keep the list; every public spread is in exactly one. */
+        SpreadCategory: {
+            category_id: number;
+            name: string;
+            /** @description Its place in the list, from 1. The first category is the default for a new or approved spread. */
+            sort_order: number;
+            /** @description How many public spreads are in it. */
+            spread_count: number;
         };
         /** @description A user account in its safe shape (no secrets or hashes). */
         User: {
@@ -2175,6 +2357,22 @@ export interface operations {
                 /** @description Page size (1–100). Omit to get every reading. */
                 limit?: number;
                 offset?: number;
+                /** @description Text in the name, notes, question or querent (ignoring case for unaccented letters). */
+                q?: string;
+                /** @description Drawn from this deck. */
+                deck_id?: number;
+                /** @description Laid out in a spread of this name, as the reading recorded it (personal spreads have no public id); "Free Draw" also matches a free draw never placed. */
+                spread?: string;
+                /** @description Carrying this tag. */
+                tag?: string;
+                /** @description Made on or after this day (YYYY-MM-DD) in `tz`. */
+                from?: string;
+                /** @description Made on or before this day (YYYY-MM-DD) in `tz`. */
+                to?: string;
+                /** @description The reader's time zone for `from` and `to` (IANA, e.g. Europe/London); UTC when absent. */
+                tz?: string;
+                /** @description only: daily cards alone; exclude: everything but. */
+                daily?: "only" | "exclude";
             };
             header?: never;
             path?: never;
@@ -2185,12 +2383,59 @@ export interface operations {
             /** @description Array of readings */
             200: {
                 headers: {
-                    /** @description The user's total reading count (sent when paging with ?limit) */
+                    /** @description How many of the user's readings the filters match (sent when paging with ?limit) */
                     "X-Total-Count"?: number;
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Reading"][];
+                };
+            };
+            /** @description A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "45883e03600cbd3bad3c72f61db1e52b": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of tags */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingTag"][];
+                };
+            };
+        };
+    };
+    "78bf7b84f913d224c0b9b55af72bc813": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Array of spreads */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReadingSpread"][];
                 };
             };
         };
@@ -2236,6 +2481,14 @@ export interface operations {
                 "application/json": {
                     reading_name?: string | null;
                     reading_notes?: string | null;
+                    /** @description Up to 500 characters; blank or null clears it. */
+                    question?: string | null;
+                    /** @description Up to 100 characters; blank or null clears it. */
+                    querent?: string | null;
+                    /** @description Replaces every tag: at most 10, of at most 30 characters each; stored lower-case, a leading # dropped, repeats merged. [] clears them. */
+                    tags?: string[];
+                    /** @enum {string} */
+                    visibility?: "link" | "password" | "private";
                     hide_user?: boolean;
                     password?: string;
                     remove_password?: boolean;
@@ -2252,7 +2505,7 @@ export interface operations {
                     "application/json": components["schemas"]["Reading"];
                 };
             };
-            /** @description No changes provided */
+            /** @description No changes provided, an unknown visibility, or tags over the limits */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2266,7 +2519,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Password too short */
+            /** @description Password too short, or Password chosen without one */
             422: {
                 headers: {
                     [name: string]: unknown;
@@ -3790,6 +4043,185 @@ export interface operations {
             };
         };
     };
+    ef075be7ca00990dc927a568f5d45f0d: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every category, in order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpreadCategory"][];
+                };
+            };
+        };
+    };
+    e337321eedcf8e7624ed65dc8fbf3ff2: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Trimmed; cut to 60 characters. */
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The new category */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpreadCategory"];
+                };
+            };
+            /** @description A category needs a name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another category has that name (case-insensitively) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    f34360f1ec19673992ab030e02c8ca65: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such category */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description It still holds spreads (move them first), or it is the last category */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "42086e9e1fab3ca51b32dcafc6aa4f78": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                category_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Trimmed; cut to 60 characters. */
+                    name: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The renamed category */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpreadCategory"];
+                };
+            };
+            /** @description A category needs a name */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such category */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Another category has that name (case-insensitively) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ddcca740b5b9338eccdd9f84d5447972: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Every category id, once, in the new order. The first becomes the default for new spreads. */
+                    category_ids: number[];
+                };
+            };
+        };
+        responses: {
+            /** @description Every category, in the new order */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SpreadCategory"][];
+                };
+            };
+            /** @description Not every category id exactly once */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     "51b4f44cde05d0ef9d3ee6a5d109f70d": {
         parameters: {
             query?: never;
@@ -3822,6 +4254,8 @@ export interface operations {
                 "application/json": {
                     name: string;
                     positions?: components["schemas"]["SpreadPosition"][];
+                    /** @description Its library category; the first category when left out. */
+                    category_id?: number;
                 };
             };
         };
@@ -3835,7 +4269,7 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
-            /** @description Name is required */
+            /** @description Name is required, or an unknown category */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3865,6 +4299,8 @@ export interface operations {
                 "application/json": {
                     name?: string;
                     positions?: components["schemas"]["SpreadPosition"][];
+                    /** @description Move it to another library category. */
+                    category_id?: number;
                 };
             };
         };
@@ -3878,7 +4314,7 @@ export interface operations {
                     "application/json": components["schemas"]["Spread"];
                 };
             };
-            /** @description Name is required (a name sent blank) */
+            /** @description Name is required (a name sent blank), or an unknown category */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3943,7 +4379,14 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": {
+                    /** @description The library category to publish it in; the first category when left out. */
+                    category_id?: number;
+                };
+            };
+        };
         responses: {
             /** @description Approved spread */
             201: {
@@ -3953,6 +4396,13 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Spread"];
                 };
+            };
+            /** @description Unknown category */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Pending spread not found */
             404: {
@@ -5281,7 +5731,7 @@ export interface operations {
                     "application/json": components["schemas"]["ReadingView"] | components["schemas"]["LockedReading"];
                 };
             };
-            /** @description InvalidReadingID */
+            /** @description InvalidReadingID: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5330,7 +5780,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description InvalidReadingID */
+            /** @description InvalidReadingID: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5353,7 +5803,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. */
+        /** @description Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for its owner (signed in, or by plugin token): anyone else's is ignored, like an id that does not exist. A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most 30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a guest's are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then instead of after the usual year; a signed-in reader's is ignored. */
         requestBody: {
             content: {
                 "application/json": Record<string, never>;
@@ -5392,6 +5842,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The deck, a name and the cards with their positions, plus the same owner options as POST /readings/generate (a signed-in reader's) or expiry (a guest's). */
         requestBody: {
             content: {
                 "application/json": Record<string, never>;
@@ -5460,7 +5911,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Reading not found */
+            /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5514,7 +5965,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Reading not found */
+            /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5557,7 +6008,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description Reading not found */
+            /** @description Reading not found: no such reading, one past its expiry, or someone else's private reading */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -5651,6 +6102,42 @@ export interface operations {
                 };
             };
             /** @description InvalidSpreadID */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    "8176e273b001a8282b32ca89d9e8f477": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                spread_id: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The new personal spread */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserSpread"];
+                };
+            };
+            /** @description Not signed in */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No such public spread */
             404: {
                 headers: {
                     [name: string]: unknown;

@@ -48,6 +48,8 @@ public sealed class SpreadPosition
     public double X { get; set; }
     public double Y { get; set; }
     public int Rotation { get; set; }
+    /// <summary>What the position asks; empty when it has none (or the API predates 5.2.0).</summary>
+    public string Description { get; set; } = "";
 }
 
 /// <summary>A predefined public spread (GET /api/spreads).</summary>
@@ -57,6 +59,11 @@ public sealed class Spread
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public int CardCount { get; set; } = 1;
+    // The library category it's listed under, and that category's place in the
+    // admins' list. An API before 5.2.0 sends none: an empty name, order 0.
+    public int CategoryId { get; set; }
+    public string CategoryName { get; set; } = "";
+    public int CategorySortOrder { get; set; }
     public List<SpreadPosition> Positions { get; set; } = new();
 }
 

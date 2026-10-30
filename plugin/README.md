@@ -14,8 +14,8 @@ channel (`-Target plugin`).
 
 **In scope**
 
-- **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. Anonymous.
-- **View a reading** by its share code / URL, including password-protected readings (guest enters the password).
+- **Generate a reading** — pick a public spread *or* a free draw (random card count), with reversals. Anonymous. The spread pickers group the public spreads under the site's library categories, in the order the site lists them.
+- **View a reading** by its share code / URL, including password-protected readings (guest enters the password). Each position lists its card, with what the position asks beneath it when the spread says (the New Reading preview shows the same).
 - **Optional account** — link a TarotGen account to lock/finalize a reading, sort deck/spread pickers by your favorites, and track generated readings ("My Readings"). Guests never have to link.
 - **Report a problem with a card's image** from the card lightbox — pick what's wrong (scan artefact, cropping, image quality, wrong card, or something else) and optionally describe it, so the site admins know what to fix.
 

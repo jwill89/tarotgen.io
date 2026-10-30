@@ -701,6 +701,14 @@ body.has-fixed-nav {
   color: var(--myst-gold);
 }
 
+/* What the position asks (its spread's description): its own line, quietly. */
+.spread-detail-about {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--myst-text-muted);
+}
+
 /* ── Spread Editor (admin) ───────────────────────────────── */
 .spread-token-tray {
   display: flex;

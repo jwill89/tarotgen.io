@@ -7,6 +7,7 @@ use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
 use Tarot\Repository\FavoriteSpreadRepository;
 use Tarot\Repository\PendingSpreadRepository;
+use Tarot\Repository\SpreadCategoryRepository;
 use Tarot\Repository\SpreadRepository;
 use Tarot\Structure\PendingSpread;
 use OpenApi\Spec as OAS;
@@ -16,10 +17,13 @@ use OpenApi\Spec as OAS;
  */
 class AdminSpreadController extends AbstractController
 {
+    private const string UNKNOWN_CATEGORY = 'Unknown spread category.';
+
     public function __construct(
         private readonly SpreadRepository $spreads,
         private readonly PendingSpreadRepository $pendingSpreads,
         private readonly FavoriteSpreadRepository $favorites,
+        private readonly SpreadCategoryRepository $categories,
     ) {
     }
 
@@ -53,6 +57,7 @@ class AdminSpreadController extends AbstractController
                 properties: [
                     new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
+                    new OAS\Property(property: 'category_id', schema: new OAS\Schema(description: 'Its library category; the first category when left out.', type: 'integer')),
                 ]
             )
         ),
@@ -62,7 +67,7 @@ class AdminSpreadController extends AbstractController
                 description: 'Created spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OAS\Response(response: 400, description: 'Name is required'),
+            new OAS\Response(response: 400, description: 'Name is required, or an unknown category'),
             new OAS\Response(response: 500, description: 'Failed to create spread'),
         ]
     )]
@@ -72,6 +77,10 @@ class AdminSpreadController extends AbstractController
 
         if (trim((string)($params['name'] ?? '')) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
+        }
+
+        if (!$this->knownCategory($params)) {
+            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
         }
 
         $spread = $this->spreads->create($params);
@@ -100,6 +109,7 @@ class AdminSpreadController extends AbstractController
                 properties: [
                     new OAS\Property(property: 'name', schema: new OAS\Schema(type: 'string')),
                     new OAS\Property(property: 'positions', schema: new OAS\Schema(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
+                    new OAS\Property(property: 'category_id', schema: new OAS\Schema(description: 'Move it to another library category.', type: 'integer')),
                 ]
             )
         ),
@@ -109,7 +119,7 @@ class AdminSpreadController extends AbstractController
                 description: 'Updated spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
-            new OAS\Response(response: 400, description: 'Name is required (a name sent blank)'),
+            new OAS\Response(response: 400, description: 'Name is required (a name sent blank), or an unknown category'),
             new OAS\Response(response: 404, description: 'Spread not found or no valid fields'),
         ]
     )]
@@ -121,6 +131,10 @@ class AdminSpreadController extends AbstractController
         // A rename may not blank the name, any more than a create may leave it out.
         if (array_key_exists('name', $params) && trim((string)$params['name']) === '') {
             return $response->withJson(['error' => 'Name is required'], 400);
+        }
+
+        if (!$this->knownCategory($params)) {
+            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
         }
 
         $spread = $this->spreads->update($spread_id, $params);
@@ -194,12 +208,21 @@ class AdminSpreadController extends AbstractController
         parameters: [
             new OAS\Parameter(name: 'pending_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
         ],
+        requestBody: new OAS\RequestBody(
+            required: false,
+            content: new OAS\MediaType\Json(
+                properties: [
+                    new OAS\Property(property: 'category_id', schema: new OAS\Schema(description: 'The library category to publish it in; the first category when left out.', type: 'integer')),
+                ]
+            )
+        ),
         responses: [
             new OAS\Response(
                 response: 201,
                 description: 'Approved spread',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Spread')
             ),
+            new OAS\Response(response: 400, description: 'Unknown category'),
             new OAS\Response(response: 404, description: 'Pending spread not found'),
             new OAS\Response(response: 500, description: 'Failed to approve spread'),
         ]
@@ -212,7 +235,16 @@ class AdminSpreadController extends AbstractController
             return $response->withJson(['error' => 'Pending spread not found'], 404);
         }
 
-        $spread = $this->pendingSpreads->approve($pending_id);
+        $params = $this->parsedBody($request);
+        if (!$this->knownCategory($params)) {
+            return $response->withJson(['error' => self::UNKNOWN_CATEGORY], 400);
+        }
+
+        $categoryId = $params['category_id'] ?? null;
+        $spread = $this->pendingSpreads->approve(
+            $pending_id,
+            is_numeric($categoryId) ? (int)$categoryId : null
+        );
 
         if ($spread === null) {
             return $response->withJson(['error' => 'Failed to approve spread'], 500);
@@ -248,5 +280,21 @@ class AdminSpreadController extends AbstractController
         }
 
         return $response->withStatus(204);
+    }
+
+    /**
+     * A category_id left out (or null) is fine: the spread keeps its category,
+     * or a new one goes into the first. One that is sent must exist.
+     *
+     * @param array<string,mixed> $params
+     */
+    private function knownCategory(array $params): bool
+    {
+        $categoryId = $params['category_id'] ?? null;
+        if ($categoryId === null) {
+            return true;
+        }
+
+        return is_numeric($categoryId) && $this->categories->find((int)$categoryId) !== null;
     }
 }

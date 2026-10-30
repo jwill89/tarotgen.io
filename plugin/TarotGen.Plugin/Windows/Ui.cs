@@ -84,6 +84,14 @@ internal static class Ui
     /// <summary>Secondary/help text — dimmed.</summary>
     public static void Help(string text) => ImGui.TextDisabled(text);
 
+    /// <summary>Secondary text, dimmed and wrapped at the edge of its column.</summary>
+    public static void HelpWrapped(string text)
+    {
+        ImGui.PushTextWrapPos(0f);
+        ImGui.TextDisabled(text);
+        ImGui.PopTextWrapPos();
+    }
+
     /// <summary>A dimmed "(?)" that shows <paramref name="text"/> as a wrapped tooltip on hover.</summary>
     public static void HelpMarker(string text)
     {

@@ -80,6 +80,7 @@ use OpenApi\Utils\Pipeline;
         new OAS\Property(property: 'x', schema: new OAS\Schema(description: 'Card centre, % of the canvas width.', type: 'number', maximum: 100, minimum: 0)),
         new OAS\Property(property: 'y', schema: new OAS\Schema(description: 'Card centre, % of the canvas height.', type: 'number', maximum: 100, minimum: 0)),
         new OAS\Property(property: 'rotation', schema: new OAS\Schema(description: 'Degrees, 0–359.', type: 'integer', maximum: 359, minimum: 0)),
+        new OAS\Property(property: 'description', schema: new OAS\Schema(description: 'What the position asks about, e.g. "What stands in your way" — never what a card means. Trimmed; absent when it has none.', type: 'string', maxLength: 280)),
     ]
 )]
 // What a reading holds (its reading_info JSON) and the two shapes the reading
@@ -103,7 +104,7 @@ use OpenApi\Utils\Pipeline;
         new OAS\Property(property: 'spread_id', schema: new OAS\Schema(description: 'The public spread it came from; 0 for a personal spread, a custom reading or a free-draw placement.', type: 'integer')),
         new OAS\Property(property: 'name', schema: new OAS\Schema(description: "The spread's name.", type: 'string')),
         new OAS\Property(property: 'description', schema: new OAS\Schema(description: 'Markdown; may be empty.', type: 'string')),
-        new OAS\Property(property: 'positions', schema: new OAS\Schema(description: 'One per drawn card.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
+        new OAS\Property(property: 'positions', schema: new OAS\Schema(description: "One per drawn card. A position keeps its spread's description unless the reader retitled it; readings made before descriptions existed have none.", type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/SpreadPosition'))),
     ]
 )]
 #[OAS\Schema(
@@ -120,7 +121,7 @@ use OpenApi\Utils\Pipeline;
 #[OAS\Schema(
     component: 'ReadingView',
     description: 'A reading as the requester may see it: what GET /readings/{reading_id} and the reading commands (generate, unlock, draw, finalize) return.',
-    required: ['reading_id', 'reading_info', 'reading_time', 'reading_name', 'reading_notes', 'reader', 'is_owner', 'is_final', 'can_draw_more', 'locked'],
+    required: ['reading_id', 'reading_info', 'reading_time', 'reading_name', 'reading_notes', 'reader', 'is_owner', 'is_final', 'can_draw_more', 'locked', 'visibility', 'expires_at'],
     properties: [
         new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
         new OAS\Property(property: 'reading_info', schema: new OAS\Schema(ref: '#/components/schemas/ReadingInfo', description: 'What was drawn.')),
@@ -132,6 +133,12 @@ use OpenApi\Utils\Pipeline;
         new OAS\Property(property: 'is_final', schema: new OAS\Schema(description: 'Locked for good against further draws.', type: 'boolean')),
         new OAS\Property(property: 'can_draw_more', schema: new OAS\Schema(description: 'The requester may draw more cards into it: their own, not final, not custom.', type: 'boolean')),
         new OAS\Property(property: 'locked', schema: new OAS\Schema(description: 'Always false here; see LockedReading.', type: 'boolean', enum: [false])),
+        new OAS\Property(property: 'visibility', schema: new OAS\Schema(description: 'Who can open it: anyone with the link, anyone with its password, or (private) only its owner.', type: 'string', enum: ['link', 'password', 'private'])),
+        new OAS\Property(property: 'expires_at', schema: new OAS\Schema(description: 'When this guest reading will be deleted, UTC ("Y-m-d H:i:s"), as its maker chose; null for the usual retention.', type: 'string', nullable: true)),
+        new OAS\Property(property: 'question', schema: new OAS\Schema(description: "What was asked. Only in the owner's payload.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'querent', schema: new OAS\Schema(description: "Who the reading was for. Only in the owner's payload.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'tags', schema: new OAS\Schema(description: "The owner's tags, sorted. Only in the owner's payload.", type: 'array', items: new OAS\Schema\Items(type: 'string'))),
+        new OAS\Property(property: 'hide_user', schema: new OAS\Schema(description: "Whether the owner hid their name from it. Only in the owner's payload.", type: 'boolean')),
     ]
 )]
 #[OAS\Schema(
@@ -157,13 +164,16 @@ use OpenApi\Utils\Pipeline;
 #[OAS\Schema(
     component: 'JournalReading',
     description: 'One reading in the journal download.',
-    required: ['reading_id', 'link', 'reading_time', 'reading_name', 'reading_notes', 'deck_id', 'deck_name', 'spread', 'cards', 'is_final', 'password_protected'],
+    required: ['reading_id', 'link', 'reading_time', 'reading_name', 'reading_notes', 'question', 'querent', 'tags', 'deck_id', 'deck_name', 'spread', 'cards', 'is_final', 'visibility', 'password_protected'],
     properties: [
         new OAS\Property(property: 'reading_id', schema: new OAS\Schema(description: 'The code in the reading link.', type: 'string')),
         new OAS\Property(property: 'link', schema: new OAS\Schema(description: "The reading's share link.", type: 'string')),
         new OAS\Property(property: 'reading_time', schema: new OAS\Schema(description: 'When it was made, UTC ("Y-m-d H:i:s").', type: 'string')),
         new OAS\Property(property: 'reading_name', schema: new OAS\Schema(description: "The owner's title for it, if any.", type: 'string', nullable: true)),
         new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(description: "The owner's notes (Markdown), if any.", type: 'string', nullable: true)),
+        new OAS\Property(property: 'question', schema: new OAS\Schema(description: 'What was asked, if recorded.', type: 'string', nullable: true)),
+        new OAS\Property(property: 'querent', schema: new OAS\Schema(description: 'Who the reading was for, if recorded.', type: 'string', nullable: true)),
+        new OAS\Property(property: 'tags', schema: new OAS\Schema(description: 'Its tags, sorted.', type: 'array', items: new OAS\Schema\Items(type: 'string'))),
         new OAS\Property(property: 'deck_id', schema: new OAS\Schema(description: 'The deck the cards were drawn from.', type: 'integer')),
         new OAS\Property(property: 'deck_name', schema: new OAS\Schema(description: '"Deck #{deck_id}" for a deck since deleted.', type: 'string')),
         new OAS\Property(property: 'spread', schema: new OAS\Schema(
@@ -172,6 +182,7 @@ use OpenApi\Utils\Pipeline;
         )),
         new OAS\Property(property: 'cards', schema: new OAS\Schema(description: 'In draw order.', type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/JournalCard'))),
         new OAS\Property(property: 'is_final', schema: new OAS\Schema(description: 'Locked for good against further draws.', type: 'boolean')),
+        new OAS\Property(property: 'visibility', schema: new OAS\Schema(description: 'Who can open it: anyone with the link, anyone with its password, or (private) only its owner.', type: 'string', enum: ['link', 'password', 'private'])),
         new OAS\Property(property: 'password_protected', schema: new OAS\Schema(description: 'A view password is set (the password itself is never exported).', type: 'boolean')),
     ]
 )]

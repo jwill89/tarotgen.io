@@ -36,11 +36,18 @@ test.describe.serial('smoke', () => {
 
     const spread = page.getByRole('combobox', { name: 'Spread' })
     await spread.fill('past')
+    // Enter picks the highlighted option, so wait for the filtered list first.
+    await expect(page.getByRole('option', { name: /Past, Present, Future/ })).toBeVisible()
     await spread.press('Enter')
     await expect(spread).toHaveValue('Past, Present, Future')
 
+    // A guest may have the reading deleted sooner than the usual year.
+    await page.getByRole('combobox', { name: 'Keep This Reading For' }).click()
+    await page.getByRole('option', { name: '7 days' }).click()
+
     await page.getByRole('button', { name: 'Generate New Draw' }).click()
     await expect(page).toHaveURL(/\/reading\/[A-Za-z0-9]+$/)
+    await expect(page.getByText(/This reading will be deleted on /)).toBeVisible()
 
     const cards = page.locator('.spread-flip')
     await expect(cards).toHaveCount(3)
@@ -67,9 +74,11 @@ test.describe.serial('smoke', () => {
     await page.getByRole('button', { name: 'Log In' }).click()
 
     await expect(page).toHaveURL(/\/admin\/card-reports$/)
+    // At least the report just made: a retried run reports another card, so
+    // counting exactly one row would fail on the retry itself.
     const row = page.getByRole('row').filter({ hasText: 'Smoke Test Deck' })
-    await expect(row).toHaveCount(1)
-    await expect(row).toContainText('Cropped or crooked')
+    await expect(row.first()).toBeVisible()
+    await expect(row.filter({ hasText: 'Cropped or crooked' }).first()).toBeVisible()
 
     expect(problems).toEqual([])
   })

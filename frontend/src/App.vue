@@ -38,12 +38,14 @@ const currentYear = computed(() => new Date().getFullYear())
 // the brand logo is referenced as a runtime URL string, not a bundled import.
 const brandLogo = '/assets/favicon.png'
 
-// Primary nav links (also used by the mobile menu).
+// Primary nav links (also used by the mobile menu). Creating a spread starts
+// from the Spreads library (and Home), which keeps the bar to five links: a
+// sixth wrapped them between the burger breakpoint and ~1100px.
 const navLinks = [
   { label: 'Home', to: { name: 'home' } },
   { label: 'New Draw', to: { name: 'new-reading' } },
+  { label: 'Spreads', to: { name: 'spread-library' } },
   { label: 'Recreate Draw', to: { name: 'custom-reading' } },
-  { label: 'Create a Spread', to: { name: 'submit-spread' } },
   { label: 'FFXIV Plugin', to: { name: 'ffxiv-plugin' } },
 ]
 

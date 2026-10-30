@@ -204,6 +204,34 @@ final class AccountSpreadsTest extends HttpTestCase
         $this->assertSame([['user_spread_id' => $id, 'user_id' => $this->userId]], $this->rows('SELECT user_spread_id, user_id FROM user_spreads'));
     }
 
+    public function testPositionDescriptionsAreKeptTrimmedAndCapped(): void
+    {
+        $this->signInAs($this->userId);
+
+        $created = $this->assertJsonResponse(201, $this->post('/account/spreads', [
+            'name' => 'Crossroads',
+            'positions' => [
+                ['order' => 1, 'title' => 'Left', 'description' => '  The road you know  '],
+                ['order' => 2, 'title' => 'Right', 'description' => ''],
+            ],
+        ]));
+        $this->assertDocumented('post', '/account/spreads', 201, $created);
+        $this->assertSame('The road you know', $created['positions'][0]['description']);
+        $this->assertArrayNotHasKey('description', $created['positions'][1]);
+
+        $updated = $this->assertJsonResponse(200, $this->request('PUT', "/account/spreads/{$created['user_spread_id']}", [
+            'positions' => [['order' => 1, 'title' => 'Left', 'description' => str_repeat('ü', 290)]],
+        ]));
+        $this->assertDocumented('put', '/account/spreads/{user_spread_id}', 200, $updated);
+        $this->assertSame(str_repeat('ü', 280), $updated['positions'][0]['description']);
+
+        // Submitting it for review takes the descriptions along.
+        $this->assertJsonResponse(201, $this->post("/account/spreads/{$created['user_spread_id']}/submit"));
+        $pending = $this->rows('SELECT positions FROM pending_spreads')[0]['positions'];
+        $this->assertIsString($pending);
+        $this->assertSame(str_repeat('ü', 280), json_decode($pending, true)[0]['description'] ?? null);
+    }
+
     public function testSomeoneElsesSpreadCannotBeEditedDeletedOrSubmitted(): void
     {
         $owner = $this->createUser('owner@example.test');

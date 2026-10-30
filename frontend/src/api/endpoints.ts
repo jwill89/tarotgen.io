@@ -51,6 +51,8 @@ export const endpoints = {
     /** `GET` public spreads / `POST` submit a spread into moderation. */
     list: '/spreads',
     byId: (id: string | number) => `/spreads/${id}`,
+    /** `POST` — copy a public spread into the signed-in user's own (→ the new UserSpread). */
+    copy: (id: string | number) => `/spreads/${id}/copy`,
   },
 
   readings: {
@@ -132,8 +134,13 @@ export const endpoints = {
     /** `POST` — sign out every other session of the account (→ `{ success, ended }`). */
     endOtherSessions: '/account/sessions/end-others',
 
+    /** `GET` — the user's readings; `?limit=&offset=` pages, `?q=&deck_id=&spread=&tag=&from=&to=&tz=&daily=` filter. */
     readings: '/account/readings',
     readingById: (id: string | number) => `/account/readings/${id}`,
+    /** `GET` — the tags on the user's readings, with counts (filter + suggestions). */
+    tags: '/account/tags',
+    /** `GET` — the spreads the user's readings were laid out in, by name, with counts (the spread filter). */
+    readingSpreads: '/account/reading-spreads',
     /** `GET` — the whole journal as a download (a plain link: it's an attachment). */
     readingsExport: (format: 'json' | 'csv') => `/account/readings/export?format=${format}`,
 
@@ -203,6 +210,14 @@ export const endpoints = {
     spreads: {
       list: '/spreads',
       byId: (id: string | number) => `/spreads/${id}`,
+    },
+    spreadCategories: {
+      /** `GET` (uncached) / `POST { name }` — add one at the end. */
+      list: '/spread-categories',
+      /** `PATCH { name }` rename / `DELETE` (refused while it holds spreads, or if it's the last). */
+      byId: (id: string | number) => `/spread-categories/${id}`,
+      /** `PUT { category_ids }` — every category id, once, in the new order. */
+      order: '/spread-categories/order',
     },
     pendingSpreads: {
       list: '/pending-spreads',

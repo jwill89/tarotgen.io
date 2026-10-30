@@ -24,6 +24,7 @@ use Routes\Internal\{AccountController,
     AdminDeckController,
     AdminDeckSystemController,
     AdminReadingController,
+    AdminSpreadCategoryController,
     AdminSpreadController,
     AdminUserController,
     ApiDocsController,
@@ -178,9 +179,12 @@ return function (ContainerInterface $container, bool $is_production): App {
     })->add(UserAuth::class);
 
     // ── Journal tools (browser session only: the plugin calls none of them, so a
-    // token stays least-privilege): card frequency and the daily card.
+    // token stays least-privilege): card frequency, the daily card, the reading
+    // tags and spreads My Readings filters by.
     $app->group('/account', function (RouteCollectorProxy $group) {
         $group->get('/card-frequency[/]', CardFrequencyController::class . ':get');
+        $group->get('/tags[/]', AccountController::class . ':myTags');
+        $group->get('/reading-spreads[/]', AccountController::class . ':myReadingSpreads');
         $group->get('/daily-cards[/]', DailyCardController::class . ':list');
         $group->post('/daily-cards[/]', DailyCardController::class . ':draw');
     })->add(UserAuth::class);
@@ -192,10 +196,12 @@ return function (ContainerInterface $container, bool $is_production): App {
         $group->post('/authorize[/]', PluginAuthController::class . ':authorize')->add(UserAuth::class);
     });
 
-    // ── Spreads (public read + public submission) ────────────────────────────────
+    // ── Spreads (public read + public submission; copying one is the signed-in
+    // user's own, into My Spreads) ──────────────────────────────────────────────
     $app->group('/spreads', function (RouteCollectorProxy $group) {
         $group->get('[/{spread_id}[/]]', SpreadController::class . ':getSpread');
         $group->post('[/]', SpreadController::class . ':submitSpread');
+        $group->post('/{spread_id}/copy[/]', SpreadController::class . ':copySpread')->add(UserAuth::class);
     });
 
     // ── Contact form (public submission) ─────────────────────────────────────────
@@ -286,6 +292,13 @@ return function (ContainerInterface $container, bool $is_production): App {
         $group->post('/spreads[/]', AdminSpreadController::class . ':createSpread');
         $group->put('/spreads/{spread_id}[/]', AdminSpreadController::class . ':updateSpread');
         $group->delete('/spreads/{spread_id}[/]', AdminSpreadController::class . ':deleteSpread');
+
+        // Spread library categories. The static /order route before {category_id}.
+        $group->get('/spread-categories[/]', AdminSpreadCategoryController::class . ':list');
+        $group->post('/spread-categories[/]', AdminSpreadCategoryController::class . ':create');
+        $group->put('/spread-categories/order[/]', AdminSpreadCategoryController::class . ':reorder');
+        $group->patch('/spread-categories/{category_id}[/]', AdminSpreadCategoryController::class . ':rename');
+        $group->delete('/spread-categories/{category_id}[/]', AdminSpreadCategoryController::class . ':delete');
 
         // Pending Spreads (user submissions awaiting approval)
         $group->get('/pending-spreads[/]', AdminSpreadController::class . ':getPendingSpreads');

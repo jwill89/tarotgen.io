@@ -36,10 +36,10 @@ const listed = () =>
     (o) => o.querySelector('.myst-combobox__item-name')?.textContent ?? o.textContent.trim(),
   )
 
-async function mountPicker(modelValue: SpreadOption | null = null) {
+async function mountPicker(modelValue: SpreadOption | null = null, list = options) {
   // The star is wrapped in a Tooltip, which needs the provider App.vue mounts.
   const { wrapper } = await mountWithApp(TooltipProvider, {
-    slots: { default: () => h(SpreadComboBox, { options, modelValue, id: 'spread-picker' }) },
+    slots: { default: () => h(SpreadComboBox, { options: list, modelValue, id: 'spread-picker' }) },
   })
   const picker = wrapper.getComponent(SpreadComboBox)
   return { picker, input: picker.get('input') }
@@ -93,6 +93,64 @@ describe('SpreadComboBox', () => {
       'Celtic Cross',
       'Single Card',
     ])
+  })
+
+  it("groups the public spreads under their library categories, in the categories' order", async () => {
+    const inCategory = (o: SpreadOption, category: string, categoryOrder: number) => ({
+      ...o,
+      category,
+      categoryOrder,
+    })
+    const { input } = await mountPicker(null, [
+      inCategory(celtic, 'General', 1),
+      inCategory(threeCard, 'General', 1),
+      inCategory(single, 'Self-reflection', 5),
+      option('public-4', 'Two Hearts', 2, {
+        spread_id: 4,
+        category: 'Love & relationships',
+        categoryOrder: 2,
+      }),
+      // Given without a category: after the rest.
+      option('public-5', 'Untold', 2, { spread_id: 5 }),
+      mine,
+    ])
+    await openList(input)
+
+    const groups = [...document.body.querySelectorAll('.myst-combobox__group')].map(
+      (g) => g.textContent,
+    )
+    expect(groups).toEqual([
+      'Favorites',
+      'My Spreads',
+      'General',
+      'Love & relationships',
+      'Self-reflection',
+      'Public Spreads',
+    ])
+    // A favourite is listed once, under Favorites.
+    expect(listed()).toEqual([
+      FREE_DRAW,
+      'Three Card',
+      'My Morning Draw',
+      'Celtic Cross',
+      'Two Hearts',
+      'Single Card',
+      'Untold',
+    ])
+  })
+
+  it('keeps the category groups while searching, dropping the empty ones', async () => {
+    const { input } = await mountPicker(null, [
+      { ...celtic, category: 'General', categoryOrder: 1 },
+      { ...single, category: 'Self-reflection', categoryOrder: 5 },
+    ])
+
+    await search(input, 'single')
+
+    expect(
+      [...document.body.querySelectorAll('.myst-combobox__group')].map((g) => g.textContent),
+    ).toEqual(['Self-reflection'])
+    expect(listed()).toEqual(['Single Card'])
   })
 
   it('counts the cards in each spread', async () => {

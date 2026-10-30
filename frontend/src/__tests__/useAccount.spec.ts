@@ -24,6 +24,27 @@ describe('useAccount.listReadingsPage', () => {
     expect(res).toEqual({ ok: true, readings: [{ reading_id: 'a' }], total: 60 })
   })
 
+  it('sends the filters set, and the browser time zone with a date', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(pageResponse([], '0'))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await useAccount().listReadingsPage(1, 25, {
+      q: 'moon',
+      deck_id: 3,
+      spread: 'Celtic Cross',
+      tag: 'career',
+      from: '2026-03-01',
+      to: '',
+      daily: 'exclude',
+    })
+    await useAccount().listReadingsPage(1, 25, { q: '', deck_id: null, spread: '', daily: '' })
+
+    expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+      '/api/account/readings?limit=25&offset=0&q=moon&deck_id=3&spread=Celtic+Cross&tag=career&from=2026-03-01&daily=exclude&tz=UTC',
+      '/api/account/readings?limit=25&offset=0',
+    ])
+  })
+
   it('still pages sensibly if a proxy strips the header', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(pageResponse([{}, {}], null)))
 
@@ -45,6 +66,40 @@ describe('useAccount.listReadingsPage', () => {
 function jsonResponse(body: unknown, { ok = true, status = 200 } = {}): Response {
   return { ok, status, json: async () => body } as unknown as Response
 }
+
+describe('useAccount.listTags', () => {
+  it("lists the reader's tags with their counts", async () => {
+    stubApi({ 'GET /account/tags': { body: [{ tag: 'career', count: 2 }] } })
+
+    expect(await useAccount().listTags()).toEqual([{ tag: 'career', count: 2 }])
+  })
+
+  it('has none to offer when they cannot be fetched', async () => {
+    stubApi({ 'GET /account/tags': { status: 401, body: { error: 'Not authenticated' } } })
+
+    expect(await useAccount().listTags()).toEqual([])
+  })
+})
+
+describe('useAccount.listReadingSpreads', () => {
+  it("lists the spreads the reader's readings used, with their counts", async () => {
+    const spreads = [
+      { name: 'Celtic Cross', count: 3 },
+      { name: 'Free Draw', count: 1 },
+    ]
+    stubApi({ 'GET /account/reading-spreads': { body: spreads } })
+
+    expect(await useAccount().listReadingSpreads()).toEqual(spreads)
+  })
+
+  it('has none to offer when they cannot be fetched', async () => {
+    stubApi({
+      'GET /account/reading-spreads': { status: 401, body: { error: 'Not authenticated' } },
+    })
+
+    expect(await useAccount().listReadingSpreads()).toEqual([])
+  })
+})
 
 describe('useAccount changes', () => {
   it('PATCHes reading settings and returns the updated reading', async () => {

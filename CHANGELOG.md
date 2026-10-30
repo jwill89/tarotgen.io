@@ -21,6 +21,49 @@ update its section here in the same commit — no manual tagging.
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-10-31
+
+A journal you can search, readings you can keep private, and a library of
+spreads to browse. No interpretations, as ever: position descriptions say what
+a position asks, never what a card means.
+
+> **Before deploying the backend, run both migrations** (as `www-data`, after
+> `sudo tarotgen-backup`): `php db/migrate_reading_journal.php` and
+> `php db/migrate_spread_library.php`. Every reading and spread read needs the
+> new columns.
+
+### Added
+
+- **Journal fields.** A reading can record the question asked, who it was for,
+  and tags. They're yours alone: never shown on a shared reading or its link
+  preview. Set them when drawing or later, on the reading or in My Readings.
+- **Find your readings.** My Readings has a filter bar: search (name, notes,
+  question, who it was for), deck, spread, tag, dates and daily cards. Filters
+  stay in the address, so Back works.
+- **Who can open a reading:** anyone with the link (the default), anyone with
+  the password, or **private** (only you; everyone else sees "not found", and
+  its link preview stays generic).
+- **Guests can have a reading deleted sooner:** after 1, 7 or 30 days, instead
+  of the usual year. The privacy page says so.
+- **Spreads library** (`/spreads`): browse the public spreads by category, search
+  them, preview each layout and its positions, then **Draw with this spread** or
+  **Copy to My Spreads**. "Spreads" replaces "Create a Spread" in the top menu;
+  the library links to it.
+- **Position descriptions:** each position in a spread can say what it asks
+  ("What's blocking you"). They show while drawing, on the reading and in print.
+- New Draw's spread picker groups public spreads by category.
+- **FFXIV plugin 0.7.0:** its spread pickers group by category too, and the
+  reading panel shows position descriptions. (Released separately; it also
+  works with older servers, without the grouping.)
+- **Admin:** a category manager (add, rename, reorder, remove; a category still
+  holding spreads can't be removed), a category on every public spread, and a
+  "Publish in" choice when approving a submitted spread.
+
+### Changed
+
+- The journal export includes question, querent, tags and who can open each
+  reading; the CSV gains those columns after Reading Name.
+
 ## [5.1.0] — 2026-10-30
 
 The first features on the new foundation: a daily card, a view of which cards
@@ -673,7 +716,8 @@ Initial release.
 - Server-rendered PHP tarot reading generator with a jQuery front-end and a
   lightbox-based card viewer.
 
-[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.1.0...HEAD
+[Unreleased]: https://github.com/jwill89/tarot-site/compare/v5.2.0...HEAD
+[5.2.0]: https://github.com/jwill89/tarot-site/compare/v5.1.0...v5.2.0
 [5.1.0]: https://github.com/jwill89/tarot-site/compare/v5.0.0...v5.1.0
 [5.0.0]: https://github.com/jwill89/tarot-site/compare/v4.1.0...v5.0.0
 [4.1.0]: https://github.com/jwill89/tarot-site/compare/v4.0.0...v4.1.0

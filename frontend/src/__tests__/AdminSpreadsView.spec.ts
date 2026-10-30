@@ -22,8 +22,9 @@ import {
   valueOf,
   typeInto,
   apiCalls,
+  choose,
 } from './helpers/page'
-import type { PendingSpread, Spread, SpreadPosition } from '@/types'
+import type { PendingSpread, Spread, SpreadCategory, SpreadPosition } from '@/types'
 
 const position = (order: number, title: string, x = 20 * order, y = 50): SpreadPosition => ({
   order,
@@ -33,13 +34,37 @@ const position = (order: number, title: string, x = 20 * order, y = 50): SpreadP
   rotation: 0,
 })
 
-const spread = (spread_id: number, name: string, positions: SpreadPosition[]): Spread => ({
-  spread_id,
+const category = (category_id: number, name: string, sort_order: number, spread_count = 0) => ({
+  category_id,
   name,
-  description: `About ${name}`,
-  card_count: positions.length,
-  positions,
+  sort_order,
+  spread_count,
 })
+const categories: SpreadCategory[] = [
+  category(1, 'General', 1, 2),
+  category(2, 'Love & relationships', 2, 1),
+  category(3, 'Career', 3),
+]
+
+const spread = (
+  spread_id: number,
+  name: string,
+  positions: SpreadPosition[],
+  category_id = 1,
+): Spread => {
+  // Its category's name and place, as the API joins them in.
+  const joined = categories.find((c) => c.category_id === category_id)
+  return {
+    spread_id,
+    name,
+    description: `About ${name}`,
+    card_count: positions.length,
+    category_id,
+    category_name: joined?.name ?? '',
+    category_sort_order: joined?.sort_order ?? 0,
+    positions,
+  }
+}
 
 const pendingSpread = (
   pending_id: number,
@@ -57,11 +82,12 @@ const pendingSpread = (
   ...overrides,
 })
 
-const threeCard = spread(1, 'Three Card', [
-  position(1, 'Past'),
-  position(2, 'Present'),
-  position(3, 'Future'),
-])
+const threeCard = spread(
+  1,
+  'Three Card',
+  [position(1, 'Past'), position(2, 'Present'), position(3, 'Future')],
+  2,
+)
 const celtic = spread(2, 'Celtic Cross', [position(1, 'Situation'), position(2, 'Challenge')])
 const single = spread(3, 'Single Card', [position(1, 'Answer')])
 const spreads = [celtic, single, threeCard]
@@ -76,6 +102,7 @@ const anonymous = pendingSpread(6, 'Quick Look', { submitter: '', user_id: null 
 
 const loads = (approved: Spread[] = spreads, pending: PendingSpread[] = []) => ({
   'GET /admin/spreads': { body: approved },
+  'GET /admin/spread-categories': { body: categories },
   'GET /admin/pending-spreads': { body: pending },
 })
 
@@ -117,14 +144,14 @@ describe('admin SpreadsView', () => {
   afterEach(cleanup)
 
   describe('the spread list', () => {
-    it('lists the spreads by ID with their card counts', async () => {
+    it('lists the spreads by ID with their categories and card counts', async () => {
       stubApi(loads())
       await mountPage(SpreadsView, { path: '/admin/spreads' })
 
       expect(tableRows(spreadsTable())).toEqual([
-        ['1', 'Three Card', '3', ''],
-        ['2', 'Celtic Cross', '2', ''],
-        ['3', 'Single Card', '1', ''],
+        ['1', 'Three Card', 'Love & relationships', '3', ''],
+        ['2', 'Celtic Cross', 'General', '2', ''],
+        ['3', 'Single Card', 'General', '1', ''],
       ])
       expect(document.body.textContent).not.toContain('No spreads yet.')
     })
@@ -139,16 +166,19 @@ describe('admin SpreadsView', () => {
       )
     })
 
-    it('filters by name or ID as the admin types', async () => {
+    it('filters by name, category or ID as the admin types', async () => {
       stubApi(loads())
       await mountPage(SpreadsView, { path: '/admin/spreads' })
-      const search = labelled('Search spreads by name or ID...')
+      const search = labelled('Search spreads by name, category or ID...')
 
       await typeInto(search, 'celtic')
       expect(column(1, spreadsTable())).toEqual(['Celtic Cross'])
 
       await typeInto(search, '3')
       expect(column(1, spreadsTable())).toEqual(['Single Card'])
+
+      await typeInto(search, 'love')
+      expect(column(1, spreadsTable())).toEqual(['Three Card'])
     })
 
     it('sorts by a column, and reverses on a second click', async () => {
@@ -161,11 +191,19 @@ describe('admin SpreadsView', () => {
       await click(header('Cards', spreadsTable()))
       await click(header('Cards', spreadsTable()))
       expect(column(1, spreadsTable())).toEqual(['Three Card', 'Celtic Cross', 'Single Card'])
+
+      // By the categories' own order: General before Love & relationships.
+      await click(header('Category', spreadsTable()))
+      expect(column(2, spreadsTable())).toEqual(['General', 'General', 'Love & relationships'])
     })
 
     it('drops to the login page when the session has expired', async () => {
       const expired = { status: 401, body: { error: 'Unauthorized' } }
-      stubApi({ 'GET /admin/spreads': expired, 'GET /admin/pending-spreads': expired })
+      stubApi({
+        'GET /admin/spreads': expired,
+        'GET /admin/spread-categories': expired,
+        'GET /admin/pending-spreads': expired,
+      })
       const { router } = await mountPage(SpreadsView, { path: '/admin/spreads' })
 
       // The login route's component loads lazily, so the navigation lands a beat later.
@@ -239,6 +277,7 @@ describe('admin SpreadsView', () => {
       let approved = false
       const api = stubApi({
         'GET /admin/spreads': () => ({ body: approved ? [...spreads, published] : spreads }),
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': () => ({ body: approved ? [] : [crossroads] }),
         'POST /admin/pending-spreads/5/approve': () => {
           approved = true
@@ -248,35 +287,65 @@ describe('admin SpreadsView', () => {
       await mountPage(SpreadsView, { path: '/admin/spreads' })
       api.mockClear()
 
-      await click(button('Approve', row('Crossroads')))
+      // From the row, into the first category (the server's default too).
+      await click(button('Approve into General', row('Crossroads')))
 
       expect(apiCalls(api)).toEqual([
         ['POST', '/api/admin/pending-spreads/5/approve', {}],
         ['GET', '/api/admin/spreads'],
         ['GET', '/api/admin/pending-spreads'],
+        ['GET', '/api/admin/spread-categories'],
       ])
       expect(toasts()).toEqual(['Spread approved and published.'])
       expect(column(1, spreadsTable())).toContain('Crossroads')
       expect(document.body.textContent).toContain('No pending submissions right now.')
     })
 
-    it('approves from the preview and closes it', async () => {
+    it('approves from the preview into the category chosen there, and closes it', async () => {
       let approved = false
-      stubApi({
+      const api = stubApi({
         'GET /admin/spreads': { body: spreads },
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': () => ({ body: approved ? [] : [crossroads] }),
         'POST /admin/pending-spreads/5/approve': () => {
           approved = true
-          return { status: 201, body: spread(4, 'Crossroads', crossroads.positions) }
+          return { status: 201, body: spread(4, 'Crossroads', crossroads.positions, 3) }
         },
       })
       await mountPage(SpreadsView, { path: '/admin/spreads' })
       await click(button('Preview', row('Crossroads')))
 
+      expect(labelled('Publish in').textContent.trim()).toBe('General')
+      await choose(labelled('Publish in'), 'Career')
       await click(button('Approve', preview()))
 
+      expect(apiCalls(api)).toContainEqual([
+        'POST',
+        '/api/admin/pending-spreads/5/approve',
+        { category_id: 3 },
+      ])
       expect(toasts()).toEqual(['Spread approved and published.'])
       expect(dialog('Crossroads')).toBeNull()
+    })
+
+    it('shows what each submitted position asks, under its title', async () => {
+      stubApi(
+        loads(spreads, [
+          pendingSpread(7, 'Crossroads', {
+            positions: [
+              { ...position(1, 'Left'), description: 'The road you know' },
+              position(2, 'Right'),
+            ],
+          }),
+        ]),
+      )
+      await mountPage(SpreadsView, { path: '/admin/spreads' })
+
+      await click(button('Preview', row('Crossroads')))
+
+      expect(
+        [...preview().querySelectorAll('.pending-position-about')].map((el) => el.textContent),
+      ).toEqual(['The road you know'])
     })
 
     it("keeps the submission queued, preview open, and shows the server's reason when approving fails", async () => {
@@ -316,6 +385,7 @@ describe('admin SpreadsView', () => {
       let rejected = false
       const api = stubApi({
         'GET /admin/spreads': { body: spreads },
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': () => ({ body: rejected ? [] : [crossroads] }),
         'DELETE /admin/pending-spreads/5': () => {
           rejected = true
@@ -340,6 +410,7 @@ describe('admin SpreadsView', () => {
       let rejected = false
       stubApi({
         'GET /admin/spreads': { body: spreads },
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': () => ({ body: rejected ? [] : [crossroads] }),
         'DELETE /admin/pending-spreads/5': () => {
           rejected = true
@@ -377,6 +448,7 @@ describe('admin SpreadsView', () => {
       let saved = false
       const api = stubApi({
         'GET /admin/spreads': () => ({ body: saved ? [...spreads, created] : spreads }),
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': { body: [] },
         'POST /admin/spreads': () => {
           saved = true
@@ -404,9 +476,12 @@ describe('admin SpreadsView', () => {
             description: 'One card for the day.',
             card_count: 1,
             positions: [{ order: 1, title: '', x: 40, y: 40, rotation: 0 }],
+            // A new spread starts in the first category.
+            category_id: 1,
           },
         ],
         ['GET', '/api/admin/spreads'],
+        ['GET', '/api/admin/spread-categories'],
       ])
       expect(toasts()).toEqual(['Spread created.'])
       expect(pageTitle()).toBe('Manage Spreads')
@@ -426,6 +501,8 @@ describe('admin SpreadsView', () => {
       expect(valueOf(labelled('Number of Cards'))).toBe('3')
 
       await typeInto(labelled('Spread Name'), 'Past, Present, Future')
+      expect(labelled('Category').textContent.trim()).toBe('Love & relationships')
+      await choose(labelled('Category'), 'Career')
       api.mockClear()
       await click(button('Save Spread'))
 
@@ -437,6 +514,7 @@ describe('admin SpreadsView', () => {
           description: 'About Three Card',
           card_count: 3,
           positions: threeCard.positions,
+          category_id: 3,
         },
       ])
       expect(toasts()).toEqual(['Spread updated.'])
@@ -493,6 +571,7 @@ describe('admin SpreadsView', () => {
         'GET /admin/spreads': () => ({
           body: deleted ? spreads.filter((s) => s.spread_id !== 2) : spreads,
         }),
+        'GET /admin/spread-categories': { body: categories },
         'GET /admin/pending-spreads': { body: [] },
         'DELETE /admin/spreads/2': () => {
           deleted = true
@@ -508,6 +587,7 @@ describe('admin SpreadsView', () => {
       expect(apiCalls(api)).toEqual([
         ['DELETE', '/api/admin/spreads/2'],
         ['GET', '/api/admin/spreads'],
+        ['GET', '/api/admin/spread-categories'],
       ])
       expect(toasts()).toEqual(['Spread deleted.'])
       expect(column(1, spreadsTable())).toEqual(['Three Card', 'Single Card'])

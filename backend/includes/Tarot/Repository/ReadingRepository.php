@@ -3,8 +3,11 @@
 namespace Tarot\Repository;
 
 use Tarot\Data\ReadingData;
+use Tarot\Data\ReadingFilter;
 use Tarot\Structure\Reading;
+use Tarot\Structure\ReadingSpread;
 use Tarot\Structure\ReadingSummary;
+use Tarot\Structure\ReadingTag;
 
 readonly class ReadingRepository
 {
@@ -18,14 +21,35 @@ readonly class ReadingRepository
     }
 
     /** @return Reading[] */
-    public function listByUser(int $userId, ?int $limit = null, int $offset = 0): array
+    public function listByUser(int $userId, ?int $limit = null, int $offset = 0, ReadingFilter $filter = new ReadingFilter()): array
     {
-        return $this->data->listByUser($userId, $limit, $offset);
+        return $this->data->listByUser($userId, $limit, $offset, $filter);
     }
 
-    public function countByUser(int $userId): int
+    public function countByUser(int $userId, ReadingFilter $filter = new ReadingFilter()): int
     {
-        return $this->data->countByUser($userId);
+        return $this->data->countByUser($userId, $filter);
+    }
+
+    /**
+     * The user's tags with how many readings carry each, alphabetically.
+     *
+     * @return list<ReadingTag>
+     */
+    public function tagCounts(int $userId): array
+    {
+        return $this->data->tagCounts($userId);
+    }
+
+    /**
+     * The spreads the user's readings were laid out in, by name, with how many
+     * readings each, alphabetically.
+     *
+     * @return list<ReadingSpread>
+     */
+    public function spreadCounts(int $userId): array
+    {
+        return $this->data->spreadCounts($userId);
     }
 
     public function save(Reading $reading, ?string $passwordHash = null): ?Reading
@@ -86,5 +110,16 @@ readonly class ReadingRepository
     public function cleanGuest(int $days): int
     {
         return $this->data->cleanGuestOlderThan($days);
+    }
+
+    /**
+     * The nightly retention run: guest readings past their chosen expiry, then
+     * those older than $days. A dry run rolls back what it deleted.
+     *
+     * @return array{expired: int, aged: int}
+     */
+    public function purgeGuests(int $days, bool $dryRun = false): array
+    {
+        return $this->data->purgeGuests($days, $dryRun);
     }
 }

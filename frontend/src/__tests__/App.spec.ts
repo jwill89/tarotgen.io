@@ -54,8 +54,8 @@ describe('App', () => {
           [
             ['Home', 'home'],
             ['New Draw', 'new-reading'],
+            ['Spreads', 'spread-library'],
             ['Recreate Draw', 'custom-reading'],
-            ['Create a Spread', 'submit-spread'],
             ['FFXIV Plugin', 'ffxiv-plugin'],
           ] as const
         ).map(([label, name]) => [label, router.resolve({ name }).href]),
@@ -250,8 +250,8 @@ describe('App', () => {
       expect(mobileLinks(wrapper)).toEqual([
         'Home',
         'New Draw',
+        'Spreads',
         'Recreate Draw',
-        'Create a Spread',
         'FFXIV Plugin',
         'Log In',
       ])

@@ -35,6 +35,7 @@ public sealed class MainWindow : Window, IDisposable
         typeof(MainWindow).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";
 
     private IReadOnlyList<Spread> spreads = Array.Empty<Spread>();
+    private List<SpreadGroup> spreadGroups = new();
     private List<DeckGroup> deckGroups = new();
     private bool catalogRequested;
     private bool catalogLoading;
@@ -330,11 +331,29 @@ public sealed class MainWindow : Window, IDisposable
         if (ImGui.Selectable("Free draw", this.selectedSpread == null))
             SelectSpread(null);
 
-        foreach (var s in this.spreads)
+        DrawSpreadItems("spread", s => s == this.selectedSpread, SelectSpread);
+    }
+
+    /// <summary>
+    /// A spread picker's list after its "Free draw": each category's heading over
+    /// its spreads, or one list with no headings when the API sent no categories.
+    /// </summary>
+    private void DrawSpreadItems(string id, Func<Spread, bool> isSelected, Action<Spread> pick)
+    {
+        foreach (var group in this.spreadGroups)
         {
-            var cards = s.CardCount == 1 ? "1 card" : $"{s.CardCount} cards";
-            if (ImGui.Selectable($"{s.Name}   ({cards})##spread{s.SpreadId}", s == this.selectedSpread))
-                SelectSpread(s);
+            if (group.Header != null)
+            {
+                ImGui.Separator();
+                ImGui.TextDisabled(group.Header);
+            }
+
+            foreach (var s in group.Spreads)
+            {
+                var cards = s.CardCount == 1 ? "1 card" : $"{s.CardCount} cards";
+                if (ImGui.Selectable($"{s.Name}   ({cards})##{id}{s.SpreadId}", isSelected(s)))
+                    pick(s);
+            }
         }
     }
 
@@ -371,6 +390,11 @@ public sealed class MainWindow : Window, IDisposable
         {
             var title = string.IsNullOrWhiteSpace(p.Title) ? $"Position {p.Order}" : p.Title;
             ImGui.TextWrapped($"{p.Order}. {title}");
+            if (!string.IsNullOrWhiteSpace(p.Description))
+            {
+                using (Ui.Body())
+                    Ui.HelpWrapped(p.Description);
+            }
         }
     }
 
@@ -593,22 +617,16 @@ public sealed class MainWindow : Window, IDisposable
             return;
 
         if (ImGui.Selectable("Free draw", this.config.DefaultSpreadId == null))
-        {
-            this.config.DefaultSpreadId = null;
-            this.config.Save(this.pluginInterface);
-            this.defaultsSavedAt = DateTime.UtcNow;
-        }
+            SaveDefaultSpread(null);
 
-        foreach (var s in this.spreads)
-        {
-            var cards = s.CardCount == 1 ? "1 card" : $"{s.CardCount} cards";
-            if (ImGui.Selectable($"{s.Name}   ({cards})##dspread{s.SpreadId}", s.SpreadId == this.config.DefaultSpreadId))
-            {
-                this.config.DefaultSpreadId = s.SpreadId;
-                this.config.Save(this.pluginInterface);
-                this.defaultsSavedAt = DateTime.UtcNow;
-            }
-        }
+        DrawSpreadItems("dspread", s => s.SpreadId == this.config.DefaultSpreadId, s => SaveDefaultSpread(s.SpreadId));
+    }
+
+    private void SaveDefaultSpread(int? spreadId)
+    {
+        this.config.DefaultSpreadId = spreadId;
+        this.config.Save(this.pluginInterface);
+        this.defaultsSavedAt = DateTime.UtcNow;
     }
 
     private void DrawConnectionSection()
@@ -718,7 +736,9 @@ public sealed class MainWindow : Window, IDisposable
                 var spreadsTask = this.api.GetSpreadsAsync(this.api.Token);
                 await Task.WhenAll(decksTask, spreadsTask).ConfigureAwait(false);
 
-                this.spreads = spreadsTask.Result.OrderBy(s => s.CardCount).ThenBy(s => s.Name).ToList();
+                var spreads = spreadsTask.Result.OrderBy(s => s.CardCount).ThenBy(s => s.Name).ToList();
+                this.spreads = spreads;
+                this.spreadGroups = BuildSpreadGroups(spreads);
                 this.deckGroups = BuildDeckGroups(decksTask.Result);
 
                 this.selectedDeck = null;
@@ -740,6 +760,23 @@ public sealed class MainWindow : Window, IDisposable
                 this.catalogLoading = false;
             }
         });
+    }
+
+    /// <summary>
+    /// Public spreads under their library category, in the admins' order, as New
+    /// Draw groups them on the site. An API before 5.2.0 sends no categories: one
+    /// group with no heading, the picker as it always was.
+    /// </summary>
+    private static List<SpreadGroup> BuildSpreadGroups(List<Spread> spreads)
+    {
+        if (spreads.TrueForAll(s => string.IsNullOrWhiteSpace(s.CategoryName)))
+            return [new SpreadGroup(null, spreads)];
+
+        return spreads
+            .GroupBy(s => s.CategoryId)
+            .OrderBy(g => g.First().CategorySortOrder)
+            .Select(g => new SpreadGroup(g.First().CategoryName, g.ToList()))
+            .ToList();
     }
 
     private static List<DeckGroup> BuildDeckGroups(IReadOnlyList<Deck> decks)
@@ -837,4 +874,7 @@ public sealed class MainWindow : Window, IDisposable
     }
 
     private sealed record DeckGroup(string Header, List<Deck> Decks);
+
+    /// <summary>A category's spreads; no <see cref="Header"/> when the API sent no categories.</summary>
+    private sealed record SpreadGroup(string? Header, List<Spread> Spreads);
 }

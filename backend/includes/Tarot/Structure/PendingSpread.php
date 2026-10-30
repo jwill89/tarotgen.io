@@ -24,7 +24,8 @@ class PendingSpread extends AbstractStructure
 
     /**
      * Array of position objects, each shaped:
-     * ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int]
+     * ['order' => int, 'title' => string, 'x' => float, 'y' => float, 'rotation' => int,
+     *  'description' => string (only when it has one)]
      *
      * @var list<array<string,mixed>>
      */

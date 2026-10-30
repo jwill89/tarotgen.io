@@ -67,9 +67,15 @@ CREATE TABLE pending_spreads (
 CREATE TABLE "readings" (
 	"reading_id"	TEXT NOT NULL UNIQUE,
 	"reading_info"	TEXT NOT NULL,
-	"reading_time"	TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, user_id INTEGER DEFAULT NULL REFERENCES users(user_id) ON DELETE CASCADE, hide_user INTEGER NOT NULL DEFAULT 0, reading_name TEXT DEFAULT NULL, password_hash TEXT DEFAULT NULL, reading_notes TEXT DEFAULT NULL, is_final INTEGER NOT NULL DEFAULT 0,
+	"reading_time"	TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, user_id INTEGER DEFAULT NULL REFERENCES users(user_id) ON DELETE CASCADE, hide_user INTEGER NOT NULL DEFAULT 0, reading_name TEXT DEFAULT NULL, password_hash TEXT DEFAULT NULL, reading_notes TEXT DEFAULT NULL, is_final INTEGER NOT NULL DEFAULT 0, question TEXT DEFAULT NULL, querent TEXT DEFAULT NULL, is_private INTEGER NOT NULL DEFAULT 0, expires_at TEXT DEFAULT NULL,
 	PRIMARY KEY("reading_id")
 );
+
+CREATE TABLE reading_tags (
+        reading_id TEXT NOT NULL REFERENCES readings(reading_id) ON DELETE CASCADE,
+        tag        TEXT NOT NULL,
+        PRIMARY KEY (reading_id, tag)
+    );
 
 CREATE TABLE sessions (
         id      TEXT    PRIMARY KEY,
@@ -91,13 +97,29 @@ CREATE TABLE "special_cards" (
             CONSTRAINT fk_special_cards_decks FOREIGN KEY (deck_id) REFERENCES decks (deck_id) ON DELETE CASCADE
         );
 
+CREATE TABLE spread_categories (
+        category_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name        TEXT    NOT NULL COLLATE NOCASE UNIQUE,
+        sort_order  INTEGER NOT NULL DEFAULT 0
+    );
+
+-- The starting list (db/migrate_spread_library.php seeds the same): every public
+-- spread is in one, and spreads.category_id defaults to General's id 1.
+INSERT INTO spread_categories (name, sort_order) VALUES
+    ('General', 1),
+    ('Love & relationships', 2),
+    ('Career', 3),
+    ('Decisions', 4),
+    ('Self-reflection', 5),
+    ('Seasonal', 6);
+
 CREATE TABLE spreads (
         spread_id   INTEGER PRIMARY KEY AUTOINCREMENT,
         name        TEXT    NOT NULL DEFAULT '',
         description TEXT    NOT NULL DEFAULT '',
         card_count  INTEGER NOT NULL DEFAULT 1,
         positions   TEXT    NOT NULL DEFAULT '[]'
-    );
+    , category_id INTEGER NOT NULL DEFAULT 1 REFERENCES spread_categories(category_id));
 
 CREATE TABLE user_favorite_decks (
         user_id    INTEGER NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
@@ -227,9 +249,15 @@ CREATE INDEX idx_readings_time ON readings (reading_time, reading_id);
 
 CREATE INDEX idx_readings_user_time ON readings (user_id, reading_time, reading_id);
 
+CREATE INDEX idx_readings_expires ON readings (expires_at) WHERE expires_at IS NOT NULL;
+
+CREATE INDEX idx_reading_tags_tag ON reading_tags (tag, reading_id);
+
 CREATE INDEX idx_sessions_expires ON sessions(expires);
 
 CREATE INDEX idx_sessions_user ON sessions (user_id);
+
+CREATE INDEX idx_spreads_category ON spreads (category_id);
 
 CREATE INDEX idx_user_spreads_user ON user_spreads (user_id);
 

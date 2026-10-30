@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace Tarot\Tests\Http;
 
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\CoversTrait;
 use Routes\Internal\AdminSpreadController;
 use Tarot\Data\FavoriteSpreadData;
+use Tarot\Data\NormalizesPositions;
 use Tarot\Data\PendingSpreadData;
 use Tarot\Data\SpreadData;
 use Tarot\Repository\PendingSpreadRepository;
@@ -14,14 +16,16 @@ use Tarot\Repository\SpreadRepository;
 use Tarot\Structure\Spread;
 
 /**
- * The public spreads as an admin manages them, and the queue of visitor
- * submissions: approving one publishes it, rejecting one drops it.
+ * The public spreads as an admin manages them, each in one library category,
+ * and the queue of visitor submissions: approving one publishes it (in the
+ * category chosen, or the first), rejecting one drops it.
  */
 #[CoversClass(AdminSpreadController::class)]
 #[CoversClass(SpreadRepository::class)]
 #[CoversClass(SpreadData::class)]
 #[CoversClass(PendingSpreadRepository::class)]
 #[CoversClass(PendingSpreadData::class)]
+#[CoversTrait(NormalizesPositions::class)]
 final class AdminSpreadsTest extends HttpTestCase
 {
     private const array POSITION = ['order' => 1, 'title' => 'Past', 'x' => 25, 'y' => 50, 'rotation' => 0];
@@ -39,8 +43,8 @@ final class AdminSpreadsTest extends HttpTestCase
             'name' => 'Three Card',
             'description' => 'Past, present, future',
             'positions' => [
-                ['order' => 1, 'title' => ' Past ', 'x' => -10, 'y' => 50, 'rotation' => -90],
-                ['order' => 2, 'title' => 'Present', 'x' => 50, 'y' => 150, 'rotation' => 450],
+                ['order' => 1, 'title' => ' Past ', 'x' => -10, 'y' => 50, 'rotation' => -90, 'description' => ' What led here '],
+                ['order' => 2, 'title' => 'Present', 'x' => 50, 'y' => 150, 'rotation' => 450, 'description' => ''],
                 'not a position',
             ],
         ]);
@@ -49,9 +53,11 @@ final class AdminSpreadsTest extends HttpTestCase
         $this->assertDocumented('post', '/admin/spreads', 201, $spread);
         $this->assertSame(2, $spread['card_count']);
         $this->assertSame([
-            ['order' => 1, 'title' => 'Past', 'x' => 0, 'y' => 50, 'rotation' => 270],
+            ['order' => 1, 'title' => 'Past', 'x' => 0, 'y' => 50, 'rotation' => 270, 'description' => 'What led here'],
             ['order' => 2, 'title' => 'Present', 'x' => 50, 'y' => 100, 'rotation' => 90],
         ], $spread['positions']);
+        // Named into no category, so in the first: General.
+        $this->assertSame(1, $spread['category_id']);
 
         $list = $this->assertJsonResponse(200, $this->get('/admin/spreads'));
         $this->assertDocumented('get', '/admin/spreads', 200, $list);
@@ -180,6 +186,72 @@ final class AdminSpreadsTest extends HttpTestCase
 
         $this->assertSame(1, $this->rowCount('pending_spreads'));
         $this->assertSame(0, $this->rowCount('spreads'));
+    }
+
+    public function testASpreadIsCreatedInTheCategoryChosenAndMovedBetweenThem(): void
+    {
+        $created = $this->assertJsonResponse(201, $this->post('/admin/spreads', [
+            'name' => 'Heart to Heart', 'category_id' => 2, 'positions' => [self::POSITION],
+        ]));
+        $this->assertSame([2, 'Love & relationships', 2], [$created['category_id'], $created['category_name'], $created['category_sort_order']]);
+
+        $moved = $this->assertJsonResponse(200, $this->request('PUT', "/admin/spreads/{$created['spread_id']}", ['category_id' => '5']));
+        $this->assertSame(['Heart to Heart', 5, 'Self-reflection', 5], [$moved['name'], $moved['category_id'], $moved['category_name'], $moved['category_sort_order']]);
+        $this->assertSame([['category_id' => 5]], $this->rows('SELECT category_id FROM spreads'));
+        $this->assertSame(['Self-reflection'], array_column($this->assertJsonResponse(200, $this->get('/admin/spreads')), 'category_name'));
+    }
+
+    public function testAnUnknownCategoryIsRefused(): void
+    {
+        $spread = $this->spread('Three Card', 3);
+        $unknown = ['error' => 'Unknown spread category.'];
+
+        foreach ([99, 0, 'Career', ''] as $categoryId) {
+            $label = var_export($categoryId, true);
+            $this->assertSame($unknown, $this->assertJsonResponse(400, $this->post('/admin/spreads', ['name' => 'New', 'category_id' => $categoryId])), "create {$label}");
+            $this->assertSame($unknown, $this->assertJsonResponse(400, $this->request('PUT', "/admin/spreads/{$spread->spread_id}", ['category_id' => $categoryId])), "update {$label}");
+        }
+
+        $this->assertSame([['name' => 'Three Card', 'category_id' => 1]], $this->rows('SELECT name, category_id FROM spreads'));
+    }
+
+    public function testApprovingASubmissionPublishesItInTheCategoryChosen(): void
+    {
+        $pending = $this->service(PendingSpreadData::class)->store(['name' => 'Crossroads', 'positions' => [self::POSITION]]);
+        $this->assertNotNull($pending);
+
+        $spread = $this->assertJsonResponse(201, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve", ['category_id' => 4]));
+
+        $this->assertDocumented('post', '/admin/pending-spreads/{pending_id}/approve', 201, $spread);
+        $this->assertSame(['Crossroads', 4], [$spread['name'], $spread['category_id']]);
+    }
+
+    public function testApprovingIntoAnUnknownCategoryLeavesTheSubmissionQueued(): void
+    {
+        $pending = $this->service(PendingSpreadData::class)->store(['name' => 'Crossroads', 'positions' => [self::POSITION]]);
+        $this->assertNotNull($pending);
+
+        $this->assertSame(
+            ['error' => 'Unknown spread category.'],
+            $this->assertJsonResponse(400, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve", ['category_id' => 99]))
+        );
+
+        $this->assertSame(1, $this->rowCount('pending_spreads'));
+        $this->assertSame(0, $this->rowCount('spreads'));
+    }
+
+    public function testASubmissionsPositionDescriptionsArePublishedWithIt(): void
+    {
+        $pending = $this->service(PendingSpreadData::class)->store(['name' => 'Crossroads', 'positions' => [
+            ['order' => 1, 'title' => 'Left', 'description' => 'The road you know'],
+            ['order' => 2, 'title' => 'Right'],
+        ]]);
+        $this->assertNotNull($pending);
+
+        $spread = $this->assertJsonResponse(201, $this->post("/admin/pending-spreads/{$pending->pending_id}/approve"));
+
+        $this->assertSame('The road you know', $spread['positions'][0]['description']);
+        $this->assertArrayNotHasKey('description', $spread['positions'][1]);
     }
 
     private function spread(string $name, int $cards): Spread

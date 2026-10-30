@@ -49,8 +49,11 @@ readonly class PendingSpreadRepository
      * Approve a submission: copy it into the official `spreads` table (which
      * assigns a real spread_id) and remove it from the queue. The copy + delete
      * run in a single transaction so a failure never leaves a half-applied state.
+     *
+     * @param ?int $categoryId The library category to list it under; null for the
+     *                         first category (the caller has checked it exists).
      */
-    public function approve(int $pending_id): ?Spread
+    public function approve(int $pending_id, ?int $categoryId = null): ?Spread
     {
         $results = $this->data->retrieve($pending_id);
         $pending = $results[0] ?? null;
@@ -67,6 +70,7 @@ readonly class PendingSpreadRepository
                 'description' => $pending->description,
                 'card_count'  => $pending->card_count,
                 'positions'   => $pending->positions,
+                'category_id' => $categoryId,
             ]);
 
             if ($spread === null) {

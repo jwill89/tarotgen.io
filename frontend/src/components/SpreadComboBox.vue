@@ -4,8 +4,9 @@
  * `options` + `modelValue` (a SpreadOption or null), `update:modelValue`, and a
  * `free-draw` emit. The null "No Spread (Free Draw)" choice is modelled as a
  * sentinel value so it can live in Reka's value-keyed selection, then mapped back
- * to null + the `free-draw` emit. Favourites / My Spreads / Public grouping and
- * the in-item favourite star are preserved.
+ * to null + the `free-draw` emit. Favourites, then My Spreads, then the public
+ * spreads under their library categories (in the categories' order), each item
+ * with its favourite star.
  */
 import { byPrefixAndName } from '@/fontawesome'
 import { ref, computed } from 'vue'
@@ -79,16 +80,37 @@ const showFreeDraw = computed(() => {
   return !q || FREE_DRAW_LABEL.toLowerCase().includes(q)
 })
 
-const groupedOptions = computed(() => {
+interface OptionGroup {
+  key: string
+  label: string
+  items: SpreadOption[]
+}
+
+const groupedOptions = computed<OptionGroup[]>(() => {
   const favs = filtered.value.filter((o) => o.isFavorite)
   const personal = filtered.value.filter((o) => o.type === 'personal' && !o.isFavorite)
   const pub = filtered.value.filter((o) => o.type === 'public' && !o.isFavorite)
-  const groups: { label: string; items: SpreadOption[] }[] = []
-  if (favs.length > 0) groups.push({ label: 'Favorites', items: favs })
-  if (personal.length > 0) groups.push({ label: 'My Spreads', items: personal })
-  if (pub.length > 0) groups.push({ label: 'Public Spreads', items: pub })
-  return groups
+  const groups: OptionGroup[] = []
+  if (favs.length > 0) groups.push({ key: 'favorites', label: 'Favorites', items: favs })
+  if (personal.length > 0) groups.push({ key: 'personal', label: 'My Spreads', items: personal })
+  return [...groups, ...publicGroups(pub)]
 })
+
+// Public spreads under their library category, in the categories' order. One
+// given without a category goes under "Public Spreads", after the rest.
+function publicGroups(options: SpreadOption[]): OptionGroup[] {
+  const byCategory = new Map<string, { order: number; items: SpreadOption[] }>()
+  for (const option of options) {
+    const label = option.category ?? 'Public Spreads'
+    const order = option.category ? (option.categoryOrder ?? 0) : Number.POSITIVE_INFINITY
+    const group = byCategory.get(label)
+    if (group) group.items.push(option)
+    else byCategory.set(label, { order, items: [option] })
+  }
+  return [...byCategory.entries()]
+    .sort(([, a], [, b]) => a.order - b.order)
+    .map(([label, { items }]) => ({ key: 'public-' + label, label, items }))
+}
 
 function displayValue(val: SpreadOption | undefined): string {
   if (!val) return ''
@@ -169,7 +191,7 @@ function onToggleFavorite(option: SpreadOption): void {
 
           <ComboboxGroup
             v-for="group in groupedOptions"
-            :key="group.label"
+            :key="group.key"
             class="myst-combobox__group-wrap"
           >
             <ComboboxLabel class="myst-combobox__group">{{ group.label }}</ComboboxLabel>

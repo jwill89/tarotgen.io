@@ -22,6 +22,8 @@ export type DeckSystemWithCards = Schemas['DeckSystemWithCards']
 export type SpecialCard = Schemas['SpecialCard']
 export type SpreadPosition = Schemas['SpreadPosition']
 export type Spread = Schemas['Spread']
+/** A heading the public spread library groups spreads under, as admins keep the list (GET /admin/spread-categories). */
+export type SpreadCategory = Schemas['SpreadCategory']
 export type PendingSpread = Schemas['PendingSpread']
 export type UserSpread = Schemas['UserSpread']
 export type FavoriteSpread = Schemas['FavoriteSpread']
@@ -41,6 +43,12 @@ export type AccountReading = Schemas['Reading']
 export type ReadingSummary = Schemas['ReadingSummary']
 export type ReadingInfo = Schemas['ReadingInfo']
 export type DrawCard = Schemas['DrawCard']
+/** Who can open a reading: anyone with the link, anyone with its password, or only its owner. */
+export type Visibility = Schemas['Reading']['visibility']
+/** One of the user's reading tags with how many readings carry it (GET /account/tags). */
+export type ReadingTag = Schemas['ReadingTag']
+/** A spread the user's readings were laid out in, by name, with how many (GET /account/reading-spreads). */
+export type ReadingSpread = Schemas['ReadingSpread']
 
 /** How often each card turned up in the user's readings (GET /account/card-frequency). */
 export type CardFrequency = Schemas['CardFrequency']
@@ -75,6 +83,18 @@ export interface SpreadOption {
   positions: SpreadPosition[]
   type: 'public' | 'personal'
   isFavorite?: boolean
+  /** A public spread's library category, and that category's place in the list. */
+  category?: string
+  categoryOrder?: number
+}
+
+/** What the spread editor loads and saves: a public, personal or submitted spread's fields. */
+export interface SpreadDraft {
+  name: string
+  description: string
+  positions: SpreadPosition[]
+  /** A public spread's library category (admin only). */
+  category_id?: number
 }
 
 /**

@@ -78,6 +78,8 @@ function reading(overrides: Partial<Reading> = {}): Reading {
     is_final: false,
     can_draw_more: false,
     locked: false,
+    visibility: 'link',
+    expires_at: null,
     ...overrides,
   }
 }
@@ -333,6 +335,32 @@ describe('ReadingView', () => {
         'Present Not yet revealed',
         'Future Not yet revealed',
       ])
+    })
+
+    it('says under each position what it asks, where the spread says, on screen and on paper', async () => {
+      const spread = spreadInfo.spread
+      if (!spread) throw new Error('spreadInfo has a spread')
+      const described: ReadingInfo = {
+        ...spreadInfo,
+        spread: {
+          ...spread,
+          positions: spread.positions.map((p) =>
+            p.order === 1 ? { ...p, description: 'What led here' } : p,
+          ),
+        },
+      }
+      loads(reading({ reading_info: described }))
+      const { wrapper } = await openReading()
+
+      expect(wrapper.findAll('.spread-detail-about').map((d) => d.text())).toEqual([
+        'What led here',
+      ])
+      expect(detailRows(wrapper)[0]).toBe('Past Not yet revealed What led here')
+      expect(
+        wrapper
+          .findAll('.reading-print-cards tbody tr')
+          .map((row) => words(row.findAll('td')[1].element)),
+      ).toEqual(['Past — What led here', 'Present', 'Future'])
     })
 
     it('reveals a card clicked on the spread, then enlarges it', async () => {
@@ -870,5 +898,152 @@ describe('ReadingView', () => {
 
     expect(meta(wrapper)['Reading ID']).toBe('xyz789')
     expect(captions(wrapper)).toEqual(['Card 1'])
+  })
+
+  describe('the journal and who can open it', () => {
+    const mine = (overrides: Partial<Reading> = {}) =>
+      reading({
+        is_owner: true,
+        reader: 'Reader',
+        question: 'Should I take the job?',
+        querent: 'My sister',
+        tags: ['career', 'monthly'],
+        hide_user: false,
+        ...overrides,
+      })
+
+    /** The open dialog titled "Edit Reading". */
+    const editDialog = () =>
+      [...document.body.querySelectorAll<HTMLElement>('[role="dialog"]')].find((d) =>
+        d.textContent.includes('Edit Reading'),
+      )
+
+    function field(label: string): HTMLInputElement {
+      const found = [...document.body.querySelectorAll('label')].find(
+        (l) => l.textContent.trim() === label,
+      )
+      const control = found && document.getElementById(found.htmlFor)
+      if (!(control instanceof HTMLInputElement)) throw new Error(`No "${label}" field`)
+      return control
+    }
+
+    it('shows the owner their question, who it was for, their tags and who can open it', async () => {
+      signIn(testUser())
+      loads(mine())
+      const { wrapper } = await openReading()
+
+      expect(meta(wrapper)).toMatchObject({
+        Question: 'Should I take the job?',
+        For: 'My sister',
+        Tags: 'career monthly',
+        'Who Can Open It': 'Anyone with the link Edit',
+      })
+    })
+
+    it('shows someone the reading was shared with none of it', async () => {
+      loads(reading({ reader: 'Reader' }))
+      const { wrapper } = await openReading()
+
+      for (const label of ['Question', 'For', 'Tags', 'Who Can Open It']) {
+        expect(meta(wrapper)).not.toHaveProperty(label)
+      }
+      expect(hasButton('Edit')).toBe(false)
+    })
+
+    it('replaces the link to share with a note on a private reading', async () => {
+      signIn(testUser())
+      loads(mine({ visibility: 'private' }))
+      const { wrapper } = await openReading()
+
+      expect(meta(wrapper)['Reading URL']).toBe('Private: only you can open this reading.')
+      expect(meta(wrapper)['Who Can Open It']).toBe('Private Edit')
+      expect(hasButton('Copy')).toBe(false)
+    })
+
+    it('says when a guest reading will be deleted, to anyone looking', async () => {
+      loads(reading({ expires_at: '2026-10-08 12:30:00' }))
+      const { wrapper } = await openReading()
+
+      expect(wrapper.get('.reading-expiry').text()).toBe(
+        `This reading will be deleted on ${formatDateTime('2026-10-08 12:30:00')}. Its link stops working then.`,
+      )
+    })
+
+    it('says nothing about deletion when the reading keeps the usual retention', async () => {
+      loads(reading())
+      const { wrapper } = await openReading()
+
+      expect(wrapper.find('.reading-expiry').exists()).toBe(false)
+    })
+
+    it('lets the owner edit the journal and make it private, then shows what was saved', async () => {
+      signIn(testUser({ display_name: 'Reader' }))
+      const api = loads(mine(), {
+        'GET /account/tags': { body: [] },
+        'PATCH /account/readings/abc123': (sent) => ({
+          body: {
+            ...(sent as object),
+            reading_id: 'abc123',
+            reading_info: freeDrawInfo,
+            reading_time: '2026-10-01 12:30:00',
+            user_id: 7,
+            is_final: false,
+            password_protected: false,
+            daily_card_day: null,
+            expires_at: null,
+            reading_name: null,
+            reading_notes: null,
+            tags: ['career', 'monthly'],
+          },
+        }),
+      })
+      const { wrapper } = await openReading()
+
+      await click('Edit')
+      await vi.waitFor(() => expect(editDialog()).toBeDefined())
+      const question = field('Question')
+      question.value = 'Will it last?'
+      question.dispatchEvent(new Event('input'))
+      await click('Private')
+      await click('Save')
+
+      const patch = api.mock.calls.find(([url]) => url === '/api/account/readings/abc123')
+      expect(JSON.parse(String(patch?.[1]?.body))).toMatchObject({
+        question: 'Will it last?',
+        querent: 'My sister',
+        tags: ['career', 'monthly'],
+        visibility: 'private',
+        hide_user: false,
+      })
+      expect(toastMessages()).toEqual([['success', 'Reading updated.']])
+      expect(editDialog()).toBeUndefined()
+      expect(meta(wrapper)).toMatchObject({
+        Question: 'Will it last?',
+        'Reading URL': 'Private: only you can open this reading.',
+        Reader: 'Reader',
+      })
+    })
+
+    it('keeps the dialog open with the reason when an edit is refused', async () => {
+      signIn(testUser())
+      loads(mine(), {
+        'PATCH /account/readings/abc123': {
+          status: 422,
+          body: { error: 'Choose a password of at least 4 characters for this reading.' },
+        },
+      })
+      await openReading()
+
+      await click('Edit')
+      await vi.waitFor(() => expect(editDialog()).toBeDefined())
+      await click('Password')
+      await click('Save')
+
+      expect(editDialog()?.textContent).toContain(
+        'Choose a password of at least 4 characters for this reading.',
+      )
+      await click('Cancel')
+      expect(editDialog()).toBeUndefined()
+    })
   })
 })

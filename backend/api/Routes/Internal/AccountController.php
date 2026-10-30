@@ -5,6 +5,7 @@ namespace Routes\Internal;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\ServerRequest as Request;
 use Slim\Http\Response;
+use Tarot\Exception\ApiException;
 use Tarot\Repository\DeckRepository;
 use Tarot\Repository\FavoriteDeckRepository;
 use Tarot\Repository\FavoriteSpreadRepository;
@@ -14,6 +15,7 @@ use Tarot\Repository\UserRepository;
 use Tarot\Repository\UserSpreadRepository;
 use Tarot\Service\AuthService;
 use Tarot\Service\JournalExport;
+use Tarot\Service\ReadingInput;
 use Tarot\Structure\Deck;
 use Tarot\Utility\Clock;
 use Tarot\Utility\Input;
@@ -44,7 +46,8 @@ class AccountController extends AbstractController
 
     #[OAS\Operation\Get(
         path: '/account/readings',
-        summary: "The current user's readings, newest first (one page with ?limit, else all)",
+        summary: "The current user's readings, newest first (one page with ?limit, else all), optionally filtered",
+        description: 'Every filter is optional and they combine; a blank one is no filter.',
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie'), new OAS\Security\Requirement(scheme: 'pluginToken')],
         parameters: [
@@ -56,6 +59,14 @@ class AccountController extends AbstractController
                 schema: new OAS\Schema(type: 'integer')
             ),
             new OAS\Parameter(name: 'offset', in: 'query', required: false, schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'q', in: 'query', required: false, description: 'Text in the name, notes, question or querent (ignoring case for unaccented letters).', schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'deck_id', in: 'query', required: false, description: 'Drawn from this deck.', schema: new OAS\Schema(type: 'integer')),
+            new OAS\Parameter(name: 'spread', in: 'query', required: false, description: 'Laid out in a spread of this name, as the reading recorded it (personal spreads have no public id); "Free Draw" also matches a free draw never placed.', schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'tag', in: 'query', required: false, description: 'Carrying this tag.', schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'from', in: 'query', required: false, description: 'Made on or after this day (YYYY-MM-DD) in `tz`.', schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'to', in: 'query', required: false, description: 'Made on or before this day (YYYY-MM-DD) in `tz`.', schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'tz', in: 'query', required: false, description: "The reader's time zone for `from` and `to` (IANA, e.g. Europe/London); UTC when absent.", schema: new OAS\Schema(type: 'string')),
+            new OAS\Parameter(name: 'daily', in: 'query', required: false, description: 'only: daily cards alone; exclude: everything but.', schema: new OAS\Schema(type: 'string', enum: ['only', 'exclude'])),
         ],
         responses: [
             new OAS\Response(
@@ -64,12 +75,13 @@ class AccountController extends AbstractController
                 headers: [
                     new OAS\Header(
                         header: 'X-Total-Count',
-                        description: "The user's total reading count (sent when paging with ?limit)",
+                        description: "How many of the user's readings the filters match (sent when paging with ?limit)",
                         schema: new OAS\Schema(type: 'integer')
                     ),
                 ],
                 content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/Reading'))
             ),
+            new OAS\Response(response: 400, description: 'A filter that cannot be one (a bad date, deck id, time zone or daily value; from after to)'),
         ]
     )]
     /**
@@ -83,26 +95,78 @@ class AccountController extends AbstractController
         $userId = $this->userId($request);
         $params = $request->getQueryParams();
 
+        try {
+            $filter = ReadingInput::filter($params);
+        } catch (ApiException $e) {
+            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
+        }
+
         if (!isset($params['limit'])) {
-            return $response->withJson($this->readings->listByUser($userId));
+            return $response->withJson($this->readings->listByUser($userId, filter: $filter));
         }
 
         $limit  = min(self::READINGS_PAGE_MAX, max(1, (int)$params['limit']));
         $offset = max(0, (int)($params['offset'] ?? 0));
 
         return $response
-            ->withJson($this->readings->listByUser($userId, $limit, $offset))
-            ->withHeader('X-Total-Count', (string)$this->readings->countByUser($userId));
+            ->withJson($this->readings->listByUser($userId, $limit, $offset, $filter))
+            ->withHeader('X-Total-Count', (string)$this->readings->countByUser($userId, $filter));
+    }
+
+    #[OAS\Operation\Get(
+        path: '/account/tags',
+        summary: "The tags on the user's readings, with how many readings carry each",
+        description: 'Alphabetical. For My Readings\' tag filter and tag suggestions while writing one.',
+        tags: ['Account'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'Array of tags',
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/ReadingTag'))
+            ),
+        ]
+    )]
+    public function myTags(Request $request, Response $response): Response|ResponseInterface
+    {
+        return $response
+            ->withJson($this->readings->tagCounts($this->userId($request)))
+            ->withHeader('Cache-Control', 'private, no-store');
+    }
+
+    #[OAS\Operation\Get(
+        path: '/account/reading-spreads',
+        summary: "The spreads the user's readings were laid out in, with how many readings each",
+        description: 'Alphabetical, by the name the readings recorded; names that differ only in case are one spread. Each is a value for GET /account/readings?spread= that finds exactly that many readings, so My Readings\' spread filter never offers a spread with none.',
+        tags: ['Account'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        responses: [
+            new OAS\Response(
+                response: 200,
+                description: 'Array of spreads',
+                content: new OAS\MediaType\Json(type: 'array', items: new OAS\Schema\Items(ref: '#/components/schemas/ReadingSpread'))
+            ),
+        ]
+    )]
+    public function myReadingSpreads(Request $request, Response $response): Response|ResponseInterface
+    {
+        return $response
+            ->withJson($this->readings->spreadCounts($this->userId($request)))
+            ->withHeader('Cache-Control', 'private, no-store');
     }
 
     /**
-     * Update a reading the current user owns: name, hidden author, view password.
+     * Update a reading the current user owns: name, notes, hidden author, the
+     * journal fields, and who can open it.
      *
      * @param array<string,string> $args
      */
     #[OAS\Operation\Patch(
         path: '/account/readings/{reading_id}',
-        summary: "Update a reading's name, notes, hidden-author flag, or view password",
+        summary: "Update a reading's name, notes, hidden-author flag, journal fields, or who can open it",
+        description: 'Only the fields sent change. `visibility`: link (anyone with the link) and private (only you) '
+            . 'drop any password; password needs `password` unless the reading has one already. Without '
+            . '`visibility`, `password` sets a password (and makes it a password reading) and `remove_password` drops it.',
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
@@ -112,6 +176,10 @@ class AccountController extends AbstractController
             content: new OAS\MediaType\Json(properties: [
                 new OAS\Property(property: 'reading_name', schema: new OAS\Schema(type: 'string', nullable: true)),
                 new OAS\Property(property: 'reading_notes', schema: new OAS\Schema(type: 'string', nullable: true)),
+                new OAS\Property(property: 'question', schema: new OAS\Schema(description: 'Up to ' . ReadingInput::QUESTION_MAX . ' characters; blank or null clears it.', type: 'string', nullable: true)),
+                new OAS\Property(property: 'querent', schema: new OAS\Schema(description: 'Up to ' . ReadingInput::QUERENT_MAX . ' characters; blank or null clears it.', type: 'string', nullable: true)),
+                new OAS\Property(property: 'tags', schema: new OAS\Schema(description: 'Replaces every tag: at most ' . ReadingInput::TAGS_MAX . ', of at most ' . ReadingInput::TAG_MAX . ' characters each; stored lower-case, a leading # dropped, repeats merged. [] clears them.', type: 'array', items: new OAS\Schema\Items(type: 'string'))),
+                new OAS\Property(property: 'visibility', schema: new OAS\Schema(type: 'string', enum: ['link', 'password', 'private'])),
                 new OAS\Property(property: 'hide_user', schema: new OAS\Schema(type: 'boolean')),
                 new OAS\Property(property: 'password', schema: new OAS\Schema(type: 'string')),
                 new OAS\Property(property: 'remove_password', schema: new OAS\Schema(type: 'boolean')),
@@ -123,16 +191,24 @@ class AccountController extends AbstractController
                 description: 'The updated reading',
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/Reading')
             ),
-            new OAS\Response(response: 400, description: 'No changes provided'),
+            new OAS\Response(response: 400, description: 'No changes provided, an unknown visibility, or tags over the limits'),
             new OAS\Response(response: 404, description: 'Reading not found'),
-            new OAS\Response(response: 422, description: 'Password too short'),
+            new OAS\Response(response: 422, description: 'Password too short, or Password chosen without one'),
         ]
     )]
     public function updateReadingMeta(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = $args['reading_id'] ?? '';
+        $userId     = $this->userId($request);
         $body       = $this->parsedBody($request);
         $fields     = [];
+
+        // Read first: whether a password is already set decides what Password
+        // without a new one means, and someone else's reading is a 404 either way.
+        $reading = $this->readings->get($reading_id);
+        if ($reading === null || !$reading->isOwnedBy($userId)) {
+            return $response->withJson(['error' => 'Reading not found.'], 404);
+        }
 
         if (array_key_exists('reading_name', $body)) {
             $fields['reading_name'] = Input::nullableString($body['reading_name'], 100);
@@ -147,22 +223,28 @@ class AccountController extends AbstractController
             $fields['hide_user'] = Input::bool($body['hide_user']);
         }
 
-        // Password: explicit removal, or set a new one. Omit both to leave as-is.
-        if (Input::bool($body['remove_password'] ?? null)) {
-            $fields['password_hash'] = null;
-        } elseif (array_key_exists('password', $body) && (string)$body['password'] !== '') {
-            $password = (string)$body['password'];
-            if (mb_strlen($password) < 4) {
-                return $response->withJson(['error' => 'Reading password must be at least 4 characters.'], 422);
+        if (array_key_exists('question', $body)) {
+            $fields['question'] = ReadingInput::question($body['question']);
+        }
+
+        if (array_key_exists('querent', $body)) {
+            $fields['querent'] = ReadingInput::querent($body['querent']);
+        }
+
+        try {
+            if (array_key_exists('tags', $body)) {
+                $fields['tags'] = ReadingInput::tags($body['tags']);
             }
-            $fields['password_hash'] = password_hash($password, AuthService::passwordAlgo());
+            $fields += ReadingInput::access($body, $reading->password_protected, 422);
+        } catch (ApiException $e) {
+            return $response->withJson(['error' => $e->getMessage()], $e->getStatusCode());
         }
 
         if ($fields === []) {
             return $response->withJson(['error' => 'No changes provided.'], 400);
         }
 
-        $updated = $this->readings->updateMeta($reading_id, $this->userId($request), $fields);
+        $updated = $this->readings->updateMeta($reading_id, $userId, $fields);
         if ($updated === null) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
@@ -202,7 +284,7 @@ class AccountController extends AbstractController
     #[OAS\Operation\Get(
         path: '/account/readings/export',
         summary: "Download the user's whole journal, every reading, as JSON or CSV",
-        description: 'A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes and the flags (never a view password). CSV has one row per drawn card, so a reading\'s name and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.',
+        description: 'A file download (Content-Disposition: attachment), newest reading first. JSON keeps everything: the spread snapshot with its positions, the cards, the notes, the question, querent and tags, who can open it, and the flags (never a view password). CSV has one row per drawn card, so a reading\'s name, journal fields and notes repeat on each of its rows; it is UTF-8 with a byte-order mark (for Excel), and a cell that starts like a formula (= + - @, tab, CR) is prefixed with an apostrophe.',
         tags: ['Account'],
         security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
         parameters: [
@@ -230,7 +312,7 @@ class AccountController extends AbstractController
                     new OAS\MediaType(
                         mediaType: 'text/csv',
                         schema: new OAS\Schema(
-                            description: 'Columns: Reading ID, Reading Time (UTC), Reading Name, Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes.',
+                            description: 'Columns: Reading ID, Reading Time (UTC), Reading Name, Question, Querent, Tags (comma-separated), Privacy (Anyone with the link, Password or Private), Deck, Spread, Position, Position Title, Card, Reversed (Yes/No), Notes.',
                             type: 'string'
                         )
                     ),

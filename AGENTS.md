@@ -543,8 +543,11 @@ scripts/retention.php --dry-run`.
   with `e2e/server/router.php` (`backend/.htaccess`'s routing: the SPA through
   `og.php` and its CSP, `/api` through the Slim app), after `e2e/server/prepare.php`
   seeds a throwaway `TAROT_DATA_DIR` (temp dir) and copies `dist/` to
-  `backend/dist/` (gitignored), where `og.php` reads the shell. Locally on Windows
-  it drives the installed Edge; CI installs Chromium.
+  `backend/dist/` (gitignored), where `og.php` reads the shell. The server runs
+  with `sys_temp_dir` inside that data dir, so the file-backed rate limiters start
+  empty each run (earlier local runs can't trip them). Locally on Windows it
+  drives the installed Edge; CI installs Chromium. `--repeat-each=5` is a good
+  flakiness check; a step must tolerate a retry's extra data.
 - **Backend (PHPUnit):** namespace `Tarot\Tests\`, two suites. Config
   (`phpunit.xml`) treats warnings/deprecations/notices as failures
   (`failOnWarning/Deprecation/Notice`) — keep tests clean.
@@ -641,13 +644,21 @@ scripts/retention.php --dry-run`.
   `RateLimiter` and, when configured, Turnstile (as login and contact do); a
   password change or reset ends sessions; admins can't demote or delete
   themselves, and `PROTECTED_ADMIN_EMAILS` accounts can't be demoted or deleted;
-  an account always keeps one way to sign in (`SignInMethods`).
+  an account always keeps one way to sign in (`SignInMethods`). A reading's
+  journal fields (`question`, `querent`, tags) reach only its owner — never a
+  shared or locked payload, an export of anyone else, or og.php's share meta
+  (`ReadingShareMeta`); a **private** reading (`readings.is_private`; "password"
+  is still just `password_hash`, and `visibility` is worked out in the SELECT)
+  and an **expired** guest reading (`expires_at`) are a 404 to everyone but the
+  owner, with generic share meta.
 - **Schema changes are additive and migrate before deploy:** a new
   `db/migrate_*.php` (idempotent; **migrations are never committed** — `db/` is
   gitignored apart from `schema.sql`, so don't un-ignore one, and don't add a
   committed test that needs one: verify it against a throwaway copy of the old
   schema instead; it's copied to the droplet by hand), `db/schema.sql` edited by hand (never
-  regenerated wholesale from a local DB — that drops a table and reorders), and
+  regenerated wholesale from a local DB — that drops a table and reorders; it
+  also seeds the starting `spread_categories`, the one reference data a fresh
+  database needs), and
   run on production **before** the backend deploy that needs it. Design it so
   the old code keeps working on the new schema.
 - **Product boundaries (the owner's, after talking with practitioners):** the

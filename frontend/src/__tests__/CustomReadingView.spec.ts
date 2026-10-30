@@ -45,6 +45,9 @@ const threeCard: Spread = {
   name: 'Past, Present, Future',
   description: '',
   card_count: 3,
+  category_id: 1,
+  category_name: 'General',
+  category_sort_order: 1,
   positions: [
     { order: 2, title: 'Present', x: 50, y: 50, rotation: 0 },
     { order: 1, title: 'Past', x: 25, y: 50, rotation: 0 },
@@ -63,6 +66,11 @@ const saved: AccountReading = {
   is_final: false,
   password_protected: false,
   daily_card_day: null,
+  question: null,
+  querent: null,
+  tags: [],
+  visibility: 'link',
+  expires_at: null,
 }
 
 /** What the page loads, plus `extra`. */
@@ -281,21 +289,30 @@ describe('CustomReadingView', () => {
     ])
   })
 
-  it("sends a signed-in user's title, hidden name, password and notes", async () => {
+  it("sends a signed-in user's title, journal, tags and who can open it", async () => {
     signIn(testUser())
     const api = loads({ 'POST /readings': { status: 201, body: saved } })
     const { wrapper } = await openPage()
     await placeWithCard(1, 'The Fool')
     await wrapper.get('#ro-name').setValue('Recreated')
-    await wrapper.get('#ro-password').setValue('s3cret')
+    await wrapper.get('#ro-question').setValue('What now?')
+    await wrapper.get('#ro-querent').setValue('Sam')
+    await wrapper.get('#ro-tags').setValue('career')
+    await wrapper.get('#ro-tags').trigger('keydown', { key: 'Enter' })
+    await flushPromises()
+    await click('Private')
 
     await click('Recreate Draw')
 
     expect(sentPayload(api)).toMatchObject({
       reading_name: 'Recreated',
+      question: 'What now?',
+      querent: 'Sam',
+      tags: ['career'],
       hide_user: false,
-      password: 's3cret',
+      visibility: 'private',
     })
+    expect(sentPayload(api)).not.toHaveProperty('password')
     expect(useRecentReadings().recent.value[0].summary).toBe('1 card')
   })
 
@@ -343,6 +360,7 @@ describe('CustomReadingView', () => {
     const { wrapper } = await openPage()
     await wrapper.get('#cr-name').setValue('Morning pull')
     await choose('custom-base-on-a-spread', 'Past, Present, Future (3 cards)')
+    await click('Password')
     await wrapper.get('#ro-password').setValue('s3cret')
 
     await click('Reset')
@@ -351,6 +369,6 @@ describe('CustomReadingView', () => {
     expect(count(wrapper)).toBe('1')
     expect(tray(wrapper)).toEqual(['1'])
     expect(wrapper.get('#custom-base-on-a-spread').text()).toBe('Start from scratch')
-    expect(wrapper.get<HTMLInputElement>('#ro-password').element.value).toBe('')
+    expect(wrapper.find('#ro-password').exists()).toBe(false)
   })
 })

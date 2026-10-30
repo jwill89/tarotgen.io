@@ -4,26 +4,44 @@ import { flushPromises } from '@vue/test-utils'
 import { TooltipProvider } from 'reka-ui'
 import SpreadEditor from '@/components/admin/SpreadEditor.vue'
 import { mountWithApp, cleanup } from './helpers/app'
-import type { Spread } from '@/types'
+import { button as bodyButton, choose, labelled, typeInto, valueOf } from './helpers/page'
+import type { Spread, SpreadCategory, SpreadPosition } from '@/types'
+
+/** What the editor emits on save, as far as these tests read it. */
+type Saved = { name: string; positions: SpreadPosition[]; category_id?: number }
 
 const threeCard: Spread = {
   spread_id: 3,
   name: 'Past, Present, Future',
   description: 'A **classic** three-card line.',
   card_count: 3,
+  category_id: 2,
+  category_name: 'Love & relationships',
+  category_sort_order: 2,
   // Out of order on purpose: the editor lays them out by `order`.
   positions: [
     { order: 3, title: 'Future', x: 70, y: 50, rotation: 0 },
-    { order: 1, title: 'Past', x: 30, y: 50, rotation: 0 },
+    { order: 1, title: 'Past', x: 30, y: 50, rotation: 0, description: 'What led here' },
     { order: 2, title: 'Present', x: 50, y: 50, rotation: 90 },
   ],
 }
 
-async function mountEditor(initial: Spread | null, saveLabel?: string) {
+const categories: SpreadCategory[] = [
+  { category_id: 1, name: 'General', sort_order: 1, spread_count: 4 },
+  { category_id: 2, name: 'Love & relationships', sort_order: 2, spread_count: 1 },
+]
+
+async function mountEditor(
+  initial: Spread | null,
+  saveLabel?: string,
+  categoryList?: SpreadCategory[],
+) {
   const spread = ref(initial)
   // The canvas toolbar's tooltips need the provider App.vue mounts.
   const { wrapper } = await mountWithApp(TooltipProvider, {
-    slots: { default: () => h(SpreadEditor, { spread: spread.value, saveLabel }) },
+    slots: {
+      default: () => h(SpreadEditor, { spread: spread.value, saveLabel, categories: categoryList }),
+    },
   })
   const editor = wrapper.getComponent(SpreadEditor)
   const field = (label: string) => {
@@ -147,7 +165,7 @@ describe('SpreadEditor', () => {
           description: 'A **classic** three-card line.',
           card_count: 3,
           positions: [
-            { order: 1, title: 'Past', x: 30, y: 50, rotation: 0 },
+            { order: 1, title: 'Past', x: 30, y: 50, rotation: 0, description: 'What led here' },
             { order: 2, title: 'Present', x: 50, y: 50, rotation: 90 },
             { order: 3, title: 'Future', x: 70, y: 50, rotation: 0 },
           ],
@@ -190,7 +208,7 @@ describe('SpreadEditor', () => {
     const { wrapper, click } = await mountEditor(null)
     await click('Place card 1')
 
-    await click('Edit title…')
+    await click('Edit position…')
     const dialog = document.body.querySelector<HTMLElement>('[role="dialog"]')
     expect(dialog?.textContent).toContain('Position #1')
     const input = dialog?.querySelector<HTMLInputElement>('input')
@@ -202,6 +220,85 @@ describe('SpreadEditor', () => {
 
     expect(document.body.querySelector('[role="dialog"]')).toBeNull()
     expect(wrapper.get('.editor-card-title').text()).toBe('The Heart of It')
+  })
+
+  it('describes what a position asks from its edit dialog, trimmed, and saves it', async () => {
+    const { editor, field, click } = await mountEditor(null)
+    await click('Place card 1')
+    await click('Edit position…')
+
+    const about = labelled('What it asks (optional)')
+    expect(about.getAttribute('maxlength')).toBe('280')
+    expect(
+      document.getElementById(about.getAttribute('aria-describedby') ?? '')?.textContent,
+    ).toContain('not what a card here would mean. 280 characters left.')
+    await typeInto(about, '  What stands in your way  ')
+    expect(document.body.textContent).toContain('253 characters left.')
+    bodyButton('Done').click()
+    await flushPromises()
+    await field('Spread Name').setValue('Obstacle')
+    await click('Save Spread')
+
+    expect(editor.emitted<[Saved]>('save')?.[0]?.[0].positions).toEqual([
+      { order: 1, title: '', x: 40, y: 40, rotation: 0, description: 'What stands in your way' },
+    ])
+  })
+
+  it("shows a loaded position's description in its dialog, and drops one cleared", async () => {
+    const { editor, click } = await mountEditor(threeCard)
+    // Select the first card (Past) on the canvas, then edit it.
+    const past = [...document.body.querySelectorAll<HTMLElement>('.spread-card--editor')][0]
+    past.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, button: 0 }))
+    past.dispatchEvent(new PointerEvent('pointerup', { bubbles: true }))
+    await flushPromises()
+    await click('Edit position…')
+
+    const about = labelled('What it asks (optional)')
+    expect(valueOf(about)).toBe('What led here')
+    await typeInto(about, '   ')
+    bodyButton('Done').click()
+    await flushPromises()
+    await click('Save Spread')
+
+    const saved = editor.emitted<[Saved]>('save')?.[0]?.[0]
+    expect(saved?.positions[0]).toEqual({ order: 1, title: 'Past', x: 30, y: 50, rotation: 0 })
+    // Without categories there is no picker, and no category is sent.
+    expect(saved && 'category_id' in saved).toBe(false)
+  })
+
+  it('picks the library category when given the categories (admin)', async () => {
+    const { editor, click } = await mountEditor(threeCard, undefined, categories)
+
+    const picker = labelled('Category')
+    expect(picker.textContent.trim()).toBe('Love & relationships')
+    await choose(picker, 'General')
+    await click('Save Spread')
+
+    expect(editor.emitted('save')?.[0]?.[0]).toMatchObject({ category_id: 1 })
+  })
+
+  it('starts a new spread in the first category', async () => {
+    const { editor, field, click } = await mountEditor(null, undefined, categories)
+    await field('Spread Name').setValue('Fork')
+    await click('Place card 1')
+
+    expect(labelled('Category').textContent.trim()).toBe('General')
+    await click('Save Spread')
+    expect(editor.emitted('save')?.[0]?.[0]).toMatchObject({ name: 'Fork', category_id: 1 })
+  })
+
+  // The admin page loads its categories beside the form.
+  it('starts a new spread in the first category when the categories arrive after it', async () => {
+    const list = ref<SpreadCategory[]>([])
+    await mountWithApp(TooltipProvider, {
+      slots: { default: () => h(SpreadEditor, { spread: null, categories: list.value }) },
+    })
+    expect(labelled('Category').textContent.trim()).toBe('Choose a category')
+
+    list.value = categories
+    await flushPromises()
+
+    expect(labelled('Category').textContent.trim()).toBe('General')
   })
 
   it('keeps the card count in step when an undo brings cards back', async () => {

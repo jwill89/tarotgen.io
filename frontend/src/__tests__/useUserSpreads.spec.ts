@@ -124,4 +124,32 @@ describe('useUserSpreads loading and sharing', () => {
     })
     expect(await useUserSpreads().submitAsPublic(1)).toBe(false)
   })
+
+  it('puts a copied public spread first among their own', async () => {
+    const api = stubApi({
+      'POST /spreads/9/copy': { status: 201, body: spread(3, 'Celtic (copy)') },
+    })
+    const { copyPublicSpread, userSpreads } = useUserSpreads()
+
+    const result = await copyPublicSpread(9)
+
+    expect(result).toMatchObject({ ok: true, data: { name: 'Celtic (copy)' } })
+    expect(api.mock.calls[0][1]?.method).toBe('POST')
+    expect(userSpreads.value.map((s) => s.user_spread_id)).toEqual([3, 1])
+  })
+
+  it("says why a copy was refused, in the server's words or a fallback", async () => {
+    stubApi({ 'POST /spreads/9/copy': { status: 404, body: { error: 'Spread not found.' } } })
+    expect(await useUserSpreads().copyPublicSpread(9)).toMatchObject({
+      ok: false,
+      error: 'Spread not found.',
+    })
+
+    stubApi({ 'POST /spreads/9/copy': { status: 500 } })
+    expect(await useUserSpreads().copyPublicSpread(9)).toMatchObject({
+      ok: false,
+      error: "Couldn't copy the spread. Please try again.",
+    })
+    expect(useUserSpreads().userSpreads.value).toHaveLength(1)
+  })
 })

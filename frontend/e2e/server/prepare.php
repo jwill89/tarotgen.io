@@ -38,6 +38,8 @@ if (!is_file($frontend . '/dist/index.html')) {
 
 removeTree($dataDir);
 mkdir($dataDir . '/db', 0o777, true);
+// The server's sys_temp_dir (playwright.config.ts): fresh rate-limit counts per run.
+mkdir($dataDir . '/tmp');
 // Development, so the session cookie isn't Secure-only over plain http.
 file_put_contents($dataDir . '/.env', "APP_ENV=development\nAPP_URL={$baseUrl}\n");
 

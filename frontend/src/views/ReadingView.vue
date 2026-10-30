@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { byPrefixAndName } from '@/fontawesome'
 import { CollapsibleRoot, CollapsibleTrigger, CollapsibleContent } from 'reka-ui'
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, defineAsyncComponent } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useDecks } from '@/composables/useDecks'
 import { useUser } from '@/composables/useUser'
@@ -13,10 +13,11 @@ import { useReadingExport } from '@/composables/useReadingExport'
 import { useReadings } from '@/composables/useReadings'
 import { renderMarkdown } from '@/utils/markdown'
 import { formatDateTime } from '@/utils/datetime'
+import { visibilityLabels } from '@/utils/visibility'
 import { cardAspectStyle } from '@/utils/cardAspect'
 import { cardImageUrls, cardBackImageUrls } from '@/utils/cardImages'
 import { cardLabel } from '@/utils/deck'
-import type { Reading, ReadingInfo, ReadingCard, SpreadPosition } from '@/types'
+import type { AccountReading, Reading, ReadingInfo, ReadingCard, SpreadPosition } from '@/types'
 import LoadingOverlay from '@/components/LoadingOverlay.vue'
 import LightboxOverlay from '@/components/LightboxOverlay.vue'
 import BaseModal from '@/components/BaseModal.vue'
@@ -25,10 +26,13 @@ import NumberField from '@/components/NumberField.vue'
 import PageHeader from '@/components/PageHeader.vue'
 import Tooltip from '@/components/Tooltip.vue'
 
+// Only an owner who chooses to edit needs it (and the notes editor it carries).
+const ReadingEditDialog = defineAsyncComponent(() => import('@/components/ReadingEditDialog.vue'))
+
 const route = useRoute()
 const router = useRouter()
 const { deckLookup, fetchDecks } = useDecks()
-const { isLoggedIn } = useUser()
+const { isLoggedIn, currentUser } = useUser()
 const toasts = useToasts()
 const { confirm } = useConfirm()
 const { record: recordReading } = useRecentReadings()
@@ -89,6 +93,52 @@ const readingCards = computed<ReadingCard[]>(() => {
 
 const spread = computed(() => readingInfo.value?.spread ?? null)
 const showSpreadDetails = ref(false)
+
+// ── The journal and who can open it ──────────────────────────────────────────
+// The question, querent and tags reach only the owner's payload. A private
+// reading reaches nobody else at all, so its link is nothing to share.
+const isPrivate = computed(() => reading.value?.visibility === 'private')
+const journalTags = computed(() => reading.value?.tags ?? [])
+// A guest's chosen expiry: the reading (and its link) is gone after this.
+const expiresAt = computed(() => reading.value?.expires_at ?? null)
+
+const editing = ref(false)
+const editable = computed(() => {
+  const r = reading.value
+  if (!r?.is_owner) return null
+  return {
+    reading_id: r.reading_id,
+    reading_name: r.reading_name,
+    reading_notes: r.reading_notes,
+    question: r.question ?? null,
+    querent: r.querent ?? null,
+    tags: r.tags ?? [],
+    visibility: r.visibility,
+    hide_user: r.hide_user ?? false,
+  }
+})
+
+/** The owner saved the edit dialog: show what's stored now, without a refetch. */
+function onEdited(saved: AccountReading): void {
+  editing.value = false
+  toasts.success('Reading updated.')
+  const current = reading.value
+  if (!current) return
+  reading.value = {
+    ...current,
+    reading_name: saved.reading_name,
+    reading_notes: saved.reading_notes,
+    question: saved.question,
+    querent: saved.querent,
+    tags: saved.tags,
+    visibility: saved.visibility,
+    hide_user: saved.hide_user,
+  }
+  readingName.value = saved.reading_name
+  readingNotes.value = saved.reading_notes
+  // The owner is the one looking, so their own name is the label when shown.
+  readerName.value = saved.hide_user ? 'Guest' : (currentUser.value?.display_name ?? 'Guest')
+}
 
 // ── Owner actions: draw more cards + mark final ─────────────────────────────
 const isOwner = computed(() => reading.value?.is_owner ?? false)
@@ -208,6 +258,8 @@ const { cardStyle } = useSpreadLayout(() => spread.value?.positions ?? [])
 interface DetailItem {
   order: number
   title: string
+  /** What the position asks, from its spread; readings made before these have none. */
+  description: string
   card: ReadingCard
   drawIndex: number
 }
@@ -217,6 +269,7 @@ const detailItems = computed<DetailItem[]>(() => {
     return spreadCards.value.map((sc) => ({
       order: sc.position.order,
       title: sc.position.title,
+      description: sc.position.description ?? '',
       card: sc.card,
       drawIndex: sc.drawIndex,
     }))
@@ -224,6 +277,7 @@ const detailItems = computed<DetailItem[]>(() => {
   return readingCards.value.map((card, i) => ({
     order: i + 1,
     title: '',
+    description: '',
     card,
     drawIndex: i,
   }))
@@ -445,6 +499,17 @@ watch(
             </p>
           </div>
 
+          <!-- A guest chose to have this reading deleted early. -->
+          <div v-if="expiresAt" class="myst-callout reading-expiry mb-4" role="note">
+            <p>
+              <span class="icon"
+                ><FontAwesomeIcon :icon="byPrefixAndName.fas['hourglass-half']"
+              /></span>
+              This reading will be deleted on {{ formatDateTime(expiresAt) }}. Its link stops
+              working then.
+            </p>
+          </div>
+
           <div class="columns reading-top">
             <div class="column is-7">
               <dl class="reading-meta settings-panel">
@@ -463,7 +528,14 @@ watch(
                     <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['link']" /></span
                     >Reading URL
                   </dt>
-                  <dd class="meta-url">
+                  <!-- Private: the link opens it for nobody else, so there's nothing to share. -->
+                  <dd v-if="isPrivate" class="reading-private-note">
+                    <span class="icon is-small"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['lock']"
+                    /></span>
+                    Private: only you can open this reading.
+                  </dd>
+                  <dd v-else class="meta-url">
                     <span class="reading-url-text">{{ readingUrl }}</span>
                     <Tooltip text="Copy Reading URL">
                       <button class="button is-small is-link" @click="copyReadingUrl">
@@ -473,6 +545,47 @@ watch(
                         <span>Copy</span>
                       </button>
                     </Tooltip>
+                  </dd>
+                </div>
+                <!-- The owner's journal: theirs alone, never in anyone else's payload. -->
+                <div v-if="reading.question" class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-question']" /></span
+                    >Question
+                  </dt>
+                  <dd class="reading-question">{{ reading.question }}</dd>
+                </div>
+                <div v-if="reading.querent" class="meta-row">
+                  <dt>
+                    <span class="icon"
+                      ><FontAwesomeIcon :icon="byPrefixAndName.fas['circle-user']" /></span
+                    >For
+                  </dt>
+                  <dd>{{ reading.querent }}</dd>
+                </div>
+                <div v-if="journalTags.length" class="meta-row">
+                  <dt>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['tags']" /></span
+                    >Tags
+                  </dt>
+                  <dd class="reading-tag-list">
+                    <span v-for="tag in journalTags" :key="tag" class="data-chip">{{ tag }}</span>
+                  </dd>
+                </div>
+                <div v-if="isOwner" class="meta-row meta-row--privacy">
+                  <dt>
+                    <span class="icon"><FontAwesomeIcon :icon="byPrefixAndName.fas['eye']" /></span
+                    >Who Can Open It
+                  </dt>
+                  <dd class="meta-privacy">
+                    <span>{{ visibilityLabels[reading.visibility] }}</span>
+                    <button class="button is-small" @click="editing = true">
+                      <span class="icon is-small"
+                        ><FontAwesomeIcon :icon="byPrefixAndName.fas['pen']"
+                      /></span>
+                      <span>Edit</span>
+                    </button>
                   </dd>
                 </div>
                 <div class="meta-row">
@@ -727,6 +840,9 @@ watch(
                         <span v-if="item.card.reversed" class="has-text-warning">(Reversed)</span>
                       </template>
                       <span v-else class="has-text-grey is-italic">Not yet revealed</span>
+                      <span v-if="item.description" class="spread-detail-about">{{
+                        item.description
+                      }}</span>
                     </span>
                   </div>
                 </div>
@@ -788,7 +904,12 @@ watch(
               <tbody>
                 <tr v-for="item in detailItems" :key="'print-' + item.drawIndex">
                   <td>{{ item.order }}</td>
-                  <td v-if="spread">{{ item.title }}</td>
+                  <td v-if="spread">
+                    {{ item.title
+                    }}<template v-if="item.description">
+                      — <em>{{ item.description }}</em></template
+                    >
+                  </td>
                   <td>
                     {{ item.card.card_name
                     }}<em v-if="item.card.reversed" class="reading-print-reversed"> (Reversed)</em>
@@ -995,11 +1116,40 @@ watch(
       </button>
     </template>
   </BaseModal>
+
+  <!-- The owner's title, journal, notes and who can open it. -->
+  <ReadingEditDialog
+    v-if="editing && editable"
+    :reading="editable"
+    @close="editing = false"
+    @saved="onEdited"
+  />
 </template>
 
 <style scoped>
 .reading-final-tag {
   vertical-align: middle;
+}
+
+.reading-private-note {
+  color: var(--myst-text-muted);
+}
+
+.reading-question {
+  font-style: italic;
+}
+
+.reading-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.meta-privacy {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
 }
 
 .export-options {
@@ -1043,6 +1193,7 @@ watch(
   .spread-details,
   .reading-notes,
   .meta-url .button,
+  .meta-privacy .button,
   .meta-row--purchase,
   .reading-grid-caption {
     display: none;

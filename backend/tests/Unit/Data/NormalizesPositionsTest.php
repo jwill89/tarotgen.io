@@ -15,14 +15,14 @@ final class NormalizesPositionsTest extends TestCase
      * Run the trait's private normalizePositions() through a public shim so we
      * can exercise it in isolation.
      *
-     * @return list<array{order: int, title: string, x: float, y: float, rotation: int}>
+     * @return list<array{order: int, title: string, x: float, y: float, rotation: int, description?: string}>
      */
     private function normalize(mixed $positions): array
     {
         $shim = new class {
             use NormalizesPositions;
 
-            /** @return list<array{order: int, title: string, x: float, y: float, rotation: int}> */
+            /** @return list<array{order: int, title: string, x: float, y: float, rotation: int, description?: string}> */
             public function run(mixed $positions): array
             {
                 return $this->normalizePositions($positions);
@@ -101,6 +101,33 @@ final class NormalizesPositionsTest extends TestCase
             ['order' => 0, 'title' => '', 'x' => 50.0, 'y' => 50.0, 'rotation' => 0],
             $result[0]
         );
+    }
+
+    public function testADescriptionIsTrimmedAndCappedAt280Chars(): void
+    {
+        $result = $this->normalize([
+            ['description' => '  What stands in your way  '],
+            ['description' => str_repeat('é', 300)],
+            ['description' => 42],
+        ]);
+
+        $this->assertSame('What stands in your way', $result[0]['description'] ?? null);
+        $this->assertSame(str_repeat('é', 280), $result[1]['description'] ?? null);
+        $this->assertSame('42', $result[2]['description'] ?? null);
+    }
+
+    public function testABlankOrNonTextDescriptionIsLeftOut(): void
+    {
+        $result = $this->normalize([
+            ['description' => '   '],
+            ['description' => ['a', 'list']],
+            ['description' => null],
+            [],
+        ]);
+
+        foreach ($result as $position) {
+            $this->assertArrayNotHasKey('description', $position);
+        }
     }
 
     public function testOutputKeysAreReindexedSequentially(): void

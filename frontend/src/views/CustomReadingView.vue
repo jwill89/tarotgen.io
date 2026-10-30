@@ -234,13 +234,7 @@ async function submit() {
   }))
 
   const payload: Record<string, unknown> = { deck_id: deckId.value, name: readingName.value, cards }
-  const opts = ownerOptions.value?.collect()
-  if (opts) {
-    if (opts.reading_name) payload.reading_name = opts.reading_name
-    payload.hide_user = opts.hide_user
-    if (opts.password) payload.password = opts.password
-    if (opts.reading_notes) payload.reading_notes = opts.reading_notes
-  }
+  Object.assign(payload, ownerOptions.value?.collect())
 
   isLoading.value = true
   const res = await createCustom(payload)

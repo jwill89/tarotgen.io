@@ -55,7 +55,7 @@ class ReadingController extends AbstractController
                     new OAS\Schema(ref: '#/components/schemas/LockedReading'),
                 ]))
             ),
-            new OAS\Response(response: 404, description: 'InvalidReadingID'),
+            new OAS\Response(response: 404, description: "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"),
             new OAS\Response(response: 429, description: 'Rate limit exceeded'),
         ]
     )]
@@ -74,13 +74,15 @@ class ReadingController extends AbstractController
         $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
-        if (!($reading instanceof Reading)) {
+        Session::start();
+        $viewerId = $this->currentUserId($request);
+
+        // A private reading is unknown to everyone but its owner (and their plugin).
+        if (!($reading instanceof Reading) || !$reading->isVisibleTo($viewerId)) {
             return $response->withJson(['error' => 'InvalidReadingID'], 404);
         }
 
-        Session::start();
-        $viewerId = $this->currentUserId($request) ?? 0;
-        $isOwner  = $reading->user_id !== null && $reading->user_id === $viewerId;
+        $isOwner = $reading->isOwnedBy($viewerId);
 
         // Password gate: anyone who isn't the owner and hasn't already unlocked
         // this reading in their session gets only the locked stub.
@@ -120,7 +122,7 @@ class ReadingController extends AbstractController
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
             new OAS\Response(response: 401, description: 'Incorrect password'),
-            new OAS\Response(response: 404, description: 'InvalidReadingID'),
+            new OAS\Response(response: 404, description: "InvalidReadingID: no such reading, one past its expiry, or someone else's private reading"),
             new OAS\Response(response: 429, description: 'Too many password attempts'),
         ]
     )]
@@ -140,13 +142,14 @@ class ReadingController extends AbstractController
         $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
-        if (!($reading instanceof Reading)) {
+        Session::start();
+        $viewerId = $this->currentUserId($request);
+
+        if (!($reading instanceof Reading) || !$reading->isVisibleTo($viewerId)) {
             return $response->withJson(['error' => 'InvalidReadingID'], 404);
         }
 
-        Session::start();
-        $viewerId = $this->currentUserId($request) ?? 0;
-        $isOwner  = $reading->user_id !== null && $reading->user_id === $viewerId;
+        $isOwner = $reading->isOwnedBy($viewerId);
 
         if (!$reading->password_protected || $isOwner) {
             // Nothing to unlock — just return the reading.
@@ -176,7 +179,12 @@ class ReadingController extends AbstractController
         requestBody: new OAS\RequestBody(
             required: true,
             description: 'Draw spec: deck, spread or card count, and options. A `user_spread_id` counts only for '
-                . 'its owner (signed in, or by plugin token): anyone else\'s is ignored, like an id that does not exist.',
+                . 'its owner (signed in, or by plugin token): anyone else\'s is ignored, like an id that does not exist. '
+                . 'A signed-in reader may also send `reading_name`, `reading_notes`, `hide_user`, `question` (up to 500 '
+                . 'characters), `querent` (up to 100), `tags` (a list, or one comma-separated string: at most 10, of at most '
+                . '30 characters each; stored lower-case) and `visibility` (link, password with `password`, or private); a '
+                . 'guest\'s are ignored. A guest may send `expires_in_days` (1, 7 or 30) to have the reading deleted then '
+                . 'instead of after the usual year; a signed-in reader\'s is ignored.',
             content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
@@ -222,6 +230,8 @@ class ReadingController extends AbstractController
         tags: ['Readings'],
         requestBody: new OAS\RequestBody(
             required: true,
+            description: 'The deck, a name and the cards with their positions, plus the same owner options as '
+                . 'POST /readings/generate (a signed-in reader\'s) or expiry (a guest\'s).',
             content: new OAS\MediaType\Json(type: 'object')
         ),
         responses: [
@@ -280,7 +290,7 @@ class ReadingController extends AbstractController
             ),
             new OAS\Response(response: 400, description: 'Position count mismatch or invalid data'),
             new OAS\Response(response: 403, description: 'Not the owner'),
-            new OAS\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 404, description: "Reading not found: no such reading, one past its expiry, or someone else's private reading"),
             new OAS\Response(response: 409, description: 'Reading is final'),
         ]
     )]
@@ -289,14 +299,15 @@ class ReadingController extends AbstractController
         $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
 
-        if (!($reading instanceof Reading)) {
-            return $response->withJson(['error' => 'Reading not found.'], 404);
-        }
-
         // Allow guests (by reading_id alone) or the owner — placement is done
         // immediately after generation, before the user navigates away.
         $userId = $this->currentUserId($request);
-        $isOwner = $reading->user_id !== null && $reading->user_id === $userId;
+
+        if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
+            return $response->withJson(['error' => 'Reading not found.'], 404);
+        }
+
+        $isOwner = $reading->isOwnedBy($userId);
         $isGuest = $reading->user_id === null;
 
         if (!$isOwner && !$isGuest) {
@@ -346,13 +357,22 @@ class ReadingController extends AbstractController
                 $rotation += 360;
             }
 
-            $snappedPositions[] = [
+            $snapped = [
                 'order'    => $idx + 1,
                 'title'    => Input::string($pos['title'] ?? null, 100),
                 'x'        => max(0.0, min(100.0, round((float)($pos['x'] ?? 50), 2))),
                 'y'        => max(0.0, min(100.0, round((float)($pos['y'] ?? 50), 2))),
                 'rotation' => $rotation,
             ];
+
+            // A position that keeps its place and title keeps its description:
+            // re-placing after drawing more cards mustn't lose the spread's own.
+            $before = $existingSpread['positions'][$idx] ?? null;
+            if (is_array($before) && ($before['title'] ?? null) === $snapped['title'] && is_string($before['description'] ?? null)) {
+                $snapped['description'] = $before['description'];
+            }
+
+            $snappedPositions[] = $snapped;
         }
 
         $info['spread'] = [
@@ -397,7 +417,7 @@ class ReadingController extends AbstractController
             ),
             new OAS\Response(response: 400, description: 'Custom readings cannot draw'),
             new OAS\Response(response: 403, description: 'Not the owner'),
-            new OAS\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 404, description: "Reading not found: no such reading, one past its expiry, or someone else's private reading"),
             new OAS\Response(response: 409, description: 'Reading is final'),
         ]
     )]
@@ -405,13 +425,13 @@ class ReadingController extends AbstractController
     {
         $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
+        $userId     = $this->currentUserId($request);
 
-        if (!($reading instanceof Reading)) {
+        if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
 
-        $userId = $this->currentUserId($request);
-        if ($userId === null || $reading->user_id !== $userId) {
+        if ($userId === null || !$reading->isOwnedBy($userId)) {
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
@@ -469,20 +489,20 @@ class ReadingController extends AbstractController
                 content: new OAS\MediaType\Json(ref: '#/components/schemas/ReadingView')
             ),
             new OAS\Response(response: 403, description: 'Not the owner'),
-            new OAS\Response(response: 404, description: 'Reading not found'),
+            new OAS\Response(response: 404, description: "Reading not found: no such reading, one past its expiry, or someone else's private reading"),
         ]
     )]
     public function finalizeReading(Request $request, Response $response, array $args): Response|ResponseInterface
     {
         $reading_id = $args['reading_id'] ?? '';
         $reading    = $reading_id !== '' ? $this->readings->get($reading_id) : null;
+        $userId     = $this->currentUserId($request);
 
-        if (!($reading instanceof Reading)) {
+        if (!($reading instanceof Reading) || !$reading->isVisibleTo($userId)) {
             return $response->withJson(['error' => 'Reading not found.'], 404);
         }
 
-        $userId = $this->currentUserId($request);
-        if ($userId === null || $reading->user_id !== $userId) {
+        if ($userId === null || !$reading->isOwnedBy($userId)) {
             return $response->withJson(['error' => 'You do not own this reading.'], 403);
         }
 
@@ -498,7 +518,8 @@ class ReadingController extends AbstractController
     /**
      * Build the full reading payload for a viewer allowed to see it, including
      * the resolved author label (respecting hide_user) and whether the viewer
-     * is the owner.
+     * is the owner. The journal fields (question, querent, tags) are the
+     * owner's alone: anyone else's payload doesn't carry the keys at all.
      *
      * @return array<string,mixed>
      * @throws JsonException
@@ -516,7 +537,7 @@ class ReadingController extends AbstractController
         $origin      = $info['origin'] ?? null;
         $canDrawMore = $isOwner && !$reading->is_final && $origin !== 'custom';
 
-        return [
+        $payload = [
             'reading_id'    => $reading->reading_id,
             'reading_info'  => $info,
             'reading_time'  => $reading->reading_time,
@@ -527,7 +548,21 @@ class ReadingController extends AbstractController
             'is_final'      => $reading->is_final,
             'can_draw_more' => $canDrawMore,
             'locked'        => false,
+            'visibility'    => $reading->visibility,
+            'expires_at'    => $reading->expires_at,
         ];
+
+        if ($isOwner) {
+            $payload += [
+                'question'  => $reading->question,
+                'querent'   => $reading->querent,
+                'tags'      => $reading->tags,
+                // So the owner's reading page can edit it as My Readings does.
+                'hide_user' => $reading->hide_user,
+            ];
+        }
+
+        return $payload;
     }
 
     /**

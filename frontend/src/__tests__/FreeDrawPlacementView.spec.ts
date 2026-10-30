@@ -60,6 +60,8 @@ function reading(info: ReadingInfo, overrides: Partial<Reading> = {}): Reading {
     is_final: false,
     can_draw_more: true,
     locked: false,
+    visibility: 'link',
+    expires_at: null,
     ...overrides,
   }
 }

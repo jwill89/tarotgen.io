@@ -11,6 +11,7 @@ import { useRecentReadings } from '@/composables/useRecentReadings'
 import { useToasts } from '@/composables/useToasts'
 import { STORAGE_KEYS } from '@/constants'
 import { mountWithApp, cleanup, signIn, stubApi, testUser } from './helpers/app'
+import { choose, labelled } from './helpers/page'
 import type { Deck, Reading, Spread, UserSpread } from '@/types'
 
 function deck(deck_id: number, name: string, extra: Partial<Deck> = {}): Deck {
@@ -39,10 +40,27 @@ const threeCard: Spread = {
   name: 'Past, Present, Future',
   description: 'A **classic** line.',
   card_count: 3,
+  category_id: 1,
+  category_name: 'General',
+  category_sort_order: 1,
   positions: [
     { order: 2, title: 'Present', x: 50, y: 50, rotation: 0 },
-    { order: 1, title: 'Past', x: 25, y: 50, rotation: 0 },
+    { order: 1, title: 'Past', x: 25, y: 50, rotation: 0, description: 'What led here' },
     { order: 3, title: 'Future', x: 75, y: 50, rotation: 0 },
+  ],
+}
+
+const crossroads: Spread = {
+  spread_id: 8,
+  name: 'Crossroads',
+  description: '',
+  card_count: 2,
+  category_id: 4,
+  category_name: 'Decisions',
+  category_sort_order: 2,
+  positions: [
+    { order: 1, title: 'Left', x: 25, y: 50, rotation: 0 },
+    { order: 2, title: 'Right', x: 75, y: 50, rotation: 0 },
   ],
 }
 
@@ -68,13 +86,15 @@ const drawn: Reading = {
   is_final: false,
   can_draw_more: false,
   locked: false,
+  visibility: 'link',
+  expires_at: null,
 }
 
 /** The lists the page loads, a signed-in user's included, plus `extra`. */
 function loads(extra: Parameters<typeof stubApi>[0] = {}) {
   return stubApi({
     'GET /decks': { body: [thoth, rws] },
-    'GET /spreads': { body: [threeCard] },
+    'GET /spreads': { body: [threeCard, crossroads] },
     'GET /account/spreads': { body: [myMorning] },
     'GET /account/favorites': { body: [] },
     'GET /account/favorite-decks': { body: [] },
@@ -82,11 +102,11 @@ function loads(extra: Parameters<typeof stubApi>[0] = {}) {
   })
 }
 
-async function openPage() {
+async function openPage(path = '/new') {
   // The pickers' favourite stars sit in tooltips, under the provider App.vue mounts.
   const { wrapper, router } = await mountWithApp(
     { render: () => h(TooltipProvider, null, () => h(NewReadingView)) },
-    { path: '/new' },
+    { path },
   )
   return { wrapper, router }
 }
@@ -117,6 +137,13 @@ function sentFields(api: ReturnType<typeof stubApi>): Record<string, string> {
 async function generate(wrapper: VueWrapper): Promise<void> {
   await button(wrapper, 'Generate New Draw').trigger('click')
   await flushPromises()
+}
+
+/** A choice of the reading options' "Who Can Open It". */
+const segment = (wrapper: VueWrapper, label: string) => {
+  const found = wrapper.findAll('.myst-segmented__btn').find((b) => b.text() === label)
+  if (!found) throw new Error(`No "${label}" choice`)
+  return found
 }
 
 describe('NewReadingView', () => {
@@ -258,6 +285,60 @@ describe('NewReadingView', () => {
     expect(wrapper.text()).not.toContain('Free Draw Mode')
   })
 
+  it("groups the public spreads under their categories, in the admins' order", async () => {
+    // By name, as the API lists them: the Decisions spread comes first.
+    loads({ 'GET /spreads': { body: [crossroads, threeCard] } })
+    const { wrapper } = await openPage()
+
+    await input(wrapper, 'new-reading-spread').trigger('keydown', { key: 'ArrowDown' })
+    await flushPromises()
+
+    expect(
+      [...document.body.querySelectorAll('.myst-combobox__group')].map((g) => g.textContent),
+    ).toEqual(['General', 'Decisions'])
+  })
+
+  it("says under a position's title what the position asks, where the spread does", async () => {
+    loads()
+    const { wrapper } = await openPage()
+
+    await pick(wrapper, 'new-reading-spread', 'past')
+
+    expect(help(wrapper)).toContain('What led here')
+  })
+
+  it('starts on the spread the library linked to with ?spread=', async () => {
+    const api = loads({ 'POST /readings/generate': { body: drawn } })
+    const { wrapper } = await openPage('/new?spread=8')
+
+    expect(input(wrapper, 'new-reading-spread').element.value).toBe('Crossroads')
+    expect(input(wrapper, 'new-reading-number-of-cards').element.value).toBe('2')
+    await generate(wrapper)
+    expect(sentFields(api)).toMatchObject({ spread_id: '8', number_of_cards: '2' })
+  })
+
+  it('stays on a free draw when ?spread= names no public spread', async () => {
+    for (const query of ['99', 'celtic', '-1']) {
+      loads()
+      const { wrapper } = await openPage(`/new?spread=${query}`)
+
+      expect(input(wrapper, 'new-reading-spread').element.value).toBe('No Spread (Free Draw)')
+      await cleanup()
+    }
+  })
+
+  it('lets the user change the spread the link chose', async () => {
+    loads()
+    const { wrapper } = await openPage('/new?spread=8')
+
+    await pick(wrapper, 'new-reading-spread', 'past')
+    // A later reload of the lists (favourites, say) doesn't put the link's back.
+    useFavoriteSpreads().favorites.value = [{ spread_type: 'public', spread_id: 8 }]
+    await flushPromises()
+
+    expect(input(wrapper, 'new-reading-spread').element.value).toBe('Past, Present, Future')
+  })
+
   it('draws into a public spread, with any position titles the user renamed', async () => {
     const api = loads({ 'POST /readings/generate': { body: drawn } })
     const { wrapper } = await openPage()
@@ -287,18 +368,31 @@ describe('NewReadingView', () => {
     expect(sent.spread_id).toBeUndefined()
   })
 
-  it("sends a signed-in user's title, hidden name and password", async () => {
+  it("sends a signed-in user's title, journal, tags and password", async () => {
     signIn(testUser())
     const api = loads({ 'POST /readings/generate': { body: drawn } })
     const { wrapper } = await openPage()
 
     await wrapper.get('#ro-name').setValue('Morning reflection')
+    await wrapper.get('#ro-question').setValue('Should I take the job?')
+    await wrapper.get('#ro-querent').setValue('My sister')
+    for (const tag of ['career', 'monthly']) {
+      await wrapper.get('#ro-tags').setValue(tag)
+      await wrapper.get('#ro-tags').trigger('keydown', { key: 'Enter' })
+      await flushPromises()
+    }
+    await segment(wrapper, 'Password').trigger('click')
     await wrapper.get('#ro-password').setValue('s3cret')
     await generate(wrapper)
 
+    // A form post: the tags go as one comma-separated value.
     expect(sentFields(api)).toMatchObject({
       reading_name: 'Morning reflection',
+      question: 'Should I take the job?',
+      querent: 'My sister',
+      tags: 'career,monthly',
       hide_user: 'false',
+      visibility: 'password',
       password: 's3cret',
     })
   })
@@ -307,10 +401,22 @@ describe('NewReadingView', () => {
     const api = loads({ 'POST /readings/generate': { body: drawn } })
     const { wrapper } = await openPage()
 
-    expect(wrapper.text()).toContain('to name your reading, hide your display name')
+    expect(wrapper.text()).toContain('to name your reading, record your question, add tags')
     await generate(wrapper)
 
-    expect(Object.keys(sentFields(api))).not.toContain('hide_user')
+    const sent = Object.keys(sentFields(api))
+    expect(sent).not.toContain('hide_user')
+    expect(sent).not.toContain('expires_in_days')
+  })
+
+  it('sends how long a guest chose to keep the reading', async () => {
+    const api = loads({ 'POST /readings/generate': { body: drawn } })
+    const { wrapper } = await openPage()
+
+    await choose(labelled('Keep This Reading For'), '30 days')
+    await generate(wrapper)
+
+    expect(sentFields(api)).toMatchObject({ expires_in_days: '30' })
   })
 
   it("shows the server's error and stays on the form", async () => {
@@ -347,6 +453,7 @@ describe('NewReadingView', () => {
     await pick(wrapper, 'deck_id', 'thoth')
     await pick(wrapper, 'new-reading-spread', 'past')
     await wrapper.get('#ro-name').setValue('Morning reflection')
+    await segment(wrapper, 'Password').trigger('click')
     await wrapper.get('#ro-password').setValue('s3cret')
 
     await button(wrapper, 'Reset').trigger('click')
@@ -356,7 +463,7 @@ describe('NewReadingView', () => {
     expect(input(wrapper, 'new-reading-spread').element.value).toBe('No Spread (Free Draw)')
     expect(input(wrapper, 'new-reading-number-of-cards').element.value).toBe('1')
     expect(input(wrapper, 'ro-name').element.value).toBe('')
-    expect(input(wrapper, 'ro-password').element.value).toBe('')
+    expect(wrapper.find('#ro-password').exists()).toBe(false)
 
     // A reading drawn now isn't password-protected by the form's old state.
     await generate(wrapper)

@@ -70,7 +70,7 @@ final class StructureTest extends TestCase
         $data = $spread->jsonSerialize();
 
         $this->assertSame(
-            ['spread_id', 'name', 'description', 'card_count', 'positions'],
+            ['spread_id', 'name', 'description', 'card_count', 'category_id', 'category_name', 'category_sort_order', 'positions'],
             array_keys($data)
         );
         $this->assertSame(2, $data['spread_id']);

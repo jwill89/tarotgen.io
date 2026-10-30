@@ -8,7 +8,9 @@ use Slim\Http\Response;
 use Tarot\Repository\PendingSpreadRepository;
 use Tarot\Repository\SpreadRepository;
 use Tarot\Repository\UserRepository;
+use Tarot\Service\SpreadCopyService;
 use Tarot\Structure\Spread;
+use Tarot\Structure\UserSpread;
 use Tarot\Utility\RateLimiter;
 use Tarot\Utility\Session;
 use OpenApi\Spec as OAS;
@@ -23,6 +25,7 @@ class SpreadController extends AbstractController
         private readonly SpreadRepository $spreads,
         private readonly PendingSpreadRepository $pending,
         private readonly UserRepository $users,
+        private readonly SpreadCopyService $copies,
     ) {
     }
 
@@ -141,6 +144,39 @@ class SpreadController extends AbstractController
         $limiter->hit($ip);
 
         return $response->withJson(['success' => true], 201);
+    }
+
+    /**
+     * @param array<string,string> $args
+     */
+    #[OAS\Operation\Post(
+        path: '/spreads/{spread_id}/copy',
+        summary: "Copy a public spread into the signed-in user's own spreads (My Spreads)",
+        description: 'The copy keeps the description and every position (with its description); its name gets " (copy)", or " (copy 2)" and on when the user already has that name. Only a published spread can be copied.',
+        tags: ['Spreads'],
+        security: [new OAS\Security\Requirement(scheme: 'sessionCookie')],
+        parameters: [
+            new OAS\Parameter(name: 'spread_id', in: 'path', required: true, schema: new OAS\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OAS\Response(
+                response: 201,
+                description: 'The new personal spread',
+                content: new OAS\MediaType\Json(ref: '#/components/schemas/UserSpread')
+            ),
+            new OAS\Response(response: 401, description: 'Not signed in'),
+            new OAS\Response(response: 404, description: 'No such public spread'),
+        ]
+    )]
+    public function copySpread(Request $request, Response $response, array $args): Response|ResponseInterface
+    {
+        $copy = $this->copies->copyToAccount((int)($args['spread_id'] ?? 0), $this->authUserId($request));
+
+        if (!($copy instanceof UserSpread)) {
+            return $response->withJson(['error' => 'Spread not found.'], 404);
+        }
+
+        return $response->withJson($copy, 201);
     }
 
     /**

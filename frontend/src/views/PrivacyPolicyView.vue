@@ -114,6 +114,11 @@ import PageHeader from '@/components/PageHeader.vue'
                 permanently deleted and their share links stop working.
               </p>
               <p>
+                When you make a reading without signing in, you can choose to have it deleted
+                sooner: after 1, 7 or 30 days. From that moment nobody can open it, and it is
+                permanently deleted within a day.
+              </p>
+              <p>
                 Deleted data can remain in our database backups for up to 14 days, after which the
                 backups that contain it are deleted.
               </p>

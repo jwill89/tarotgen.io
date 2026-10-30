@@ -23,7 +23,9 @@ export default defineConfig({
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], channel } }],
   webServer: {
-    command: `php e2e/server/prepare.php "${DATA_DIR}" ${BASE_URL} && php -S 127.0.0.1:${String(PORT)} -t dist e2e/server/router.php`,
+    // The rate limiters keep their counts in PHP's temp dir: the run's own, so
+    // reports and sign-ins from earlier local runs can't trip them.
+    command: `php e2e/server/prepare.php "${DATA_DIR}" ${BASE_URL} && php -d sys_temp_dir="${DATA_DIR}/tmp" -S 127.0.0.1:${String(PORT)} -t dist e2e/server/router.php`,
     url: `${BASE_URL}/api/config`,
     env: { TAROT_DATA_DIR: DATA_DIR },
     reuseExistingServer: false,

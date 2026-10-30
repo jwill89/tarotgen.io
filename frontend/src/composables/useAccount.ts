@@ -1,13 +1,38 @@
 import { useUser } from './useUser'
 import { endpoints } from '@/api/endpoints'
-import { apiRequest, sendJson } from './apiClient'
-import type { AccountReading, User } from '@/types'
+import { apiFetch, apiRequest, sendJson } from './apiClient'
+import type { AccountReading, ReadingSpread, ReadingTag, User, Visibility } from '@/types'
 
 export interface ReadingMetaUpdate {
   reading_name?: string
+  reading_notes?: string
   hide_user?: boolean
+  question?: string
+  querent?: string
+  tags?: string[]
+  visibility?: Visibility
   password?: string
   remove_password?: boolean
+}
+
+/**
+ * What My Readings narrows the list to. `from` and `to` are the reader's own
+ * dates (YYYY-MM-DD, both included); a blank field is no filter.
+ */
+export interface ReadingFilters {
+  q?: string
+  deck_id?: number | null
+  /** A spread's name as the readings recorded it ("Free Draw" for unplaced draws). */
+  spread?: string
+  tag?: string
+  from?: string
+  to?: string
+  daily?: '' | 'only' | 'exclude'
+}
+
+/** The browser's time zone, which the API reads `from` and `to` in. */
+function timeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
 
 /** Signed-in user's self-service API (/api/account/*). */
@@ -22,13 +47,18 @@ export function useAccount() {
   async function listReadingsPage(
     page: number,
     perPage: number,
+    filters: ReadingFilters = {},
   ): Promise<
     { ok: true; readings: AccountReading[]; total: number } | { ok: false; error: string }
   > {
     const offset = (Math.max(1, page) - 1) * perPage
-    const res = await apiRequest<AccountReading[]>(
-      `${endpoints.account.readings}?limit=${perPage}&offset=${offset}`,
-    )
+    const query = new URLSearchParams({ limit: String(perPage), offset: String(offset) })
+    for (const [key, value] of Object.entries(filters)) {
+      if (value !== undefined && value !== null && value !== '') query.set(key, String(value))
+    }
+    if (query.has('from') || query.has('to')) query.set('tz', timeZone())
+
+    const res = await apiRequest<AccountReading[]>(`${endpoints.account.readings}?${query}`)
     if (!res.ok) return { ok: false, error: res.error }
 
     // get() returns null when absent, and Number(null) is 0 — parse only a real value.
@@ -41,6 +71,23 @@ export function useAccount() {
       // "at least what we can see".
       total: Number.isFinite(total) ? total : offset + res.data.length,
     }
+  }
+
+  /**
+   * The tags on the user's readings with how many carry each, alphabetically.
+   * Empty on any failure: they only feed suggestions and a filter.
+   */
+  async function listTags(): Promise<ReadingTag[]> {
+    return (await apiFetch<ReadingTag[]>(endpoints.account.tags)) ?? []
+  }
+
+  /**
+   * The spreads the user's readings were laid out in with how many used each,
+   * alphabetically: only names the spread filter finds readings for. Empty on
+   * any failure: they only feed a filter.
+   */
+  async function listReadingSpreads(): Promise<ReadingSpread[]> {
+    return (await apiFetch<ReadingSpread[]>(endpoints.account.readingSpreads)) ?? []
   }
 
   async function updateReading(
@@ -133,6 +180,8 @@ export function useAccount() {
 
   return {
     listReadingsPage,
+    listTags,
+    listReadingSpreads,
     updateReading,
     deleteReading,
     changeDisplayName,
